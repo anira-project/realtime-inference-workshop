@@ -359,10 +359,8 @@
 }
 
 
-/* Hide header and footer for specific slides */
-.no-header .slide-header,
+/* Hide footer for specific slides; the header (theme switch) is always visible */
 .no-footer .slide-footer,
-.no-chrome .slide-header,
 .no-chrome .slide-footer {
   display: none;
 }

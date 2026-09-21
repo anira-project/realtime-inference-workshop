@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Neural Inference Workshop</title>
+  <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+    <img src="assets/images/anira-logo.png" alt="Toggle theme">
+  </button>
+  
+  <h1>Real-Time Neural Inference Workshop</h1>
+  <p class="subtitle">From an exported neural model to a real-time-safe audio plugin</p>
+  
+  <div class="presentations">
+{{PRESENTATIONS_LIST}}
+  </div>
+  
+  {{HOT_RELOAD_SCRIPT}}
+  <script>
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    function loadTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+    
+    loadTheme();
+  </script>
+</body>
+</html>

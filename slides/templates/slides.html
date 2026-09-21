@@ -11,9 +11,11 @@
 <body>
   <div class="reveal">
     <header class="slide-header">
-      <button class="header-logo-box" onclick="toggleTheme()">
-        <img src="assets/images/anira-logo.png" alt="anira logo" class="header-logo" title="Toggle theme">
-      </button>
+      <div class="header-logo-box">
+        <button class="theme-switch" onclick="toggleTheme()" title="Toggle dark/light mode" aria-label="Toggle dark/light mode">
+          {{THEME_ICONS}}
+        </button>
+      </div>
     </header>
     
     <div class="slides">

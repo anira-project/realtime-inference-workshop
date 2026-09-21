@@ -57,3 +57,8 @@
   --fs-header-bg: #242529;
   --fs-fragment-select-color: rgb(110, 82, 82);
 }
+
+/* Theme switch icons */
+.icon-sun { display: none; }
+[data-theme="dark"] .icon-sun { display: block; }
+[data-theme="dark"] .icon-moon { display: none; }

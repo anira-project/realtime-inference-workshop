@@ -197,23 +197,6 @@
       z-index: 1000;
   }
 
-  .pdf-page::after {
-      content: url('../assets/images/anira-logo-50px.png');
-      position: fixed;
-      z-index: 1000;
-      right: 0;
-      top: -10px;
-      height: 50px;
-      display: flex;
-      align-items: center;
-      padding: 15px;
-      background: var(--fs-header-bg);
-      border-radius: 4px;
-      margin-right: 20px;
-      border: 1px solid var(--fs-border-light);
-      box-shadow: 0px 0px 5px 0px var(--fs-shadow-color-light);
-  }
-
   .slide-footer {
     position: fixed !important;
     height: 80px !important;
@@ -260,11 +243,11 @@
 .header-logo-box {
   position: absolute;
   z-index: 1001;
-  cursor: pointer;
   right: 0;
   top: -0.5vw;
   display: flex;
   align-items: center;
+  gap: min(0.8vw, 1.4vh);
   padding: min(0.8vw, 1.4vh);
   background: var(--fs-header-bg);
   backdrop-filter: blur(0.26vw);
@@ -279,6 +262,29 @@
   width: auto;
   object-fit: contain;
   opacity: 0.8;
+}
+
+.theme-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(2.6vw, 4.65vh);
+  width: min(2.6vw, 4.65vh);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--fs-text-color);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.theme-switch:hover {
+  opacity: 1;
+}
+
+.theme-switch svg {
+  width: 70%;
+  height: 70%;
 }
 
 .slide-footer {

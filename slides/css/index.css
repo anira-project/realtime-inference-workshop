@@ -81,7 +81,12 @@ h1 {
   transform: scale(1.1);
 }
 
-.theme-toggle img {
-  width: 30px;
-  height: 30px;
+.theme-toggle {
+  color: var(--fs-text-color);
 }
+
+.theme-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+

@@ -1,0 +1,19 @@
+{
+  "name": "realtime-inference-workshop",
+  "version": "0.0.1",
+  "description": "Real-Time Neural Inference Workshop",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/dev-server.js",
+    "dev": "node scripts/dev-server.js",
+    "build": "node scripts/build.js"
+  },
+  "license": "CC-BY-NC-4.0",
+  "dependencies": {
+    "katex": "^0.16.22",
+    "reveal.js": "^5.2.1"
+  },
+  "devDependencies": {
+    "ws": "^8.18.3"
+  }
+}

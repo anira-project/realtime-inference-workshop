@@ -17,10 +17,15 @@ The model's block size comes from the export. The host's comes from the audio de
 
 ## What to do
 
-Open [`exercise/main.cpp`](exercise/main.cpp) and fill in `run_at_block_size()`, at the three TODO banners. Two ring buffers and a callback — no class, nothing else.
+Open [`exercise/main.cpp`](exercise/main.cpp) and fill in `ProcessorExample`, at the three TODO banners. It has the shape a plugin has:
 
-1. **Size the two ring buffers.** How much can be in flight at once, given a host block of N and a model block of 2048?
-2. **The pump.** Take the host's samples in, and run the model whenever a whole block has arrived. What is left over waits for the next call.
+```cpp
+processor.prepare(max_block_size);            // Before the audio starts: allocate
+processor.process_block(samples, num_samples) // Per callback, in place
+```
+
+1. **Size the two ring buffers**, in `prepare()`. How much can be in flight at once, given a host block of N and a model block of 2048? Everything that allocates belongs here, not in the callback.
+2. **The pump**, in `process_block()`. Take the host's samples in, and run the model whenever a whole block has arrived. What is left over waits for the next call.
 3. **Give the host its samples back**, in place. At the start the model has produced nothing — so what goes out?
 
 Build and run from the repository root:

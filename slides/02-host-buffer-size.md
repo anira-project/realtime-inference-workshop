@@ -42,21 +42,23 @@ host in  →  [ ring buffer ]  →  model (2048)  →  [ ring buffer ]  →  hos
 Two buffers, because both sides set their own pace. The pump is four lines:
 
 ```cpp
-input.push(samples, num_samples);
+m_input.push(samples, num_samples);
 
-while (input.available() >= model_input_size) {
-    input.pop(block.data(), model_input_size);
-    engine.process(block.data(), model_input_size);
-    output.push(block.data(), model_input_size);
+while (m_input.available() >= m_model_input_size) {
+    m_input.pop(m_block.data(), m_model_input_size);
+    m_engine.process(m_block.data(), m_model_input_size);
+    m_output.push(m_block.data(), m_model_input_size);
 }
 ```
+
+The buffers are sized in `prepare()`, the way a plugin does it.
 
 ---
 
 ## Your job
 
-1. **Size the buffers** — what is the worst moment?
-2. **Write the pump** — whole model blocks only
+1. **Size the buffers** in `prepare()` — what is the worst moment?
+2. **Write the pump** in `process_block()` — whole model blocks only
 3. **Hand samples back** — including when there are none yet
 
 ```bash

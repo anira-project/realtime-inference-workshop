@@ -37,49 +37,59 @@ constexpr std::array<size_t, 6> k_host_block_sizes = {64, 128, 480, 512, 1024, 2
 
 namespace {
 
-// Runs the whole signal through the host at one block size, and returns
-// everything the model produced, in order.
-// @engine: the model, which only accepts model_input_size samples
-// @signal: the input
-// @host_block_size: what the host hands over per callback
-// @model_input_size: what the model takes per forward pass
-std::vector<float> run_at_block_size(workshop::LibTorchEngine& engine,
-                                     const std::vector<float>& signal,
-                                     size_t host_block_size,
-                                     size_t model_input_size) {
-    // Room for a full host block on top of a full model block: the host can
-    // write before the model has taken anything out.
-    workshop::RingBuffer input(host_block_size + model_input_size);
-    workshop::RingBuffer output(host_block_size + model_input_size);
+// The shape a plugin has: the host says what it will do in prepare(), then
+// calls process_block() over and over. Here, one model block in the middle and
+// a ring buffer on each side.
+class ProcessorExample {
+public:
+    explicit ProcessorExample(workshop::LibTorchEngine& engine, size_t model_input_size)
+        : m_engine(engine), m_model_input_size(model_input_size) {}
 
-    std::vector<float> block(model_input_size);  // One model block, reused
-    std::vector<float> produced;
+    // Everything that allocates happens here, before the audio starts.
+    // @max_block_size: the largest block process_block() will be given
+    void prepare(size_t max_block_size) {
+        // Room for a full host block on top of a full model block: the host can
+        // write before the model has taken anything out.
+        m_input = workshop::RingBuffer(max_block_size + m_model_input_size);
+        m_output = workshop::RingBuffer(max_block_size + m_model_input_size);
+        m_block.assign(m_model_input_size, 0.0f);
+        m_produced.clear();
+        m_engine.reset();
+    }
 
-    workshop::run_host(signal.data(),
-                       signal.size(),
-                       host_block_size,
-                       [&](float* samples, size_t num_samples) {
-                           input.push(samples, num_samples);
+    // One host block, in place: num_samples in, num_samples out.
+    void process_block(float* samples, size_t num_samples) {
+        m_input.push(samples, num_samples);
 
-                           // Whole model blocks only — the rest waits for the next callback.
-                           while (input.available() >= model_input_size) {
-                               input.pop(block.data(), model_input_size);
-                               engine.process(block.data(), model_input_size);
-                               output.push(block.data(), model_input_size);
-                               produced.insert(produced.end(), block.begin(), block.end());
-                           }
+        // Whole model blocks only — the rest waits for the next callback.
+        while (m_input.available() >= m_model_input_size) {
+            m_input.pop(m_block.data(), m_model_input_size);
+            m_engine.process(m_block.data(), m_model_input_size);
+            m_output.push(m_block.data(), m_model_input_size);
+            m_produced.insert(m_produced.end(), m_block.begin(), m_block.end());
+        }
 
-                           // Hand back what is ready. At the start nothing is, so the host
-                           // gets silence — that is latency, and it has its own step.
-                           if (output.available() >= num_samples) {
-                               output.pop(samples, num_samples);
-                           } else {
-                               std::fill_n(samples, num_samples, 0.0f);
-                           }
-                       });
+        // Hand back what is ready. At the start nothing is, so the host gets
+        // silence — that is latency, and it has its own step.
+        if (m_output.available() >= num_samples) {
+            m_output.pop(samples, num_samples);
+        } else {
+            std::fill_n(samples, num_samples, 0.0f);
+        }
+    }
 
-    return produced;
-}
+    // Everything the model produced, in order — what the check reads. It grows
+    // inside process_block(), which is fine offline and a problem later.
+    const std::vector<float>& produced() const { return m_produced; }
+
+private:
+    workshop::LibTorchEngine& m_engine;
+    size_t m_model_input_size;
+    workshop::RingBuffer m_input{0};
+    workshop::RingBuffer m_output{0};
+    std::vector<float> m_block;
+    std::vector<float> m_produced;
+};
 
 }  // namespace
 
@@ -92,19 +102,24 @@ int main() {
         return 2;
     }
 
-    const std::vector<float> input(workshop::k_input_signal.begin(),
-                                   workshop::k_input_signal.end());
+    const std::array<float, workshop::k_signal_length>& input = workshop::k_input_signal;
     const std::array<float, workshop::k_signal_length>& target = workshop::k_target_output_signal;
     const auto model_input_size = static_cast<size_t>(k_model.m_input_size);
 
+    ProcessorExample processor(*engine, model_input_size);
     bool all_ok = true;
-    for (const size_t host_block_size : k_host_block_sizes) {
-        engine->reset();  // Every run starts from the same state
 
+    for (const size_t host_block_size : k_host_block_sizes) {
         const std::string label = "host block " + std::to_string(host_block_size);
-        std::vector<float> produced;
+
         try {
-            produced = run_at_block_size(*engine, input, host_block_size, model_input_size);
+            processor.prepare(host_block_size);
+            workshop::run_host(input.data(),
+                               input.size(),
+                               host_block_size,
+                               [&processor](float* samples, size_t num_samples) {
+                                   processor.process_block(samples, num_samples);
+                               });
         } catch (const std::exception& error) {
             std::printf("  %-24s %s\n",
                         label.c_str(),
@@ -115,8 +130,10 @@ int main() {
 
         // The model saw whole blocks, so what it produced has to match the
         // reference for as far as it got — and it has to have got that far.
+        const std::vector<float>& produced = processor.produced();
         const size_t host_samples = input.size() / host_block_size * host_block_size;
         const size_t expected = host_samples / model_input_size * model_input_size;
+
         if (produced.size() != expected) {
             std::printf("  %-24s produced %zu samples, expected %zu   <-- FAILED\n",
                         label.c_str(),

@@ -1,7 +1,7 @@
-// Step 4 — Minimal C++ inference
+// Step 1 — Minimal C++ inference
 //
 // Goal:   load the model with LibTorch and run the test signal through it.
-// Given:  helpers/libtorch_engine.h, the engine — read it first.
+// Given:  common/libtorch_engine.h, the engine — read it first.
 // You do: wire it up, at the three TODO banners below.
 // Check:  the output within 1e-4 of what the model produced in Python.
 //
@@ -12,10 +12,10 @@
 #include <cstdio>
 #include <vector>
 
-#include "helpers/libtorch_engine.h"
-#include "helpers/support.h"
-#include "helpers/target_signal.h"
-#include "helpers/test_signal.h"
+#include "common/libtorch_engine.h"
+#include "common/support.h"
+#include "common/target_signal.h"
+#include "common/test_signal.h"
 
 // What the export fixed, from its metadata. Sample rate and channel count are
 // not used here — they are what the model assumes about the audio it is given.
@@ -41,6 +41,12 @@ int main() {
         // --------------------------------------------------------------------
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
+        return 2;
+
+    }
+
+    if (engine == nullptr) {
+        std::fprintf(stderr, "TODO 1: construct engine first with path to model");
         return 2;
     }
 

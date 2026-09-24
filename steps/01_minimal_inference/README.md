@@ -1,4 +1,4 @@
-# Step 4: Minimal C++ inference
+# Step 1: Minimal C++ inference
 
 **Goal:** run the model in C++ and prove the output is the same as the reference.
 
@@ -7,10 +7,10 @@
 ## What you have
 
 - `models/forward_stateful.pt` — the model as TorchScript: graph and weights in one file. Audio in, audio out, 2048 samples per call, 48 kHz, one channel. The state lives inside the model, so each call continues where the last one ended.
-- [`helpers/libtorch_engine.h`](helpers/libtorch_engine.h) — the engine, written for you. Read it first: it is the whole of LibTorch you need.
-- [`helpers/test_signal.h`](helpers/test_signal.h) — `k_input_signal`: a 220 Hz sine, 3 blocks of 2048 samples.
-- `helpers/target_signal.h` — `k_target_output_signal`: what the model produced for it in Python.
-- `helpers/support.h` — the comparison and the report.
+- [`common/libtorch_engine.h`](common/libtorch_engine.h) — the engine, written for you. Read it first: it is the whole of LibTorch you need.
+- [`common/test_signal.h`](common/test_signal.h) — `k_input_signal`: a 220 Hz sine, 3 blocks of 2048 samples.
+- `common/target_signal.h` — `k_target_output_signal`: what the model produced for it in Python.
+- `common/support.h` — the comparison and the report.
 
 Both signals are compiled in, so there are no files to read and no audio format to parse. That comes later.
 
@@ -35,7 +35,7 @@ Build and run from the repository root:
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/bin/step04_exercise
+./build/bin/step01_exercise
 ```
 
 ## Expected output
@@ -61,7 +61,7 @@ Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
 ## Slides
 
-[`slides/04-minimal-inference.md`](../../slides/04-minimal-inference.md), or the deployed deck at `/04-minimal-inference.html`.
+[`slides/01-minimal-inference.md`](../../slides/01-minimal-inference.md), or the deployed deck at `/01-minimal-inference.html`.
 
 ## What broke?
 

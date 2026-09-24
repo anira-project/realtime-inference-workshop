@@ -1,4 +1,4 @@
-<h1>Step 4<br>Minimal C++ inference</h1>
+<h1>Step 1<br>Minimal C++ inference</h1>
 
 Load the model, run it, prove it is the same model
 
@@ -88,7 +88,7 @@ std::copy_n(output.data_ptr<float>(), num_samples, samples);
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/bin/step04_exercise
+./build/bin/step01_exercise
 ```
 
 Note:

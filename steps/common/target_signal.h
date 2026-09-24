@@ -4,7 +4,7 @@
 #include <array>
 #include <cstddef>
 
-#include "helpers/test_signal.h"  // k_signal_length
+#include "common/test_signal.h"  // k_signal_length
 
 namespace workshop {
 

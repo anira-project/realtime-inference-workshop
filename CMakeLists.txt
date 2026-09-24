@@ -17,10 +17,10 @@ workshop_setup_libtorch()
 set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward_stateful.pt"
     CACHE FILEPATH "TorchScript model to run")
 
-# Build one step (-DWORKSHOP_STEP=04) or all of them.
-set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 04, or all")
+# Build one step (-DWORKSHOP_STEP=01) or all of them.
+set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01, or all")
 
-set(WORKSHOP_STEPS 04_minimal_inference)
+set(WORKSHOP_STEPS 01_minimal_inference 02_host_buffer_size)
 
 foreach(step ${WORKSHOP_STEPS})
     if(WORKSHOP_STEP STREQUAL "all" OR step MATCHES "^${WORKSHOP_STEP}")

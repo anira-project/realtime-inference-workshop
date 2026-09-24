@@ -17,7 +17,7 @@ The model's block size comes from the export. The host's comes from the audio de
 
 ## What to do
 
-Open [`exercise/main.cpp`](exercise/main.cpp) and fill in `BlockAdapter`, at the three TODO banners.
+Open [`exercise/main.cpp`](exercise/main.cpp) and fill in `run_at_block_size()`, at the three TODO banners. Two ring buffers and a callback — no class, nothing else.
 
 1. **Size the two ring buffers.** How much can be in flight at once, given a host block of N and a model block of 2048?
 2. **The pump.** Take the host's samples in, and run the model whenever a whole block has arrived. What is left over waits for the next call.
@@ -52,7 +52,7 @@ The check is on **what the model produced**, not on what the host received: the 
 - **`ring buffer overflow: 64 samples pushed, room for 0`** — the capacity from TODO 1 is too small. Think about the worst moment: the host has just written a full block and the model has not taken anything out yet.
 - **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; TODO 3 decides what the host gets instead.
 - **`produced 4096 samples, expected 6144`** — samples are being dropped. Everything the host gives you has to go in, and only whole model blocks come out.
-- **It passes at 2048 and fails everywhere else** — the pump only works when the sizes happen to match: probably one model block per callback, rather than "as many as are ready".
+- **It passes at 2048 and fails everywhere else** — the pump only works when the sizes happen to match: probably one model block per callback, rather than as many as are ready.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 

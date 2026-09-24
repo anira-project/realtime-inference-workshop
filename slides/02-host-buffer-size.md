@@ -42,12 +42,12 @@ host in  →  [ ring buffer ]  →  model (2048)  →  [ ring buffer ]  →  hos
 Two buffers, because both sides set their own pace. The pump is four lines:
 
 ```cpp
-m_input.push(samples, num_samples);
+input.push(samples, num_samples);
 
-while (m_input.available() >= m_model_input_size) {
-    m_input.pop(m_block.data(), m_model_input_size);
-    m_engine.process(m_block.data(), m_model_input_size);
-    m_output.push(m_block.data(), m_model_input_size);
+while (input.available() >= model_input_size) {
+    input.pop(block.data(), model_input_size);
+    engine.process(block.data(), model_input_size);
+    output.push(block.data(), model_input_size);
 }
 ```
 

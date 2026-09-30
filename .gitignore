@@ -4,7 +4,6 @@ dist/
 .DS_Store
 .claude/
 tmp/
-models/*.pt
 models/*.onnx
 models/*.data
 build/

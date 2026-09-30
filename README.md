@@ -15,8 +15,13 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 
 ## Setup
 
-CMake ≥ 3.22 and a C++17 compiler. The inference engines are downloaded as
-prebuilt binaries at configure time; nothing else to install.
+CMake ≥ 3.22, a C++17 compiler, and [Git LFS](https://git-lfs.com) for the
+model file. The inference engines are downloaded as prebuilt binaries at
+configure time; nothing else to install.
+
+```bash
+git lfs install && git lfs pull
+```
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -24,8 +29,8 @@ cmake --build build -j
 ./build/bin/step01_solution
 ```
 
-Build a single step with `-DWORKSHOP_STEP=01`. The model file is not in the
-repo, see [models/README.md](models/README.md).
+Build a single step with `-DWORKSHOP_STEP=01`. See
+[models/README.md](models/README.md) for the model.
 
 The steps so far:
 

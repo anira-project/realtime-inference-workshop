@@ -9,8 +9,6 @@
 #include <functional>
 #include <vector>
 
-namespace workshop {
-
 // Calls `callback` with one block at a time until the signal is used up, in
 // place: the callback overwrites what it was given.
 // @signal: the input, copied so the caller keeps theirs
@@ -29,5 +27,3 @@ inline std::vector<float> run_host(const float* signal,
 
     return audio;
 }
-
-}  // namespace workshop

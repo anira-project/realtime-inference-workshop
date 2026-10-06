@@ -4,8 +4,6 @@
 #include <array>
 #include <cstddef>
 
-namespace workshop {
-
 constexpr size_t k_signal_length = 6144;
 
 // The signal the steps run through the model: a 220 Hz sine at half scale,
@@ -782,5 +780,3 @@ inline constexpr std::array<float, k_signal_length> k_input_signal = {
     0.349831671f, 0.359972864f, 0.369815558f, 0.379351556f, 0.388572991f, 0.397472173f, 0.406041771f, 0.414274633f,
 };
 // clang-format on
-
-}  // namespace workshop

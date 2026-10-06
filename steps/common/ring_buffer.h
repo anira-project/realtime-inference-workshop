@@ -9,8 +9,6 @@
 #include <stdexcept>
 #include <vector>
 
-namespace workshop {
-
 class RingBuffer {
 public:
     // @capacity: how many samples can be in flight at once
@@ -22,8 +20,8 @@ public:
     // Room left for writing.
     size_t space() const { return m_samples.size() - m_size; }
 
-    // Appends num_samples. Throws if they do not fit — in a plugin you would
-    // size the buffer so this cannot happen, which is the point of TODO 1.
+    // Writes num_samples into the buffer. Throws when there is not that much
+    // room left — in a plugin you size the buffer so that cannot happen.
     void push(const float* samples, size_t num_samples) {
         if (num_samples > space()) {
             throw std::runtime_error("ring buffer overflow: " + std::to_string(num_samples) +
@@ -36,7 +34,8 @@ public:
         m_size += num_samples;
     }
 
-    // Removes num_samples into `samples`. Throws if that many are not there.
+    // Reads num_samples out of the buffer and drops them. Throws when fewer
+    // than that are waiting.
     void pop(float* samples, size_t num_samples) {
         if (num_samples > m_size) {
             throw std::runtime_error("ring buffer underflow: " + std::to_string(num_samples) +
@@ -55,5 +54,3 @@ private:
     size_t m_write = 0;
     size_t m_size = 0;
 };
-
-}  // namespace workshop

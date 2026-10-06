@@ -53,8 +53,17 @@ The check is on **what the model produced**, not on what the host received: the 
 
 ## If you're stuck
 
-- **`produced 0 samples, expected 6144`** — the model is never run; TODO 2 is still empty.
-- **`ring buffer overflow: 64 samples pushed, room for 0`** — the capacity from TODO 1 is too small. Think about the worst moment: the host has just written a full block and the model has not taken anything out yet.
+Each TODO says so when it is still missing:
+
+- **`TODO 1: give the ring buffers a capacity in prepare()`** — `capacity` is still 0. Think about the worst moment: the host has just written a full block and the model has not taken anything out yet.
+- **`TODO 2: the model never ran`** — nothing was pushed or processed in `process_block()`.
+- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: probably one model block per callback, rather than as many as are ready.
+- **`TODO 3: give the host its samples back`** — the output is piling up instead of going out.
+- **`TODO 3: the host got its own input back`** — the host buffer was never written to.
+
+The ring buffer complains too:
+
+- **`ring buffer overflow: 64 samples pushed, room for 0`** — the capacity from TODO 1 is too small.
 - **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; TODO 3 decides what the host gets instead.
 - **`produced 4096 samples, expected 6144`** — samples are being dropped. Everything the host gives you has to go in, and only whole model blocks come out.
 - **It passes at 2048 and fails everywhere else** — the pump only works when the sizes happen to match: probably one model block per callback, rather than as many as are ready.

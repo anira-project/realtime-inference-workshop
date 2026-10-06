@@ -34,17 +34,17 @@ int main() {
     // ---- TODO 1: create the engine -----------------------------------------
     // Once, outside the loop: loading is slow, and the model carries the state
     // from block to block. A fresh model per block would lose it.
-    std::unique_ptr<workshop::LibTorchEngine> engine;
+    std::unique_ptr<LibTorchEngine> engine;
     try {
-        engine = std::make_unique<workshop::LibTorchEngine>(k_model.m_path);
+        engine = std::make_unique<LibTorchEngine>(k_model.m_path);
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
         return 2;
     }
 
-    constexpr size_t k_test_signal_length = workshop::k_signal_length;
-    const std::array<float, k_test_signal_length>& input = workshop::k_input_signal;
-    const std::array<float, k_test_signal_length>& target = workshop::k_target_output_signal;
+    constexpr size_t k_test_signal_length = k_signal_length;
+    const std::array<float, k_test_signal_length>& input = k_input_signal;
+    const std::array<float, k_test_signal_length>& target = k_target_output_signal;
 
     static_assert(input.size() == target.size(), "the target was generated for another signal");
 
@@ -65,11 +65,9 @@ int main() {
             engine->process(output.data() + i * process_size, process_size);
         }
     } catch (const std::exception& error) {
-        std::fprintf(stderr,
-                     "process() failed: %s\n",
-                     workshop::error_summary(error.what()).c_str());
+        std::fprintf(stderr, "process() failed: %s\n", error_summary(error.what()).c_str());
         return 2;
     }
 
-    return workshop::report(output.data(), target.data(), output.size());
+    return report(output.data(), target.data(), output.size());
 }

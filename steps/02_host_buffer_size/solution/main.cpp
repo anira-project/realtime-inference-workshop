@@ -52,11 +52,11 @@ public:
     void prepare(size_t max_block_size) {
         // Room for a full host block on top of a full model block: the host can
         // write before the model has taken anything out.
-        ringBuffersize = max_block_size + m_model_input_size;
+        const size_t ring_buffer_size = max_block_size + m_model_input_size;
 
-        m_input = workshop::RingBuffer(ringBuffersize);
-        m_output = workshop::RingBuffer(ringBuffersize);
-        
+        m_input = RingBuffer(ring_buffer_size);
+        m_output = RingBuffer(ring_buffer_size);
+
         m_block.assign(m_model_input_size, 0.0f);
         m_produced.clear();
         m_engine.reset();
@@ -154,7 +154,6 @@ int main() {
         // The processed samples are compared with the reference output. Only complete
         // model-sized blocks can be checked, so the samples produced for the
         // complete portion of the host input are validated.
-        const std::vector<float>& produced = processor.produced();
         const size_t host_samples = input.size() / host_block_size * host_block_size;
         const size_t expected = host_samples / model_input_size * model_input_size;
 

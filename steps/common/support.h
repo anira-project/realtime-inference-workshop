@@ -8,8 +8,6 @@
 #include <cstdio>
 #include <string>
 
-namespace workshop {
-
 // Everything below this counts as the same signal. The reference comes from a
 // different runtime (ONNX Runtime in Python), so the numbers are close but not
 // bit-identical.
@@ -54,5 +52,3 @@ inline int report(const float* got, const float* want, size_t num_samples) {
     std::printf("FAILED: max abs diff %.3g, tolerance %g.\n", worst, k_tolerance);
     return 1;
 }
-
-}  // namespace workshop

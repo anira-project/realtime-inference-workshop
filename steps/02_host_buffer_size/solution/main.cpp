@@ -44,7 +44,7 @@ namespace {
 // with one model block between an input and an output ring buffer.
 class ProcessorExample {
 public:
-    explicit ProcessorExample(workshop::LibTorchEngine& engine, size_t model_input_size)
+    explicit ProcessorExample(LibTorchEngine& engine, size_t model_input_size)
         : m_engine(engine), m_model_input_size(model_input_size) {}
 
     // Allocate and initialize all processing buffers before audio processing begins.
@@ -91,10 +91,10 @@ public:
     const std::vector<float>& produced() const { return m_produced; }
 
 private:
-    workshop::LibTorchEngine& m_engine;
+    LibTorchEngine& m_engine;
     size_t m_model_input_size;
-    workshop::RingBuffer m_input{0};
-    workshop::RingBuffer m_output{0};
+    RingBuffer m_input{0};
+    RingBuffer m_output{0};
     std::vector<float> m_block;
     std::vector<float> m_produced;
 };
@@ -102,16 +102,16 @@ private:
 }  // namespace
 
 int main() {
-    std::unique_ptr<workshop::LibTorchEngine> engine;
+    std::unique_ptr<LibTorchEngine> engine;
     try {
-        engine = std::make_unique<workshop::LibTorchEngine>(k_model.m_path);
+        engine = std::make_unique<LibTorchEngine>(k_model.m_path);
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
         return 2;
     }
 
-    const std::array<float, workshop::k_signal_length>& input = workshop::k_input_signal;
-    const std::array<float, workshop::k_signal_length>& target = workshop::k_target_output_signal;
+    const std::array<float, k_signal_length>& input = k_input_signal;
+    const std::array<float, k_signal_length>& target = k_target_output_signal;
     const auto model_input_size = static_cast<size_t>(k_model.m_input_size);
 
     ProcessorExample processor(*engine, model_input_size);
@@ -120,18 +120,33 @@ int main() {
     for (const size_t host_block_size : k_host_block_sizes) {
         const std::string label = "host block " + std::to_string(host_block_size);
 
+        std::vector<float> host_output;
         try {
             processor.prepare(host_block_size);
-            workshop::run_host(input.data(),
-                               input.size(),
-                               host_block_size,
-                               [&processor](float* samples, size_t num_samples) {
-                                   processor.process_block(samples, num_samples);
-                               });
+            host_output = run_host(input.data(),
+                                   input.size(),
+                                   host_block_size,
+                                   [&processor](float* samples, size_t num_samples) {
+                                       processor.process_block(samples, num_samples);
+                                   });
         } catch (const std::exception& error) {
-            std::printf("  %-24s %s\n",
-                        label.c_str(),
-                        workshop::error_summary(error.what()).c_str());
+            std::printf("  %-24s %s\n", label.c_str(), error_summary(error.what()).c_str());
+            all_ok = false;
+            continue;
+        }
+
+        // Nothing came out of the model at all.
+        const std::vector<float>& produced = processor.produced();
+        if (produced.empty()) {
+            std::printf("  %-24s TODO 2: the model never ran   <-- FAILED\n", label.c_str());
+            all_ok = false;
+            continue;
+        }
+
+        // The host has to be given something back, even if it is silence.
+        if (std::equal(host_output.begin(), host_output.end(), input.begin())) {
+            std::printf("  %-24s TODO 3: the host got its own input back   <-- FAILED\n",
+                        label.c_str());
             all_ok = false;
             continue;
         }
@@ -152,9 +167,8 @@ int main() {
             continue;
         }
 
-        all_ok &= workshop::report_line(
-            label.c_str(),
-            workshop::max_abs_diff(produced.data(), target.data(), produced.size()));
+        all_ok &= report_line(label.c_str(),
+                              max_abs_diff(produced.data(), target.data(), produced.size()));
     }
 
     if (all_ok) {

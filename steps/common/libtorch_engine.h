@@ -13,8 +13,6 @@
 #include <stdexcept>
 #include <string>
 
-namespace workshop {
-
 class LibTorchEngine {
 public:
     // Loads the TorchScript file: graph and weights in one file, so there is
@@ -60,5 +58,3 @@ public:
 private:
     torch::jit::script::Module m_model;
 };
-
-}  // namespace workshop

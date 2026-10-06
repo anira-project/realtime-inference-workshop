@@ -36,6 +36,7 @@ The steps so far:
 
 1. [Minimal C++ inference](steps/01_minimal_inference/README.md) — load the model, run it, match the Python reference
 2. [Model input size vs. host buffer size](steps/02_host_buffer_size/README.md) — ring buffers between the host's block size and the model's
+3. [Benchmarking and the real-time budget](steps/03_benchmark/README.md) — how long a forward pass takes, and how long in the worst case
 
 ## License
 

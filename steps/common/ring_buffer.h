@@ -9,8 +9,6 @@
 #include <stdexcept>
 #include <vector>
 
-namespace workshop {
-
 class RingBuffer {
 public:
     // @capacity: how many samples can be in flight at once
@@ -55,5 +53,3 @@ private:
     size_t m_write = 0;
     size_t m_size = 0;
 };
-
-}  // namespace workshop

@@ -32,7 +32,7 @@ constexpr struct {
 } k_model{};
 
 int main() {
-    std::unique_ptr<workshop::LibTorchEngine> engine;
+    std::unique_ptr<LibTorchEngine> engine;
     try {
         // ---- TODO 1 --------------------------------------------------------
         // Create the engine with k_model.m_path. It throws if the file is not
@@ -42,7 +42,6 @@ int main() {
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
         return 2;
-
     }
 
     if (engine == nullptr) {
@@ -50,9 +49,9 @@ int main() {
         return 2;
     }
 
-    constexpr size_t k_test_signal_length = workshop::k_signal_length;
-    const std::array<float, k_test_signal_length>& input = workshop::k_input_signal;
-    const std::array<float, k_test_signal_length>& target = workshop::k_target_output_signal;
+    constexpr size_t k_test_signal_length = k_signal_length;
+    const std::array<float, k_test_signal_length>& input = k_input_signal;
+    const std::array<float, k_test_signal_length>& target = k_target_output_signal;
 
     static_assert(input.size() == target.size(), "the target was generated for another signal");
 
@@ -82,11 +81,9 @@ int main() {
             // ----------------------------------------------------------------
         }
     } catch (const std::exception& error) {
-        std::fprintf(stderr,
-                     "process() failed: %s\n",
-                     workshop::error_summary(error.what()).c_str());
+        std::fprintf(stderr, "process() failed: %s\n", error_summary(error.what()).c_str());
         return 2;
     }
 
-    return workshop::report(output.data(), target.data(), output.size());
+    return report(output.data(), target.data(), output.size());
 }

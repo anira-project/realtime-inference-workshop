@@ -23,9 +23,11 @@ At 48 kHz that is 1.33 ms for 64 samples, 10.7 ms for 512, 42.7 ms for 2048. The
 
 Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners.
 
-1. **Run the model inside the timed loop.** Everything in there is what gets measured, so nothing else belongs in it.
-2. **Implement `percentile()`.** Google Benchmark hands you one time per repetition; you sort and index.
-3. **Fix the registration.** By default Google Benchmark averages over as many calls as it likes, and an average is exactly what hides the problem. One call per repetition, `k_repetitions` of them.
+1. **Call the model inside the timed loop.** Only what stands in that loop is measured.
+2. **Implement `percentile()`.** Google Benchmark hands you one time per repetition; sort a copy and index into it.
+3. **Fix the registration.** Left alone, Google Benchmark runs the body as often as it likes and reports the average — the one number that cannot show a worst case. One call per repetition, `k_repetitions` of them.
+
+Each TODO says so while it is still open, in the order above.
 
 Build and run from the repository root:
 
@@ -54,9 +56,9 @@ Run it a few times. The mean and median barely move; the max moves a lot.
 
 ## If you're stuck
 
-- **`ERROR OCCURRED: 'TODO 1: run the model inside the timed loop'`** — the loop body is still empty.
-- **`p95` and `p99` read `0 ms`** — `percentile()` still returns 0.
-- **There is no `_p95` line at all, and `Iterations` is some large number** — the registration from TODO 3 is missing, so Google Benchmark is averaging and there is nothing to take a percentile of.
+- **`ERROR OCCURRED: 'TODO 1: call the model inside the timed loop'`** — the loop body is still empty.
+- **`ERROR OCCURRED: 'TODO 3: time one single call per repetition'`** — the registration still lets Google Benchmark choose, so every repetition is already an average.
+- **`TODO 2: implement percentile(), it still returns 0`**, and `p95`/`p99` read `0.000 ms` next to a mean of several milliseconds.
 - **Every number is suspiciously small** — a Debug build measures something else entirely. Use `-DCMAKE_BUILD_TYPE=Release`.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.

@@ -22,7 +22,7 @@ public:
     // Room left for writing.
     size_t space() const { return m_samples.size() - m_size; }
 
-    // Appends num_samples. Throws if they do not fit — in a plugin you would
+    // Appends num_samples to the back of the buffer. Throws if they do not fit — in a plugin you would
     // size the buffer so this cannot happen, which is the point of TODO 1.
     void push(const float* samples, size_t num_samples) {
         if (num_samples > space()) {
@@ -36,11 +36,11 @@ public:
         m_size += num_samples;
     }
 
-    // Removes num_samples into `samples`. Throws if that many are not there.
+    // Removes num_samples from the front of the buffer into `samples`. Throws if there are not enough samples.
     void pop(float* samples, size_t num_samples) {
         if (num_samples > m_size) {
             throw std::runtime_error("ring buffer underflow: " + std::to_string(num_samples) +
-                                     " samples popped, only " + std::to_string(m_size) + " there");
+                                     " samples popped, only " + std::to_string(m_size) + " available");
         }
         for (size_t i = 0; i < num_samples; ++i) {
             samples[i] = m_samples[m_read];

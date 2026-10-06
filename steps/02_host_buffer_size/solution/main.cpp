@@ -22,8 +22,9 @@
 #include "common/target_signal.h"
 #include "common/test_signal.h"
 
-// What the export fixed, from its metadata. Sample rate and channel count are
-// not used here — they are what the model assumes about the audio it is given.
+// Model settings taken from the export metadata. The sample rate and channel
+// count are not used by this exercise, but describe the audio format expected
+// by the model.
 constexpr struct {
     const char* m_path = WORKSHOP_MODEL_PATH;
     int m_input_size = 2048;
@@ -31,34 +32,40 @@ constexpr struct {
     int m_channels = 1;
 } k_model{};
 
-// Block sizes a host might pick. 2048 is the one case where it happens to match
-// the model; the rest are ordinary, and one of them does not even divide it.
+// Host block sizes to test. The host's block size does not have to match the
+// model's fixed 2048-sample input size; the ring buffers bridge that mismatch.
 constexpr std::array<size_t, 6> k_host_block_sizes = {64, 128, 480, 512, 1024, 2048};
 
 namespace {
 
-// The shape a plugin has: the host says what it will do in prepare(), then
-// calls process_block() over and over. Here, one model block in the middle and
-// a ring buffer on each side.
+// Like a plugin, allocate buffers after the host reports its block size in
+// prepare(). The host then makes repeated process_block() calls. Ring buffers
+// translate between the host's block size and the model's fixed block size,
+// with one model block between an input and an output ring buffer.
 class ProcessorExample {
 public:
     explicit ProcessorExample(workshop::LibTorchEngine& engine, size_t model_input_size)
         : m_engine(engine), m_model_input_size(model_input_size) {}
 
-    // Everything that allocates happens here, before the audio starts.
-    // @max_block_size: the largest block process_block() will be given
+    // Allocate and initialize all processing buffers before audio processing begins.
+    // @max_block_size: the largest block process_block() can be given
     void prepare(size_t max_block_size) {
         // Room for a full host block on top of a full model block: the host can
         // write before the model has taken anything out.
-        m_input = workshop::RingBuffer(max_block_size + m_model_input_size);
-        m_output = workshop::RingBuffer(max_block_size + m_model_input_size);
+        ringBuffersize = max_block_size + m_model_input_size;
+
+        m_input = workshop::RingBuffer(ringBuffersize);
+        m_output = workshop::RingBuffer(ringBuffersize);
+        
         m_block.assign(m_model_input_size, 0.0f);
         m_produced.clear();
         m_engine.reset();
     }
 
-    // One host block, in place: num_samples in, num_samples out.
+    // Processes one block supplied by the host. The same buffer is used for input
+    // and output, and its length is given by num_samples.
     void process_block(float* samples, size_t num_samples) {
+        // Adds the host-provided samples to the input side.
         m_input.push(samples, num_samples);
 
         // Whole model blocks only — the rest waits for the next callback.
@@ -78,8 +85,9 @@ public:
         }
     }
 
-    // Everything the model produced, in order — what the check reads. It grows
-    // inside process_block(), which is fine offline and a problem later.
+    // Stores the model's output blocks in processing order for the final check.
+    // It grows as process_block() runs; this is fine for the exercise, but
+    // a real-time implementation would avoid expanding a vector during audio processing.
     const std::vector<float>& produced() const { return m_produced; }
 
 private:
@@ -128,8 +136,9 @@ int main() {
             continue;
         }
 
-        // The model saw whole blocks, so what it produced has to match the
-        // reference for as far as it got — and it has to have got that far.
+        // The processed samples are compared with the reference output. Only complete
+        // model-sized blocks can be checked, so the samples produced for the
+        // complete portion of the host input are validated.
         const std::vector<float>& produced = processor.produced();
         const size_t host_samples = input.size() / host_block_size * host_block_size;
         const size_t expected = host_samples / model_input_size * model_input_size;

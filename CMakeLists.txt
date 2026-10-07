@@ -18,11 +18,16 @@ workshop_setup_benchmark()
 # and the expected output are compiled in (steps/*/test_signal.h).
 set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward_stateful.pt"
     CACHE FILEPATH "TorchScript model to run")
+set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward.onnx"
+    CACHE FILEPATH "ONNX model to run")
+
+# RealtimeSanitizer for step 5; needs a clang that has it, see that step's README.
+option(WORKSHOP_RTSAN "Build the real-time safety step with -fsanitize=realtime" OFF)
 
 # Build one step (-DWORKSHOP_STEP=01) or all of them.
 set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01, or all")
 
-set(WORKSHOP_STEPS 01_minimal_inference 02_host_buffer_size 03_benchmark)
+set(WORKSHOP_STEPS 01_minimal_inference 02_host_buffer_size 03_benchmark 05_realtime_safety)
 
 foreach(step ${WORKSHOP_STEPS})
     if(WORKSHOP_STEP STREQUAL "all" OR step MATCHES "^${WORKSHOP_STEP}")

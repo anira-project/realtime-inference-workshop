@@ -39,6 +39,7 @@ The steps so far:
 3. [Benchmarking and the real-time budget](steps/03_benchmark/README.md) — how long a forward pass takes, and how long in the worst case
 4. [Shipping the engine](steps/04_shipping_the_engine/README.md) — LibTorch vs. ONNX Runtime vs. your own code; talk only, no exercise
 5. [Real-time safety](steps/05_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
+6. [Inference on a worker thread](steps/06_threading/README.md) — lock-free queues, and an audio thread that allocates nothing
 
 ## License
 

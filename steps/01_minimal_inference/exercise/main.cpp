@@ -2,7 +2,7 @@
 //
 // Goal:   load the model with LibTorch and run the test signal through it.
 // Given:  common/libtorch_engine.h, the engine — read it first.
-// You do: wire it up, at the three TODO banners below.
+// Task: wire it up, at the three TODO banners below.
 // Check:  the output within 1e-4 of what the model produced in Python.
 //
 // It builds and runs as it is, and says what is still missing.

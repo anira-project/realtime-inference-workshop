@@ -51,11 +51,11 @@ public:
 
     // Allocate and initialize all processing buffers before audio processing begins.
     // @max_block_size: the largest block process_block() can be given
-    void prepare(size_t max_block_size) {
+    void prepare([[maybe_unused]] size_t max_block_size) {
         // ---- TODO 1 --------------------------------------------------------
-        // Choose a ring buffer size. Choose a capacity that can absorb the temporary mismatch between the host
-        // block size and the model block size. Consider how much audio may be waiting
-        // when the host has just delivered a block. Otherwise push() can overflow.
+        // Choose a ring buffer size. Choose a capacity that can absorb the temporary mismatch
+        // between the host block size and the model block size. Consider how much audio may be
+        // waiting when the host has just delivered a block. Otherwise push() can overflow.
         // --------------------------------------------------------------------
         const size_t capacity = 0;
 
@@ -77,10 +77,8 @@ public:
         // Add the host-provided samples to the input side, then process any complete
         // model-sized blocks that are available. Move each block through the model,
         // make its output available to the host, and Append every
-        // block the model returns to m_produced, so the check can read it. 
+        // block the model returns to m_produced, so the check can read it.
         // --------------------------------------------------------------------
-
-        
 
         // ---- TODO 3 --------------------------------------------------------
         // Write exactly num_samples output samples into the host-provided buffer. Use any
@@ -166,7 +164,6 @@ int main() {
         // The processed samples are compared with the reference output. Only complete
         // model-sized blocks can be checked, so the samples produced for the
         // complete portion of the host input are validated.
-        const std::vector<float>& produced = processor.produced();
         const size_t host_samples = input.size() / host_block_size * host_block_size;
         const size_t expected = host_samples / model_input_size * model_input_size;
 

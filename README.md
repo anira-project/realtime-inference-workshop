@@ -41,6 +41,7 @@ The steps so far:
 5. [Real-time safety](steps/05_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
 6. [Inference on a worker thread](steps/06_threading/README.md) — lock-free queues, and an audio thread that allocates nothing
 7. [Latency and the dry/wet mix](steps/07_latency/README.md) — what to report to the host, and how to prove it
+8. [The plugin](steps/08_juce_plugin/README.md) — all of it inside JUCE; solution only, built with `-DWORKSHOP_JUCE=ON`
 
 ## License
 

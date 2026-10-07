@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 
+#include <cstdio>
+
 namespace {
 constexpr const char* k_mix_id = "mix";
 }
@@ -28,23 +30,27 @@ juce::AudioProcessorValueTreeState::ParameterLayout WorkshopPluginProcessor::mak
 // including loading the model and starting the worker threads.
 void WorkshopPluginProcessor::prepareToPlay(double sample_rate, int samples_per_block) {
     const auto channels = static_cast<size_t>(getTotalNumInputChannels());
-
-    m_engines.clear();
-    m_channels.clear();
     m_load_error.clear();
 
+    // Loading takes a second and the host may call this often — once per
+    // channel is enough, and only when the channel count actually changed.
     try {
-        for (size_t channel = 0; channel < channels; ++channel) {
+        while (m_engines.size() < channels) {
             m_engines.push_back(std::make_unique<LibTorchEngine>(WORKSHOP_MODEL_PATH));
             m_channels.push_back(std::make_unique<LatencyProcessor>(*m_engines.back()));
-            m_channels.back()->prepare(static_cast<size_t>(samples_per_block));
         }
     } catch (const std::exception& error) {
+        std::fprintf(stderr, "plugin: %s\n", error.what());
         m_load_error = error.what();
         m_engines.clear();
         m_channels.clear();
         setLatencySamples(0);
         return;
+    }
+
+    // Buffers and threads do get rebuilt: the block size may have changed.
+    for (size_t channel = 0; channel < channels; ++channel) {
+        m_channels[channel]->prepare(static_cast<size_t>(samples_per_block));
     }
 
     // The number from step 7, now where it belongs: the host delays every other

@@ -134,7 +134,13 @@ public:
         while (m_input.available() >= k_model.m_input_size) {
             ModelBlock block;
             m_input.pop(block.m_samples.data(), k_model.m_input_size);
-            if (!m_to_worker.try_enqueue(block)) { break; }
+
+            // Queue full means the worker is behind. The block is already out
+            // of the ring buffer, so it is dropped — a glitch, but a bounded
+            // one. Keeping it would let the backlog grow without end.
+            if (!m_to_worker.try_enqueue(block)) {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+            }
         }
 
         // Collect what came back since the last callback — but only as much as
@@ -169,7 +175,11 @@ private:
             m_engine.process(block.m_samples.data(), k_model.m_input_size);
             m_produced.insert(m_produced.end(), block.m_samples.begin(), block.m_samples.end());
 
+            // Wait for room, but keep watching the stop flag: the audio thread
+            // may have stopped calling us, and then this would never return —
+            // a lock-free queue does not save you from a deadlock at shutdown.
             while (!m_from_worker.try_enqueue(block)) {
+                if (!m_running.load(std::memory_order_acquire)) { break; }
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
         }
@@ -188,7 +198,8 @@ private:
     moodycamel::ReaderWriterQueue<ModelBlock> m_from_worker{0};
     std::thread m_worker;
     std::atomic<bool> m_running{false};
-    std::vector<float> m_produced;  // Written on the worker thread only
+    std::atomic<long> m_dropped{0};  // Blocks the worker could not take in time
+    std::vector<float> m_produced;   // Written on the worker thread only
 };
 
 }  // namespace

@@ -79,6 +79,8 @@ public:
         m_output = RingBuffer(max_block_size + k_queue_capacity * k_model.m_input_size);
         m_dry = RingBuffer(max_block_size + latency_samples());
         m_engine.reset();
+        m_dry_block.assign(max_block_size, 0.0f);
+        m_wet_block.assign(max_block_size, 0.0f);
 
         // Prime both paths with the same amount of silence: one block while the
         // input is still being collected, and one more so the worker has a full
@@ -120,7 +122,13 @@ public:
         while (m_input.available() >= k_model.m_input_size) {
             ModelBlock block;
             m_input.pop(block.m_samples.data(), k_model.m_input_size);
-            if (!m_to_worker.try_enqueue(block)) { break; }
+
+            // Queue full means the worker is behind. The block is already out
+            // of the ring buffer, so it is dropped — a glitch, but a bounded
+            // one. Keeping it would let the backlog grow without end.
+            if (!m_to_worker.try_enqueue(block)) {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);
+            }
         }
 
         ModelBlock done;
@@ -153,7 +161,11 @@ private:
             }
             m_engine.process(block.m_samples.data(), k_model.m_input_size);
             m_produced.insert(m_produced.end(), block.m_samples.begin(), block.m_samples.end());
+            // Wait for room, but keep watching the stop flag: the audio thread
+            // may have stopped calling us, and then this would never return —
+            // a lock-free queue does not save you from a deadlock at shutdown.
             while (!m_from_worker.try_enqueue(block)) {
+                if (!m_running.load(std::memory_order_acquire)) { break; }
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
         }
@@ -171,10 +183,11 @@ private:
     moodycamel::ReaderWriterQueue<ModelBlock> m_from_worker{0};
     std::thread m_worker;
     std::atomic<bool> m_running{false};
+    std::atomic<long> m_dropped{0};  // Blocks the worker could not take in time
     std::vector<float> m_produced;
     std::vector<float> m_silence;
-    std::array<float, 4096> m_dry_block{};
-    std::array<float, 4096> m_wet_block{};
+    std::vector<float> m_dry_block;  // Scratch, sized in prepare()
+    std::vector<float> m_wet_block;
     float m_mix = 1.0f;
     std::atomic<bool> m_mix_missing{false};
 };

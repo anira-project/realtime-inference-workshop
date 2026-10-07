@@ -51,9 +51,11 @@ public:
     // Allocate and initialize all processing buffers before audio processing begins.
     // @max_block_size: the largest block process_block() can be given
     void prepare(size_t max_block_size) {
-        // Room for a full host block on top of a full model block: the host can
-        // write before the model has taken anything out.
-        const size_t capacity = max_block_size + m_model_input_size;
+        // ---- TODO 1: ring buffer capacity ------------------------------------
+        // The worst moment: the host has just written a block, the model has
+        // just produced one, and what it produced before is not drained yet —
+        // which happens whenever the host block does not divide the model one.
+        const size_t capacity = max_block_size + 2 * m_model_input_size;
 
         m_input = RingBuffer(capacity);
         m_output = RingBuffer(capacity);
@@ -66,6 +68,7 @@ public:
     // Processes one block supplied by the host. The same buffer is used for input
     // and output, and its length is given by num_samples.
     void process_block(float* samples, size_t num_samples) {
+        // ---- TODO 2: take samples in and run whole model blocks --------------
         // Adds the host-provided samples to the input side.
         m_input.push(samples, num_samples);
 
@@ -77,6 +80,7 @@ public:
             m_produced.insert(m_produced.end(), m_block.begin(), m_block.end());
         }
 
+        // ---- TODO 3: give the host its samples back --------------------------
         // Hand back what is ready. At the start nothing is, so the host gets
         // silence — that is latency, and it has its own step.
         if (m_output.available() >= num_samples) {

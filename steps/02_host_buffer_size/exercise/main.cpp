@@ -53,9 +53,12 @@ public:
     // @max_block_size: the largest block process_block() can be given
     void prepare([[maybe_unused]] size_t max_block_size) {
         // ---- TODO 1 --------------------------------------------------------
-        // Choose a ring buffer size. Choose a capacity that can absorb the temporary mismatch
-        // between the host block size and the model block size. Consider how much audio may be
-        // waiting when the host has just delivered a block. Otherwise push() can overflow.
+        // Choose a ring buffer size: a capacity that can absorb the mismatch
+        // between the host block size and the model block size. Think about the
+        // worst moment — the host has just delivered a block, the model has just
+        // produced one, and the one before it has not been drained yet. This
+        // happens as soon as the host block does not divide the model block.
+        // Otherwise push() throws.
         // --------------------------------------------------------------------
         const size_t capacity = 0;
 

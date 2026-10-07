@@ -107,6 +107,7 @@ public:
         m_produced.clear();
         m_produced.reserve(k_signal_length);
 
+        // ---- TODO 1: queue capacity, and the worker thread -------------------
         // The queues allocate their blocks up front; try_enqueue() never grows
         // them, it fails instead — which is what the audio thread needs.
         m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
@@ -125,6 +126,7 @@ public:
 
     // The audio thread: no engine, no allocation, no lock. Only copies.
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
+        // ---- TODO 2: the audio thread ----------------------------------------
         m_input.push(samples, num_samples);
 
         // Hand whole model blocks over. If the queue is full the worker is
@@ -155,6 +157,7 @@ public:
 private:
     // The worker thread: the engine lives here, and everything the engine does
     // — allocating, locking, growing arenas — is allowed on this side.
+    // ---- TODO 3: the worker thread -------------------------------------------
     void worker() {
         ModelBlock block;
         while (m_running.load(std::memory_order_acquire)) {

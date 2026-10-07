@@ -40,6 +40,7 @@ The steps so far:
 4. [Shipping the engine](steps/04_shipping_the_engine/README.md) — LibTorch vs. ONNX Runtime vs. your own code; talk only, no exercise
 5. [Real-time safety](steps/05_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
 6. [Inference on a worker thread](steps/06_threading/README.md) — lock-free queues, and an audio thread that allocates nothing
+7. [Latency and the dry/wet mix](steps/07_latency/README.md) — what to report to the host, and how to prove it
 
 ## License
 

@@ -88,11 +88,7 @@ public:
         // processed samples that are ready; before the first model block is complete,
         // decide what value should fill the unavailable portion.
         // --------------------------------------------------------------------
-        if (m_output.available() >= num_samples) {
-            m_output.pop(samples, num_samples);
-        } else {
-            std::fill_n(samples, num_samples, 0.0f);
-        }
+ 
     }
 
     // Stores the model's output blocks in processing order for the final check.

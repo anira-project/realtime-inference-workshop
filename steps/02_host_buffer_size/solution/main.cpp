@@ -55,9 +55,9 @@ public:
         // write before the model has taken anything out.
         const size_t capacity = max_block_size + m_model_input_size;
 
-        m_input = workshop::RingBuffer(capacity);
-        m_output = workshop::RingBuffer(capacity);
-        
+        m_input = RingBuffer(capacity);
+        m_output = RingBuffer(capacity);
+
         m_block.assign(m_model_input_size, 0.0f);
         m_produced.clear();
         m_engine.reset();

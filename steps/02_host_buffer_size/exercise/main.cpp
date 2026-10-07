@@ -33,8 +33,9 @@ constexpr struct {
     int m_channels = 1;
 } k_model{};
 
-// Host block sizes to test. The host's block size does not have to match the
-// model's fixed 2048-sample input size; the ring buffers bridge that mismatch.
+// Block sizes a host might pick. Only 2048 happens to match the model. 480 is
+// the awkward one: it is a whole number of milliseconds at 48 kHz, but neither
+// a divisor of 2048 nor of the test signal, so that run stops a little early.
 constexpr std::array<size_t, 6> k_host_block_sizes = {64, 128, 480, 512, 1024, 2048};
 
 namespace {
@@ -56,19 +57,17 @@ public:
         // block size and the model block size. Consider how much audio may be waiting
         // when the host has just delivered a block. Otherwise push() can overflow.
         // --------------------------------------------------------------------
-        ringBuffersize = 0; // TODO 1: define ringBuffersize so the model never overflows
+        const size_t capacity = 0;
 
-        m_input = workshop::RingBuffer(ringBuffersize);
-        m_output = workshop::RingBuffer(ringBuffersize);
+        if (capacity == 0) {
+            throw std::runtime_error("TODO 1: give the ring buffers a capacity in prepare()");
+        }
+        m_input = RingBuffer(capacity);
+        m_output = RingBuffer(capacity);
 
         m_block.assign(m_model_input_size, 0.0f);
         m_produced.clear();
         m_engine.reset();
-
-        if (ringBuffersize == 0) {
-            std::fprintf(stderr, "TODO 1: define ringBuffersize in prepare() so the model never overflows.\n");
-            exit(1);
-        }
     }
 
     // Processes one block supplied by the host. The same buffer is used for input
@@ -80,7 +79,7 @@ public:
         // make its output available to the host, and Append every
         // block the model returns to m_produced, so the check can read it. 
         // --------------------------------------------------------------------
-        
+
         
 
         // ---- TODO 3 --------------------------------------------------------
@@ -88,12 +87,19 @@ public:
         // processed samples that are ready; before the first model block is complete,
         // decide what value should fill the unavailable portion.
         // --------------------------------------------------------------------
- 
+
+        // After a finished callback, less than one model block is waiting on
+        // either side: anything else means samples are piling up.
+        if (m_input.available() >= m_model_input_size) {
+            throw std::runtime_error("TODO 2: run the model on the samples that arrived");
+        }
+        if (m_output.available() >= m_model_input_size) {
+            throw std::runtime_error("TODO 3: give the host its samples back");
+        }
     }
 
-    // Stores the model's output blocks in processing order for the final check.
-    // It grows as process_block() runs; this is fine for the exercise, but
-    // a real-time implementation would avoid expanding a vector during audio processing.
+    // Everything the model produced, in order — what the check reads. It grows
+    // inside process_block(), which is fine offline and a problem later.
     const std::vector<float>& produced() const { return m_produced; }
 
 private:
@@ -103,7 +109,6 @@ private:
     RingBuffer m_output{0};
     std::vector<float> m_block;
     std::vector<float> m_produced;
-    std::size_t ringBuffersize = 0;
 };
 
 }  // namespace
@@ -130,13 +135,12 @@ int main() {
         std::vector<float> host_output;
         try {
             processor.prepare(host_block_size);
-
-            workshop::run_host(input.data(),
-                               input.size(),
-                               host_block_size,
-                               [&processor](float* samples, size_t num_samples) {
-                                   processor.process_block(samples, num_samples);
-                               });
+            host_output = run_host(input.data(),
+                                   input.size(),
+                                   host_block_size,
+                                   [&processor](float* samples, size_t num_samples) {
+                                       processor.process_block(samples, num_samples);
+                                   });
         } catch (const std::exception& error) {
             std::printf("  %-24s %s\n", label.c_str(), error_summary(error.what()).c_str());
             all_ok = false;
@@ -167,24 +171,16 @@ int main() {
         const size_t expected = host_samples / model_input_size * model_input_size;
 
         if (produced.size() != expected) {
-            if (produced.size() == 0) {
-                 std::fprintf(stderr, "TODO 2: run the model whenever a whole block has arrived.\n");
-                 exit(1);
-            }
-            else {
-                std::printf(" %-24s produced %zu samples, expected %zu   <-- FAILED\n",
+            std::printf("  %-24s produced %zu samples, expected %zu   <-- FAILED\n",
                         label.c_str(),
                         produced.size(),
                         expected);
             all_ok = false;
             continue;
-            }
-            
         }
 
-        all_ok &= workshop::report_line(
-            label.c_str(),
-            workshop::max_abs_diff(produced.data(), target.data(), produced.size()));
+        all_ok &= report_line(label.c_str(),
+                              max_abs_diff(produced.data(), target.data(), produced.size()));
     }
 
     if (all_ok) {

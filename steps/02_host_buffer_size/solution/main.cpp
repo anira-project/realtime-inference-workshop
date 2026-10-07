@@ -32,8 +32,9 @@ constexpr struct {
     int m_channels = 1;
 } k_model{};
 
-// Host block sizes to test. The host's block size does not have to match the
-// model's fixed 2048-sample input size; the ring buffers bridge that mismatch.
+// Block sizes a host might pick. Only 2048 happens to match the model. 480 is
+// the awkward one: it is a whole number of milliseconds at 48 kHz, but neither
+// a divisor of 2048 nor of the test signal, so that run stops a little early.
 constexpr std::array<size_t, 6> k_host_block_sizes = {64, 128, 480, 512, 1024, 2048};
 
 namespace {
@@ -52,10 +53,10 @@ public:
     void prepare(size_t max_block_size) {
         // Room for a full host block on top of a full model block: the host can
         // write before the model has taken anything out.
-        ringBuffersize = max_block_size + m_model_input_size;
+        const size_t capacity = max_block_size + m_model_input_size;
 
-        m_input = workshop::RingBuffer(ringBuffersize);
-        m_output = workshop::RingBuffer(ringBuffersize);
+        m_input = workshop::RingBuffer(capacity);
+        m_output = workshop::RingBuffer(capacity);
         
         m_block.assign(m_model_input_size, 0.0f);
         m_produced.clear();
@@ -154,7 +155,6 @@ int main() {
         // The processed samples are compared with the reference output. Only complete
         // model-sized blocks can be checked, so the samples produced for the
         // complete portion of the host input are validated.
-        const std::vector<float>& produced = processor.produced();
         const size_t host_samples = input.size() / host_block_size * host_block_size;
         const size_t expected = host_samples / model_input_size * model_input_size;
 

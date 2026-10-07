@@ -13,6 +13,8 @@ include(FetchContent)
 set(WORKSHOP_BACKENDS_VERSION "v2.4.0" CACHE STRING "anira-project/backends release tag")
 set(WORKSHOP_LIBTORCH_VERSION "2.12.0" CACHE STRING "LibTorch version in that release")
 set(WORKSHOP_LIBTORCH_ROOTDIR "" CACHE PATH "Use this prebuilt LibTorch tree instead of downloading")
+set(WORKSHOP_ONNXRUNTIME_VERSION "1.26.0" CACHE STRING "ONNX Runtime version in that release")
+set(WORKSHOP_ONNXRUNTIME_ROOTDIR "" CACHE PATH "Use this prebuilt ONNX Runtime tree instead of downloading")
 
 # <OS>-<arch> part of the asset name, as the release names them.
 function(_workshop_platform out)
@@ -75,6 +77,50 @@ function(workshop_copy_libtorch_runtime target)
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${WORKSHOP_LIBTORCH_LIB_DIR}" "$<TARGET_FILE_DIR:${target}>"
         COMMENT "Copying LibTorch runtime next to ${target}"
+        VERBATIM
+    )
+endfunction()
+
+# ONNX Runtime: the same release, unpacked to include/ + lib/. It ships no CMake
+# config, so the imported target is built here.
+macro(workshop_setup_onnxruntime)
+    if(NOT TARGET workshop::onnxruntime)
+        if(WORKSHOP_ONNXRUNTIME_ROOTDIR)
+            set(ort_root "${WORKSHOP_ONNXRUNTIME_ROOTDIR}")
+        else()
+            _workshop_platform(ort_platform)
+            set(ort_asset "onnxruntime-${WORKSHOP_ONNXRUNTIME_VERSION}-${ort_platform}-shared.zip")
+            message(STATUS "Workshop: fetching ${ort_asset}")
+
+            FetchContent_Declare(workshop_onnxruntime
+                URL "https://github.com/anira-project/backends/releases/download/${WORKSHOP_BACKENDS_VERSION}/${ort_asset}"
+                DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+                SOURCE_SUBDIR no-cmake-project
+            )
+            FetchContent_MakeAvailable(workshop_onnxruntime)
+            set(ort_root "${workshop_onnxruntime_SOURCE_DIR}")
+        endif()
+
+        file(GLOB ort_library
+            "${ort_root}/lib/libonnxruntime.dylib"
+            "${ort_root}/lib/libonnxruntime.so*"
+            "${ort_root}/lib/onnxruntime.lib")
+        list(GET ort_library 0 ort_library)
+
+        add_library(workshop::onnxruntime SHARED IMPORTED GLOBAL)
+        set_target_properties(workshop::onnxruntime PROPERTIES
+            IMPORTED_LOCATION "${ort_library}"
+            INTERFACE_INCLUDE_DIRECTORIES "${ort_root}/include")
+        set(WORKSHOP_ONNXRUNTIME_LIB_DIR "${ort_root}/lib" CACHE PATH "" FORCE)
+    endif()
+endmacro()
+
+# Copy the ONNX Runtime shared library next to an executable.
+function(workshop_copy_onnxruntime_runtime target)
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${WORKSHOP_ONNXRUNTIME_LIB_DIR}" "$<TARGET_FILE_DIR:${target}>"
+        COMMENT "Copying the ONNX Runtime next to ${target}"
         VERBATIM
     )
 endfunction()

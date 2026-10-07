@@ -200,7 +200,12 @@ int main() {
     }
 
     ThreadedProcessor processor(*engine);
-    processor.prepare(k_host_block_size);
+    try {
+        processor.prepare(k_host_block_size);
+    } catch (const std::runtime_error& error) {
+        std::printf("%s\n", error.what());
+        return 1;
+    }
 
     // The host now runs in real time: the worker has to keep up with a block of
     // audio every 10.7 ms, rather than with a loop going as fast as it can.

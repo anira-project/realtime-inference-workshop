@@ -71,6 +71,20 @@ Look at what is left in `process_block`: a ring buffer push, a `try_enqueue`, a 
 
 And what it does when the worker is late: `try_dequeue` returns nothing and the host gets silence. That is a dropout, and it is a decision — the alternative, waiting for the worker, would be a missed deadline for the whole host.
 
+## Two things that only show up under load
+
+Both were found by running the plugin from step 8 through `pluginval`, and both
+are in the solution:
+
+- **A full queue must drop, not stall.** If `try_enqueue` fails and the block
+  stays in the ring buffer, the backlog grows until the buffer overflows. The
+  block is already out of the ring, so it is dropped — a glitch, but a bounded
+  one.
+- **The worker must watch the stop flag while it waits.** Waiting for room in
+  the output queue without checking whether the processor is shutting down
+  deadlocks `join()` as soon as the host stops calling the callback. A
+  lock-free queue does not save you from a deadlock at shutdown.
+
 ## Slides
 
 [`slides/06-threading.md`](../../slides/06-threading.md).

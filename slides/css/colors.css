@@ -6,7 +6,7 @@
 
   /* Colors */
   --fs-link-color: #55A49F;
-  --fs-link-color-light: #D6FCB7;
+  --fs-link-color-light: #b7d8fc;
   --fs-link-color-hover: #FE938C;
   --fs-fragment-select-light: #EDAF97;
   --fs-fragment-select-color-1: #77af49;
@@ -33,6 +33,7 @@
   --fs-overlay: rgba(255, 255, 255, 0.96);
   --fs-header-bg: #fafafa;
   --fs-fragment-select-color: rgba(230, 152, 145, 0.921);
+  --fs-code-keyword-color: #007f7b;
 }
 
 /* Dark theme for presentations */

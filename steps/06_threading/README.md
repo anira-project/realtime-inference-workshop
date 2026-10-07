@@ -20,6 +20,22 @@ Two [moodycamel `ReaderWriterQueue`s](https://github.com/cameron314/readerwriter
 
 What crosses the queue is a `ModelBlock`: a fixed `std::array<float, 2048>` by value. Copying 8 KB is a `memcpy`; passing a pointer would mean agreeing on who frees it.
 
+## What to do
+
+Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners.
+
+1. **In `prepare()`**: give both queues their capacity and start the worker thread. Everything that allocates belongs here.
+2. **In `process_block()`**: the audio thread. Samples in, whole model blocks over to the worker, results back, samples out — and nothing that allocates, locks or waits.
+3. **In `worker()`**: take blocks out, run the engine, hand them back, and drain what is left when the loop ends. This side may sleep and allocate.
+
+Each TODO says so while it is still open:
+
+```
+TODO 1: give the queues a capacity and start the worker
+TODO 2: the audio thread never handed a block over.
+TODO 3: the worker never picked a block up.
+```
+
 ## What you get
 
 ```

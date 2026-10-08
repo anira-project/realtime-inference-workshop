@@ -2,7 +2,7 @@
 //
 // Goal:  feed a model that only takes 2048 samples from a host that hands you
 //        whatever it likes.
-// Given: common/ring_buffer.h and common/host.h.
+// Given: common/helpers/ring_buffer.h and common/helpers/host.h.
 // Check: the stream the model produced is the same for every host block size.
 
 #include <algorithm>
@@ -15,12 +15,12 @@
 #include <string>
 #include <vector>
 
-#include "common/host.h"
-#include "common/libtorch_engine.h"
-#include "common/ring_buffer.h"
-#include "common/support.h"
-#include "common/target_signal.h"
-#include "common/test_signal.h"
+#include "common/helpers/host.h"
+#include "common/helpers/libtorch_engine.h"
+#include "common/helpers/ring_buffer.h"
+#include "common/helpers/support.h"
+#include "common/assets/target_signal.h"
+#include "common/assets/test_signal.h"
 
 // Model settings taken from the export metadata. The sample rate and channel
 // count are not used by this exercise, but describe the audio format expected

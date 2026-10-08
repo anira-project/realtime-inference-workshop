@@ -10,10 +10,10 @@ The model's block size comes from the export. The host's comes from the audio de
 
 ## What you have
 
-- [`common/ring_buffer.h`](../common/ring_buffer.h) — a ring buffer, written for you: `push`, `pop`, `available`, `space`. It throws on overflow and underflow, which is how you find out your capacity was wrong.
-- [`common/host.h`](../common/host.h) — a fake host: it calls your `process(samples, num_samples)` with one block at a time, at a size you choose. No audio device, so it runs anywhere.
-- `common/libtorch_engine.h` — the engine from step 1, unchanged.
-- `common/support.h`, `common/test_signal.h`, `common/target_signal.h` — as before.
+- [`common/helpers/ring_buffer.h`](../common/helpers/ring_buffer.h) — a ring buffer, written for you: `push`, `pop`, `available`, `space`. It throws on overflow and underflow, which is how you find out your capacity was wrong.
+- [`common/helpers/host.h`](../common/helpers/host.h) — a fake host: it calls your `process(samples, num_samples)` with one block at a time, at a size you choose. No audio device, so it runs anywhere.
+- `common/helpers/libtorch_engine.h` — the engine from step 1, unchanged.
+- `common/helpers/support.h`, `common/assets/test_signal.h`, `common/assets/target_signal.h` — as before.
 
 ## What to do
 

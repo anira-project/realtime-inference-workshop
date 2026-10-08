@@ -4,7 +4,7 @@
 #include <array>
 #include <cstddef>
 
-#include "common/test_signal.h"  // k_signal_length
+#include "common/assets/test_signal.h"  // k_signal_length
 
 
 

@@ -15,7 +15,7 @@
 #include <thread>
 #include <vector>
 
-#include "common/ring_buffer.h"
+#include "common/helpers/ring_buffer.h"
 
 // Model settings taken from the export metadata.
 constexpr struct {

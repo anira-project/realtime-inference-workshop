@@ -1,7 +1,7 @@
 // Step 1 — Minimal C++ inference, reference implementation
 //
 // Goal:  load the model with LibTorch and run the test signal through it.
-// Given: common/libtorch_engine.h, the engine.
+// Given: common/helpers/libtorch_engine.h, the engine.
 // Check: the output within 1e-4 of what the model produced in Python.
 
 #include <array>
@@ -11,10 +11,10 @@
 #include <stdexcept>
 #include <vector>
 
-#include "common/libtorch_engine.h"
-#include "common/support.h"
-#include "common/target_signal.h"
-#include "common/test_signal.h"
+#include "common/helpers/libtorch_engine.h"
+#include "common/helpers/support.h"
+#include "common/assets/target_signal.h"
+#include "common/assets/test_signal.h"
 
 // Model settings taken from the export metadata. The sample rate and channel
 // count are not used by this exercise, but describe the audio format expected

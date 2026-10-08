@@ -10,7 +10,9 @@ Note:
 
 ---
 
-## What we have been shipping
+<div class="tag">Shipping</div>
+
+## 262 KB of program.<br><span class="then">318 MB of engine.</span>
 
 Our step 1 binary:
 
@@ -25,14 +27,14 @@ libtorch runtime         318 MB
   libtorch_cpu.dylib     206 MB   ← one file
 ```
 
-A 262 KB program and 318 MB of engine.
-
 Note:
     - Measured on this machine, macOS arm64, from the anira-project/backends v2.4.0 release.
 
 ---
 
-## The same model, other engines
+<div class="tag">Engines</div>
+
+## Same model, 13× smaller.
 
 macOS arm64, prebuilt, from `anira-project/backends` v2.4.0:
 
@@ -44,11 +46,14 @@ macOS arm64, prebuilt, from `anira-project/backends` v2.4.0:
 | LiteRT 2.1 | 3 MB | — |
 | TFLite 2.17 | 2 MB | — |
 
-Same weights, same output to 1e-6. **13× smaller** for the ONNX path.
+Note:
+    - Same weights, same output to 1e-6. 13× smaller for the ONNX path.
 
 ---
 
-## Why LibTorch is that big
+<div class="tag">LibTorch</div>
+
+## It is PyTorch, minus Python.
 
 It is not an inference engine. It is **PyTorch**, minus Python:
 
@@ -60,7 +65,9 @@ Convenient, because the thing you traced is exactly the thing that runs.
 
 ---
 
-## The trade-off
+<div class="tag">The trade-off</div>
+
+## Less work, or less weight.
 
 ```
 high level                                          low level
@@ -76,7 +83,9 @@ biggest            much smaller          leaner          fastest — if you are 
 
 ---
 
-## When hand-written wins
+<div class="tag">Hand-written</div>
+
+## Potentially the smallest and fastest.<br><span class="then">At the cost of maintaining it yourself.</span>
 
 A GRU with 32 units, a small TCN, a biquad-shaped network: a few hundred lines of
 plain C++, no dependency, no allocation, no graph.
@@ -89,7 +98,9 @@ Note:
 
 ---
 
-## What a plugin actually ships
+<div class="tag">What ships</div>
+
+## Users download the engine too.
 
 A VST3 is a bundle. Your engine goes inside it, per architecture:
 
@@ -104,7 +115,9 @@ impression of your product.
 
 ---
 
-## So why did we start with LibTorch?
+<div class="tag">LibTorch first</div>
+
+## Start with a correct reference.<br><span class="then">Optimise against it afterwards.</span>
 
 Because it is the shortest path from a trained model to a correct result — and
 correctness first is a good order to work in.
@@ -120,14 +133,16 @@ Swapping the engine is a different `Engine` class behind the same three methods.
 
 ---
 
-## What to take away
+<div class="tag">What to take away</div>
 
-- The engine is a **shipping decision**, not only a performance one
-- Measure the size early — it is hard to walk back from after a release
-- Correct first, small second, fast third
-- Keep the engine behind a thin interface, and the choice stays open
+## The choice of engine affects distribution,<br><span class="then">not only performance.</span>
 
-<!-- .slide: data-state="no-footer" -->
+<div class="statement-points">
+  <div>Measure the size early — it is hard to walk back after a release</div>
+  <div>Correct first, small second, fast third</div>
+  <div>Keep the engine behind a thin interface, and the choice stays open</div>
+</div>
+
 
 Note:
     - Next: real-time safety, which no amount of size tuning fixes.

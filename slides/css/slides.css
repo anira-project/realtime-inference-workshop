@@ -504,6 +504,127 @@
 }
 
 /*********************************************
+ * CHAPTER OVERVIEW
+ *********************************************/
+
+.chapter-overview {
+  display: none;
+  position: fixed;
+  inset: 0;
+  /* Above the header and footer */
+  z-index: 2000;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--fs-background-color);
+}
+
+.chapter-overview.open {
+  display: flex;
+}
+
+.chapter-overview-chapters {
+  display: flex;
+  flex: none;
+  gap: 16px;
+  /* Room for the outline of the current chapter */
+  padding: 6px 6px 12px 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--fs-border);
+}
+
+/* Always visible, macOS hides overlay scrollbars otherwise */
+.chapter-overview ::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.chapter-overview ::-webkit-scrollbar-thumb {
+  background: var(--fs-border);
+  border-radius: 4px;
+}
+
+.chapter-overview-chapter {
+  --thumb-scale: 0.1;
+  flex: none;
+  width: 192px;
+  cursor: pointer;
+}
+
+.chapter-overview-title {
+  margin-top: 6px;
+  font-family: var(--fs-heading-font);
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--fs-text-muted-color);
+}
+
+.chapter-overview-chapter.selected .chapter-overview-title {
+  color: var(--fs-heading-color);
+}
+
+.chapter-overview-chapter.selected .chapter-overview-thumb {
+  border-color: var(--fs-link-color);
+}
+
+.chapter-overview-slides {
+  flex: 1;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.chapter-overview-list {
+  --thumb-scale: 0.0833;
+  display: none;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chapter-overview-list.selected {
+  display: flex;
+}
+
+/* The 1920 x 1080 slide at --thumb-scale */
+.chapter-overview-thumb {
+  position: relative;
+  flex: none;
+  width: calc(1920px * var(--thumb-scale));
+  height: calc(1080px * var(--thumb-scale));
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--fs-background-color);
+  border: 1px solid var(--fs-border);
+  border-radius: 4px;
+}
+
+.chapter-overview-thumb:hover {
+  border-color: var(--fs-link-color);
+}
+
+.chapter-overview-chapter.current .chapter-overview-thumb,
+.chapter-overview-thumb.current {
+  outline: 3px solid var(--fs-highlight-background);
+  outline-offset: 2px;
+}
+
+.reveal .chapter-overview-slide {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  padding: 108px 192px;
+  box-sizing: border-box;
+  text-align: left;
+  line-height: 1.3;
+  transform: scale(var(--thumb-scale));
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/*********************************************
  * FRAGMENTS
  *********************************************/
 

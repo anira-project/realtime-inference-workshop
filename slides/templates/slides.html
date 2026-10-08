@@ -38,6 +38,7 @@
   <script src="reveal.js/plugin/math/math.js"></script>
   <script src="js/custom_speaker_notes.js"></script>
   <script src="js/timeline.js"></script>
+  <script src="js/chapter_overview.js"></script>
   {{HOT_RELOAD_SCRIPT}}
   <script type="module">
     // Theme switching functionality
@@ -74,6 +75,11 @@
       transition: 'none',
       // Chapters are vertical stacks; left/right still step through every slide
       navigationMode: 'linear',
+      // Esc opens the chapter overview instead of Reveal's own
+      overview: false,
+      keyboard: {
+        27: () => window.chapterOverview.toggle()
+      },
       plugins: [
         RevealMarkdown,
         RevealHighlight,

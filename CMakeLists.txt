@@ -11,13 +11,17 @@ include(backends)
 include(benchmark)
 include(readerwriterqueue)
 include(juce)
+include(models)
 
 # Fetch the engines once, so every step links the same build.
 workshop_setup_libtorch()
 workshop_setup_benchmark()
 
-# The model file. It is not in the repo; see models/README.md. The test signal
-# and the expected output are compiled in (steps/*/test_signal.h).
+# The models are downloaded from the repository's own release, unless they are
+# already in models/. The test signal and the expected output are compiled in
+# (steps/common/test_signal.h).
+workshop_fetch_models()
+
 set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward_stateful.pt"
     CACHE FILEPATH "TorchScript model to run")
 set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward.onnx"

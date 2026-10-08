@@ -15,13 +15,8 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 
 ## Setup
 
-CMake ≥ 3.22, a C++17 compiler, and [Git LFS](https://git-lfs.com) for the
-model file. The inference engines are downloaded as prebuilt binaries at
-configure time; nothing else to install.
-
-```bash
-git lfs install && git lfs pull
-```
+CMake ≥ 3.22 and a C++17 compiler. The models and the inference engines are
+downloaded at configure time; nothing else to install.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

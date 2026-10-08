@@ -3,6 +3,7 @@
 Fast enough is not the same as safe
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: demo -->
 
 Note:
     - Demonstration, no exercise. Run it live if the Homebrew clang is there; the output is the slide.

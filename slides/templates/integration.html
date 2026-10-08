@@ -1,0 +1,43 @@
+<div class="integration">
+  <div class="integration-step {{TRAIN}}">
+    <svg viewBox="0 0 200 140" aria-hidden="true">
+      <g class="integration-lines">
+        <line x1="30" y1="40" x2="80" y2="25"/><line x1="30" y1="40" x2="80" y2="70"/><line x1="30" y1="40" x2="80" y2="115"/>
+        <line x1="30" y1="100" x2="80" y2="25"/><line x1="30" y1="100" x2="80" y2="70"/><line x1="30" y1="100" x2="80" y2="115"/>
+        <line x1="80" y1="25" x2="130" y2="45"/><line x1="80" y1="70" x2="130" y2="45"/><line x1="80" y1="115" x2="130" y2="45"/>
+        <line x1="80" y1="25" x2="130" y2="95"/><line x1="80" y1="70" x2="130" y2="95"/><line x1="80" y1="115" x2="130" y2="95"/>
+        <line x1="130" y1="45" x2="175" y2="70"/><line x1="130" y1="95" x2="175" y2="70"/>
+      </g>
+      <g class="integration-dots">
+        <circle cx="30" cy="40" r="8"/><circle cx="30" cy="100" r="8"/>
+        <circle cx="80" cy="25" r="8"/><circle cx="80" cy="70" r="8"/><circle cx="80" cy="115" r="8"/>
+        <circle cx="130" cy="45" r="8"/><circle cx="130" cy="95" r="8"/><circle cx="175" cy="70" r="8"/>
+      </g>
+    </svg>
+    <div class="integration-label">Train</div>
+    <div class="integration-title">Train the network</div>
+    <div class="integration-detail">in PyTorch</div>
+    <div class="integration-language">Python</div>
+  </div>
+  <div class="integration-step {{EXPORT}}">
+    <svg viewBox="0 0 200 140" aria-hidden="true">
+      <circle class="integration-ring" cx="100" cy="70" r="58"/>
+      <circle class="integration-ring accent" cx="100" cy="70" r="46"/>
+    </svg>
+    <div class="integration-label">Export</div>
+    <div class="integration-title">Export the model</div>
+    <div class="integration-detail">TorchScript <code>.pt</code>, ONNX</div>
+    <div class="integration-language">Python</div>
+  </div>
+  <div class="integration-step {{IMPLEMENT}}">
+    <svg viewBox="0 0 200 140" aria-hidden="true">
+      <path class="integration-curve" d="M10 130 C 90 120, 110 20, 190 15"/>
+      <path class="integration-curve accent" d="M10 130 C 90 125, 120 50, 190 45"/>
+      <path class="integration-curve" d="M10 130 C 90 130, 130 80, 190 75"/>
+    </svg>
+    <div class="integration-label">Implement</div>
+    <div class="integration-title">Run it in the audio environment</div>
+    <div class="integration-detail">LibTorch, ONNX Runtime — real-time safe</div>
+    <div class="integration-language">C++</div>
+  </div>
+</div>

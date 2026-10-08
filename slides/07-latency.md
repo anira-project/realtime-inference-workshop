@@ -3,6 +3,7 @@
 The output is late. By how much, exactly?
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: exercise -->
 
 Note:
     - Ask first: who reports latency in their plugins today, and where did the number come from?

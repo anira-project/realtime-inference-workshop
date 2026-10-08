@@ -3,6 +3,7 @@
 The engine has to go somewhere — just not here
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: exercise -->
 
 Note:
     - Step 5 ended with "not on the audio thread". This is the answer.

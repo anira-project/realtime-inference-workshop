@@ -3,6 +3,7 @@
 Everything from steps 1 to 7, where the host can reach it
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: demo -->
 
 Note:
     - Run the standalone here. Play through it, move the dry/wet.

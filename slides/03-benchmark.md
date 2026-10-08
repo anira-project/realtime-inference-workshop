@@ -3,6 +3,7 @@
 How long does it take — and how long in the worst case?
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: exercise -->
 
 Note:
     - Ask the room: who measures worst case rather than average? What do you measure with?

@@ -1,92 +1,84 @@
-<h1>Neural networks<br>in real-time audio</h1>
+<h1>Neural networks in<br>real-time environments</h1>
 
 What we are integrating today, and where it comes from
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: talk -->
 <!-- part: Real-time inference -->
 
 ---
 
-## Audio → audio
+## Neural network integration
 
-<div class="nn-flow">
-  <div class="nn-node">audio<small>a block of samples</small></div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node model">model</div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node">audio<small>a block of samples</small></div>
-</div>
+{{INTEGRATION:train}}
 
-- **RAVE** — timbre transfer, **Demucs** — source separation, neural amp and effect models
-- Runs on every block, at audio rate: the model *is* the effect
-- Its latency is the plugin's latency
+First: where the model comes from.
 
 ---
 
-## Parameters → audio
+## Neural networks in real-time audio
 
-<div class="nn-flow">
-  <div class="nn-node">parameters<small>pitch, loudness, text, …</small></div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node model">model</div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node">audio<small>a block of samples</small></div>
+<div class="nn-types">
+  <div class="nn-type">
+    <div class="nn-node">audio</div><div class="nn-arrow">→</div>
+    <div class="nn-node model">model</div><div class="nn-arrow">→</div>
+    <div class="nn-node">audio</div>
+    <div class="nn-examples">RAVE · Demucs · amp models</div>
+  </div>
+  <div class="nn-type">
+    <div class="nn-node">parameters</div><div class="nn-arrow">→</div>
+    <div class="nn-node model">model</div><div class="nn-arrow">→</div>
+    <div class="nn-node">audio</div>
+    <div class="nn-examples">DDSP · text-to-speech</div>
+  </div>
+  <div class="nn-type">
+    <div class="nn-node">audio</div><div class="nn-arrow">→</div>
+    <div class="nn-node model">model</div><div class="nn-arrow">→</div>
+    <div class="nn-node">parameters</div>
+    <div class="nn-examples">PESTO · CREPE · speech-to-text</div>
+  </div>
 </div>
 
-- **DDSP** — pitch and loudness in, an instrument out, **text-to-speech**
-- Control rate in, audio rate out: the model *is* the sound generator
-- Has to deliver every block, whether the input changed or not
-
----
-
-## Audio → parameters
-
-<div class="nn-flow">
-  <div class="nn-node">audio<small>a block of samples</small></div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node model">model</div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node">parameters<small>pitch, text, events, …</small></div>
-</div>
-
-- **PESTO**, **CREPE** — pitch estimation, **speech-to-text**
-- Audio rate in, control rate out: the model *listens*
-- The result often leaves the audio thread — to the UI, to MIDI, to a file
+Note:
+    - Audio → audio: runs every block at audio rate, the model is the effect; its latency is the plugin's latency.
+    - Parameters → audio: control rate in, audio out, the model is the sound generator; has to deliver every block.
+    - Audio → parameters: the model listens; the result often leaves the audio thread (UI, MIDI, file).
 
 ---
 
 ## Stateless vs. stateful
 
-<div class="nn-compare">
-  <div>
-    <h3>Stateless</h3>
-    <p>The output depends only on this call's input.</p>
-    <ul>
-      <li>Context has to come with the input, e.g. overlapping windows</li>
-      <li>Calls are independent of each other</li>
-    </ul>
+<div class="state-demo">
+  <div class="state-label">Stateless</div>
+  <div class="state-row">
+    <div class="nn-node">call 1</div><div class="state-gap"></div>
+    <div class="nn-node">call 2</div><div class="state-gap"></div>
+    <div class="nn-node">call 3</div>
   </div>
-  <div>
-    <h3>Stateful</h3>
-    <p>The model carries memory from one call to the next.</p>
-    <ul>
-      <li>RNN hidden states, cached convolution history</li>
-      <li>Calls must come in order, one state per stream</li>
-      <li>The state has to be reset when the stream restarts</li>
-    </ul>
+  <div class="state-label">Stateful</div>
+  <div class="state-row">
+    <div class="nn-node model">call 1</div><div class="state-link">state →</div>
+    <div class="nn-node model">call 2</div><div class="state-link">state →</div>
+    <div class="nn-node model">call 3</div>
   </div>
 </div>
 
 Ours is **stateful**: 40 state tensors, carried from block to block.
 
+Note:
+    - Stateless: output depends only on this call's input; context has to come with the input (overlapping windows); calls are independent.
+    - Stateful: memory from one call to the next (RNN hidden states, cached convolution history); calls in order, one state per stream, reset when the stream restarts.
+
 ---
 
 ## And many variations
 
-- **Conditioned**: audio and parameters → audio, e.g. an amp model with a gain knob
-- **Causal or not**: a model that looks into the future needs that future as latency
-- **Fixed or free input size**: a model traced for 2048 samples takes exactly 2048
-- **Rates**: audio rate, control rate, or one result per note
+<div class="tiles-grid variations">
+  <div class="tile"><h3>Conditioned</h3><div class="tile-description">audio + knobs → audio</div></div>
+  <div class="tile"><h3>Causal or not</h3><div class="tile-description">the future costs latency</div></div>
+  <div class="tile"><h3>Fixed input size</h3><div class="tile-description">traced for 2048, takes 2048</div></div>
+  <div class="tile"><h3>Rates</h3><div class="tile-description">audio, control, per note</div></div>
+</div>
 
 The type decides where the model runs, how often, and what the host waits for.
 
@@ -106,98 +98,59 @@ The type decides where the model runs, how often, and what the host waits for.
   <div class="nn-node">audio<small>2048 samples</small></div>
 </div>
 
-- A **variational autoencoder**, audio → audio, from `seqsynth`
-- 48 kHz, mono, 2048 samples per call: 42.7 ms of audio squeezed into 16 numbers
-- Streaming and **stateful**, 65 MB of weights
+<div class="facts">
+  <span>variational autoencoder</span><span>48 kHz mono</span><span>2048 samples per call</span><span>stateful</span><span>65 MB</span>
+</div>
 
 Note:
+    - From seqsynth. 42.7 ms of audio squeezed into 16 numbers.
     - TODO: confirm the architecture details with Fares (PQMF front end, encoder/decoder layout).
 
 ---
 
 ## How it was trained
 
-1. The **encoder** maps the audio to a distribution over `z`
-2. A `z` is drawn from it, the **decoder** turns it back into audio
-3. The loss: **reconstruction** — how close is the output to the input — plus a term
-   that keeps `z` close to a normal distribution
+<div class="nn-flow">
+  <div class="nn-node">audio</div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node model">encoder</div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node latent">z<small>drawn from 𝒩(μ, σ)</small></div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node model">decoder</div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node">audio′</div>
+</div>
 
-Afterwards: a PCA over the latents orders the 16 dimensions by how much they matter.
+<div class="facts">
+  <span>loss: audio′ ≈ audio</span><span>+ z ≈ 𝒩(0, 1)</span><span>then PCA: 16 dims, by importance</span>
+</div>
 
 TODO: dataset, losses, training time (checkpoint: 625,000 steps)
 
 Note:
+    - Encoder maps the audio to a distribution over z; a z is drawn, the decoder turns it back into audio.
+    - Loss: reconstruction plus a term that keeps z close to a normal distribution.
     - The PCA is whitened; the 16 components are ordered by explained variance (11.6 % for the first, 2.5 % for the last).
 
 ---
 
 ## What it is for
 
-The 16 numbers are a handle on the sound: change them, and the decoder makes something new.
+<div class="spectro-player" data-a="assets/audio/demo_input.wav" data-b="assets/audio/demo_output.wav"
+     data-label-a="In" data-label-b="Out — through encoder and decoder"></div>
 
-<div class="audio-demo">
-  <div>
-    <h3>In</h3>
-    <audio controls src="assets/audio/demo_input.wav"></audio>
-  </div>
-  <div>
-    <h3>Out — through encoder and decoder</h3>
-    <audio controls src="assets/audio/demo_output.wav"></audio>
-  </div>
-</div>
-
-Rendered block by block, 2048 samples at a time — exactly what we will do in C++.
+16 numbers are a handle on the sound: change them, and the decoder makes something new.
 
 Note:
-    - Rendered with scripts/render_demo.py; the input is synthesized there.
+    - Rendered with scripts/render_demo.py, block by block, 2048 samples at a time — exactly what we do in C++. The input is synthesized there.
+    - The fader crossfades what you hear; the spectrogram you hear is the brighter one.
 
 ---
 
 ## Neural network integration
 
-<div class="integration">
-  <div class="integration-step">
-    <svg viewBox="0 0 200 140" aria-hidden="true">
-      <g class="integration-lines">
-        <line x1="30" y1="40" x2="80" y2="25"/><line x1="30" y1="40" x2="80" y2="70"/><line x1="30" y1="40" x2="80" y2="115"/>
-        <line x1="30" y1="100" x2="80" y2="25"/><line x1="30" y1="100" x2="80" y2="70"/><line x1="30" y1="100" x2="80" y2="115"/>
-        <line x1="80" y1="25" x2="130" y2="45"/><line x1="80" y1="70" x2="130" y2="45"/><line x1="80" y1="115" x2="130" y2="45"/>
-        <line x1="80" y1="25" x2="130" y2="95"/><line x1="80" y1="70" x2="130" y2="95"/><line x1="80" y1="115" x2="130" y2="95"/>
-        <line x1="130" y1="45" x2="175" y2="70"/><line x1="130" y1="95" x2="175" y2="70"/>
-      </g>
-      <g class="integration-dots">
-        <circle cx="30" cy="40" r="8"/><circle cx="30" cy="100" r="8"/>
-        <circle cx="80" cy="25" r="8"/><circle cx="80" cy="70" r="8"/><circle cx="80" cy="115" r="8"/>
-        <circle cx="130" cy="45" r="8"/><circle cx="130" cy="95" r="8"/><circle cx="175" cy="70" r="8"/>
-      </g>
-    </svg>
-    <div class="integration-label">Train</div>
-    <div class="integration-title">Train the network</div>
-    <div class="integration-detail">in PyTorch</div>
-    <div class="integration-language">Python</div>
-  </div>
-  <div class="integration-step">
-    <svg viewBox="0 0 200 140" aria-hidden="true">
-      <circle class="integration-ring" cx="100" cy="70" r="58"/>
-      <circle class="integration-ring accent" cx="100" cy="70" r="46"/>
-    </svg>
-    <div class="integration-label">Export</div>
-    <div class="integration-title">Export the model</div>
-    <div class="integration-detail">TorchScript <code>.pt</code>, ONNX</div>
-    <div class="integration-language">Python</div>
-  </div>
-  <div class="integration-step today">
-    <svg viewBox="0 0 200 140" aria-hidden="true">
-      <path class="integration-curve" d="M10 130 C 90 120, 110 20, 190 15"/>
-      <path class="integration-curve accent" d="M10 130 C 90 125, 120 50, 190 45"/>
-      <path class="integration-curve" d="M10 130 C 90 130, 130 80, 190 75"/>
-    </svg>
-    <div class="integration-label">Implement</div>
-    <div class="integration-title">Run it in the audio environment</div>
-    <div class="integration-detail">LibTorch, ONNX Runtime — real-time safe</div>
-    <div class="integration-language">C++</div>
-  </div>
-</div>
+{{INTEGRATION:implement}}
 
 The first two are done. **Today starts at the third.**
 

@@ -687,6 +687,71 @@
   font-size: 0.85em;
 }
 
+/* Spectrogram player: in above out, one transport, a crossfader */
+.spectro-player {
+  position: relative;
+  margin: 30px 0 20px 0;
+}
+
+.spectro-track {
+  position: relative;
+  margin-bottom: 14px;
+  transition: opacity 0.15s;
+}
+
+.spectro-track canvas {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 230px;
+  border: 1px solid var(--fs-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.spectro-label {
+  position: absolute;
+  top: 10px;
+  left: 16px;
+  font-family: var(--fs-heading-font);
+  font-size: 0.55em;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.spectro-playhead {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: calc(2 * 232px + 14px);
+  background: var(--fs-heading-color);
+  pointer-events: none;
+}
+
+.spectro-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 10px;
+  font-size: 0.6em;
+}
+
+.spectro-play {
+  width: 80px;
+  height: 56px;
+  border: 2px solid var(--fs-border);
+  border-radius: 12px;
+  background: var(--fs-surface);
+  color: var(--fs-text-color);
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.spectro-fader {
+  flex: 1;
+  accent-color: var(--fs-highlight-background);
+}
+
 .audio-demo {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -786,6 +851,204 @@
   color: #fff;
 }
 
+/* Model types, one row each */
+.nn-types {
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+  margin: 80px 0;
+}
+
+.nn-type {
+  display: grid;
+  grid-template-columns: 360px 80px 240px 80px 360px 1fr;
+  align-items: center;
+  text-align: center;
+}
+
+.nn-type .nn-node {
+  padding: 24px 0;
+}
+
+.nn-examples {
+  margin-left: 50px;
+  text-align: left;
+  font-size: 0.8em;
+  color: var(--fs-text-muted-color);
+}
+
+/* Stateless vs. stateful: independent calls vs. calls chained by state */
+.state-demo {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  row-gap: 50px;
+  margin: 60px 0;
+}
+
+.state-label {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+}
+
+.state-gap,
+.state-link {
+  width: 200px;
+  text-align: center;
+}
+
+.state-link {
+  color: var(--fs-highlight-background);
+  font-size: 0.7em;
+  font-weight: bold;
+}
+
+.variations .tile h3 {
+  font-size: 0.8em;
+}
+
+/* A row of short facts under a diagram */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin: 30px 0;
+}
+
+.facts span {
+  padding: 8px 22px;
+  border-radius: 999px;
+  background: var(--fs-surface-alt);
+  font-size: 0.75em;
+}
+
+/*********************************************
+ * INTRODUCTION
+ *********************************************/
+
+.people {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 80px;
+}
+
+.person {
+  width: 420px;
+  text-align: center;
+}
+
+.person-photo {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.reveal .person-photo {
+  display: block;
+  margin: 0 auto;
+}
+
+.reveal .person-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fs-surface-alt);
+  font-family: var(--fs-heading-font);
+  font-size: 3em;
+  color: var(--fs-highlight-background);
+}
+
+.person-name {
+  margin-top: 30px;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+.person-role {
+  color: var(--fs-text-muted-color);
+  font-size: 0.75em;
+}
+
+.scope {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 60px;
+}
+
+.reveal .scope h3 {
+  margin: 0 0 10px 0;
+}
+
+.scope-out {
+  color: var(--fs-text-muted-color);
+}
+
+.scope-out li {
+  text-decoration: line-through;
+}
+
+.qr-row {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 60px;
+}
+
+.qr {
+  text-align: center;
+}
+
+/* White background in both themes, or phones cannot read it */
+.qr-code {
+  width: 360px;
+  height: 360px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 16px;
+}
+
+.qr-code svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.qr-label {
+  margin-top: 24px;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+.qr-url {
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+/* Agenda badges: what is hands-on and what is only shown */
+.agenda-kind {
+  margin-left: 14px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  font-size: 0.6em;
+  vertical-align: middle;
+  border: 2px solid var(--fs-border);
+  color: var(--fs-text-muted-color);
+}
+
+.agenda-kind.exercise {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.12);
+  color: var(--fs-text-color);
+}
+
 /*********************************************
  * INTEGRATION (train, export, implement)
  *********************************************/
@@ -803,6 +1066,14 @@
 
 .integration-step + .integration-step {
   border-left: 3px solid var(--fs-highlight-background);
+}
+
+/* The step this slide is about */
+.integration-step.highlight-step {
+  outline: 4px solid var(--fs-highlight-background);
+  outline-offset: 12px;
+  border-radius: 16px;
+  background: var(--fs-surface-alt);
 }
 
 .integration-step svg {

@@ -3,6 +3,7 @@
 LibTorch, ONNX Runtime, or writing it yourself
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: talk -->
 
 Note:
     - No exercise here. Talk, numbers, and a decision the room has to make for their own product.

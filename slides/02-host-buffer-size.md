@@ -1,6 +1,7 @@
 <h1>Step 2<br>Model input size<br>vs. host buffer size</h1>
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: exercise -->
 
 Note:
     - Ask the room what buffer sizes they ship with. Collect the spread.

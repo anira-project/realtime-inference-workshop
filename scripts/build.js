@@ -2,6 +2,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const QRCode = require('qrcode');
 
 async function combineSlides() {
   const slidesDir = path.join(__dirname, '../slides');
@@ -44,18 +45,24 @@ async function generateHTML(isDev = false) {
     if (partMatch) {
       part = partMatch[1];
     }
+    // exercise, demo or talk — shown as a badge in the agenda
+    const kindMatch = slide.content.match(/<!--\s*kind:\s*(\w+)\s*-->/);
     chapters.push({
       ...slide,
       id: slide.filename.replace(/\.(md|html)$/, '').replace(/^\d+-/, ''),
       title: extractTitle(slide.content, slide.isHtml),
-      part: part
+      part: part,
+      kind: kindMatch ? kindMatch[1] : null
     });
   }
   
   const agenda = buildAgenda(chapters);
+  const integrationTemplate = await fs.readFile(
+    path.join(__dirname, '../slides/templates/integration.html'), 'utf-8');
   let slidesContent = '';
   for (const chapter of chapters) {
-    const content = chapter.content.replace(/\{\{AGENDA\}\}/g, agenda);
+    const content = await renderQrCodes(renderIntegration(
+      chapter.content.replace(/\{\{AGENDA\}\}/g, agenda), integrationTemplate));
     slidesContent += `<section id="${chapter.id}">
       ${await buildSlidesContent([{ ...chapter, content }])}</section>
       `;
@@ -75,6 +82,26 @@ async function generateHTML(isDev = false) {
   
   console.log('✅ All HTML files generated successfully!');
 }
+
+// {{INTEGRATION:train|export|implement}} → the train/export/implement diagram,
+// with a box around that one step
+function renderIntegration(content, template) {
+  return content.replace(/\{\{INTEGRATION:(\w+)\}\}/g, (match, step) =>
+    template.replace(/\{\{(TRAIN|EXPORT|IMPLEMENT)\}\}/g, (m, name) =>
+      name.toLowerCase() === step ? 'highlight-step' : ''));
+}
+
+// {{QR:https://...}} → an inline SVG QR code for that URL
+async function renderQrCodes(content) {
+  const matches = [...content.matchAll(/\{\{QR:([^}]+)\}\}/g)];
+  for (const match of matches) {
+    const svg = await QRCode.toString(match[1].trim(), { type: 'svg', margin: 0 });
+    content = content.replace(match[0], `<div class="qr-code">${svg}</div>`);
+  }
+  return content;
+}
+
+const KIND_LABELS = { exercise: 'hands-on', demo: 'demo', talk: 'talk' };
 
 // "Step 3 Benchmarking and the real-time budget" -> { number: 3, name: "Benchmarking ..." }
 function splitStepTitle(title) {
@@ -101,8 +128,9 @@ function buildAgenda(chapters) {
     }
     const items = p.chapters.map(chapter => {
       const { number, name } = splitStepTitle(chapter.title);
-      const label = number ? `<span class="agenda-number">${number}</span>` : '';
-      return `<li><a href="#/${chapter.id}">${label}${name}</a></li>`;
+      const label = number ? `<span class="agenda-number">${number}</span>` : '<span class="agenda-number"></span>';
+      const kind = chapter.kind ? `<span class="agenda-kind ${chapter.kind}">${KIND_LABELS[chapter.kind] ?? chapter.kind}</span>` : '';
+      return `<li><a href="#/${chapter.id}">${label}${name}</a>${kind}</li>`;
     }).join('');
     return `<div class="agenda-part"><div class="agenda-part-label">Part ${i + 1}</div><h3>${p.title}</h3><ol>${items}</ol></div>`;
   });

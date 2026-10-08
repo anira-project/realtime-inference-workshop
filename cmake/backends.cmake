@@ -101,16 +101,23 @@ macro(workshop_setup_onnxruntime)
             set(ort_root "${workshop_onnxruntime_SOURCE_DIR}")
         endif()
 
+        # The file to load at runtime, and on Windows the import library the
+        # linker needs next to it.
         file(GLOB ort_library
             "${ort_root}/lib/libonnxruntime.dylib"
             "${ort_root}/lib/libonnxruntime.so*"
-            "${ort_root}/lib/onnxruntime.lib")
+            "${ort_root}/lib/onnxruntime.dll")
         list(GET ort_library 0 ort_library)
 
         add_library(workshop::onnxruntime SHARED IMPORTED GLOBAL)
         set_target_properties(workshop::onnxruntime PROPERTIES
             IMPORTED_LOCATION "${ort_library}"
             INTERFACE_INCLUDE_DIRECTORIES "${ort_root}/include")
+
+        if(WIN32)
+            set_target_properties(workshop::onnxruntime PROPERTIES
+                IMPORTED_IMPLIB "${ort_root}/lib/onnxruntime.lib")
+        endif()
         set(WORKSHOP_ONNXRUNTIME_LIB_DIR "${ort_root}/lib" CACHE PATH "" FORCE)
     endif()
 endmacro()

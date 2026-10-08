@@ -806,6 +806,266 @@
 }
 
 /*********************************************
+ * FILES, ICONS, WAVEFORMS
+ *********************************************/
+
+.file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-icon {
+  width: 100px;
+  height: 124px;
+  overflow: visible;
+}
+
+.file-page {
+  fill: var(--fs-surface);
+  stroke: var(--fs-border);
+  stroke-width: 3;
+}
+
+.file-fold {
+  fill: none;
+  stroke: var(--fs-border);
+  stroke-width: 3;
+}
+
+.file-icon text {
+  fill: #fff;
+  font-family: var(--fs-code-font);
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.file-name {
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+}
+
+.cpp-icon {
+  width: 130px;
+  height: 146px;
+}
+
+.cpp-icon text {
+  fill: #fff;
+  font-family: var(--fs-heading-font);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.waveform {
+  display: block;
+  width: 100%;
+}
+
+.waveform path {
+  fill: none;
+  stroke: var(--fs-highlight-background);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.waveform-dividers line {
+  stroke: var(--fs-border);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+/* What's given: assets | helpers | exercise, split like the integration slide */
+.given {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 40px;
+}
+
+.given-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  padding: 0 30px;
+}
+
+.given-column + .given-column {
+  border-left: 3px solid var(--fs-highlight-background);
+}
+
+.given-label {
+  font-family: var(--fs-heading-font);
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fs-heading-color);
+}
+
+.reveal .given-macro {
+  font-size: 0.5em;
+}
+
+.signal-pair {
+  margin-top: 30px;
+}
+
+.signal-pair .waveform {
+  box-sizing: border-box;
+  height: 230px;
+  margin: 10px 0 40px 0;
+  border: 1px solid var(--fs-border);
+  border-radius: 8px;
+}
+
+.signal-label {
+  font-size: 0.6em;
+}
+
+/*********************************************
+ * TASK PIPELINE: inputs → C++ → output → check
+ * Plays once whenever the slide comes up.
+ *********************************************/
+
+.pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  margin-top: 70px;
+}
+
+.pipeline .file-icon {
+  width: 130px;
+  height: 161px;
+}
+
+.pipeline .file-name {
+  font-size: 0.55em;
+}
+
+.pipeline .cpp-icon {
+  width: 170px;
+  height: 190px;
+}
+
+.pipe-inputs {
+  display: flex;
+  gap: 30px;
+}
+
+.pipe-link {
+  position: relative;
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--fs-highlight-background) 0 14px, transparent 14px 24px);
+  background-size: 24px 6px;
+}
+
+.pipe-link::after {
+  content: '';
+  position: absolute;
+  right: -14px;
+  top: -9px;
+  border: 12px solid transparent;
+  border-left: 16px solid var(--fs-highlight-background);
+  border-right: 0;
+}
+
+.pipe-run {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Eight segments: one per model block */
+.pipe-progress {
+  width: 240px;
+  height: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: repeating-linear-gradient(90deg, var(--fs-surface-alt) 0 28px, var(--fs-background-color) 28px 30px);
+}
+
+.pipe-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--fs-highlight-background);
+}
+
+.pipe-output {
+  width: 480px;
+}
+
+.pipe-output .waveform {
+  box-sizing: border-box;
+  height: 200px;
+  border: 1px solid var(--fs-border);
+  border-radius: 8px;
+  clip-path: inset(0 100% 0 0);
+}
+
+.pipe-label {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.55em;
+  color: var(--fs-text-muted-color);
+}
+
+.pipe-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+}
+
+.pipe-check-mark {
+  font-size: 2.2em;
+  font-weight: bold;
+  line-height: 1;
+  color: #4caf50;
+}
+
+.reveal .slides section.present .pipe-link {
+  animation: pipe-flow 0.8s linear infinite;
+}
+
+.reveal .slides section.present .pipe-progress span {
+  animation: pipe-fill 3s steps(8, end) 0.6s forwards;
+}
+
+.reveal .slides section.present .pipe-output .waveform {
+  animation: pipe-reveal 3s steps(8, end) 0.6s forwards;
+}
+
+.reveal .slides section.present .pipe-check {
+  animation: pipe-pop 0.4s ease-out 3.8s forwards;
+}
+
+@keyframes pipe-flow {
+  to { background-position: 24px 0; }
+}
+
+@keyframes pipe-fill {
+  to { width: 100%; }
+}
+
+@keyframes pipe-reveal {
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes pipe-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/*********************************************
  * TASK TIMER
  *********************************************/
 

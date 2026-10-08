@@ -69,17 +69,30 @@ Convenient, because the thing you traced is exactly the thing that runs.
 
 ## Less work, or less weight.
 
-```
-high level                                          low level
-LibTorch ──────── ONNX Runtime ──────── LiteRT ──────── your own code
-easiest            still easy            smaller         smallest
-biggest            much smaller          leaner          fastest — if you are good
-```
+<div class="tradeoff">
+  <div class="tradeoff-axis"><span>high level</span><span>low level</span></div>
+  <div class="tradeoff-head"></div>
+  <div class="tradeoff-head">weight</div>
+  <div class="tradeoff-head">your work</div>
+  <div class="tradeoff-name">LibTorch<small>export, load, call</small></div>
+  <div class="tradeoff-bar weight" style="--v:100%;--i:0"><span>318 MB</span></div>
+  <div class="tradeoff-bar work" style="--v:12%;--i:0"></div>
+  <div class="tradeoff-name">ONNX Runtime<small>still easy</small></div>
+  <div class="tradeoff-bar weight" style="--v:55%;--i:1"><span>24 MB</span></div>
+  <div class="tradeoff-bar work" style="--v:28%;--i:1"></div>
+  <div class="tradeoff-name">LiteRT<small>leaner, fewer ops</small></div>
+  <div class="tradeoff-bar weight" style="--v:30%;--i:2"></div>
+  <div class="tradeoff-bar work" style="--v:55%;--i:2"></div>
+  <div class="tradeoff-name">Your own code<small>fastest, if you are good</small></div>
+  <div class="tradeoff-bar weight" style="--v:3%;--i:3"><span>~ 0</span></div>
+  <div class="tradeoff-bar work" style="--v:100%;--i:3"></div>
+</div>
 
-- **More high-level: less work.** Export, load, call. The graph decides.
-- **More low-level: smaller, more control.** You carry the op coverage problem.
-- **Hand-written: smallest and potentially fastest** — and the only option where
-  you own every bug.
+Note:
+    - Weight on a log scale: unpacked runtime, macOS arm64, anira-project/backends v2.4.0. LiteRT's runtime was not measured unpacked; its download is 3 MB.
+    - More high-level: less work. Export, load, call. The graph decides.
+    - More low-level: smaller, more control. You carry the op coverage problem.
+    - Hand-written: smallest and potentially fastest, and the only option where you own every bug.
 
 ---
 
@@ -102,13 +115,16 @@ Note:
 
 ## Users download the engine too.
 
-A VST3 is a bundle. Your engine goes inside it, per architecture:
+A VST3 is a bundle. Your engine goes inside it, per architecture (universal binary):
 
-| path | universal binary |
-|---|---|
-| LibTorch | > 600 MB |
-| ONNX Runtime | ~ 50 MB |
-| hand-written | ~ 0 |
+<div class="tradeoff ships">
+  <div class="tradeoff-name">LibTorch</div>
+  <div class="tradeoff-bar weight" style="--v:100%;--i:0"><span>&gt; 600 MB</span></div>
+  <div class="tradeoff-name">ONNX Runtime</div>
+  <div class="tradeoff-bar weight" style="--v:8.3%;--i:1"><span>~ 50 MB</span></div>
+  <div class="tradeoff-name">hand-written</div>
+  <div class="tradeoff-bar weight" style="--v:0.4%;--i:2"><span>~ 0</span></div>
+</div>
 
 Users download that. Installers, notarisation, CDN bills, and the first
 impression of your product.

@@ -1,7 +1,6 @@
 <h1>Step 1<br>Minimal C++ inference</h1>
 
 <!-- .slide: data-state="no-header" -->
-<!-- part: Real-time inference -->
 
 Note:
     - First hands-on block. Everyone builds and runs before we talk about speed.
@@ -89,10 +88,8 @@ std::copy_n(output.data_ptr<float>(), num_samples, samples);
 
 ```cpp
 const torch::NoGradGuard no_grad;                                               // 1
-
 const auto input  = torch::from_blob(samples, {1, 1, length}, torch::kFloat32); // 2
 const auto output = m_model.forward({input}).toTensor() .contiguous();          // 3
-
 std::copy_n(output.data_ptr<float>(), num_samples, samples);                    // 4
 ```
 

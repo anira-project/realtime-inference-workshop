@@ -64,7 +64,7 @@ async function generateHTML(isDev = false) {
   const html = renderTemplate(slidesTemplate, {
     SLIDES_CONTENT: slidesContent,
     PRESENTATION_TITLE: 'Real-Time Neural Inference Workshop',
-    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>' : ''
+    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>\n  <script src="js/overflow_check.js"></script>' : ''
   });
   
   await fs.writeFile(path.join(distDir, 'workshop.html'), html);

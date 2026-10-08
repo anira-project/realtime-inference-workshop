@@ -12,10 +12,7 @@ Note:
 ## The deadline
 
 A callback has to be done before the host wants the next block:
-
-```
-budget = host block size / sample rate
-```
+`budget = host block size / sample rate`
 
 | host block | 44.1 kHz | 48 kHz | 96 kHz |
 |---|---|---|---|

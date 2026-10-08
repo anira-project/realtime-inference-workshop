@@ -84,7 +84,8 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-size: 2em;
-  margin-block: 20% 10%;
+  /* Percentages of the slide width; three title lines still clear the footer */
+  margin-block: 14% 5%;
 }
 
 .reveal h2 {
@@ -622,6 +623,183 @@
   transform: scale(var(--thumb-scale));
   transform-origin: 0 0;
   pointer-events: none;
+}
+
+/*********************************************
+ * NEURAL NETWORK DIAGRAMS
+ *********************************************/
+
+.nn-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  margin: 50px 0 60px 0;
+}
+
+.nn-node {
+  padding: 24px 40px;
+  border: 2px solid var(--fs-border);
+  border-radius: 16px;
+  background: var(--fs-surface);
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  text-align: center;
+}
+
+.nn-node small {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--fs-main-font);
+  font-size: 0.55em;
+  font-weight: normal;
+  color: var(--fs-text-muted-color);
+}
+
+.nn-node.model {
+  border-color: var(--fs-highlight-background);
+  background: var(--fs-surface-alt);
+}
+
+.nn-node.latent {
+  border-style: dashed;
+  border-color: var(--fs-highlight-background);
+}
+
+.nn-arrow {
+  color: var(--fs-text-muted-color);
+}
+
+.nn-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin-bottom: 30px;
+}
+
+.reveal .nn-compare h3 {
+  margin: 0 0 10px 0;
+}
+
+.reveal .nn-compare p,
+.reveal .nn-compare ul {
+  margin: 0 0 10px 0;
+  font-size: 0.85em;
+}
+
+.audio-demo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin: 50px 0;
+}
+
+.reveal .audio-demo h3 {
+  margin: 0 0 20px 0;
+  font-size: 0.8em;
+}
+
+.audio-demo audio {
+  width: 100%;
+}
+
+/*********************************************
+ * INTEGRATION (train, export, implement)
+ *********************************************/
+
+.integration {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 30px 0 40px 0;
+}
+
+.integration-step {
+  padding: 0 40px;
+  text-align: center;
+}
+
+.integration-step + .integration-step {
+  border-left: 3px solid var(--fs-highlight-background);
+}
+
+.integration-step svg {
+  width: 100%;
+  height: 280px;
+  margin-bottom: 10px;
+}
+
+.integration-lines line,
+.integration-ring,
+.integration-curve {
+  fill: none;
+  stroke: var(--fs-border);
+  stroke-width: 4;
+}
+
+.integration-dots circle {
+  fill: var(--fs-highlight-background);
+}
+
+.integration-ring {
+  stroke-dasharray: 10 8;
+}
+
+.integration-ring.accent,
+.integration-curve.accent {
+  stroke: var(--fs-highlight-background);
+}
+
+.integration-label {
+  font-family: var(--fs-heading-font);
+  font-size: 1.2em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fs-heading-color);
+}
+
+.integration-title {
+  margin-top: 20px;
+  font-weight: bold;
+  font-size: 0.75em;
+}
+
+.integration-detail {
+  color: var(--fs-text-muted-color);
+  font-size: 0.7em;
+}
+
+.integration-language {
+  margin-top: 10px;
+  color: var(--fs-highlight-background);
+  font-size: 0.7em;
+}
+
+/*********************************************
+ * OVERFLOW CHECK (dev server only)
+ *********************************************/
+
+.overflow-check {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 40vw;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #c62828;
+  color: #fff;
+  font-family: var(--fs-main-font);
+  font-size: 14px;
+}
+
+.overflow-check a {
+  color: #fff;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /*********************************************

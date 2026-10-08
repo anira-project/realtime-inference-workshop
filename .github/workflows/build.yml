@@ -1,0 +1,131 @@
+name: build
+
+# Every step has to build on every platform participants bring, and every
+# solution has to produce the right numbers. Exercises only have to build:
+# they fail at runtime by design, until their TODOs are filled in.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS-arm64
+            os: macos-latest
+          - name: Linux-x86_64
+            os: ubuntu-latest
+          - name: Windows-x86_64
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The models come from this repository's release and never change within
+      # a tag, so they are worth caching: 124 MB per run otherwise.
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: models-${{ hashFiles('cmake/models.cmake') }}
+
+      # LibTorch alone is 80 MB compressed, and the benchmark library is built
+      # from source. Keyed on the files that decide the versions.
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-${{ matrix.os }}-${{ hashFiles('cmake/backends.cmake', 'cmake/benchmark.cmake', 'cmake/readerwriterqueue.cmake') }}
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build every step
+        run: cmake --build build --config Release --parallel
+
+      # The solutions carry the claims the workshop makes: the output matches
+      # the Python reference, the audio thread allocates nothing, the latency
+      # is what we say it is. A non-zero exit fails the run.
+      - name: Run the solutions
+        shell: bash
+        run: |
+          for binary in step01_solution step02_solution step06_solution step07_solution; do
+            path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)
+            echo "=== $binary"
+            "$path"
+          done
+
+      # Step 5 is a demonstration: its "verify" mode is the part with a right
+      # answer, the rest is meant to misbehave.
+      - name: Run the real-time safety check
+        shell: bash
+        run: |
+          path=$(find build -name "step05_solution" -o -name "step05_solution.exe" | head -1)
+          "$path" verify
+
+      # Exercises are expected to fail — they are full of TODOs. What matters
+      # is that they compile, so nobody loses time on a build error that is
+      # not theirs.
+      - name: Exercises build and report their first open TODO
+        shell: bash
+        run: |
+          for binary in step01_exercise step02_exercise step03_exercise step06_exercise step07_exercise; do
+            path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)
+            if [ -z "$path" ]; then echo "$binary was not built"; exit 1; fi
+            echo "=== $binary"
+            "$path" || true
+          done
+
+  plugin:
+    name: plugin-${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS-arm64
+            os: macos-latest
+          - name: Linux-x86_64
+            os: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: models-${{ hashFiles('cmake/models.cmake') }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build-juce/_deps
+          key: juce-deps-${{ matrix.os }}-${{ hashFiles('cmake/juce.cmake', 'cmake/backends.cmake') }}
+
+      # What JUCE needs on a bare Ubuntu runner.
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libfreetype6-dev libcurl4-openssl-dev \
+            libwebkit2gtk-4.1-dev ninja-build
+
+      - name: Configure
+        run: cmake -S . -B build-juce -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
+
+      - name: Build the plugin
+        run: cmake --build build-juce --config Release --parallel --target step08_plugin_VST3

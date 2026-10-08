@@ -1,6 +1,7 @@
 <h1>Step 1<br>Minimal C++ inference</h1>
 
 <!-- .slide: data-state="no-header" -->
+<!-- part: Real-time inference -->
 
 Note:
     - First hands-on block. Everyone builds and runs before we talk about speed.

@@ -72,6 +72,8 @@
         local: 'katex',
       },
       transition: 'none',
+      // Chapters are vertical stacks; left/right still step through every slide
+      navigationMode: 'linear',
       plugins: [
         RevealMarkdown,
         RevealHighlight,
@@ -83,7 +85,7 @@
       function updateSlideCounter() {
         const slideCounter = document.querySelector('.slide-counter');
         if (slideCounter) {
-          const current = Reveal.getState().indexh + 1;
+          const current = Reveal.getSlidePastCount() + 1;
           const total = Reveal.getTotalSlides();
           slideCounter.textContent = `${current} / ${total}`;
           console.log('Updating slide counter'); // Debugging line

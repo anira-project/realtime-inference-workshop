@@ -2,7 +2,7 @@
 //
 // Goal:  show that these engines are not real-time safe. Not a question of
 //        being fast enough: they allocate, lock and call into the system.
-// Given: both engines, and RealtimeSanitizer (clang -fsanitize=realtime).
+// Given: both engines and a RealtimeSanitizer (clang -fsanitize=realtime).
 // Check: RTSan stops at the first violation inside the audio callback.
 //
 // There is no exercise here. Build it with -DWORKSHOP_RTSAN=ON and a clang that
@@ -23,8 +23,9 @@
 #include "common/target_signal.h"
 #include "common/test_signal.h"
 
-// Counting mode turns the sanitizer off while it runs: it counts for itself,
-// and symbolizing a few hundred thousand stack traces would take minutes.
+// Disable RTSan while counting so it does not stop at the first violation or
+// symbolize every stack trace. The allocation counter records the violations
+// directly and keeps the run fast.
 #if defined(__has_feature)
 #if __has_feature(realtime_sanitizer)
 #define WORKSHOP_HAS_RTSAN 1
@@ -33,9 +34,10 @@ extern "C" void __rtsan_enable();
 #endif
 #endif
 
-// Counting the allocations ourselves, so this works in any build — RTSan or
-// not. Every new and delete in the process goes through here; only the ones
-// inside the callback are counted.
+
+// Count allocations independently of RTSan so this measurement works in both
+// sanitized and unsanitized builds. The counter records only new/delete calls
+// that occur while the audio callback is running.
 namespace {
 std::atomic<bool> g_in_callback{false};
 std::atomic<long> g_allocations{0};

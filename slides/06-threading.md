@@ -9,9 +9,9 @@ Note:
 
 ---
 
-## The split
+## Why: the split
 
-```
+```plaintext
 audio thread                     worker thread
 ------------                     -------------
 process_block()                  while (running)
@@ -26,7 +26,35 @@ it likes.
 
 ---
 
-## What crosses the boundary
+## Goal
+
+The model runs on a worker thread, and the audio thread **neither allocates nor
+locks** — with the same output as step 1.
+
+1. **Give the queues a capacity and start the worker** in `prepare()`
+2. **The audio thread:** samples in, whole blocks to the worker, results back to the host
+3. **The worker thread:** take a block, run the engine, hand it back — and drain at the end
+
+---
+
+## What's given
+
+```plaintext
+models/forward_stateful.pt    the model, as in step 1
+WORKSHOP_MODEL_PATH           its path, set by CMake → k_model.m_path
+common/libtorch_engine.h      the engine from step 1
+common/ring_buffer.h          from step 2
+common/host.h                 from step 2, now in real time: 512 samples per call
+readerwriterqueue.h           new: moodycamel's lock-free queue, fetched by CMake
+exercise/main.cpp             ThreadedProcessor, three TODOs
+```
+
+Also in `main.cpp`: `ModelBlock`, a counting `operator new`, and
+`WORKSHOP_AUDIO_CALLBACK` — `[[clang::nonblocking]]` where the compiler has it.
+
+---
+
+## New: the lock-free queue
 
 ```cpp
 struct ModelBlock {
@@ -43,7 +71,67 @@ moodycamel::ReaderWriterQueue<ModelBlock> m_from_worker{8};
 
 ---
 
-## The callback, in full
+## Task
+
+<div class="task-timer" data-minutes="10"></div>
+
+Fill in the TODOs in `steps/06_threading/exercise/main.cpp`
+
+```bash
+cmake --build --preset release --target step06_exercise
+./build/bin/step06_exercise
+```
+
+<div class="nn-flow task-flow">
+  <div class="nn-node">fake host<small>512 samples, in real time</small></div>
+  <div class="nn-arrow">⇄</div>
+  <div class="nn-node exercise">audio thread<small>ring buffers, queues</small></div>
+  <div class="nn-arrow">⇄</div>
+  <div class="nn-node exercise">worker thread<small>engine</small></div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-stack">
+    <div class="nn-node check">0 allocations<small>on the audio thread</small></div>
+    <div class="nn-node check">output<small>vs. <code>target_signal.h</code></small></div>
+  </div>
+</div>
+
+---
+
+## If you see this: perfect
+
+```plaintext
+  allocations on the audio thread 0
+  the model produced           16384 of 16384 samples
+  max abs diff vs. reference   3.51e-06
+
+OK: inference ran on the worker thread, the audio thread only moved samples.
+```
+
+- Counted with our own `operator new`, **thread-local** — the worker's 11,000
+  allocations per block do not count, and should not
+- Same output as step 1. Under RTSan: **no report at all.**
+
+Note:
+    - Worth running live next to step 5, which stops at the first line of the engine.
+
+---
+
+## TODO 1 — queues and the worker
+
+```cpp
+m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
+m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
+
+m_running.store(true, std::memory_order_release);
+m_worker = std::thread([this] { worker(); });
+```
+
+All in `prepare()`: the queues allocate their blocks up front, so the callback never
+has to.
+
+---
+
+## TODO 2 — the audio thread
 
 ```cpp
 m_input.push(samples, num_samples);
@@ -51,7 +139,7 @@ m_input.push(samples, num_samples);
 while (m_input.available() >= k_model.m_input_size) {
     ModelBlock block;
     m_input.pop(block.m_samples.data(), k_model.m_input_size);
-    if (!m_to_worker.try_enqueue(block)) { break; }   // Worker is behind
+    if (!m_to_worker.try_enqueue(block)) { m_dropped.fetch_add(1); }   // Worker is behind
 }
 
 ModelBlock done;
@@ -67,22 +155,23 @@ No `new`, no mutex, no engine.
 
 ---
 
-## Two checks
+## TODO 3 — the worker thread
 
+```cpp
+while (m_running.load(std::memory_order_acquire)) {
+    if (!m_to_worker.try_dequeue(block)) { sleep_for(100us); continue; }
+    m_engine.process(block.m_samples.data(), k_model.m_input_size);
+    m_produced.insert(m_produced.end(), block.m_samples.begin(), block.m_samples.end());
+    while (!m_from_worker.try_enqueue(block)) {
+        if (!m_running.load(std::memory_order_acquire)) { break; }   // Do not hang at stop
+        sleep_for(100us);
+    }
+}
+while (m_to_worker.try_dequeue(block)) { /* process what is left */ }
 ```
-  allocations on the audio thread 0
-  the model produced           6144 of 6144 samples
-  max abs diff vs. reference   2.21e-06
-```
 
-- Counted with our own `operator new`, **thread-local** — the worker's 11,000
-  allocations per block do not count, and should not
-- Same output as step 1
-
-Under RTSan: **no report at all.**
-
-Note:
-    - Worth running live next to step 5, which stops at the first line of the engine.
+Common fail: waiting for room **without** checking `m_running` — the audio thread has
+stopped calling, and `stop()` waits forever.
 
 ---
 

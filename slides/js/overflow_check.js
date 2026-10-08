@@ -1,22 +1,27 @@
 /**
  * Overflow check (dev server only): lists every slide whose content reaches into
- * the bottom of the slide, where the footer and the progress bar sit.
+ * the bottom of the slide, where the footer and the progress bar sit, or past
+ * its right edge.
  */
 
 // In slide pixels: the slide is 1080 tall, the footer covers roughly the last 50
 const OVERFLOW_LIMIT = 1030;
+const WIDTH_LIMIT = 1920;
 
-function measureSlideBottom(slide, scale) {
-    const top = slide.getBoundingClientRect().top;
+// How far the content reaches down and right, in slide pixels.
+function measureSlideExtent(slide, scale) {
+    const origin = slide.getBoundingClientRect();
     let bottom = 0;
+    let right = 0;
     slide.querySelectorAll('*').forEach(element => {
         if (element.closest('aside.notes')) return;
         const rect = element.getBoundingClientRect();
         if (rect.height > 0) {
             bottom = Math.max(bottom, rect.bottom);
+            right = Math.max(right, rect.right);
         }
     });
-    return (bottom - top) / scale;
+    return { bottom: (bottom - origin.top) / scale, right: (right - origin.left) / scale };
 }
 
 function checkOverflow() {
@@ -30,14 +35,15 @@ function checkOverflow() {
             const slideDisplay = slide.style.display;
             chapter.style.display = 'block';
             slide.style.display = 'block';
-            const bottom = measureSlideBottom(slide, scale);
+            const { bottom, right } = measureSlideExtent(slide, scale);
             chapter.style.display = chapterDisplay;
             slide.style.display = slideDisplay;
 
-            if (bottom > OVERFLOW_LIMIT) {
+            if (bottom > OVERFLOW_LIMIT || right > WIDTH_LIMIT) {
                 const heading = slide.querySelector('h1, h2');
                 const title = heading ? heading.innerText.replace(/\s+/g, ' ') : '(no heading)';
-                overflows.push({ h, v, bottom: Math.round(bottom), label: `${chapter.id} / ${v + 1}: ${title}` });
+                const size = `${Math.round(right)} × ${Math.round(bottom)}px`;
+                overflows.push({ h, v, size, label: `${chapter.id} / ${v + 1}: ${title}` });
             }
         });
     });
@@ -45,15 +51,15 @@ function checkOverflow() {
     document.querySelector('.overflow-check')?.remove();
     if (overflows.length === 0) return;
 
-    console.warn(`${overflows.length} slide(s) reach below ${OVERFLOW_LIMIT}px:`,
-        overflows.map(o => `${o.label} (${o.bottom}px)`));
+    console.warn(`${overflows.length} slide(s) reach below ${OVERFLOW_LIMIT}px or past ${WIDTH_LIMIT}px:`,
+        overflows.map(o => `${o.label} (${o.size})`));
 
     const panel = document.createElement('div');
     panel.className = 'overflow-check';
-    panel.textContent = `${overflows.length} slide(s) reach the footer:`;
+    panel.textContent = `${overflows.length} slide(s) reach the footer or the right edge:`;
     for (const overflow of overflows) {
         const link = document.createElement('a');
-        link.textContent = `${overflow.label} (${overflow.bottom}px)`;
+        link.textContent = `${overflow.label} (${overflow.size})`;
         link.addEventListener('click', () => Reveal.slide(overflow.h, overflow.v));
         panel.appendChild(link);
     }

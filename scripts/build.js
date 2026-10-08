@@ -61,8 +61,10 @@ async function generateHTML(isDev = false) {
     path.join(__dirname, '../slides/templates/integration.html'), 'utf-8');
   let slidesContent = '';
   for (const chapter of chapters) {
-    const content = await renderQrCodes(renderIntegration(
-      chapter.content.replace(/\{\{AGENDA\}\}/g, agenda), integrationTemplate));
+    let content = chapter.content.replace(/\{\{AGENDA\}\}/g, agenda);
+    content = renderIntegration(content, integrationTemplate);
+    content = renderIcons(await renderWaveforms(content));
+    content = await renderQrCodes(content);
     slidesContent += `<section id="${chapter.id}">
       ${await buildSlidesContent([{ ...chapter, content }])}</section>
       `;
@@ -89,6 +91,67 @@ function renderIntegration(content, template) {
   return content.replace(/\{\{INTEGRATION:(\w+)\}\}/g, (match, step) =>
     template.replace(/\{\{(TRAIN|EXPORT|IMPLEMENT)\}\}/g, (m, name) =>
       name.toLowerCase() === step ? 'highlight-step' : ''));
+}
+
+// {{WAVEFORM:steps/common/test_signal.h|blocks=2048|height=200}} → an SVG of the
+// float array in that header: min/max per column, a divider every `blocks` samples
+async function renderWaveforms(content) {
+  const matches = [...content.matchAll(/\{\{WAVEFORM:([^}|]+)((?:\|[^}|]+)*)\}\}/g)];
+  for (const match of matches) {
+    const options = Object.fromEntries(match[2].split('|').filter(Boolean).map(o => o.split('=')));
+    const header = await fs.readFile(path.join(__dirname, '..', match[1].trim()), 'utf-8');
+    const body = header.slice(header.indexOf('= {') + 3, header.lastIndexOf('};'));
+    const samples = (body.match(/-?\d[\d.]*(?:e[-+]?\d+)?/gi) || []).map(Number);
+
+    const width = 1600;
+    const height = Number(options.height || 200);
+    const columns = [];
+    for (let x = 0; x < width; ++x) {
+      const from = Math.floor(x / width * samples.length);
+      const to = Math.max(from + 1, Math.floor((x + 1) / width * samples.length));
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let i = from; i < to; ++i) { lo = Math.min(lo, samples[i]); hi = Math.max(hi, samples[i]); }
+      // Full scale is ±1, so signals drawn side by side are comparable
+      const y = v => ((1 - Math.max(-1, Math.min(1, v))) / 2 * height).toFixed(1);
+      columns.push(`M${x},${y(hi)}V${y(lo)}`);
+    }
+    let dividers = '';
+    if (options.blocks) {
+      for (let i = Number(options.blocks); i < samples.length; i += Number(options.blocks)) {
+        const x = (i / samples.length * width).toFixed(1);
+        dividers += `<line x1="${x}" y1="0" x2="${x}" y2="${height}"/>`;
+      }
+    }
+    const svg = `<svg class="waveform" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">` +
+      `<g class="waveform-dividers">${dividers}</g><path d="${columns.join('')}"/></svg>`;
+    content = content.replace(match[0], svg);
+  }
+  return content;
+}
+
+// Colour of the badge on a file icon, by extension
+const FILE_COLOURS = { pt: '#ee4c2c', onnx: '#7f7f7f', h: '#8e6bd8', cpp: '#00599c' };
+
+// {{FILE:forward_stateful.pt}} → a file icon with its extension on a badge, name below
+// {{ICON:cpp}} → the C++ hexagon
+function renderIcons(content) {
+  content = content.replace(/\{\{FILE:([^}]+)\}\}/g, (match, name) => {
+    const extension = name.includes('.') ? name.split('.').pop() : '';
+    const colour = FILE_COLOURS[extension] || '#7f7f7f';
+    return `<div class="file"><svg class="file-icon" viewBox="0 0 100 124" aria-hidden="true">` +
+      `<path class="file-page" d="M8 4h58l26 26v86a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z"/>` +
+      `<path class="file-fold" d="M66 4v22a4 4 0 0 0 4 4h22"/>` +
+      `<rect x="0" y="66" width="74" height="30" rx="5" fill="${colour}"/>` +
+      `<text x="37" y="87" text-anchor="middle">.${extension}</text></svg>` +
+      `<div class="file-name">${name}</div></div>`;
+  });
+  return content.replace(/\{\{ICON:cpp\}\}/g,
+    `<svg class="cpp-icon" viewBox="0 0 100 112" aria-hidden="true">` +
+    `<path d="M50 2l46 26v56l-46 26L4 84V28z" fill="#00599c"/>` +
+    `<path d="M50 2l46 26L50 56 4 28z" fill="#659ad2"/>` +
+    `<path d="M96 28v56l-46 26V56z" fill="#004482"/>` +
+    `<text x="50" y="68" text-anchor="middle">C++</text></svg>`);
 }
 
 // {{QR:https://...}} → an inline SVG QR code for that URL

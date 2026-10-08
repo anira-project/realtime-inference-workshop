@@ -10,36 +10,41 @@ Note:
 
 ## Goal
 
-The test signal runs through the model in C++, and comes out within **1e-4** of what
-the model produced in Python.
-
-1. **Create the engine** — and decide *where* it goes
-2. **Pick the size you process in** — and see whether the model agrees
-3. **Run each block** through the engine
+- Load the model with LibTorch
+- Run the test signal through it, block by block
+- Get the same result as the model in Python
 
 ---
 
 ## What's given
 
-```plaintext
-models/forward_stateful.pt    the model: TorchScript, graph + weights, 65 MB
-WORKSHOP_MODEL_PATH           its path, set by CMake → k_model.m_path
-common/libtorch_engine.h      the engine, written for you
-common/test_signal.h          220 Hz sine, 8 × 2048 samples
-common/target_signal.h        what the model made of it, in Python
-common/support.h              report(): compares and prints the result
-exercise/main.cpp             three TODOs
-```
+<div class="given">
+  <div class="given-column">
+    <div class="given-label">Assets</div>
+    {{FILE:forward_stateful.pt}}
+    {{FILE:test_signal.h}}
+    {{FILE:target_signal.h}}
+  </div>
+  <div class="given-column">
+    <div class="given-label">Helpers</div>
+    {{FILE:libtorch_engine.h}}
+    {{FILE:support.h}}
+  </div>
+  <div class="given-column exercise">
+    <div class="given-label">Exercise</div>
+    {{FILE:main.cpp}}
+    <code class="given-macro">WORKSHOP_MODEL_PATH</code>
+  </div>
+</div>
 
-- The model is **stateful**: each call continues where the last one ended
-- TorchScript keeps that state inside the model: audio in, audio out
-- No audio files, no Python: the signals are compiled in
+Note:
+    - forward_stateful.pt: the model, TorchScript, graph + weights, 65 MB; stateful, the state lives inside it.
+    - WORKSHOP_MODEL_PATH: set by CMake (-DWORKSHOP_MODEL=...), read in main.cpp as k_model.m_path.
+    - test_signal.h / target_signal.h: compiled in, no audio files, no Python.
 
 ---
 
-## The engine
-
-Three methods:
+## `libtorch_engine.h`
 
 ```cpp
 LibTorchEngine engine(path);          // Loads the model
@@ -47,37 +52,63 @@ engine.process(samples, num_samples); // One block, processed in place
 engine.reset();                       // Clears the model's state
 ```
 
-Every later step keeps this interface. What changes is **who calls `process()`, and
-from which thread**.
+Every later step keeps these three methods.
+
+Note:
+    - What changes later is who calls process(), and from which thread.
 
 ---
 
-## Inside the engine — loading the model
+## `libtorch_engine.h` — inside
 
 ```cpp
+// Constructor
 m_model = torch::jit::load(model_path);
 m_model.eval();
+
+// process()
+const torch::NoGradGuard no_grad;
+const auto input  = torch::from_blob(samples, {1, 1, length}, torch::kFloat32);
+const auto output = m_model.forward({input}).toTensor().contiguous();
+std::copy_n(output.data_ptr<float>(), num_samples, samples);
 ```
 
-- A TorchScript file carries the graph **and** the weights
-- No model class to link against, no architecture in your C++ needed
-- `eval()`: model in inference mode, no dropout, no batchnorm updates
+Note:
+    - load: a TorchScript file carries graph and weights; no model class in C++. eval(): inference mode.
+    - NoGradGuard: no autograd graph, no allocations for it.
+    - from_blob wraps your buffer, no copy — the buffer must outlive the tensor. Shape {batch, channels, samples}.
+    - forward also advances the model's state; contiguous() guarantees a flat layout to read from.
+    - copy_n writes back in place.
 
 ---
 
-## Inside the engine — a block
+## `test_signal.h` · `target_signal.h`
+
+<div class="signal-pair">
+  <div class="signal-label"><code>k_input_signal</code></div>
+  {{WAVEFORM:steps/common/test_signal.h|blocks=2048|height=230}}
+  <div class="signal-label"><code>k_target_output_signal</code></div>
+  {{WAVEFORM:steps/common/target_signal.h|blocks=2048|height=230}}
+</div>
+
+Note:
+    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 48 kHz. The dashed lines are the block boundaries.
+    - Target: what the model made of it, in Python. The first block is nearly silent — the model's latency has not filled yet.
+
+---
+
+## `support.h`
 
 ```cpp
-const torch::NoGradGuard no_grad;                                               // 1
-const auto input  = torch::from_blob(samples, {1, 1, length}, torch::kFloat32); // 2
-const auto output = m_model.forward({input}).toTensor() .contiguous();          // 3
-std::copy_n(output.data_ptr<float>(), num_samples, samples);                    // 4
+return report(output.data(), target.data(), output.size());
 ```
 
-1. **No autograd graph.** Inference only, so no allocations for it.
-2. **`from_blob` wraps your buffer, doesn't copy it.** The tensor points at *your* buffer, so the buffer must outlive it. Shape is `{batch, channels, samples}`.
-3. **Run.** `forward` also advances the model's **state**. `contiguous()` guarantees a flat layout to read from.
-4. **Write back in place.** The caller's buffer now holds the output
+```plaintext
+OK: max abs diff 3.51e-06, within 0.0001 of the reference.
+```
+
+Note:
+    - Compares what you produced with the target and prints one line; the return value is main's exit code.
 
 ---
 
@@ -88,19 +119,27 @@ std::copy_n(output.data_ptr<float>(), num_samples, samples);                    
 Fill in the TODOs in `steps/01_minimal_inference/exercise/main.cpp`
 
 ```bash
-cmake --preset release                                        # once
+cmake --preset release      # once
 cmake --build --preset release --target step01_exercise
 ./build/bin/step01_exercise
 ```
 
-<div class="nn-flow task-flow">
-  <div class="nn-node">model<small><code>forward_stateful.pt</code></small></div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node exercise">your C++<small><code>main.cpp</code> + engine</small></div>
-  <div class="nn-arrow">←</div>
-  <div class="nn-node">test signal<small>220 Hz sine</small></div>
-  <div class="nn-arrow">→</div>
-  <div class="nn-node check">output<small>vs. <code>target_signal.h</code>, 1e-4</small></div>
+<div class="pipeline">
+  <div class="pipe-inputs">
+    {{FILE:forward_stateful.pt}}
+    {{FILE:test_signal.h}}
+  </div>
+  <div class="pipe-link"></div>
+  <div class="pipe-run">
+    {{ICON:cpp}}
+    <div class="pipe-progress"><span></span></div>
+  </div>
+  <div class="pipe-link pipe-link-2"></div>
+  <div class="pipe-output">
+    {{WAVEFORM:steps/common/target_signal.h|blocks=2048|height=200}}
+    <div class="pipe-label">output</div>
+  </div>
+  <div class="pipe-check"><span class="pipe-check-mark">✓</span><div class="pipe-label">target_signal.h</div></div>
 </div>
 
 ---
@@ -111,13 +150,8 @@ cmake --build --preset release --target step01_exercise
 OK: max abs diff 3.51e-06, within 0.0001 of the reference.
 ```
 
-Not zero, and it should not be: the reference ran in **ONNX Runtime, in Python**, our
-engine runs in **LibTorch, in C++**.
-
-&rarr; ~1e-6 is what "the same model" means across two runtimes.
-
-The first block is nearly silent — the model's latency has not filled yet. It still
-has to match.
+Note:
+    - Not zero, and it should not be: the reference ran in ONNX Runtime in Python, our engine is LibTorch in C++. ~1e-6 is what "the same model" means across two runtimes.
 
 ---
 

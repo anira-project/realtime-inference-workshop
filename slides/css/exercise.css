@@ -1395,3 +1395,137 @@ html.tanh .congrats .confetti {
     animation-iteration-count: 1 !important;
   }
 }
+
+/*********************************************
+ * Step 4 · the engine trade-off: weight falls, your work rises, from high
+ * level to low level; bars grow in turn when the slide is shown
+ *********************************************/
+
+html.tanh .tradeoff {
+  position: relative;
+  display: grid;
+  grid-template-columns: 300px 1fr 1fr;
+  align-items: center;
+  column-gap: var(--space-6);
+  row-gap: var(--space-5);
+  margin-top: var(--space-6);
+  padding-left: 190px;
+}
+
+html.tanh .tradeoff.ships {
+  grid-template-columns: 300px 1fr;
+  padding-left: 0;
+}
+
+html.tanh .tradeoff-axis {
+  position: absolute;
+  top: 60px;
+  bottom: 0;
+  left: 150px;
+  width: 2px;
+  background: var(--ink);
+}
+
+html.tanh .tradeoff-axis::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: -7px;
+  border: 8px solid transparent;
+  border-top: 12px solid var(--ink);
+  border-bottom: none;
+}
+
+html.tanh .tradeoff-axis span {
+  position: absolute;
+  right: 16px;
+  font-size: 0.45em;
+  color: var(--fs-text-muted-color);
+  white-space: nowrap;
+}
+
+html.tanh .tradeoff-axis span:first-child { top: -4px; }
+html.tanh .tradeoff-axis span:last-child { bottom: 0; }
+
+html.tanh .tradeoff-head {
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .tradeoff-name {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--fs-heading-font);
+  font-size: 0.65em;
+  font-weight: 600;
+}
+
+html.tanh .tradeoff-name small {
+  font-family: var(--fs-body-font, inherit);
+  font-size: 0.65em;
+  font-weight: 400;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .tradeoff-bar {
+  position: relative;
+  height: 48px;
+}
+
+html.tanh .tradeoff-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: max(var(--v), 6px);
+  border-radius: var(--radius-small);
+  background: var(--tint-model);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+html.tanh .tradeoff-bar.weight::before { background: var(--ink); }
+html.tanh .tradeoff-bar.work::before { background: var(--mark-exercise); }
+
+html.tanh .tradeoff-bar span {
+  position: absolute;
+  top: 50%;
+  left: calc(max(var(--v), 6px) + var(--space-3));
+  transform: translateY(-50%);
+  font-family: var(--fs-code-font);
+  font-size: 0.45em;
+  white-space: nowrap;
+  opacity: 0;
+}
+
+/* The label sits inside a long bar */
+html.tanh .tradeoff-bar.weight[style*="--v:100%"] span {
+  left: auto;
+  right: var(--space-3);
+  color: var(--paper);
+}
+
+html.tanh .reveal section.present .tradeoff-bar::before {
+  animation: meter-fill 0.8s var(--ease) both;
+  animation-delay: calc(0.3s + var(--i) * 0.35s);
+}
+
+html.tanh .reveal section.present .tradeoff-bar.work::before {
+  animation-delay: calc(1.8s + var(--i) * 0.35s);
+}
+
+html.tanh .reveal section.present .tradeoff-bar span {
+  animation: run-appear 0.3s var(--ease) both;
+  animation-delay: calc(0.9s + var(--i) * 0.35s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .tradeoff-bar::before,
+  html.tanh .reveal section.present .tradeoff-bar span {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}

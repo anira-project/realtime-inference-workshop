@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "common/libtorch_engine.h"
+#include "common/onnx_engine.h"
 #include "common/threaded_processor.h"
 
 class WorkshopPluginProcessor : public juce::AudioProcessor {
@@ -46,10 +46,12 @@ private:
     juce::AudioProcessorValueTreeState m_parameters;
     std::atomic<float>* m_mix = nullptr;
 
+    // ONNX Runtime, not LibTorch: it is the one with a static build, so the
+    // plugin is a single self-contained bundle — step 4, made good on.
     // One engine and one processor per channel: the model is mono, and its
     // state belongs to the signal that is running through it.
-    std::vector<std::unique_ptr<LibTorchEngine>> m_engines;
-    std::vector<std::unique_ptr<LatencyProcessor>> m_channels;
+    std::vector<std::unique_ptr<OnnxEngine>> m_engines;
+    std::vector<std::unique_ptr<LatencyProcessor<OnnxEngine>>> m_channels;
     juce::String m_load_error;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WorkshopPluginProcessor)

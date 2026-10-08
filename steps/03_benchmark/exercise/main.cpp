@@ -79,21 +79,26 @@ double percentile(const std::vector<double>& times, double fraction) {
     // Sort a copy of `times` and return the entry at `fraction` of the way
     // through it.
     // ------------------------------------------------------------------------
-    std::vector<double> sorted = std::nfill(times.size(), 0.0);
-    const auto index = 0.0;
+    std::vector<double> sorted(times);  // Sort this copy, leave `times` alone
+    const size_t index = 0;             // Which entry is `fraction` of the way in?
 
     return sorted[index];
 }
 
-// Says once that TODO 2 is still open: a percentile of 0 next to a mean of
-// several milliseconds cannot be a real measurement.
+// Says once that TODO 2 is still open. A p95 that is 0, or that equals the
+// fastest call of all, is not a percentile.
 double checked_percentile(const std::vector<double>& times, double fraction) {
     const double value = percentile(times, fraction);
 
     static bool reported = false;
-    if (value == 0.0 && !times.empty() && !reported) {
-        std::fprintf(stderr, "TODO 2: implement percentile(), it still returns 0\n");
-        reported = true;
+    if (!times.empty() && !reported) {
+        const double fastest = *std::min_element(times.begin(), times.end());
+        if (value <= fastest) {
+            std::fprintf(stderr,
+                         "TODO 2: percentile() still returns %s\n",
+                         value == 0.0 ? "0" : "the fastest call");
+            reported = true;
+        }
     }
     return value;
 }

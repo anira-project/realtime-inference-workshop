@@ -38,10 +38,23 @@ One engine and one processor per channel. The model is mono and stateful, so two
 
 The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by 4096 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
 
+## Which engine, and why it matters here
+
+The plugin runs **ONNX Runtime, linked statically** — not LibTorch, which every
+step before it used. The reason is step 4, now with a bundle around it:
+
+| | what ships |
+|---|---|
+| LibTorch | the binary plus 318 MB of dylibs that have to be found at load time |
+| ONNX Runtime, static | **one 28 MB bundle**, nothing to find |
+
+LibTorch has no static build in the backends release, so the choice is made for
+you. The engine sits behind `construct / process / reset`, so the switch is one
+type name in `PluginProcessor.h` — the processor itself is templated on it.
+
 ## Known rough edges, on purpose
 
-- **The model path is absolute**, baked in at compile time. A real plugin ships the model inside the bundle or next to it.
-- **The VST3 finds LibTorch through an rpath into the build tree.** Shipping it means copying 318 MB of dylibs into the bundle — step 4's number, now with a bundle around it.
+- **The model path is absolute**, baked in at compile time, and `forward.onnx.data` has to stay next to `forward.onnx`. A real plugin ships both inside the bundle.
 - **The sample rate is fixed at 48 kHz** by the export. At another rate the plugin says so and still runs; it is a different instrument then, not a broken one.
 
 ## Slides

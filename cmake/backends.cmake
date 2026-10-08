@@ -68,6 +68,14 @@ macro(workshop_setup_libtorch)
     set(Torch_DIR "${root}/share/cmake/Torch" CACHE PATH "" FORCE)
     find_package(Torch REQUIRED CONFIG)
     set(WORKSHOP_LIBTORCH_LIB_DIR "${root}/lib" CACHE PATH "" FORCE)
+
+    # On Windows the DLLs live in bin/ and only the import libraries in lib/,
+    # so copying lib/ alone leaves the executables without torch.dll.
+    if(EXISTS "${root}/bin")
+        set(WORKSHOP_LIBTORCH_BIN_DIR "${root}/bin" CACHE PATH "" FORCE)
+    else()
+        set(WORKSHOP_LIBTORCH_BIN_DIR "" CACHE PATH "" FORCE)
+    endif()
 endmacro()
 
 # Copy the engine's shared libraries next to an executable, so it runs from the
@@ -79,6 +87,15 @@ function(workshop_copy_libtorch_runtime target)
         COMMENT "Copying LibTorch runtime next to ${target}"
         VERBATIM
     )
+
+    if(WORKSHOP_LIBTORCH_BIN_DIR)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${WORKSHOP_LIBTORCH_BIN_DIR}" "$<TARGET_FILE_DIR:${target}>"
+            COMMENT "Copying the LibTorch DLLs next to ${target}"
+            VERBATIM
+        )
+    endif()
 endfunction()
 
 # ONNX Runtime: the same release, unpacked to include/ + lib/. It ships no CMake

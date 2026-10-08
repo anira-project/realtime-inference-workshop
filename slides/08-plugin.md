@@ -3,6 +3,7 @@
 Everything from steps 1 to 7, where the host can reach it
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: demo -->
 
 Note:
     - Run the standalone here. Play through it, move the dry/wet.
@@ -22,6 +23,23 @@ setLatencySamples(static_cast<int>(processor.latency_samples()));
 **`releaseResources`** — stop the threads
 
 Everything else in the plugin is JUCE boilerplate.
+
+---
+
+## Which engine ships
+
+Every step so far used LibTorch. The plugin uses **ONNX Runtime, static**:
+
+| | what ships |
+|---|---|
+| LibTorch | binary + 318 MB of dylibs to find at load time |
+| ONNX Runtime, static | **one 28 MB bundle** |
+
+The switch is one type name — the processor is templated on the engine, and
+both engines have the same three methods.
+
+Note:
+    - This is step 4's argument arriving: the size difference is not theoretical, it is the bundle you upload.
 
 ---
 

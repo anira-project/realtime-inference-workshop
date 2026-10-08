@@ -3,14 +3,16 @@
 Everything from steps 1 to 7, where the host can reach it
 
 <!-- .slide: data-state="no-header" -->
-<!-- kind: demo -->
+<!-- kind: demo, exercise -->
 
 Note:
     - Run the standalone here. Play through it, move the dry/wet.
 
 ---
 
-## Three places the host talks to us
+<div class="tag">The host</div>
+
+## Three places the host talks to us.
 
 **`prepareToPlay`** — load the model, size the buffers, start the threads
 
@@ -26,7 +28,9 @@ Everything else in the plugin is JUCE boilerplate.
 
 ---
 
-## Which engine ships
+<div class="tag">Which engine ships</div>
+
+## ONNX Runtime, static.<br><span class="then">One 28 MB bundle.</span>
 
 Every step so far used LibTorch. The plugin uses **ONNX Runtime, static**:
 
@@ -43,7 +47,9 @@ Note:
 
 ---
 
-## One engine per channel
+<div class="tag">Stateful and mono</div>
+
+## Two channels, two of everything.
 
 The model is **mono and stateful**. Two channels need two states — sharing one
 would mix the left channel's history into the right.
@@ -57,7 +63,9 @@ Note:
 
 ---
 
-## How you check the latency in a DAW
+<div class="tag">In a DAW</div>
+
+## 100 % dry has to null.
 
 Dry/Wet at 0, delay compensation on:
 
@@ -68,30 +76,34 @@ wrong, and everything downstream of it is too.
 
 ---
 
-## What it took
+<div class="tag">What it took</div>
+
+## All of this is infrastructure,<br><span class="then">before any work on the sound itself.</span>
 
 ```
 ring buffers          step 2
 a benchmark           step 3
 an engine choice      step 4
 RTSan                 step 5
-a worker thread       step 6
-two lock-free queues  step 6
+a worker, two queues  step 6
 a prefill rule        step 7
 a latency calculation step 7
 a dry path to match   step 7
 one engine per channel step 8
 ```
 
-All of it before a single creative decision.
-
 ---
 
-## Break
+<div class="tag">Break</div>
 
-After it: what anira does with all of this.
+## Break.<br><span class="then">Afterwards: how anira handles these steps.</span>
 
-<!-- .slide: data-state="no-footer" -->
+<div class="statement-points">
+  <div>Ten pieces of infrastructure, by hand</div>
+  <div>Every one of them a place to get it wrong</div>
+  <div>anira does them for you</div>
+</div>
+
 
 Note:
     - 30 minutes. Then the architecture talk.

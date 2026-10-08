@@ -17,11 +17,11 @@
 #include <string>
 #include <vector>
 
-#include "common/libtorch_engine.h"
-#include "common/onnx_engine.h"
-#include "common/support.h"
-#include "common/target_signal.h"
-#include "common/test_signal.h"
+#include "common/helpers/libtorch_engine.h"
+#include "common/helpers/onnx_engine.h"
+#include "common/helpers/support.h"
+#include "common/assets/target_signal.h"
+#include "common/assets/test_signal.h"
 
 // Disable RTSan while counting so it does not stop at the first violation or
 // symbolize every stack trace. The allocation counter records the violations

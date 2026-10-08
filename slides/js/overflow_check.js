@@ -6,7 +6,8 @@
 
 // In slide pixels: the slide is 1080 tall, the footer covers roughly the last 50
 const OVERFLOW_LIMIT = 1030;
-const WIDTH_LIMIT = 1920;
+// Right edge, with 2 px for sub-pixel rounding at full width
+const WIDTH_LIMIT = 1922;
 
 // How far the content reaches down and right, in slide pixels.
 function measureSlideExtent(slide, scale) {
@@ -14,11 +15,21 @@ function measureSlideExtent(slide, scale) {
     let bottom = 0;
     let right = 0;
     slide.querySelectorAll('*').forEach(element => {
-        if (element.closest('aside.notes')) return;
+        if (element.closest('aside.notes') || element.classList.contains('confetti')) return;
         const rect = element.getBoundingClientRect();
         if (rect.height > 0) {
-            bottom = Math.max(bottom, rect.bottom);
-            right = Math.max(right, rect.right);
+            // What an overflow: hidden ancestor cuts off is not on the slide
+            let elementBottom = rect.bottom;
+            let elementRight = rect.right;
+            for (let parent = element.parentElement; parent && parent !== slide; parent = parent.parentElement) {
+                if (getComputedStyle(parent).overflow === 'hidden') {
+                    const clip = parent.getBoundingClientRect();
+                    elementBottom = Math.min(elementBottom, clip.bottom);
+                    elementRight = Math.min(elementRight, clip.right);
+                }
+            }
+            bottom = Math.max(bottom, elementBottom);
+            right = Math.max(right, elementRight);
         }
     });
     return { bottom: (bottom - origin.top) / scale, right: (right - origin.left) / scale };

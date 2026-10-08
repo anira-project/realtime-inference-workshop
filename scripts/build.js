@@ -35,52 +35,79 @@ async function generateHTML(isDev = false) {
   const distDir = path.join(__dirname, '../dist');
   await fs.mkdir(distDir, { recursive: true });
   
-  const presentationFiles = [];
-  
-  // Check if there's only one slide file
-  if (slides.length === 1) {
-    // Generate single index.html for the presentation
-    const slide = slides[0];
-    const slidesContent = await buildSlidesContent([slide]);
-    const title = extractTitle(slide.content, slide.isHtml);
-    
-    let html = renderTemplate(slidesTemplate, {
-      SLIDES_CONTENT: slidesContent,
-      PRESENTATION_TITLE: title,
-      HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>' : ''
-    });
-    
-    await fs.writeFile(path.join(distDir, 'index.html'), html);
-    console.log(`✅ Generated index.html (single presentation)`);
-  } else {
-    // Generate a separate HTML file for each slide
-    for (const slide of slides) {
-      const slidesContent = await buildSlidesContent([slide]);
-      const title = extractTitle(slide.content, slide.isHtml);
-      
-      let html = renderTemplate(slidesTemplate, {
-        SLIDES_CONTENT: slidesContent,
-        PRESENTATION_TITLE: title,
-        HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>' : ''
-      });
-      
-      // Get output filename (replace .md or .html extension with .html)
-      const outputFilename = slide.filename.replace(/\.(md|html)$/, '.html');
-      
-      await fs.writeFile(path.join(distDir, outputFilename), html);
-      console.log(`✅ Generated ${outputFilename}`);
-      
-      presentationFiles.push({
-        filename: outputFilename,
-        title: title
-      });
+  // Every slide file is one chapter: a vertical stack in a single deck, so the
+  // overview (Esc) shows one column per chapter
+  const chapters = [];
+  let part = null;
+  for (const slide of slides) {
+    const partMatch = slide.content.match(/<!--\s*part:\s*(.+?)\s*-->/);
+    if (partMatch) {
+      part = partMatch[1];
     }
-    
-    // Generate index.html landing page
-    await generateIndexPage(presentationFiles, distDir, isDev);
+    chapters.push({
+      ...slide,
+      id: slide.filename.replace(/\.(md|html)$/, '').replace(/^\d+-/, ''),
+      title: extractTitle(slide.content, slide.isHtml),
+      part: part
+    });
   }
   
+  const agenda = buildAgenda(chapters);
+  let slidesContent = '';
+  for (const chapter of chapters) {
+    const content = chapter.content.replace(/\{\{AGENDA\}\}/g, agenda);
+    slidesContent += `<section id="${chapter.id}">
+      ${await buildSlidesContent([{ ...chapter, content }])}</section>
+      `;
+  }
+  
+  const html = renderTemplate(slidesTemplate, {
+    SLIDES_CONTENT: slidesContent,
+    PRESENTATION_TITLE: 'Real-Time Neural Inference Workshop',
+    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>' : ''
+  });
+  
+  await fs.writeFile(path.join(distDir, 'workshop.html'), html);
+  console.log('✅ Generated workshop.html');
+  
+  // Generate index.html landing page
+  await generateIndexPage(chapters, distDir, isDev);
+  
   console.log('✅ All HTML files generated successfully!');
+}
+
+// "Step 3 Benchmarking and the real-time budget" -> { number: 3, name: "Benchmarking ..." }
+function splitStepTitle(title) {
+  const match = title.match(/^Step\s+(\d+)\s+(.*)$/);
+  return match ? { number: match[1], name: match[2] } : { number: null, name: title };
+}
+
+// One column per part, separated by a break; chapters without a part are left out
+function buildAgenda(chapters) {
+  const parts = [];
+  for (const chapter of chapters) {
+    if (!chapter.part) continue;
+    if (parts.length === 0 || parts[parts.length - 1].title !== chapter.part) {
+      parts.push({ title: chapter.part, chapters: [] });
+    }
+    parts[parts.length - 1].chapters.push(chapter);
+  }
+  
+  const columns = parts.map((p, i) => {
+    // A part that is a single chapter of the same name links its heading instead
+    const first = p.chapters[0];
+    if (p.chapters.length === 1 && splitStepTitle(first.title).name === p.title) {
+      return `<div class="agenda-part"><div class="agenda-part-label">Part ${i + 1}</div><h3><a href="#/${first.id}">${p.title}</a></h3></div>`;
+    }
+    const items = p.chapters.map(chapter => {
+      const { number, name } = splitStepTitle(chapter.title);
+      const label = number ? `<span class="agenda-number">${number}</span>` : '';
+      return `<li><a href="#/${chapter.id}">${label}${name}</a></li>`;
+    }).join('');
+    return `<div class="agenda-part"><div class="agenda-part-label">Part ${i + 1}</div><h3>${p.title}</h3><ol>${items}</ol></div>`;
+  });
+  
+  return `<div class="agenda">${columns.join('<div class="agenda-break">Break</div>')}</div>`;
 }
 
 function extractTitle(content, isHtml) {
@@ -93,14 +120,14 @@ function extractTitle(content, isHtml) {
   return formatTitle || 'Untitled Presentation';
 }
 
-async function generateIndexPage(presentationFiles, distDir, isDev) {
+async function generateIndexPage(chapters, distDir, isDev) {
   const indexTemplatePath = path.join(__dirname, '../slides/templates/index.html');
   const indexTemplate = await fs.readFile(indexTemplatePath, 'utf-8');
   
-  const presentationsList = presentationFiles.map(file => 
-    `    <a href="${file.filename}" class="presentation-card">
-      <h2>${file.title}</h2>
-      <p class="filename">${file.filename}</p>
+  const presentationsList = chapters.map(chapter => 
+    `    <a href="workshop.html#/${chapter.id}" class="presentation-card">
+      <h2>${chapter.title}</h2>
+      <p class="filename">${chapter.part ?? 'Introduction'}</p>
     </a>`
   ).join('\n');
   
@@ -149,7 +176,7 @@ async function createMarkdownSection(markdownContent) {
   // Process timeline imports before cleaning content
   const processedContent = await processTimelineImports(markdownContent);
   const cleanContent = processedContent.replace(/\n\n---\n\n$/, '');
-  return `<section data-markdown data-separator="^---" data-separator-vertical="^--">
+  return `<section data-markdown data-separator="^---\\s*$">
         <textarea data-template>
 ${cleanContent}
         </textarea>

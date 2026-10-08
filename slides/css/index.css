@@ -24,6 +24,21 @@ h1 {
   font-size: 1.1rem;
 }
 
+.start-link {
+  display: inline-block;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  background: var(--fs-highlight-background);
+  color: #100f10;
+  font-family: var(--fs-heading-font);
+  text-decoration: none;
+  transition: transform 0.2s;
+}
+
+.start-link:hover {
+  transform: translateY(-2px);
+}
+
 .presentations {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

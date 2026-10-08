@@ -36,8 +36,8 @@ void WorkshopPluginProcessor::prepareToPlay(double sample_rate, int samples_per_
     // channel is enough, and only when the channel count actually changed.
     try {
         while (m_engines.size() < channels) {
-            m_engines.push_back(std::make_unique<LibTorchEngine>(WORKSHOP_MODEL_PATH));
-            m_channels.push_back(std::make_unique<LatencyProcessor>(*m_engines.back()));
+            m_engines.push_back(std::make_unique<OnnxEngine>(WORKSHOP_ONNX_MODEL_PATH));
+            m_channels.push_back(std::make_unique<LatencyProcessor<OnnxEngine>>(*m_engines.back()));
         }
     } catch (const std::exception& error) {
         std::fprintf(stderr, "plugin: %s\n", error.what());

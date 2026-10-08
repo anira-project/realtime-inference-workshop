@@ -84,7 +84,8 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-size: 2em;
-  margin-block: 20% 10%;
+  /* Percentages of the slide width; three title lines still clear the footer */
+  margin-block: 14% 5%;
 }
 
 .reveal h2 {
@@ -442,6 +443,977 @@
 .tile.color-2 {
   background: var(--fs-shadow-color-light);
   color: var(--fs-highlight-color);
+}
+
+/*********************************************
+ * AGENDA
+ *********************************************/
+
+.agenda {
+  display: flex;
+  align-items: stretch;
+  gap: 60px;
+  margin: 30px 0;
+}
+
+.agenda-part {
+  flex: 1;
+}
+
+.agenda-part-label {
+  color: var(--fs-text-subtle-color);
+  font-size: 0.55em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.reveal .agenda-part h3 {
+  margin: 5px 0 20px 0;
+}
+
+.reveal .agenda-part ol {
+  list-style: none;
+  padding-left: 0;
+  font-size: 0.75em;
+}
+
+.reveal .agenda-part a {
+  color: var(--fs-text-color);
+}
+
+.reveal .agenda-part a:hover {
+  color: var(--fs-link-color-hover);
+}
+
+.agenda-number {
+  display: inline-block;
+  width: 1.5em;
+  color: var(--fs-text-subtle-color);
+  font-family: var(--fs-code-font);
+}
+
+.agenda-break {
+  writing-mode: vertical-rl;
+  text-align: center;
+  padding: 0 15px;
+  color: var(--fs-text-subtle-color);
+  font-size: 0.55em;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  border-left: 2px solid var(--fs-border);
+  border-right: 2px solid var(--fs-border);
+}
+
+/*********************************************
+ * CHAPTER OVERVIEW
+ *********************************************/
+
+.chapter-overview {
+  display: none;
+  position: fixed;
+  inset: 0;
+  /* Above the header and footer */
+  z-index: 2000;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--fs-background-color);
+}
+
+.chapter-overview.open {
+  display: flex;
+}
+
+.chapter-overview-chapters {
+  display: flex;
+  flex: none;
+  gap: 16px;
+  /* Room for the outline of the current chapter */
+  padding: 6px 6px 12px 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--fs-border);
+}
+
+/* Always visible, macOS hides overlay scrollbars otherwise */
+.chapter-overview ::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.chapter-overview ::-webkit-scrollbar-thumb {
+  background: var(--fs-border);
+  border-radius: 4px;
+}
+
+.chapter-overview-chapter {
+  --thumb-scale: 0.1;
+  flex: none;
+  width: 192px;
+  cursor: pointer;
+}
+
+.chapter-overview-title {
+  margin-top: 6px;
+  font-family: var(--fs-heading-font);
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--fs-text-muted-color);
+}
+
+.chapter-overview-chapter.selected .chapter-overview-title {
+  color: var(--fs-heading-color);
+}
+
+.chapter-overview-chapter.selected .chapter-overview-thumb {
+  border-color: var(--fs-link-color);
+}
+
+.chapter-overview-slides {
+  flex: 1;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.chapter-overview-list {
+  --thumb-scale: 0.0833;
+  display: none;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chapter-overview-list.selected {
+  display: flex;
+}
+
+/* The 1920 x 1080 slide at --thumb-scale */
+.chapter-overview-thumb {
+  position: relative;
+  flex: none;
+  width: calc(1920px * var(--thumb-scale));
+  height: calc(1080px * var(--thumb-scale));
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--fs-background-color);
+  border: 1px solid var(--fs-border);
+  border-radius: 4px;
+}
+
+.chapter-overview-thumb:hover {
+  border-color: var(--fs-link-color);
+}
+
+.chapter-overview-chapter.current .chapter-overview-thumb,
+.chapter-overview-thumb.current {
+  outline: 3px solid var(--fs-highlight-background);
+  outline-offset: 2px;
+}
+
+.reveal .chapter-overview-slide {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  padding: 108px 192px;
+  box-sizing: border-box;
+  text-align: left;
+  line-height: 1.3;
+  transform: scale(var(--thumb-scale));
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/*********************************************
+ * NEURAL NETWORK DIAGRAMS
+ *********************************************/
+
+.nn-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  margin: 50px 0 60px 0;
+}
+
+.nn-node {
+  padding: 24px 40px;
+  border: 2px solid var(--fs-border);
+  border-radius: 16px;
+  background: var(--fs-surface);
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  text-align: center;
+}
+
+.nn-node small {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--fs-main-font);
+  font-size: 0.55em;
+  font-weight: normal;
+  color: var(--fs-text-muted-color);
+}
+
+.nn-node.model {
+  border-color: var(--fs-highlight-background);
+  background: var(--fs-surface-alt);
+}
+
+.nn-node.latent {
+  border-style: dashed;
+  border-color: var(--fs-highlight-background);
+}
+
+.nn-arrow {
+  color: var(--fs-text-muted-color);
+}
+
+.nn-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin-bottom: 30px;
+}
+
+.reveal .nn-compare h3 {
+  margin: 0 0 10px 0;
+}
+
+.reveal .nn-compare p,
+.reveal .nn-compare ul {
+  margin: 0 0 10px 0;
+  font-size: 0.85em;
+}
+
+/* Spectrogram player: in above out, one transport, a crossfader */
+.spectro-player {
+  position: relative;
+  margin: 30px 0 20px 0;
+}
+
+.spectro-track {
+  position: relative;
+  margin-bottom: 14px;
+  transition: opacity 0.15s;
+}
+
+.spectro-track canvas {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 230px;
+  border: 1px solid var(--fs-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.spectro-label {
+  position: absolute;
+  top: 10px;
+  left: 16px;
+  font-family: var(--fs-heading-font);
+  font-size: 0.55em;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.spectro-playhead {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: calc(2 * 232px + 14px);
+  background: var(--fs-heading-color);
+  pointer-events: none;
+}
+
+.spectro-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 10px;
+  font-size: 0.6em;
+}
+
+.spectro-play {
+  width: 80px;
+  height: 56px;
+  border: 2px solid var(--fs-border);
+  border-radius: 12px;
+  background: var(--fs-surface);
+  color: var(--fs-text-color);
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.spectro-fader {
+  flex: 1;
+  accent-color: var(--fs-highlight-background);
+}
+
+.audio-demo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin: 50px 0;
+}
+
+.reveal .audio-demo h3 {
+  margin: 0 0 20px 0;
+  font-size: 0.8em;
+}
+
+.audio-demo audio {
+  width: 100%;
+}
+
+/* Task diagrams: what goes in, what the exercise does, what checks it */
+.task-flow {
+  gap: 24px;
+  margin: 40px 0;
+}
+
+.task-flow .nn-node {
+  padding: 22px 30px;
+}
+
+.reveal .nn-node code {
+  font-size: 0.75em;
+}
+
+.nn-node.exercise {
+  border-width: 3px;
+  border-color: var(--fs-highlight-background);
+  background: var(--fs-surface-alt);
+}
+
+.nn-node.check {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.12);
+}
+
+.nn-node.check::before {
+  content: '✓ ';
+  color: #4caf50;
+}
+
+/* Two paths that meet, e.g. dry and wet */
+.nn-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/*********************************************
+ * FILES, ICONS, WAVEFORMS
+ *********************************************/
+
+.file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-icon {
+  width: 100px;
+  height: 124px;
+  overflow: visible;
+}
+
+.file-page {
+  fill: var(--fs-surface);
+  stroke: var(--fs-border);
+  stroke-width: 3;
+}
+
+.file-fold {
+  fill: none;
+  stroke: var(--fs-border);
+  stroke-width: 3;
+}
+
+.file-icon text {
+  fill: #fff;
+  font-family: var(--fs-code-font);
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.file-name {
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+}
+
+.cpp-icon {
+  width: 130px;
+  height: 146px;
+}
+
+.cpp-icon text {
+  fill: #fff;
+  font-family: var(--fs-heading-font);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.waveform {
+  display: block;
+  width: 100%;
+}
+
+.waveform path {
+  fill: none;
+  stroke: var(--fs-highlight-background);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.waveform-dividers line {
+  stroke: var(--fs-border);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+/* What's given: assets | helpers | exercise, split like the integration slide */
+.given {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 40px;
+}
+
+.given-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  padding: 0 30px;
+}
+
+.given-column + .given-column {
+  border-left: 3px solid var(--fs-highlight-background);
+}
+
+.given-label {
+  font-family: var(--fs-heading-font);
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fs-heading-color);
+}
+
+.reveal .given-macro {
+  font-size: 0.5em;
+}
+
+.signal-pair {
+  margin-top: 30px;
+}
+
+.signal-pair .waveform {
+  box-sizing: border-box;
+  height: 230px;
+  margin: 10px 0 40px 0;
+  border: 1px solid var(--fs-border);
+  border-radius: 8px;
+}
+
+.signal-label {
+  font-size: 0.6em;
+}
+
+/*********************************************
+ * TASK PIPELINE: inputs → C++ → output → check
+ * Plays once whenever the slide comes up.
+ *********************************************/
+
+.pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  margin-top: 70px;
+}
+
+.pipeline .file-icon {
+  width: 130px;
+  height: 161px;
+}
+
+.pipeline .file-name {
+  font-size: 0.55em;
+}
+
+.pipeline .cpp-icon {
+  width: 170px;
+  height: 190px;
+}
+
+.pipe-inputs {
+  display: flex;
+  gap: 30px;
+}
+
+.pipe-link {
+  position: relative;
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--fs-highlight-background) 0 14px, transparent 14px 24px);
+  background-size: 24px 6px;
+}
+
+.pipe-link::after {
+  content: '';
+  position: absolute;
+  right: -14px;
+  top: -9px;
+  border: 12px solid transparent;
+  border-left: 16px solid var(--fs-highlight-background);
+  border-right: 0;
+}
+
+.pipe-run {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Eight segments: one per model block */
+.pipe-progress {
+  width: 240px;
+  height: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: repeating-linear-gradient(90deg, var(--fs-surface-alt) 0 28px, var(--fs-background-color) 28px 30px);
+}
+
+.pipe-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--fs-highlight-background);
+}
+
+.pipe-output {
+  width: 480px;
+}
+
+.pipe-output .waveform {
+  box-sizing: border-box;
+  height: 200px;
+  border: 1px solid var(--fs-border);
+  border-radius: 8px;
+  clip-path: inset(0 100% 0 0);
+}
+
+.pipe-label {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.55em;
+  color: var(--fs-text-muted-color);
+}
+
+.pipe-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+}
+
+.pipe-check-mark {
+  font-size: 2.2em;
+  font-weight: bold;
+  line-height: 1;
+  color: #4caf50;
+}
+
+.reveal .slides section.present .pipe-link {
+  animation: pipe-flow 0.8s linear infinite;
+}
+
+.reveal .slides section.present .pipe-progress span {
+  animation: pipe-fill 3s steps(8, end) 0.6s forwards;
+}
+
+.reveal .slides section.present .pipe-output .waveform {
+  animation: pipe-reveal 3s steps(8, end) 0.6s forwards;
+}
+
+.reveal .slides section.present .pipe-check {
+  animation: pipe-pop 0.4s ease-out 3.8s forwards;
+}
+
+@keyframes pipe-flow {
+  to { background-position: 24px 0; }
+}
+
+@keyframes pipe-fill {
+  to { width: 100%; }
+}
+
+@keyframes pipe-reveal {
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes pipe-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/*********************************************
+ * TASK TIMER
+ *********************************************/
+
+.task-timer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 4.2em;
+  padding: 8px 24px;
+  border: 3px solid var(--fs-border);
+  border-radius: 14px;
+  font-family: var(--fs-code-font);
+  font-size: 1.3em;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.task-timer::after {
+  content: 'click to start';
+  display: block;
+  font-family: var(--fs-main-font);
+  font-size: 0.35em;
+  color: var(--fs-text-subtle-color);
+}
+
+.task-timer.running {
+  border-color: var(--fs-highlight-background);
+}
+
+.task-timer.running::after {
+  content: 'click to pause';
+}
+
+.task-timer.done {
+  border-color: #c62828;
+  background: #c62828;
+  color: #fff;
+}
+
+.task-timer.done::after {
+  content: 'time · double-click to reset';
+  color: #fff;
+}
+
+/* Model types, one row each */
+.nn-types {
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+  margin: 80px 0;
+}
+
+.nn-type {
+  display: grid;
+  grid-template-columns: 360px 80px 240px 80px 360px 1fr;
+  align-items: center;
+  text-align: center;
+}
+
+.nn-type .nn-node {
+  padding: 24px 0;
+}
+
+.nn-examples {
+  margin-left: 50px;
+  text-align: left;
+  font-size: 0.8em;
+  color: var(--fs-text-muted-color);
+}
+
+/* Stateless vs. stateful: independent calls vs. calls chained by state */
+.state-demo {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  row-gap: 50px;
+  margin: 60px 0;
+}
+
+.state-label {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+}
+
+.state-gap,
+.state-link {
+  width: 200px;
+  text-align: center;
+}
+
+.state-link {
+  color: var(--fs-highlight-background);
+  font-size: 0.7em;
+  font-weight: bold;
+}
+
+.variations .tile h3 {
+  font-size: 0.8em;
+}
+
+/* A row of short facts under a diagram */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin: 30px 0;
+}
+
+.facts span {
+  padding: 8px 22px;
+  border-radius: 999px;
+  background: var(--fs-surface-alt);
+  font-size: 0.75em;
+}
+
+/*********************************************
+ * INTRODUCTION
+ *********************************************/
+
+.people {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 80px;
+}
+
+.person {
+  width: 420px;
+  text-align: center;
+}
+
+.person-photo {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.reveal .person-photo {
+  display: block;
+  margin: 0 auto;
+}
+
+.reveal .person-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fs-surface-alt);
+  font-family: var(--fs-heading-font);
+  font-size: 3em;
+  color: var(--fs-highlight-background);
+}
+
+.person-name {
+  margin-top: 30px;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+.person-role {
+  color: var(--fs-text-muted-color);
+  font-size: 0.75em;
+}
+
+.scope {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 60px;
+}
+
+.reveal .scope h3 {
+  margin: 0 0 10px 0;
+}
+
+.scope-out {
+  color: var(--fs-text-muted-color);
+}
+
+.scope-out li {
+  text-decoration: line-through;
+}
+
+.qr-row {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 60px;
+}
+
+.qr {
+  text-align: center;
+}
+
+/* White background in both themes, or phones cannot read it */
+.qr-code {
+  width: 360px;
+  height: 360px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 16px;
+}
+
+.qr-code svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.qr-label {
+  margin-top: 24px;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+.qr-url {
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+/* Agenda badges: what is hands-on and what is only shown */
+.agenda-kind {
+  margin-left: 14px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  font-size: 0.6em;
+  vertical-align: middle;
+  border: 2px solid var(--fs-border);
+  color: var(--fs-text-muted-color);
+}
+
+.agenda-kind.exercise {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.12);
+  color: var(--fs-text-color);
+}
+
+/*********************************************
+ * INTEGRATION (train, export, implement)
+ *********************************************/
+
+.integration {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 30px 0 40px 0;
+}
+
+.integration-step {
+  padding: 0 40px;
+  text-align: center;
+}
+
+.integration-step + .integration-step {
+  border-left: 3px solid var(--fs-highlight-background);
+}
+
+/* The step this slide is about */
+.integration-step.highlight-step {
+  outline: 4px solid var(--fs-highlight-background);
+  outline-offset: 12px;
+  border-radius: 16px;
+  background: var(--fs-surface-alt);
+}
+
+.integration-step svg {
+  width: 100%;
+  height: 280px;
+  margin-bottom: 10px;
+}
+
+.integration-lines line,
+.integration-ring,
+.integration-curve {
+  fill: none;
+  stroke: var(--fs-border);
+  stroke-width: 4;
+}
+
+.integration-dots circle {
+  fill: var(--fs-highlight-background);
+}
+
+.integration-ring {
+  stroke-dasharray: 10 8;
+}
+
+.integration-ring.accent,
+.integration-curve.accent {
+  stroke: var(--fs-highlight-background);
+}
+
+.integration-label {
+  font-family: var(--fs-heading-font);
+  font-size: 1.2em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fs-heading-color);
+}
+
+.integration-title {
+  margin-top: 20px;
+  font-weight: bold;
+  font-size: 0.75em;
+}
+
+.integration-detail {
+  color: var(--fs-text-muted-color);
+  font-size: 0.7em;
+}
+
+.integration-language {
+  margin-top: 10px;
+  color: var(--fs-highlight-background);
+  font-size: 0.7em;
+}
+
+/*********************************************
+ * OVERFLOW CHECK (dev server only)
+ *********************************************/
+
+.overflow-check {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 40vw;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #c62828;
+  color: #fff;
+  font-family: var(--fs-main-font);
+  font-size: 14px;
+}
+
+.overflow-check a {
+  color: #fff;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /*********************************************

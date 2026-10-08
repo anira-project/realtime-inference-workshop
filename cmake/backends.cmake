@@ -68,6 +68,14 @@ macro(workshop_setup_libtorch)
     set(Torch_DIR "${root}/share/cmake/Torch" CACHE PATH "" FORCE)
     find_package(Torch REQUIRED CONFIG)
     set(WORKSHOP_LIBTORCH_LIB_DIR "${root}/lib" CACHE PATH "" FORCE)
+
+    # On Windows the DLLs live in bin/ and only the import libraries in lib/,
+    # so copying lib/ alone leaves the executables without torch.dll.
+    if(EXISTS "${root}/bin")
+        set(WORKSHOP_LIBTORCH_BIN_DIR "${root}/bin" CACHE PATH "" FORCE)
+    else()
+        set(WORKSHOP_LIBTORCH_BIN_DIR "" CACHE PATH "" FORCE)
+    endif()
 endmacro()
 
 # Copy the engine's shared libraries next to an executable, so it runs from the
@@ -79,46 +87,79 @@ function(workshop_copy_libtorch_runtime target)
         COMMENT "Copying LibTorch runtime next to ${target}"
         VERBATIM
     )
+
+    if(WORKSHOP_LIBTORCH_BIN_DIR)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${WORKSHOP_LIBTORCH_BIN_DIR}" "$<TARGET_FILE_DIR:${target}>"
+            COMMENT "Copying the LibTorch DLLs next to ${target}"
+            VERBATIM
+        )
+    endif()
 endfunction()
 
 # ONNX Runtime: the same release, unpacked to include/ + lib/. It ships no CMake
 # config, so the imported target is built here.
+#
+#   workshop_setup_onnxruntime()          -> workshop::onnxruntime, the dylib
+#   workshop_setup_onnxruntime(STATIC)    -> workshop::onnxruntime_static
+#
+# The plugin links the static one: one self-contained bundle instead of a
+# shared library that has to be found at load time. LibTorch has no static
+# build in the release, which is half of step 4's point.
 macro(workshop_setup_onnxruntime)
-    if(NOT TARGET workshop::onnxruntime)
+    set(ort_linkage "shared")
+    set(ort_target "workshop::onnxruntime")
+    if("${ARGN}" MATCHES "STATIC")
+        set(ort_linkage "static")
+        set(ort_target "workshop::onnxruntime_static")
+    endif()
+
+    if(NOT TARGET ${ort_target})
         if(WORKSHOP_ONNXRUNTIME_ROOTDIR)
             set(ort_root "${WORKSHOP_ONNXRUNTIME_ROOTDIR}")
         else()
             _workshop_platform(ort_platform)
-            set(ort_asset "onnxruntime-${WORKSHOP_ONNXRUNTIME_VERSION}-${ort_platform}-shared.zip")
+            set(ort_asset "onnxruntime-${WORKSHOP_ONNXRUNTIME_VERSION}-${ort_platform}-${ort_linkage}.zip")
             message(STATUS "Workshop: fetching ${ort_asset}")
 
-            FetchContent_Declare(workshop_onnxruntime
+            FetchContent_Declare(workshop_onnxruntime_${ort_linkage}
                 URL "https://github.com/anira-project/backends/releases/download/${WORKSHOP_BACKENDS_VERSION}/${ort_asset}"
                 DOWNLOAD_EXTRACT_TIMESTAMP TRUE
                 SOURCE_SUBDIR no-cmake-project
             )
-            FetchContent_MakeAvailable(workshop_onnxruntime)
-            set(ort_root "${workshop_onnxruntime_SOURCE_DIR}")
+            FetchContent_MakeAvailable(workshop_onnxruntime_${ort_linkage})
+            set(ort_root "${workshop_onnxruntime_${ort_linkage}_SOURCE_DIR}")
         endif()
 
-        # The file to load at runtime, and on Windows the import library the
-        # linker needs next to it.
-        file(GLOB ort_library
-            "${ort_root}/lib/libonnxruntime.dylib"
-            "${ort_root}/lib/libonnxruntime.so*"
-            "${ort_root}/lib/onnxruntime.dll")
-        list(GET ort_library 0 ort_library)
+        if(ort_linkage STREQUAL "static")
+            file(GLOB ort_library "${ort_root}/lib/libonnxruntime.a" "${ort_root}/lib/onnxruntime.lib")
+            list(GET ort_library 0 ort_library)
 
-        add_library(workshop::onnxruntime SHARED IMPORTED GLOBAL)
-        set_target_properties(workshop::onnxruntime PROPERTIES
-            IMPORTED_LOCATION "${ort_library}"
-            INTERFACE_INCLUDE_DIRECTORIES "${ort_root}/include")
+            add_library(workshop::onnxruntime_static STATIC IMPORTED GLOBAL)
+            set_target_properties(workshop::onnxruntime_static PROPERTIES
+                IMPORTED_LOCATION "${ort_library}"
+                INTERFACE_INCLUDE_DIRECTORIES "${ort_root}/include")
+        else()
+            # The file to load at runtime, and on Windows the import library the
+            # linker needs next to it.
+            file(GLOB ort_library
+                "${ort_root}/lib/libonnxruntime.dylib"
+                "${ort_root}/lib/libonnxruntime.so*"
+                "${ort_root}/lib/onnxruntime.dll")
+            list(GET ort_library 0 ort_library)
 
-        if(WIN32)
+            add_library(workshop::onnxruntime SHARED IMPORTED GLOBAL)
             set_target_properties(workshop::onnxruntime PROPERTIES
-                IMPORTED_IMPLIB "${ort_root}/lib/onnxruntime.lib")
+                IMPORTED_LOCATION "${ort_library}"
+                INTERFACE_INCLUDE_DIRECTORIES "${ort_root}/include")
+
+            if(WIN32)
+                set_target_properties(workshop::onnxruntime PROPERTIES
+                    IMPORTED_IMPLIB "${ort_root}/lib/onnxruntime.lib")
+            endif()
+            set(WORKSHOP_ONNXRUNTIME_LIB_DIR "${ort_root}/lib" CACHE PATH "" FORCE)
         endif()
-        set(WORKSHOP_ONNXRUNTIME_LIB_DIR "${ort_root}/lib" CACHE PATH "" FORCE)
     endif()
 endmacro()
 

@@ -3,6 +3,10 @@
 workshop_setup_juce()
 workshop_setup_readerwriterqueue()
 
+# Static, so the bundle carries the engine inside it instead of looking for a
+# shared library at load time. LibTorch has no static build — see step 4.
+workshop_setup_onnxruntime(STATIC)
+
 juce_add_plugin(step08_plugin
     VERSION 0.1.0
     PRODUCT_NAME "Workshop Inference"
@@ -21,16 +25,15 @@ target_compile_definitions(step08_plugin PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
-    WORKSHOP_MODEL_PATH="${WORKSHOP_MODEL}"
+    WORKSHOP_ONNX_MODEL_PATH="${WORKSHOP_ONNX_MODEL}"
 )
 
 target_include_directories(step08_plugin PRIVATE
     "${CMAKE_SOURCE_DIR}/steps"
-    "${CMAKE_CURRENT_LIST_DIR}/source"
-    ${TORCH_INCLUDE_DIRS})
+    "${CMAKE_CURRENT_LIST_DIR}/source")
 
 target_link_libraries(step08_plugin PRIVATE
-    "${TORCH_LIBRARIES}"
+    workshop::onnxruntime_static
     readerwriterqueue
     juce::juce_audio_utils
     PUBLIC

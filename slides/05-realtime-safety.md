@@ -3,6 +3,7 @@
 Fast enough is not the same as safe
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: demo -->
 
 Note:
     - Demonstration, no exercise. Run it live if the Homebrew clang is there; the output is the slide.
@@ -76,9 +77,7 @@ Note:
 
 ## Not once — all the time
 
-Ten callbacks, every allocation and free inside them counted:
-
-| | per block | first block |
+| allocations + frees, ten callbacks | per block | first block |
 |---|---|---|
 | LibTorch | 10,960 | **591,393** |
 | ONNX Runtime | 1,932 | 2,000-ish |

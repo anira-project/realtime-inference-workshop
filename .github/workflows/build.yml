@@ -1,8 +1,8 @@
 name: build
 
-# Every step has to build on every platform participants bring, and every
-# solution has to produce the right numbers. Exercises only have to build:
-# they fail at runtime by design, until their TODOs are filled in.
+# Every step and the plugin have to build on every platform participants bring,
+# and every solution has to produce the right numbers. Exercises only have to
+# build: they fail at runtime by design, until their TODOs are filled in.
 
 on:
   push:
@@ -25,10 +25,16 @@ jobs:
         include:
           - name: macOS-arm64
             os: macos-latest
+          - name: macOS-x86_64
+            os: macos-13
           - name: Linux-x86_64
             os: ubuntu-latest
+          - name: Linux-arm64
+            os: ubuntu-24.04-arm
           - name: Windows-x86_64
             os: windows-latest
+          - name: Windows-arm64
+            os: windows-11-arm
 
     steps:
       - uses: actions/checkout@v4
@@ -41,18 +47,27 @@ jobs:
           path: models
           key: models-${{ hashFiles('cmake/models.cmake') }}
 
-      # LibTorch alone is 80 MB compressed, and the benchmark library is built
-      # from source. Keyed on the files that decide the versions.
+      # LibTorch alone is 80 MB compressed, JUCE is a full clone, and the
+      # benchmark library is built from source.
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
           path: build/_deps
-          key: deps-${{ matrix.os }}-${{ hashFiles('cmake/backends.cmake', 'cmake/benchmark.cmake', 'cmake/readerwriterqueue.cmake') }}
+          key: deps-${{ matrix.name }}-${{ hashFiles('cmake/*.cmake') }}
+
+      # What JUCE needs on a bare Ubuntu runner.
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libfreetype6-dev libcurl4-openssl-dev \
+            libwebkit2gtk-4.1-dev
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
 
-      - name: Build every step
+      - name: Build every step and the plugin
         run: cmake --build build --config Release --parallel
 
       # The solutions carry the claims the workshop makes: the output matches
@@ -67,12 +82,14 @@ jobs:
             "$path"
           done
 
-      # Step 5 is a demonstration: its "verify" mode is the part with a right
-      # answer, the rest is meant to misbehave.
+      # Step 5 is a demonstration; its "verify" mode is the part with a right
+      # answer. Skipped on Windows: RealtimeSanitizer is a clang feature, and
+      # the step only means something with it.
       - name: Run the real-time safety check
+        if: runner.os != 'Windows'
         shell: bash
         run: |
-          path=$(find build -name "step05_solution" -o -name "step05_solution.exe" | head -1)
+          path=$(find build -name "step05_solution" | head -1)
           "$path" verify
 
       # Exercises are expected to fail — they are full of TODOs. What matters
@@ -88,44 +105,6 @@ jobs:
             "$path" || true
           done
 
-  plugin:
-    name: plugin-${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macOS-arm64
-            os: macos-latest
-          - name: Linux-x86_64
-            os: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache models
-        uses: actions/cache@v4
-        with:
-          path: models
-          key: models-${{ hashFiles('cmake/models.cmake') }}
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: build-juce/_deps
-          key: juce-deps-${{ matrix.os }}-${{ hashFiles('cmake/juce.cmake', 'cmake/backends.cmake') }}
-
-      # What JUCE needs on a bare Ubuntu runner.
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxrandr-dev \
-            libxinerama-dev libxcursor-dev libfreetype6-dev libcurl4-openssl-dev \
-            libwebkit2gtk-4.1-dev ninja-build
-
-      - name: Configure
-        run: cmake -S . -B build-juce -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
-
-      - name: Build the plugin
-        run: cmake --build build-juce --config Release --parallel --target step08_plugin_VST3
+      - name: The plugin was built
+        shell: bash
+        run: find build -name "*.vst3" -o -name "*.app" | head -5

@@ -15,7 +15,6 @@
 #include <thread>
 #include <vector>
 
-#include "common/libtorch_engine.h"
 #include "common/ring_buffer.h"
 
 // Model settings taken from the export metadata.
@@ -39,9 +38,12 @@ struct ModelBlock {
 #endif
 
 // Step 6's processor, with a dry path and a mix control.
+// @Engine: anything with process(float*, size_t) and reset() — the engines from
+//          step 1 and step 5 both fit, which is the point of that interface.
+template <typename Engine>
 class LatencyProcessor {
 public:
-    explicit LatencyProcessor(LibTorchEngine& engine) : m_engine(engine) {}
+    explicit LatencyProcessor(Engine& engine) : m_engine(engine) {}
 
     ~LatencyProcessor() { stop(); }
 
@@ -153,7 +155,7 @@ private:
         }
     }
 
-    LibTorchEngine& m_engine;
+    Engine& m_engine;
     RingBuffer m_input{0};
     RingBuffer m_output{0};
     RingBuffer m_dry{0};

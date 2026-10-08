@@ -2,6 +2,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const QRCode = require('qrcode');
 
 async function combineSlides() {
   const slidesDir = path.join(__dirname, '../slides');
@@ -35,52 +36,169 @@ async function generateHTML(isDev = false) {
   const distDir = path.join(__dirname, '../dist');
   await fs.mkdir(distDir, { recursive: true });
   
-  const presentationFiles = [];
-  
-  // Check if there's only one slide file
-  if (slides.length === 1) {
-    // Generate single index.html for the presentation
-    const slide = slides[0];
-    const slidesContent = await buildSlidesContent([slide]);
-    const title = extractTitle(slide.content, slide.isHtml);
-    
-    let html = renderTemplate(slidesTemplate, {
-      SLIDES_CONTENT: slidesContent,
-      PRESENTATION_TITLE: title,
-      HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>' : ''
-    });
-    
-    await fs.writeFile(path.join(distDir, 'index.html'), html);
-    console.log(`✅ Generated index.html (single presentation)`);
-  } else {
-    // Generate a separate HTML file for each slide
-    for (const slide of slides) {
-      const slidesContent = await buildSlidesContent([slide]);
-      const title = extractTitle(slide.content, slide.isHtml);
-      
-      let html = renderTemplate(slidesTemplate, {
-        SLIDES_CONTENT: slidesContent,
-        PRESENTATION_TITLE: title,
-        HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>' : ''
-      });
-      
-      // Get output filename (replace .md or .html extension with .html)
-      const outputFilename = slide.filename.replace(/\.(md|html)$/, '.html');
-      
-      await fs.writeFile(path.join(distDir, outputFilename), html);
-      console.log(`✅ Generated ${outputFilename}`);
-      
-      presentationFiles.push({
-        filename: outputFilename,
-        title: title
-      });
+  // Every slide file is one chapter: a vertical stack in a single deck, so the
+  // overview (Esc) shows one column per chapter
+  const chapters = [];
+  let part = null;
+  for (const slide of slides) {
+    const partMatch = slide.content.match(/<!--\s*part:\s*(.+?)\s*-->/);
+    if (partMatch) {
+      part = partMatch[1];
     }
-    
-    // Generate index.html landing page
-    await generateIndexPage(presentationFiles, distDir, isDev);
+    // exercise, demo or talk — shown as a badge in the agenda
+    const kindMatch = slide.content.match(/<!--\s*kind:\s*(\w+)\s*-->/);
+    chapters.push({
+      ...slide,
+      id: slide.filename.replace(/\.(md|html)$/, '').replace(/^\d+-/, ''),
+      title: extractTitle(slide.content, slide.isHtml),
+      part: part,
+      kind: kindMatch ? kindMatch[1] : null
+    });
   }
   
+  const agenda = buildAgenda(chapters);
+  const integrationTemplate = await fs.readFile(
+    path.join(__dirname, '../slides/templates/integration.html'), 'utf-8');
+  let slidesContent = '';
+  for (const chapter of chapters) {
+    let content = chapter.content.replace(/\{\{AGENDA\}\}/g, agenda);
+    content = renderIntegration(content, integrationTemplate);
+    content = renderIcons(await renderWaveforms(content));
+    content = await renderQrCodes(content);
+    slidesContent += `<section id="${chapter.id}">
+      ${await buildSlidesContent([{ ...chapter, content }])}</section>
+      `;
+  }
+  
+  const html = renderTemplate(slidesTemplate, {
+    SLIDES_CONTENT: slidesContent,
+    PRESENTATION_TITLE: 'Real-Time Neural Inference Workshop',
+    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>\n  <script src="js/overflow_check.js"></script>' : ''
+  });
+  
+  await fs.writeFile(path.join(distDir, 'workshop.html'), html);
+  console.log('✅ Generated workshop.html');
+  
+  // Generate index.html landing page
+  await generateIndexPage(chapters, distDir, isDev);
+  
   console.log('✅ All HTML files generated successfully!');
+}
+
+// {{INTEGRATION:train|export|implement}} → the train/export/implement diagram,
+// with a box around that one step
+function renderIntegration(content, template) {
+  return content.replace(/\{\{INTEGRATION:(\w+)\}\}/g, (match, step) =>
+    template.replace(/\{\{(TRAIN|EXPORT|IMPLEMENT)\}\}/g, (m, name) =>
+      name.toLowerCase() === step ? 'highlight-step' : ''));
+}
+
+// {{WAVEFORM:steps/common/test_signal.h|blocks=2048|height=200}} → an SVG of the
+// float array in that header: min/max per column, a divider every `blocks` samples
+async function renderWaveforms(content) {
+  const matches = [...content.matchAll(/\{\{WAVEFORM:([^}|]+)((?:\|[^}|]+)*)\}\}/g)];
+  for (const match of matches) {
+    const options = Object.fromEntries(match[2].split('|').filter(Boolean).map(o => o.split('=')));
+    const header = await fs.readFile(path.join(__dirname, '..', match[1].trim()), 'utf-8');
+    const body = header.slice(header.indexOf('= {') + 3, header.lastIndexOf('};'));
+    const samples = (body.match(/-?\d[\d.]*(?:e[-+]?\d+)?/gi) || []).map(Number);
+
+    const width = 1600;
+    const height = Number(options.height || 200);
+    const columns = [];
+    for (let x = 0; x < width; ++x) {
+      const from = Math.floor(x / width * samples.length);
+      const to = Math.max(from + 1, Math.floor((x + 1) / width * samples.length));
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let i = from; i < to; ++i) { lo = Math.min(lo, samples[i]); hi = Math.max(hi, samples[i]); }
+      // Full scale is ±1, so signals drawn side by side are comparable
+      const y = v => ((1 - Math.max(-1, Math.min(1, v))) / 2 * height).toFixed(1);
+      columns.push(`M${x},${y(hi)}V${y(lo)}`);
+    }
+    let dividers = '';
+    if (options.blocks) {
+      for (let i = Number(options.blocks); i < samples.length; i += Number(options.blocks)) {
+        const x = (i / samples.length * width).toFixed(1);
+        dividers += `<line x1="${x}" y1="0" x2="${x}" y2="${height}"/>`;
+      }
+    }
+    const svg = `<svg class="waveform" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">` +
+      `<g class="waveform-dividers">${dividers}</g><path d="${columns.join('')}"/></svg>`;
+    content = content.replace(match[0], svg);
+  }
+  return content;
+}
+
+// Colour of the badge on a file icon, by extension
+const FILE_COLOURS = { pt: '#ee4c2c', onnx: '#7f7f7f', h: '#8e6bd8', cpp: '#00599c' };
+
+// {{FILE:forward_stateful.pt}} → a file icon with its extension on a badge, name below
+// {{ICON:cpp}} → the C++ hexagon
+function renderIcons(content) {
+  content = content.replace(/\{\{FILE:([^}]+)\}\}/g, (match, name) => {
+    const extension = name.includes('.') ? name.split('.').pop() : '';
+    const colour = FILE_COLOURS[extension] || '#7f7f7f';
+    return `<div class="file"><svg class="file-icon" viewBox="0 0 100 124" aria-hidden="true">` +
+      `<path class="file-page" d="M8 4h58l26 26v86a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z"/>` +
+      `<path class="file-fold" d="M66 4v22a4 4 0 0 0 4 4h22"/>` +
+      `<rect x="0" y="66" width="74" height="30" rx="5" fill="${colour}"/>` +
+      `<text x="37" y="87" text-anchor="middle">.${extension}</text></svg>` +
+      `<div class="file-name">${name}</div></div>`;
+  });
+  return content.replace(/\{\{ICON:cpp\}\}/g,
+    `<svg class="cpp-icon" viewBox="0 0 100 112" aria-hidden="true">` +
+    `<path d="M50 2l46 26v56l-46 26L4 84V28z" fill="#00599c"/>` +
+    `<path d="M50 2l46 26L50 56 4 28z" fill="#659ad2"/>` +
+    `<path d="M96 28v56l-46 26V56z" fill="#004482"/>` +
+    `<text x="50" y="68" text-anchor="middle">C++</text></svg>`);
+}
+
+// {{QR:https://...}} → an inline SVG QR code for that URL
+async function renderQrCodes(content) {
+  const matches = [...content.matchAll(/\{\{QR:([^}]+)\}\}/g)];
+  for (const match of matches) {
+    const svg = await QRCode.toString(match[1].trim(), { type: 'svg', margin: 0 });
+    content = content.replace(match[0], `<div class="qr-code">${svg}</div>`);
+  }
+  return content;
+}
+
+const KIND_LABELS = { exercise: 'hands-on', demo: 'demo', talk: 'talk' };
+
+// "Step 3 Benchmarking and the real-time budget" -> { number: 3, name: "Benchmarking ..." }
+function splitStepTitle(title) {
+  const match = title.match(/^Step\s+(\d+)\s+(.*)$/);
+  return match ? { number: match[1], name: match[2] } : { number: null, name: title };
+}
+
+// One column per part, separated by a break; chapters without a part are left out
+function buildAgenda(chapters) {
+  const parts = [];
+  for (const chapter of chapters) {
+    if (!chapter.part) continue;
+    if (parts.length === 0 || parts[parts.length - 1].title !== chapter.part) {
+      parts.push({ title: chapter.part, chapters: [] });
+    }
+    parts[parts.length - 1].chapters.push(chapter);
+  }
+  
+  const columns = parts.map((p, i) => {
+    // A part that is a single chapter of the same name links its heading instead
+    const first = p.chapters[0];
+    if (p.chapters.length === 1 && splitStepTitle(first.title).name === p.title) {
+      return `<div class="agenda-part"><div class="agenda-part-label">Part ${i + 1}</div><h3><a href="#/${first.id}">${p.title}</a></h3></div>`;
+    }
+    const items = p.chapters.map(chapter => {
+      const { number, name } = splitStepTitle(chapter.title);
+      const label = number ? `<span class="agenda-number">${number}</span>` : '<span class="agenda-number"></span>';
+      const kind = chapter.kind ? `<span class="agenda-kind ${chapter.kind}">${KIND_LABELS[chapter.kind] ?? chapter.kind}</span>` : '';
+      return `<li><a href="#/${chapter.id}">${label}${name}</a>${kind}</li>`;
+    }).join('');
+    return `<div class="agenda-part"><div class="agenda-part-label">Part ${i + 1}</div><h3>${p.title}</h3><ol>${items}</ol></div>`;
+  });
+  
+  return `<div class="agenda">${columns.join('<div class="agenda-break">Break</div>')}</div>`;
 }
 
 function extractTitle(content, isHtml) {
@@ -93,14 +211,14 @@ function extractTitle(content, isHtml) {
   return formatTitle || 'Untitled Presentation';
 }
 
-async function generateIndexPage(presentationFiles, distDir, isDev) {
+async function generateIndexPage(chapters, distDir, isDev) {
   const indexTemplatePath = path.join(__dirname, '../slides/templates/index.html');
   const indexTemplate = await fs.readFile(indexTemplatePath, 'utf-8');
   
-  const presentationsList = presentationFiles.map(file => 
-    `    <a href="${file.filename}" class="presentation-card">
-      <h2>${file.title}</h2>
-      <p class="filename">${file.filename}</p>
+  const presentationsList = chapters.map(chapter => 
+    `    <a href="workshop.html#/${chapter.id}" class="presentation-card">
+      <h2>${chapter.title}</h2>
+      <p class="filename">${chapter.part ?? 'Introduction'}</p>
     </a>`
   ).join('\n');
   
@@ -149,7 +267,7 @@ async function createMarkdownSection(markdownContent) {
   // Process timeline imports before cleaning content
   const processedContent = await processTimelineImports(markdownContent);
   const cleanContent = processedContent.replace(/\n\n---\n\n$/, '');
-  return `<section data-markdown data-separator="^---" data-separator-vertical="^--">
+  return `<section data-markdown data-separator="^---\\s*$">
         <textarea data-template>
 ${cleanContent}
         </textarea>

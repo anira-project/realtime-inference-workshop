@@ -3,19 +3,17 @@
 How long does it take — and how long in the worst case?
 
 <!-- .slide: data-state="no-header" -->
+<!-- kind: exercise -->
 
 Note:
     - Ask the room: who measures worst case rather than average? What do you measure with?
 
 ---
 
-## The deadline
+## Why: the deadline
 
 A callback has to be done before the host wants the next block:
-
-```
-budget = host block size / sample rate
-```
+`budget = host block size / sample rate`
 
 | host block | 44.1 kHz | 48 kHz | 96 kHz |
 |---|---|---|---|
@@ -28,13 +26,13 @@ Miss it once and you hear it.
 
 ---
 
-## Two block sizes, one deadline
+## Why: two block sizes, one deadline
 
 Our model takes **2048 samples**: 42.7 ms of *audio*.
 
 The host hands us **64 samples**: 1.33 ms of *time*.
 
-```
+```plaintext
 callback:  |64|64|64| ... |64|   ← 1.33 ms each
 model:     .  .  .       [2048]  ← runs in one of them
 ```
@@ -47,7 +45,7 @@ Note:
 
 ---
 
-## What that costs
+## Why: what that costs
 
 Forward pass on this laptop: **≈ 5 ms**.
 
@@ -58,35 +56,125 @@ A CPU meter showing 12% and an audio stream that clicks every 43 ms.
 
 ---
 
-## Mean is not the number
+## Goal
 
-```
-forward_pass_mean       5.13 ms
-forward_pass_median     4.57 ms
-forward_pass_p95        5.21 ms
-forward_pass_p99        5.36 ms
-forward_pass_max        84.5 ms      ← one call in 200
+You know how long one forward pass takes — **typically, and in the worst case**.
+
+1. **Run the model** inside the timed loop
+2. **Implement `percentile()`** — for p95 and p99
+3. **Time one call per repetition** — not an average of many
+
+---
+
+## What's given
+
+```plaintext
+models/forward_stateful.pt    the model, as in step 1
+WORKSHOP_MODEL_PATH           its path, set by CMake → k_model.m_path
+common/libtorch_engine.h      the engine from step 1
+common/test_signal.h          its first 2048 samples are the input
+Google Benchmark              new: fetched and built by CMake
+exercise/main.cpp             three TODOs, k_repetitions = 200
 ```
 
-Page faults, the allocator, a thermal step, the scheduler. The mean is stable
-across runs; **the max is not, and it is the one that decides**.
+The model is loaded once, before anything is timed — loading is not what we measure.
+
+---
+
+## New: Google Benchmark
+
+```cpp
+void forward_pass(benchmark::State& state) {
+    for (auto _ : state) { /* only this is timed */ }
+}
+
+BENCHMARK(forward_pass)
+    ->Iterations(n)      // calls per repetition — otherwise it picks, and averages
+    ->Repetitions(n)     // how often the whole measurement runs
+    ->ComputeStatistics("p95", fn);   // our own statistic over the repetitions
+```
+
+Mean, median and standard deviation come for free. **p95, p99 and max we add.**
+
+---
+
+## Task
+
+<div class="task-timer" data-minutes="5"></div>
+
+Fill in the TODOs in `steps/03_benchmark/exercise/main.cpp`
+
+```bash
+cmake --build --preset release --target step03_exercise
+./build/bin/step03_exercise
+```
+
+<div class="nn-flow task-flow">
+  <div class="nn-node">model<small>one 2048-sample block</small></div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node exercise">200 × one timed call<small><code>main.cpp</code> + Google Benchmark</small></div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node check">mean, p95, p99, max<small>vs. the budget per callback</small></div>
+</div>
+
+---
+
+## If you see this: perfect
+
+```plaintext
+Benchmark                                         Time
+forward_pass/iterations:1/repeats:200_mean     5.83 ms
+forward_pass/iterations:1/repeats:200_median   5.50 ms
+forward_pass/iterations:1/repeats:200_p95      6.02 ms
+forward_pass/iterations:1/repeats:200_p99      6.39 ms
+forward_pass/iterations:1/repeats:200_max      41.1 ms   ← one call in 200
+```
+
+Run it three times and watch which numbers move. The mean is stable across runs;
+**the max is not, and it is the one that decides**.
 
 Note:
     - Ask: what is your worst-case budget in practice? Collect numbers — most people only know the average.
 
 ---
 
-## Your job
+## TODO 1 — the timed loop
 
-1. **Run the model in the timed loop**
-2. **Implement `percentile()`** — p95, p99
-3. **One call per repetition** — not an average of many
-
-```bash
-./build/bin/step03_exercise
+```cpp
+for (auto _ : state) {
+    engine().process(block.data(), block_size);
+    benchmark::DoNotOptimize(block.data());
+}
 ```
 
-Run it three times and watch which numbers move.
+Only the call itself: copying, allocating or printing in here is measured too.
+
+---
+
+## TODO 2 — `percentile()`
+
+```cpp
+std::vector<double> sorted(times);
+std::sort(sorted.begin(), sorted.end());
+const auto index = static_cast<size_t>(fraction * (sorted.size() - 1) + 0.5);
+return sorted[index];
+```
+
+Sort a copy, and take the entry `fraction` of the way through it.
+
+---
+
+## TODO 3 — one call per repetition
+
+```cpp
+BENCHMARK(forward_pass)
+    ->Iterations(1)
+    ->Repetitions(k_repetitions)
+    // ...
+```
+
+Left alone, Google Benchmark runs the body as often as it likes and reports the
+average — the one number that **cannot** show a worst case.
 
 ---
 
@@ -96,8 +184,9 @@ Run it three times and watch which numbers move.
 - **p95 / p99** — what most users hit sometimes
 - **max** — what decides whether you shipped a broken plugin
 
-Rule of thumb: the worst case has to fit the budget, with room to spare,
-because everything else in the host is also fighting for that deadline.
+Page faults, the allocator, a thermal step, the scheduler. The worst case has to fit
+the budget, with room to spare: everything else in the host is fighting for that
+deadline too.
 
 ---
 

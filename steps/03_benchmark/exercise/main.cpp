@@ -3,7 +3,7 @@
 // Goal:   find out how long one forward pass takes, and how long it takes in
 //         the worst case.
 // Given:  Google Benchmark, and the engine from step 1.
-// You do: fill in the three TODO banners.
+// Task:   fill in the three TODO banners.
 // Check:  the numbers, against the budget a host block size gives you.
 //
 // It builds and runs as it is, and says which TODO is still open.
@@ -41,7 +41,7 @@ LibTorchEngine& engine() {
     return instance;
 }
 
-// What Google Benchmark times. Everything inside the loop below is measured.
+// What Google Benchmark measures. Everything inside the loop below is measured.
 void forward_pass(benchmark::State& state) {
     const auto block_size = static_cast<size_t>(k_model.m_input_size);
     std::vector<float> block(k_input_signal.begin(), k_input_signal.begin() + block_size);
@@ -79,7 +79,10 @@ double percentile(const std::vector<double>& times, double fraction) {
     // Sort a copy of `times` and return the entry at `fraction` of the way
     // through it.
     // ------------------------------------------------------------------------
-    return 0.0;
+    std::vector<double> sorted = std::nfill(times.size(), 0.0);
+    const auto index = 0.0;
+
+    return sorted[index];
 }
 
 // Says once that TODO 2 is still open: a percentile of 0 next to a mean of

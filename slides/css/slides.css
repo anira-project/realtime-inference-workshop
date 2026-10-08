@@ -703,6 +703,89 @@
   width: 100%;
 }
 
+/* Task diagrams: what goes in, what the exercise does, what checks it */
+.task-flow {
+  gap: 24px;
+  margin: 40px 0;
+}
+
+.task-flow .nn-node {
+  padding: 22px 30px;
+}
+
+.reveal .nn-node code {
+  font-size: 0.75em;
+}
+
+.nn-node.exercise {
+  border-width: 3px;
+  border-color: var(--fs-highlight-background);
+  background: var(--fs-surface-alt);
+}
+
+.nn-node.check {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.12);
+}
+
+.nn-node.check::before {
+  content: '✓ ';
+  color: #4caf50;
+}
+
+/* Two paths that meet, e.g. dry and wet */
+.nn-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/*********************************************
+ * TASK TIMER
+ *********************************************/
+
+.task-timer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 4.2em;
+  padding: 8px 24px;
+  border: 3px solid var(--fs-border);
+  border-radius: 14px;
+  font-family: var(--fs-code-font);
+  font-size: 1.3em;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.task-timer::after {
+  content: 'click to start';
+  display: block;
+  font-family: var(--fs-main-font);
+  font-size: 0.35em;
+  color: var(--fs-text-subtle-color);
+}
+
+.task-timer.running {
+  border-color: var(--fs-highlight-background);
+}
+
+.task-timer.running::after {
+  content: 'click to pause';
+}
+
+.task-timer.done {
+  border-color: #c62828;
+  background: #c62828;
+  color: #fff;
+}
+
+.task-timer.done::after {
+  content: 'time · double-click to reset';
+  color: #fff;
+}
+
 /*********************************************
  * INTEGRATION (train, export, implement)
  *********************************************/

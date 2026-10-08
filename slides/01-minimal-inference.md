@@ -6,44 +6,39 @@ Note:
     - First hands-on block. Everyone builds and runs before we talk about speed.
 
 ---
-##  Goal
-   
-1. Load the exported model with LibTorch
-2. Run a test signal through it, block by block
-3. Match what the model produced in Python: within 1e-4
 
----
+## Goal
 
-## The current state
+The test signal runs through the model in C++, and comes out within **1e-4** of what
+the model produced in Python.
 
-- The model is trained and exported - we are not touching either
-- It is **stateful**: each call continues where the last one ended
-- Two exports, same weights:
-  - **TorchScript** (`.pt`) — state inside the model, audio in, audio out
-  - **ONNX** — state in and out, carried by the caller
-
-&rarr; For today: TorchScript in C++, with LibTorch.
+1. **Create the engine** — and decide *where* it goes
+2. **Pick the size you process in** — and see whether the model agrees
+3. **Run each block** through the engine
 
 ---
 
 ## What's given
 
-```
-models/forward_stateful.pt      the model: graph + weights, 65 MB
-common/libtorch_engine.h        the engine, written for you
-common/test_signal.h            220 Hz sine, 3 x 2048 samples
-common/target_signal.h          what the model made of it, in Python
-common/support.h                comparison and reporting
-exercise/main.cpp               three TODOs
+```plaintext
+models/forward_stateful.pt    the model: TorchScript, graph + weights, 65 MB
+WORKSHOP_MODEL_PATH           its path, set by CMake → k_model.m_path
+common/libtorch_engine.h      the engine, written for you
+common/test_signal.h          220 Hz sine, 8 × 2048 samples
+common/target_signal.h        what the model made of it, in Python
+common/support.h              report(): compares and prints the result
+exercise/main.cpp             three TODOs
 ```
 
-No audio files, no Python: the signals are compiled in c++.
+- The model is **stateful**: each call continues where the last one ended
+- TorchScript keeps that state inside the model: audio in, audio out
+- No audio files, no Python: the signals are compiled in
 
 ---
 
 ## The engine
 
-The engine has three methods.
+Three methods:
 
 ```cpp
 LibTorchEngine engine(path);          // Loads the model
@@ -51,8 +46,8 @@ engine.process(samples, num_samples); // One block, processed in place
 engine.reset();                       // Clears the model's state
 ```
 
-Later steps keep this interface and change **who calls
-`process()`, and from which thread**. (was willst du damit sagen?)  
+Every later step keeps this interface. What changes is **who calls `process()`, and
+from which thread**.
 
 ---
 
@@ -68,21 +63,6 @@ m_model.eval();
 - `eval()`: model in inference mode, no dropout, no batchnorm updates
 
 ---
-
-<!-- ## Inside the engine — a block
-
-```cpp
-const torch::NoGradGuard no_grad; // No autograd graph, no allocations for it
-
-const auto input = torch::from_blob(samples, {1, 1, length}, torch::kFloat32);
-const auto output = m_model.forward({input}).toTensor().contiguous();
-
-std::copy_n(output.data_ptr<float>(), num_samples, samples);
-```
-
-- `from_blob` wraps your buffer — no copy, so it has to outlive the tensor
-- `{batch, channels, samples}`, even when two of them are 1
-- `NoGradGuard`: no autograd graph, no allocations for it -->
 
 ## Inside the engine — a block
 
@@ -100,68 +80,93 @@ std::copy_n(output.data_ptr<float>(), num_samples, samples);                    
 
 ---
 
-## Task - 5 minutes
+## Task
 
-1. **Create the engine** — and decide *where* it goes
-2. **Pick the size you process in** — and see if the model agrees
-3. **Run each block** through it
+<div class="task-timer" data-minutes="5"></div>
 
-then complile and run:
+Fill in the TODOs in `steps/01_minimal_inference/exercise/main.cpp`
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
+cmake --preset release                                        # once
+cmake --build --preset release --target step01_exercise
 ./build/bin/step01_exercise
 ```
 
+<div class="nn-flow task-flow">
+  <div class="nn-node">model<small><code>forward_stateful.pt</code></small></div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node exercise">your C++<small><code>main.cpp</code> + engine</small></div>
+  <div class="nn-arrow">←</div>
+  <div class="nn-node">test signal<small>220 Hz sine</small></div>
+  <div class="nn-arrow">→</div>
+  <div class="nn-node check">output<small>vs. <code>target_signal.h</code>, 1e-4</small></div>
+</div>
 
 ---
 
-## What we check
+## If you see this: perfect
 
-```
-OK: max abs diff 2.21e-06, within 0.0001 of the reference.
+```plaintext
+OK: max abs diff 3.51e-06, within 0.0001 of the reference.
 ```
 
-Not zero, and it should not be: the reference ran in **ONNX Runtime, in Python**, our engine runs in **LibTorch, in C++.**
+Not zero, and it should not be: the reference ran in **ONNX Runtime, in Python**, our
+engine runs in **LibTorch, in C++**.
 
 &rarr; ~1e-6 is what "the same model" means across two runtimes.
 
+The first block is nearly silent — the model's latency has not filled yet. It still
+has to match.
 
-The first block is nearly silent — the model's latency has not filled yet. It
-still has to match.
 ---
 
-## Mistakes worth making
+## TODO 1 — create the engine
 
-**1. The engine inside the loop**
-
+```cpp
+std::unique_ptr<LibTorchEngine> engine;
+try {
+    engine = std::make_unique<LibTorchEngine>(k_model.m_path);
+} catch (const std::runtime_error& error) { /* ... */ }
 ```
+
+Once, **outside the loop**. Inside it, every block gets a fresh engine:
+
+```plaintext
 block 0   ok
 block 1   wrong     <- state was thrown away
-block 2   wrong
 ```
- 
-- Every `process()` on a fresh engine starts from silence.
-- Block 0 cannot tell the difference. Everything after it can.
-- Very slow: reads 65 MB file per block.
 
-**Rule:** the engine's lifetime is the stream's lifetime.
+Slow, too: 65 MB read per block. **The engine lives as long as the stream.**
 
 ---
 
-## Mistakes worth making
+## TODO 2 — the size to process in
 
-**2. A block size the export has never seen before**
-The export fixed the shape at **2048**. Any other size fails inside LibTorch,
-with an error that mentions tensors, not blocks.
-
+```cpp
+const size_t process_size = static_cast<size_t>(k_model.m_input_size);  // 2048
 ```
+
+Not a free choice: the export fixed the shape at **2048**. Anything else fails inside
+LibTorch, with an error about tensors, not blocks:
+
+```plaintext
 process() failed: RuntimeError: The size of tensor a (6)
 must match the size of tensor b (0) at non-singleton dimension 2
 ```
 
-**Rule:** the model sets the block size. 
+**The model sets the block size.**
+
+---
+
+## TODO 3 — run each block
+
+```cpp
+for (size_t i = 0; i < num_blocks; ++i) {
+    engine->process(output.data() + i * process_size, process_size);
+}
+```
+
+In place: afterwards `output` holds what the model made of the signal.
 
 ---
 
@@ -169,15 +174,13 @@ must match the size of tensor b (0) at non-singleton dimension 2
 
 Nothing. The numbers are right.
 
-But: 
+But:
 - how long does one `process()` take?
 - who decides the block size in a real host?
-
-<!-- one forward pass takes *a certain* amount of time, and nobody measured it. -->
 
 At 48 kHz, 2048 samples is **42.7 ms** — per callback, not on average.
 
 <!-- .slide: data-state="no-footer" -->
 
 Note:
-    - Straight into step 5: mean vs. worst case.
+    - Straight into step 2: the host's block size.

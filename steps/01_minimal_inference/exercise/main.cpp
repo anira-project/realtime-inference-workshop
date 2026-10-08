@@ -45,7 +45,7 @@ int main() {
     }
 
     if (engine == nullptr) {
-        std::fprintf(stderr, "TODO 1: construct engine first with path to model");
+        std::fprintf(stderr, "TODO 1: construct engine first with path to model\n");
         return 2;
     }
 

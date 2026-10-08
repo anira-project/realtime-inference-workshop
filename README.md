@@ -24,6 +24,14 @@ cmake --build build -j
 ./build/bin/step01_solution
 ```
 
+Or with the preset, one step at a time:
+
+```bash
+cmake --preset release
+cmake --build --preset release --target step01_exercise
+./build/bin/step01_exercise
+```
+
 Build a single step with `-DWORKSHOP_STEP=01`. See
 [models/README.md](models/README.md) for the model.
 

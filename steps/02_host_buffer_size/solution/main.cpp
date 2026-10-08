@@ -25,6 +25,10 @@
 // Model settings taken from the export metadata. The sample rate and channel
 // count are not used by this exercise, but describe the audio format expected
 // by the model.
+// @m_path: absolute path to the exported model, set via CMake
+// @m_input_size: samples the model takes per forward pass
+// @m_sample_rate: the sample rate the model was trained for
+// @m_channels: channels in and out
 constexpr struct {
     const char* m_path = WORKSHOP_MODEL_PATH;
     int m_input_size = 2048;

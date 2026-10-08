@@ -17,10 +17,10 @@
 #include "common/target_signal.h"
 #include "common/test_signal.h"
 
-// What the export fixed, from its metadata. Sample rate and channel count are
-// not used here — they are what the model assumes about the audio it is given.
-// @m_path: absolute path to the exported model, set via CMake with
-//          -DWORKSHOP_MODEL=/path/to/forward_stateful.pt; see models/README.md
+// Model settings taken from the export metadata. The sample rate and channel
+// count are not used by this exercise, but describe the audio format expected
+// by the model.
+// @m_path: absolute path to the exported model, set via CMake
 // @m_input_size: samples the model takes per forward pass
 // @m_sample_rate: the sample rate the model was trained for
 // @m_channels: channels in and out

@@ -44,12 +44,12 @@ What you get for it: the thing you traced is the thing that runs, and the numeri
 ```
 high level                                          low level
 LibTorch ──────── ONNX Runtime ──────── LiteRT ──────── your own code
-easiest            still easy            smaller         smallest
-biggest            much smaller          leaner          fastest — if you are good
+easiest            still easy           leaner          fastest (if you are good)
+biggest            much smaller         even smaller    smallest 
 ```
 
 - **Higher level: less work.** Export, load, call.
-- **Lower level: smaller and more controllable.** Op coverage becomes your problem.
+- **Lower level: smaller and more controllable.** Operator coverage becomes your problem.
 - **Hand-written: smallest, and potentially fastest** — a GRU with 32 units or a small TCN is a few hundred lines of plain C++ with no dependency and no allocation. It is also the only option where every bug is yours, and every architecture change means writing it again. Fast hand-written code is a project, not a default.
 
 ## What this means for a plugin
@@ -65,7 +65,7 @@ models/forward_stateful.pt    LibTorch, state inside the model
 forward.onnx                  ONNX, state in and out
 ```
 
-Because the engine sits behind three methods — construct, `process`, `reset` — swapping it is a different class, not a different program.
+Because the engine sits behind three methods, construct, `process`, `reset`, we can easily swap it for a different class, instead of needing a whole new program.
 
 ## Slides
 
@@ -73,4 +73,4 @@ Because the engine sits behind three methods — construct, `process`, `reset` �
 
 ## What's next
 
-Size is a shipping problem. The next step is a correctness problem that no amount of size tuning fixes: none of these engines is real-time safe.
+The size of the inference engine is a shipping problem. The next step is a correctness problem that no amount of size tuning fixes: none of these engines is real-time safe.

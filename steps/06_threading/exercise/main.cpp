@@ -3,7 +3,7 @@
 // Goal:   get the engine off the audio thread, and keep the audio thread free
 //         of allocations and locks.
 // Given:  moodycamel's lock-free queues, the ring buffers, the fake host.
-// You do: fill in the three TODO banners.
+// Task:   fill in the three TODO banners.
 // Check:  the model still produces the reference output, and the callback does
 //         not allocate once.
 //
@@ -48,8 +48,9 @@ constexpr size_t k_queue_capacity = 8;     // Model blocks in flight between the
 // Counts what the audio thread allocates. Any number above zero here is a bug,
 // whether or not it showed up as a glitch today.
 namespace {
-// Thread-local on purpose: the worker thread is allowed to allocate as much as
-// it likes, and counting its work here would say nothing.
+// Keep this flag thread-local: only allocations on the audio thread matter.
+// The worker thread may allocate, so counting its allocations would not test
+// the real-time constraint.
 thread_local bool t_on_audio_thread = false;
 std::atomic<long> g_allocations{0};
 }  // namespace
@@ -138,13 +139,14 @@ public:
     // The audio thread: no engine, no allocation, no lock. Only copies.
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
         // ---- TODO 2 --------------------------------------------------------
-        // The audio thread. Take the host's samples in, hand whole model blocks
-        // over to the worker, collect what came back, and give the host its
-        // num_samples. Nothing here may allocate, lock or wait:
-        //   - try_enqueue() and try_dequeue() fail rather than block — and if
-        //     the queue is full, the worker is behind: deal with it here.
-        //   - only take as much out of from_worker as m_output has room for.
-        //   - when nothing has come back yet, the host still needs samples.
+        // The audio thread. Collect host samples, pass complete model blocks to the
+        // worker, collect completed blocks, and return num_samples to the host.
+        // Nothing here may allocate, lock, or wait:
+        //   - try_enqueue() and try_dequeue() fail instead of blocking.
+        //   - If the worker queue is full, do not wait; decide how to handle the
+        //     model block that could not be handed over.
+        //   - Only move worker output into m_output while there is room for it.
+        //   - If no processed samples are ready, the host still needs output.
         // --------------------------------------------------------------------
     }
 
@@ -181,6 +183,7 @@ private:
     moodycamel::ReaderWriterQueue<ModelBlock> m_from_worker{0};
     std::thread m_worker;
     std::atomic<bool> m_running{false};
+    std::atomic<long> m_dropped{0};  // Blocks the worker could not take in time
     std::vector<float> m_produced;  // Written on the worker thread only
 };
 

@@ -45,8 +45,9 @@ constexpr size_t k_queue_capacity = 8;     // Model blocks in flight between the
 // Counts what the audio thread allocates. Any number above zero here is a bug,
 // whether or not it showed up as a glitch today.
 namespace {
-// Thread-local on purpose: the worker thread is allowed to allocate as much as
-// it likes, and counting its work here would say nothing.
+// Keep this flag thread-local: only allocations on the audio thread matter.
+// The worker thread may allocate, so counting its allocations would not test
+// the real-time constraint.
 thread_local bool t_on_audio_thread = false;
 std::atomic<long> g_allocations{0};
 }  // namespace
@@ -110,8 +111,10 @@ public:
         // ---- TODO 1: queue capacity, and the worker thread -------------------
         // The queues allocate their blocks up front; try_enqueue() never grows
         // them, it fails instead — which is what the audio thread needs.
-        m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
-        m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
+        const size_t queue_capacity = k_queue_capacity;
+
+        m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
+        m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
 
         m_running.store(true, std::memory_order_release);
         m_worker = std::thread([this] { worker(); });
@@ -129,8 +132,8 @@ public:
         // ---- TODO 2: the audio thread ----------------------------------------
         m_input.push(samples, num_samples);
 
-        // Hand whole model blocks over. If the queue is full the worker is
-        // behind — dropping is bad, but blocking here would be worse.
+        // pass complete model blocks to the worker. If the queue is full the
+        // worker is behind. Dropping is bad, but blocking here would be worse.
         while (m_input.available() >= k_model.m_input_size) {
             ModelBlock block;
             m_input.pop(block.m_samples.data(), k_model.m_input_size);
@@ -163,10 +166,10 @@ public:
 private:
     // The worker thread: the engine lives here, and everything the engine does
     // — allocating, locking, growing arenas — is allowed on this side.
-    // ---- TODO 3: the worker thread -------------------------------------------
     void worker() {
         ModelBlock block;
         while (m_running.load(std::memory_order_acquire)) {
+            // ---- TODO 3: the worker thread -------------------------------------------
             if (!m_to_worker.try_dequeue(block)) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
                 continue;

@@ -8,43 +8,71 @@ Note:
 
 ---
 
-## Goal
+<div class="tag">Goal</div>
 
-- Load the model with LibTorch
-- Run the test signal through it, block by block
-- Get the same result as the model in Python
+## Run the model in C++<br><span class="then">and reproduce the Python output.</span>
+
+<div class="statement-points">
+  <div><small>1</small>Load the model with LibTorch</div>
+  <div><small>2</small>Run the test signal through it, block by block</div>
+  <div><small>3</small>Compare with what the model made in Python</div>
+</div>
+
 
 ---
 
-## What's given
+<div class="tag">What's given</div>
+
+## 3 assets, 1 helper, 1 file to edit.
 
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
+    <div class="given-folder">models/ · common/assets/</div>
     {{FILE:forward_stateful.pt}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>
   <div class="given-column">
     <div class="given-label">Helpers</div>
+    <div class="given-folder">common/helpers/</div>
     {{FILE:libtorch_engine.h}}
-    {{FILE:support.h}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
+    <div class="given-folder">01_minimal_inference/exercise/</div>
     {{FILE:main.cpp}}
-    <code class="given-macro">WORKSHOP_MODEL_PATH</code>
   </div>
 </div>
 
 Note:
     - forward_stateful.pt: the model, TorchScript, graph + weights, 65 MB; stateful, the state lives inside it.
     - WORKSHOP_MODEL_PATH: set by CMake (-DWORKSHOP_MODEL=...), read in main.cpp as k_model.m_path.
+    - support.h (report_line, k_tolerance) is plumbing for the checks and stays off the slides.
     - test_signal.h / target_signal.h: compiled in, no audio files, no Python.
 
 ---
 
-## `libtorch_engine.h`
+<div class="tag">Assets · <code>test_signal.h</code> · <code>target_signal.h</code></div>
+
+## Input: a sine.<br><span class="then">Reference: the model's output in Python.</span>
+
+<div class="signal-pair">
+  <div class="signal-label"><code>k_input_signal</code></div>
+  {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=230|from=2|to=4}}
+  <div class="signal-label"><code>k_target_output_signal</code></div>
+  {{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=230|from=2|to=4}}
+</div>
+
+Note:
+    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 48 kHz; shown here: blocks 3 and 4, the dashed line between them is a block boundary.
+    - Target: what the model made of it, in Python. The first block is nearly silent — the model's latency has not filled yet.
+
+---
+
+<div class="tag">Helpers · <code>libtorch_engine.h</code></div>
+
+## The engine interface has three methods.<br><span class="then">Later steps reuse it unchanged.</span>
 
 ```cpp
 LibTorchEngine engine(path);          // Loads the model
@@ -52,14 +80,14 @@ engine.process(samples, num_samples); // One block, processed in place
 engine.reset();                       // Clears the model's state
 ```
 
-Every later step keeps these three methods.
-
 Note:
     - What changes later is who calls process(), and from which thread.
 
 ---
 
-## `libtorch_engine.h` — inside
+<div class="tag">Helpers · <code>libtorch_engine.h</code> — inside</div>
+
+## Load once, then one block at a time.
 
 ```cpp
 // Constructor
@@ -82,36 +110,6 @@ Note:
 
 ---
 
-## `test_signal.h` · `target_signal.h`
-
-<div class="signal-pair">
-  <div class="signal-label"><code>k_input_signal</code></div>
-  {{WAVEFORM:steps/common/test_signal.h|blocks=2048|height=230}}
-  <div class="signal-label"><code>k_target_output_signal</code></div>
-  {{WAVEFORM:steps/common/target_signal.h|blocks=2048|height=230}}
-</div>
-
-Note:
-    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 48 kHz. The dashed lines are the block boundaries.
-    - Target: what the model made of it, in Python. The first block is nearly silent — the model's latency has not filled yet.
-
----
-
-## `support.h`
-
-```cpp
-return report(output.data(), target.data(), output.size());
-```
-
-```plaintext
-OK: max abs diff 3.51e-06, within 0.0001 of the reference.
-```
-
-Note:
-    - Compares what you produced with the target and prints one line; the return value is main's exit code.
-
----
-
 ## Task
 
 <div class="task-timer" data-minutes="5"></div>
@@ -124,76 +122,79 @@ cmake --build --preset release --target step01_exercise
 ./build/bin/step01_exercise
 ```
 
-<div class="pipeline">
-  <div class="pipe-inputs">
-    {{FILE:forward_stateful.pt}}
-    {{FILE:test_signal.h}}
+<div class="run" style="grid-template-columns: 1fr 1.5fr 1.5fr">
+  <div class="run-step" data-seconds="2">
+    <div class="run-title"><span>1</span>Create the engine</div>
+    <div class="run-visual">
+      <div class="run-file">{{FILE:forward_stateful.pt}}</div>
+      <div class="run-engine">{{ICON:cpp}}<small>LibTorch</small></div>
+    </div>
   </div>
-  <div class="pipe-link"></div>
-  <div class="pipe-run">
-    {{ICON:cpp}}
-    <div class="pipe-progress"><span></span></div>
+  <div class="run-step" data-seconds="2.2">
+    <div class="run-title"><span>2</span>Pick the block size</div>
+    <div class="run-visual run-wave">
+      {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=6}}
+      <div class="run-cuts"><i></i><i></i><i></i></div>
+      <div class="run-size">? samples</div>
+    </div>
   </div>
-  <div class="pipe-link pipe-link-2"></div>
-  <div class="pipe-output">
-    {{WAVEFORM:steps/common/target_signal.h|blocks=2048|height=200}}
-    <div class="pipe-label">output</div>
+  <div class="run-step" data-seconds="3.4">
+    <div class="run-title"><span>3</span>Run each block</div>
+    <div class="run-visual run-wave">
+      <div class="run-target">{{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=6}}</div>
+      <div class="run-reveal">{{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=6}}</div>
+      <div class="run-window"></div>
+      <div class="run-ok">✓ matches the reference</div>
+    </div>
   </div>
-  <div class="pipe-check"><span class="pipe-check-mark">✓</span><div class="pipe-label">target_signal.h</div></div>
 </div>
 
 ---
 
-## If you see this: perfect
+<div class="tag">Solution</div>
 
-```plaintext
-OK: max abs diff 3.51e-06, within 0.0001 of the reference.
-```
-
-Note:
-    - Not zero, and it should not be: the reference ran in ONNX Runtime in Python, our engine is LibTorch in C++. ~1e-6 is what "the same model" means across two runtimes.
-
----
-
-## TODO 1 — create the engine
+## TODO 1 · Create the engine
 
 ```cpp
 std::unique_ptr<LibTorchEngine> engine;
 try {
     engine = std::make_unique<LibTorchEngine>(k_model.m_path);
-} catch (const std::runtime_error& error) { /* ... */ }
+} catch (const std::runtime_error& error) {
+    std::fprintf(stderr, "%s\n", error.what());
+    return 2;
+}
 ```
 
-Once, **outside the loop**. Inside it, every block gets a fresh engine:
-
-```plaintext
-block 0   ok
-block 1   wrong     <- state was thrown away
-```
-
-Slow, too: 65 MB read per block. **The engine lives as long as the stream.**
+Note:
+    - Outside the loop. Created inside, block 1 is already wrong: the state was thrown away.
+    - Slow, too: 65 MB read per block. The engine lives as long as the stream.
 
 ---
 
-## TODO 2 — the size to process in
+<div class="tag">Solution</div>
+
+## TODO 2 · Pick the block size
 
 ```cpp
 const size_t process_size = static_cast<size_t>(k_model.m_input_size);  // 2048
 ```
 
-Not a free choice: the export fixed the shape at **2048**. Anything else fails inside
-LibTorch, with an error about tensors, not blocks:
+<div class="run-visual run-wave run-solved">
+  {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=6}}
+  <div class="run-cuts"><i></i><i></i><i></i></div>
+  <div class="run-size"><span class="was">? samples</span><span class="is">2048 samples</span></div>
+</div>
 
-```plaintext
-process() failed: RuntimeError: The size of tensor a (6)
-must match the size of tensor b (0) at non-singleton dimension 2
-```
-
-**The model sets the block size.**
+Note:
+    - The model sets it, fixed at export.
+    - Anything else fails inside LibTorch, with an error about tensors, not blocks:
+      "The size of tensor a (6) must match the size of tensor b (0) at non-singleton dimension 2".
 
 ---
 
-## TODO 3 — run each block
+<div class="tag">Solution</div>
+
+## TODO 3 · Run each block
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
@@ -201,21 +202,22 @@ for (size_t i = 0; i < num_blocks; ++i) {
 }
 ```
 
-In place: afterwards `output` holds what the model made of the signal.
+Note:
+    - In place: afterwards output holds what the model made of the signal.
 
 ---
 
-## What broke?
+<div class="tag">Done</div>
 
-Nothing. The numbers are right.
+## Congratulations!<br><span class="then">You integrated an AI model in C++.</span>
 
-But:
-- how long does one `process()` take?
-- who decides the block size in a real host?
-
-At 48 kHz, 2048 samples is **42.7 ms** — per callback, not on average.
-
-<!-- .slide: data-state="no-footer" -->
+<div class="congrats">
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="60" cy="60" r="52"/>
+    <path d="M36 62 L53 78 L85 44"/>
+  </svg>
+</div>
 
 Note:
+    - Same output as in Python. Whether it is fast enough is still open.
     - Straight into step 2: the host's block size.

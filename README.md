@@ -7,7 +7,8 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 ## Layout
 
 - `steps/` — one buildable folder per step, each with `exercise/` and `solution/`
-- `steps/common/` — the engine, the ring buffer, the fake host and the test signals, shared by every step
+- `steps/common/assets/` — the test signal and its target output
+- `steps/common/helpers/` — the engines, the ring buffer, the fake host and the reporting, shared by every step
 - `models/` — the exported seqsynth model (LibTorch `.pt`, ONNX)
 - `setup/` — setup check
 - `cmake/` — shared CMake helpers (backends, anira, RTSan)

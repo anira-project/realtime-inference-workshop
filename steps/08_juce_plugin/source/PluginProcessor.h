@@ -9,8 +9,8 @@
 
 #include <memory>
 
-#include "common/onnx_engine.h"
-#include "common/threaded_processor.h"
+#include "common/helpers/onnx_engine.h"
+#include "common/helpers/threaded_processor.h"
 
 class WorkshopPluginProcessor : public juce::AudioProcessor {
 public:

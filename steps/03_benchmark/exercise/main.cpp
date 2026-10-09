@@ -16,8 +16,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "common/libtorch_engine.h"
-#include "common/test_signal.h"
+#include "common/helpers/libtorch_engine.h"
+#include "common/assets/test_signal.h"
 
 // Model settings taken from the export metadata.
 // @m_path: absolute path to the exported model, set via CMake

@@ -1,6 +1,6 @@
 /**
  * Spectrogram player: two recordings, their spectrograms stacked, one transport,
- * and a fader that crossfades between them while both play in sync.
+ * and a fader that crossfades between them while both loop in sync.
  *
  * <div class="spectro-player" data-a="in.wav" data-b="out.wav"
  *      data-label-a="In" data-label-b="Out"></div>
@@ -70,13 +70,23 @@
         return frames;
     }
 
-    // Dark to light, transparent at the bottom so the slide background shows
-    const STOPS = [
-        [0.0, [191, 133, 252, 0]],
-        [0.35, [191, 133, 252, 140]],
-        [0.7, [254, 147, 140, 230]],
-        [1.0, [255, 236, 170, 255]],
-    ];
+    function hex(name) {
+        const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        const m = value.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+        return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [28, 28, 26];
+    }
+
+    // Quiet is transparent, so the card shows through; loud runs through lilac to ink
+    let STOPS = [];
+    function updateStops() {
+        const ink = hex('--ink');
+        STOPS = [
+            [0.0, [139, 134, 184, 0]],
+            [0.45, [139, 134, 184, 110]],
+            [0.8, [ink[0], ink[1], ink[2], 210]],
+            [1.0, [ink[0], ink[1], ink[2], 255]],
+        ];
+    }
 
     function colour(value) {
         for (let i = 1; i < STOPS.length; ++i) {
@@ -121,22 +131,61 @@
         context.putImageData(image, 0, 0);
     }
 
+    // Min and max per column, mirrored around the centre line, in ink
+    function drawWave(canvas, samples) {
+        const width = canvas.width;
+        const height = canvas.height;
+        const context = canvas.getContext('2d');
+        const ink = hex('--ink');
+        context.clearRect(0, 0, width, height);
+        let peak = 0;
+        for (const v of samples) peak = Math.max(peak, Math.abs(v));
+        const scale = (height / 2 - 12) / (peak || 1);
+        context.fillStyle = `rgb(${ink.join(',')})`;
+        const perColumn = samples.length / width;
+        for (let x = 0; x < width; ++x) {
+            let lo = Infinity;
+            let hi = -Infinity;
+            const end = Math.min(samples.length, Math.floor((x + 1) * perColumn));
+            for (let i = Math.floor(x * perColumn); i < end; ++i) {
+                lo = Math.min(lo, samples[i]);
+                hi = Math.max(hi, samples[i]);
+            }
+            const top = height / 2 - hi * scale;
+            context.fillRect(x, top, 1, Math.max(1, (hi - lo) * scale));
+        }
+    }
+
     async function load(url) {
         const data = await (await fetch(url)).arrayBuffer();
         // An offline context decodes without needing a user gesture
         return new OfflineAudioContext(1, 1, 48000).decodeAudioData(data);
     }
 
+    const PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
+    const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>';
+
     async function setup(player) {
         player.innerHTML = `
-          <div class="spectro-track a"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
-          <div class="spectro-track b"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
-          <div class="spectro-playhead"></div>
+          <div class="spectro-view" role="group" aria-label="View">
+            <button class="active" data-view="spectrogram">Spectrogram</button>
+            <button data-view="waveform">Waveform</button>
+          </div>
+          <div class="spectro-body">
+            <div class="spectro-mix">
+              <span class="spectro-fader-label"></span>
+              <input class="spectro-fader" type="range" min="0" max="1" step="0.01" value="0" aria-label="Mix">
+              <span class="spectro-fader-label"></span>
+            </div>
+            <div class="spectro-tracks">
+              <div class="spectro-track a"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
+              <div class="spectro-track b"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
+              <div class="spectro-playhead"></div>
+            </div>
+          </div>
           <div class="spectro-controls">
-            <button class="spectro-play" aria-label="Play">▶</button>
-            <span class="spectro-fader-label"></span>
-            <input class="spectro-fader" type="range" min="0" max="1" step="0.01" value="0">
-            <span class="spectro-fader-label"></span>
+            <button class="spectro-play" aria-label="Play">${PLAY}</button>
+            <span class="spectro-time"></span>
           </div>`;
 
         const [trackA, trackB] = player.querySelectorAll('.spectro-track');
@@ -152,8 +201,28 @@
         // One scale for both, so louder really looks louder
         let maxDb = -Infinity;
         for (const frame of [...framesA, ...framesB]) for (const v of frame) maxDb = Math.max(maxDb, v);
-        draw(trackA.querySelector('canvas'), framesA, bufferA.sampleRate, maxDb);
-        draw(trackB.querySelector('canvas'), framesB, bufferB.sampleRate, maxDb);
+        let view = 'spectrogram';
+        const redraw = () => {
+            updateStops();
+            if (view === 'waveform') {
+                drawWave(trackA.querySelector('canvas'), bufferA.getChannelData(0));
+                drawWave(trackB.querySelector('canvas'), bufferB.getChannelData(0));
+            } else {
+                draw(trackA.querySelector('canvas'), framesA, bufferA.sampleRate, maxDb);
+                draw(trackB.querySelector('canvas'), framesB, bufferB.sampleRate, maxDb);
+            }
+        };
+        player.querySelectorAll('.spectro-view button').forEach(button => {
+            button.addEventListener('click', () => {
+                view = button.dataset.view;
+                player.querySelectorAll('.spectro-view button').forEach(b => b.classList.toggle('active', b === button));
+                redraw();
+                button.blur();
+            });
+        });
+        redraw();
+        // The colours come from the theme; draw again when it flips
+        new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
         const duration = Math.min(bufferA.duration, bufferB.duration);
         const playButton = player.querySelector('.spectro-play');
@@ -166,52 +235,68 @@
         let offset = 0;      // Seconds into the recording when paused
         let startedAt = 0;   // context.currentTime when playback started
 
-        const position = () => (sources.length ? offset + context.currentTime - startedAt : offset);
+        // Both recordings loop, so the position wraps
+        const position = () => (sources.length ? (offset + context.currentTime - startedAt) % duration : offset);
+        const timeLabel = player.querySelector('.spectro-time');
+
+        const FADE = 0.04;   // seconds, so starting and stopping do not click
+        let master = null;
 
         const applyFader = () => {
             const mix = Number(fader.value);
             // Equal power: the blend does not dip in the middle
             if (gains.length) {
-                gains[0].gain.value = Math.cos(mix * Math.PI / 2);
-                gains[1].gain.value = Math.sin(mix * Math.PI / 2);
+                const now = context.currentTime;
+                gains[0].gain.setTargetAtTime(Math.cos(mix * Math.PI / 2), now, 0.01);
+                gains[1].gain.setTargetAtTime(Math.sin(mix * Math.PI / 2), now, 0.01);
             }
             trackA.style.opacity = 0.3 + 0.7 * (1 - mix);
             trackB.style.opacity = 0.3 + 0.7 * mix;
         };
 
         const stop = () => {
-            sources.forEach(source => { source.onended = null; source.stop(); });
+            const end = context.currentTime + FADE;
+            master.gain.cancelScheduledValues(context.currentTime);
+            master.gain.setValueAtTime(master.gain.value, context.currentTime);
+            master.gain.linearRampToValueAtTime(0, end);
+            sources.forEach(source => source.stop(end));
             sources = [];
             gains = [];
-            playButton.textContent = '▶';
+            playButton.innerHTML = PLAY;
+            player.classList.remove('playing');
         };
 
         const play = () => {
             context = context || new AudioContext();
             context.resume();
+            master = context.createGain();
+            master.connect(context.destination);
             sources = [bufferA, bufferB].map(buffer => {
                 const source = context.createBufferSource();
                 source.buffer = buffer;
+                source.loop = true;
+                source.loopEnd = duration;
                 return source;
             });
             gains = sources.map(source => {
                 const gain = context.createGain();
-                source.connect(gain).connect(context.destination);
+                source.connect(gain).connect(master);
                 return gain;
             });
             applyFader();
             startedAt = context.currentTime + 0.05;
+            master.gain.setValueAtTime(0, startedAt);
+            master.gain.linearRampToValueAtTime(1, startedAt + FADE);
             sources.forEach(source => source.start(startedAt, offset));
-            sources[0].onended = () => { stop(); offset = 0; };
-            playButton.textContent = '❚❚';
+            playButton.innerHTML = PAUSE;
+            player.classList.add('playing');
         };
 
         playButton.addEventListener('click', () => {
             if (sources.length) {
-                offset = Math.min(position(), duration);
+                offset = position();
                 stop();
             } else {
-                if (offset >= duration) offset = 0;
                 play();
             }
         });
@@ -238,6 +323,8 @@
             const fraction = Math.max(0, Math.min(1, Math.max(0, position()) / duration));
             const canvas = trackA.querySelector('canvas');
             playhead.style.left = `${canvas.offsetLeft + fraction * canvas.offsetWidth}px`;
+            playhead.style.top = `${trackA.offsetTop}px`;
+            timeLabel.textContent = `${position().toFixed(1)} / ${duration.toFixed(1)} s`;
             requestAnimationFrame(tick);
         };
         applyFader();

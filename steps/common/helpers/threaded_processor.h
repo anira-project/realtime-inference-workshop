@@ -15,7 +15,7 @@
 #include <thread>
 #include <vector>
 
-#include "common/ring_buffer.h"
+#include "common/helpers/ring_buffer.h"
 
 // Model settings taken from the export metadata.
 constexpr struct {
@@ -68,6 +68,7 @@ public:
         m_engine.reset();
         m_dry_block.assign(max_block_size, 0.0f);
         m_wet_block.assign(max_block_size, 0.0f);
+        m_wet_debt = 0;
 
         // Prime both paths with the same amount of silence: one block while the
         // input is still being collected, and one more so the worker has a full
@@ -115,6 +116,16 @@ public:
             m_output.push(done.m_samples.data(), k_model.m_input_size);
         }
 
+        // A block that came too late already went out as silence. Drop it when
+        // it arrives, so the wet path stays exactly latency_samples() late: a
+        // late block is a glitch, not a shift for the rest of the stream.
+        while (m_wet_debt > 0 && m_output.available() > 0) {
+            const size_t n = std::min({m_wet_debt, m_output.available(), m_wet_block.size()});
+            m_output.pop(m_wet_block.data(), n);
+            m_wet_debt -= n;
+        }
+        const bool wet_ready = m_output.available() >= num_samples;
+
         // Both sides are equally late now, so this is a plain crossfade. If a
         // side has nothing ready, the other still has to come through.
         std::fill_n(samples, num_samples, 0.0f);
@@ -129,6 +140,10 @@ public:
         if (m_output.available() >= num_samples) {
             m_output.pop(m_wet_block.data(), num_samples);
             for (size_t i = 0; i < num_samples; ++i) { samples[i] += m_mix * m_wet_block[i]; }
+        }
+        // The wet side had nothing for this callback: its share is owed.
+        if (!wet_ready) {
+            m_wet_debt += num_samples;
         }
     }
 
@@ -167,5 +182,6 @@ private:
     std::vector<float> m_silence;
     std::vector<float> m_dry_block;  // Scratch, sized in prepare()
     std::vector<float> m_wet_block;
+    size_t m_wet_debt = 0;  // Wet samples whose slot already went out as silence
     float m_mix = 1.0f;
 };

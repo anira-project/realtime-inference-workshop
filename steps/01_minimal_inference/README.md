@@ -7,10 +7,10 @@
 ## What you have
 
 - `models/forward_stateful.pt` — the model as TorchScript: graph and weights in one file. Audio in, audio out, 2048 samples per call, 48 kHz, one channel. The state lives inside the model, so each call continues where the last one ended.
-- [`common/libtorch_engine.h`](common/libtorch_engine.h) — the engine, written for you. Read it first: it is the whole of LibTorch you need.
-- [`common/test_signal.h`](common/test_signal.h) — `k_input_signal`: a 220 Hz sine, 3 blocks of 2048 samples.
-- `common/target_signal.h` — `k_target_output_signal`: what the model produced for it in Python.
-- `common/support.h` — the comparison and the report.
+- [`common/helpers/libtorch_engine.h`](common/helpers/libtorch_engine.h) — the engine, written for you. Read it first: it is the whole of LibTorch you need.
+- [`common/assets/test_signal.h`](common/assets/test_signal.h) — `k_input_signal`: a 220 Hz sine, 3 blocks of 2048 samples.
+- `common/assets/target_signal.h` — `k_target_output_signal`: what the model produced for it in Python.
+- `common/helpers/support.h` — the comparison and the report.
 
 Both signals are compiled in, so there are no files to read and no audio format to parse. That comes later.
 

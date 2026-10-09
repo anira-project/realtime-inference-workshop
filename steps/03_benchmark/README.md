@@ -17,7 +17,7 @@ At 48 kHz that is 1.33 ms for 64 samples, 10.7 ms for 512, 42.7 ms for 2048. The
 ## What you have
 
 - [Google Benchmark](https://github.com/google/benchmark), fetched by CMake — the same library anira benchmarks with.
-- `common/libtorch_engine.h` and `common/test_signal.h`, as before.
+- `common/helpers/libtorch_engine.h` and `common/assets/test_signal.h`, as before.
 
 ## What to do
 

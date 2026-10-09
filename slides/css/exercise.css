@@ -1483,7 +1483,6 @@ html.tanh .tradeoff-bar::before {
   width: max(var(--v), 6px);
   border-radius: var(--radius-small);
   background: var(--tint-model);
-  transform: scaleX(0);
   transform-origin: left;
 }
 
@@ -1498,7 +1497,6 @@ html.tanh .tradeoff-bar span {
   font-family: var(--fs-code-font);
   font-size: 0.45em;
   white-space: nowrap;
-  opacity: 0;
 }
 
 /* The label sits inside a long bar */
@@ -1509,7 +1507,7 @@ html.tanh .tradeoff-bar.weight[style*="--v:100%"] span {
 }
 
 html.tanh .reveal section.present .tradeoff-bar::before {
-  animation: meter-fill 0.8s var(--ease) both;
+  animation: tradeoff-grow 0.8s var(--ease) backwards;
   animation-delay: calc(0.3s + var(--i) * 0.35s);
 }
 
@@ -1518,9 +1516,14 @@ html.tanh .reveal section.present .tradeoff-bar.work::before {
 }
 
 html.tanh .reveal section.present .tradeoff-bar span {
-  animation: run-appear 0.3s var(--ease) both;
+  animation: tradeoff-fade 0.3s var(--ease) backwards;
   animation-delay: calc(0.9s + var(--i) * 0.35s);
 }
+
+/* Visible by default; the animation only adds the way in, so a browser that
+   skips it still shows the chart */
+@keyframes tradeoff-grow { from { transform: scaleX(0); } }
+@keyframes tradeoff-fade { from { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   html.tanh .reveal section.present .tradeoff-bar::before,

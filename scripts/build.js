@@ -459,7 +459,8 @@ const THEME_ICONS = `<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stro
 
 function renderTemplate(template, data) {
   let result = template;
-  data = { THEME_ICONS, ...data };
+  // Stamped onto every css/ and js/ link, so a new build is never served from a stale cache
+  data = { THEME_ICONS, BUILD_ID: Date.now().toString(36), ...data };
   
   // Replace all placeholders
   for (const [key, value] of Object.entries(data)) {

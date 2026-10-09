@@ -171,14 +171,20 @@
             <button class="active" data-view="spectrogram">Spectrogram</button>
             <button data-view="waveform">Waveform</button>
           </div>
-          <div class="spectro-track a"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
-          <div class="spectro-track b"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
-          <div class="spectro-playhead"></div>
+          <div class="spectro-body">
+            <div class="spectro-mix">
+              <span class="spectro-fader-label"></span>
+              <input class="spectro-fader" type="range" min="0" max="1" step="0.01" value="0" aria-label="Mix">
+              <span class="spectro-fader-label"></span>
+            </div>
+            <div class="spectro-tracks">
+              <div class="spectro-track a"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
+              <div class="spectro-track b"><div class="spectro-label"></div><canvas width="1600" height="230"></canvas></div>
+              <div class="spectro-playhead"></div>
+            </div>
+          </div>
           <div class="spectro-controls">
             <button class="spectro-play" aria-label="Play">${PLAY}</button>
-            <span class="spectro-fader-label"></span>
-            <input class="spectro-fader" type="range" min="0" max="1" step="0.01" value="0">
-            <span class="spectro-fader-label"></span>
             <span class="spectro-time"></span>
           </div>`;
 

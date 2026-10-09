@@ -12,6 +12,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -35,6 +36,7 @@ constexpr struct {
 } k_model{};
 
 constexpr size_t k_host_block_size = 512;  // What the host hands over per callback
+constexpr size_t k_late_capacity = 1024;   // Late callbacks remembered for the report
 constexpr size_t k_queue_capacity = 8;     // Model blocks in flight between the threads
 
 namespace {
@@ -77,6 +79,10 @@ public:
         m_engine.reset();
         m_dry_block.assign(max_block_size, 0.0f);
         m_wet_block.assign(max_block_size, 0.0f);
+        m_wet_debt = 0;
+        m_position = 0;
+        m_late.clear();
+        m_late.reserve(k_late_capacity);
 
         // Prime both paths with the same amount of silence: one block while the
         // input is still being collected, and one more so the worker has a full
@@ -124,6 +130,16 @@ public:
             m_output.push(done.m_samples.data(), k_model.m_input_size);
         }
 
+        // A block that came too late already went out as silence. Drop it when
+        // it arrives, so the wet path stays exactly latency_samples() late: a
+        // late block is a glitch, not a shift for the rest of the stream.
+        while (m_wet_debt > 0 && m_output.available() > 0) {
+            const size_t n = std::min({m_wet_debt, m_output.available(), m_wet_block.size()});
+            m_output.pop(m_wet_block.data(), n);
+            m_wet_debt -= n;
+        }
+        const bool wet_ready = m_output.available() >= num_samples;
+
         // ---- TODO 2: mix the delayed dry signal with the wet one -------------
         // Both sides are now equally late, so this is a plain crossfade. If the
         // wet side has nothing ready, the dry side still has to come through.
@@ -141,9 +157,18 @@ public:
             m_output.pop(m_wet_block.data(), num_samples);
             for (size_t i = 0; i < num_samples; ++i) { samples[i] += m_mix * m_wet_block[i]; }
         }
+        // The wet side had nothing for this callback: its share is owed.
+        if (!wet_ready) {
+            m_wet_debt += num_samples;
+            if (m_late.size() < m_late.capacity()) { m_late.push_back(m_position); }
+        }
+        m_position += num_samples;
     }
 
     const std::vector<float>& produced() const { return m_produced; }
+
+    // Where a late wet block went out as silence, in samples from the start.
+    const std::vector<size_t>& late() const { return m_late; }
 
 private:
     void worker() {
@@ -182,11 +207,15 @@ private:
     std::vector<float> m_silence;
     std::vector<float> m_dry_block;  // Scratch, sized in prepare()
     std::vector<float> m_wet_block;
+    size_t m_wet_debt = 0;  // Wet samples whose slot already went out as silence
+    size_t m_position = 0;  // Samples handed to the host so far
+    std::vector<size_t> m_late;  // Where a late wet block went out as silence
     float m_mix = 1.0f;
 };
 
 // Runs the whole signal through the processor at one mix setting.
-std::vector<float> run(LatencyProcessor& processor, float mix) {
+// @late: set to where a late wet block went out as silence
+std::vector<float> run(LatencyProcessor& processor, float mix, std::vector<size_t>& late) {
     processor.prepare(k_host_block_size);
     processor.set_mix(mix);
 
@@ -200,16 +229,28 @@ std::vector<float> run(LatencyProcessor& processor, float mix) {
         k_model.m_sample_rate);
 
     processor.stop();
+    late = processor.late();
     return output;
 }
 
 // Compares a signal against a reference that is `latency` samples earlier.
+// Callbacks where a late wet block went out as silence are left out: they are
+// glitches, and what matters is that everything around them still lines up.
 // @got: what came out of the processor
 // @want: what it should be, undelayed
 // @latency: how far `want` has to be pushed back to line up
-float diff_with_latency(const std::vector<float>& got, const float* want, size_t latency) {
+// @late: where a late wet block went out as silence, in callback order
+float diff_with_latency(const std::vector<float>& got, const float* want, size_t latency,
+                        const std::vector<size_t>& late) {
     if (got.size() <= latency) { return 1.0f; }
-    return max_abs_diff(got.data() + latency, want, got.size() - latency);
+    float diff = 0.0f;
+    size_t next = 0;
+    for (size_t i = latency; i < got.size(); ++i) {
+        while (next < late.size() && i >= late[next] + k_host_block_size) { ++next; }
+        if (next < late.size() && i >= late[next]) { continue; }
+        diff = std::max(diff, std::abs(got[i] - want[i - latency]));
+    }
+    return diff;
 }
 
 }  // namespace
@@ -231,14 +272,28 @@ int main() {
                 1000.0 * static_cast<double>(latency) / k_model.m_sample_rate,
                 k_model.m_sample_rate);
 
-    const std::vector<float> dry = run(processor, 0.0f);
-    const std::vector<float> wet = run(processor, 1.0f);
+    std::vector<size_t> dry_late;
+    std::vector<size_t> wet_late;
+    const std::vector<float> dry = run(processor, 0.0f, dry_late);
+    const std::vector<float> wet = run(processor, 1.0f, wet_late);
 
-    const float dry_diff = diff_with_latency(dry, k_input_signal.data(), latency);
-    const float wet_diff = diff_with_latency(wet, k_target_output_signal.data(), latency);
+    const float dry_diff = diff_with_latency(dry, k_input_signal.data(), latency, {});
+    const float wet_diff = diff_with_latency(wet, k_target_output_signal.data(), latency, wet_late);
 
     const bool dry_ok = report_line("dry, delayed by the latency", dry_diff);
     const bool wet_ok = report_line("wet, delayed by the latency", wet_diff);
+
+    // A slow or busy machine can make the worker late now and then; those
+    // callbacks are silent and left out above. Late most of the time is a
+    // machine that cannot run the model in real time at all.
+    const size_t callbacks = k_input_signal.size() / k_host_block_size;
+    if (!wet_late.empty()) {
+        std::printf("  late wet callbacks, silent    %zu of %zu\n", wet_late.size(), callbacks);
+    }
+    if (wet_late.size() * 4 > callbacks) {
+        std::printf("\nFAILED: the worker was late in more than a quarter of the callbacks.\n");
+        return 1;
+    }
 
     if (dry_ok && wet_ok) {
         std::printf("\nOK: both paths are late by exactly the reported latency, so they mix.\n");

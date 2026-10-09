@@ -19,7 +19,7 @@ workshop_setup_benchmark()
 
 # The models are downloaded from the repository's own release, unless they are
 # already in models/. The test signal and the expected output are compiled in
-# (steps/common/test_signal.h).
+# (steps/common/assets/test_signal.h).
 workshop_fetch_models()
 
 set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward_stateful.pt"

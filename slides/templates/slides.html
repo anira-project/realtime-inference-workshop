@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html class="tanh">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{{PRESENTATION_TITLE}}</title>
   
   <link rel="stylesheet" href="reveal.js/dist/reveal.css">
-  <link rel="stylesheet" href="css/slides.css">
+  <link rel="stylesheet" href="css/slides.css?v={{BUILD_ID}}">
+  <link rel="stylesheet" href="css/tanh.css?v={{BUILD_ID}}">
+  <link rel="stylesheet" href="css/exercise.css?v={{BUILD_ID}}">
 </head>
 <body>
   <div class="reveal">
@@ -23,10 +25,11 @@
     </div>
     
     <footer class="slide-footer">
+      <div class="chapter-progress" aria-hidden="true"></div>
       <div class="footer-content">
         <div class="footer-left">Real-Time Neural Inference Workshop</div>
+        <div class="footer-chapter"></div>
         <div class="slide-counter"></div>
-        <div class="footer-right">anira-project</div>
       </div>
     </footer>
   </div>
@@ -36,11 +39,13 @@
   <script src="reveal.js/plugin/highlight/highlight.js"></script>
   <script src="reveal.js/plugin/notes/notes.js"></script>
   <script src="reveal.js/plugin/math/math.js"></script>
-  <script src="js/custom_speaker_notes.js"></script>
-  <script src="js/timeline.js"></script>
-  <script src="js/chapter_overview.js"></script>
-  <script src="js/task_timer.js"></script>
-  <script src="js/spectrogram_player.js"></script>
+  <script src="js/custom_speaker_notes.js?v={{BUILD_ID}}"></script>
+  <script src="js/timeline.js?v={{BUILD_ID}}"></script>
+  <script src="js/chapter_overview.js?v={{BUILD_ID}}"></script>
+  <script src="js/task_timer.js?v={{BUILD_ID}}"></script>
+  <script src="js/spectrogram_player.js?v={{BUILD_ID}}"></script>
+  <script src="js/task_run.js?v={{BUILD_ID}}"></script>
+  <script src="js/congrats.js?v={{BUILD_ID}}"></script>
   {{HOT_RELOAD_SCRIPT}}
   <script type="module">
     // Theme switching functionality
@@ -75,6 +80,8 @@
         local: 'katex',
       },
       transition: 'none',
+      // The footer draws its own progress, per chapter
+      progress: false,
       // Chapters are vertical stacks; left/right still step through every slide
       navigationMode: 'linear',
       // Esc opens the chapter overview instead of Reveal's own
@@ -90,13 +97,53 @@
       ]
     }).then(() => {
       // Update slide counter
+      // One progress segment per chapter, as wide as the chapter is long
+      const chapters = [...document.querySelectorAll('.reveal .slides > section')];
+      const chapterSizes = chapters.map(chapter => chapter.querySelectorAll(':scope > section').length || 1);
+      const progress = document.querySelector('.chapter-progress');
+      const segments = chapterSizes.map(size => {
+        const segment = document.createElement('div');
+        segment.className = 'chapter-progress-segment';
+        segment.style.flexGrow = size;
+        segment.appendChild(document.createElement('span'));
+        progress.appendChild(segment);
+        return segment;
+      });
+
       function updateSlideCounter() {
+        const { h, v } = Reveal.getIndices();
+        const size = chapterSizes[h] ?? 1;
+
+        // Position within the chapter, not within all slides
         const slideCounter = document.querySelector('.slide-counter');
         if (slideCounter) {
-          const current = Reveal.getSlidePastCount() + 1;
-          const total = Reveal.getTotalSlides();
-          slideCounter.textContent = `${current} / ${total}`;
-          console.log('Updating slide counter'); // Debugging line
+          slideCounter.textContent = `${(v ?? 0) + 1} / ${size}`;
+        }
+
+        // The opening slide shows the whole map, nothing done yet
+        const atStart = h === 0 && (v ?? 0) === 0;
+
+        segments.forEach((segment, i) => {
+          const fill = atStart || i > h ? 0 : i < h ? 1 : ((v ?? 0) + 1) / size;
+          segment.firstChild.style.transform = `scaleX(${fill})`;
+          segment.classList.toggle('current', i === h);
+        });
+
+        // The chapter the current slide belongs to, from its title slide
+        const chapterLabel = document.querySelector('.footer-chapter');
+        const chapter = Reveal.getCurrentSlide()?.closest('.slides > section');
+        // The introduction is the workshop itself, already named on the left
+        const heading = chapter?.id === 'introduction' ? null : chapter?.querySelector('h1');
+        if (chapterLabel) {
+          // innerHTML, not innerText: hidden chapters render no line breaks to split on
+          // "Step 3<br>Benchmarking and<br>the real-time budget" → "Step 3 — Benchmarking and the real-time budget"
+          const parts = heading
+            ? heading.innerHTML.split(/<br\s*\/?>/i).map(part => part.replace(/<[^>]*>/g, '').trim())
+            : [];
+          // Only "Step N" gets the dash; other titles are one line broken in two
+          chapterLabel.textContent = parts.length > 1 && /^Step \d+$/.test(parts[0])
+            ? `${parts[0]} — ${parts.slice(1).join(' ')}`
+            : parts.join(' ');
         }
       }
       
@@ -113,8 +160,7 @@
         const pages = document.querySelectorAll('.pdf-page');
         console.log(`Total pages: ${pages.length}`); // Debugging line
         const slideCounter = document.querySelector('.slide-counter');
-        const total = Reveal.getTotalSlides();
-        slideCounter.textContent = `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 / ${total}`;
+        slideCounter.textContent = '';
       });
     });
   </script>

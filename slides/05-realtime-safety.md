@@ -10,7 +10,9 @@ Note:
 
 ---
 
-## The promise a callback makes
+<div class="tag">The promise</div>
+
+## Not slow. Unbounded.
 
 The audio thread has a deadline and no second chance. So, inside a callback:
 
@@ -23,7 +25,9 @@ Not "slow". **Unbounded.** The 99.9th percentile is where it bites.
 
 ---
 
-## Saying it in the type system
+<div class="tag">RealtimeSanitizer</div>
+
+## Say it in the type system.
 
 ```cpp
 void audio_callback(Engine& engine, float* samples, size_t n)
@@ -40,7 +44,9 @@ Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang.
 
 ---
 
-## LibTorch
+<div class="tag">LibTorch</div>
+
+## It allocates before the model even runs.
 
 ```
 ERROR: RealtimeSanitizer: unsafe-library-call
@@ -57,7 +63,9 @@ The model has not run yet.
 
 ---
 
-## ONNX Runtime
+<div class="tag">ONNX Runtime</div>
+
+## Same story, other library.
 
 ```
 ERROR: RealtimeSanitizer: unsafe-library-call
@@ -67,7 +75,7 @@ Intercepted call to real-time unsafe function `malloc`
     audio_callback(...)
 ```
 
-Same story, other library. One thread, no arena growth, our own side
+One thread, no arena growth, our own side
 preallocated — and it still allocates on the way in.
 
 Note:
@@ -75,28 +83,29 @@ Note:
 
 ---
 
-## Not once — all the time
+<div class="tag">Not once — all the time</div>
+
+## Mutexes.<br><span class="then">On the audio thread.</span>
 
 | allocations + frees, ten callbacks | per block | first block |
 |---|---|---|
 | LibTorch | 10,960 | **591,393** |
 | ONNX Runtime | 1,932 | 2,000-ish |
 
-What RTSan says they are, for **one** block:
-
 ```
 ONNX Runtime     98 × malloc    51 × free    10 × mutex lock/unlock
 LibTorch       4393 × malloc  3103 × free   180 × mutex lock/unlock
 ```
 
-Mutexes. On the audio thread.
-
 Note:
+    - The code block is what RTSan reports for one block.
     - Block 0 at 591k: TorchScript recompiles while it runs, after the warm-up call. That is the 84 ms outlier from step 3.
 
 ---
 
-## Why there is no flag for it
+<div class="tag">No flag for it</div>
+
+## The allocation is inside the engine.
 
 - The allocation happens **inside** the engine, in a shared library
 - A custom allocator changes where memory comes from, not whether a lock is taken
@@ -107,14 +116,16 @@ Shipping this on the audio thread means hoping the allocator stays fast.
 
 ---
 
-## What that leaves
+<div class="tag">What that leaves</div>
 
-Inference does not belong on the audio thread.
+## Inference does not belong<br><span class="then">on the audio thread.</span>
 
-So it runs **somewhere else** — and then the two threads have to pass audio
-between them without locking, without allocating, and without waiting.
+<div class="statement-points">
+  <div>So it runs somewhere else</div>
+  <div>The two threads pass audio without locking</div>
+  <div>…without allocating, and without waiting</div>
+</div>
 
-<!-- .slide: data-state="no-footer" -->
 
 Note:
     - Next step: a worker thread plus lock-free hand-over, and the latency that comes with it.

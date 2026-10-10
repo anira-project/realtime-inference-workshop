@@ -68,8 +68,9 @@ public:
     // --------------------------------------------------------------------------
     size_t latency_samples() const { return 2 * k_model.m_input_size; }
 
-    // Everything that allocates: buffers, queue capacity, the thread.
-    // @max_block_size: the largest block process_block() will be given
+    // Allocate and initialize all processing buffers, queue capacity, 
+    // the thread before audio processing begins.
+    // @max_block_size: the largest block process_block() can be given
     void prepare(size_t max_block_size) {
         stop();
 

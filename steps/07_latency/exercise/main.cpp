@@ -3,7 +3,7 @@
 // Goal:   work out how late the processed signal is, report it, and delay the
 //         dry signal by the same amount so the two can be mixed.
 // Given:  the threaded processor from step 6, with a dry path added.
-// You do: fill in the two TODO banners.
+// Task:   fill in the two TODO banners.
 // Check:  at 100% dry the output is the input, delayed by exactly the reported
 //         latency — if the number is wrong, the check says so.
 //
@@ -60,7 +60,7 @@ public:
     explicit LatencyProcessor(LibTorchEngine& engine) : m_engine(engine) {}
 
     ~LatencyProcessor() { stop(); }
-
+    
     // ---- TODO 1: how late is the wet signal? ---------------------------------
     // Two things delay it, and both are fixed by the design:
     //   - the model cannot run before a whole block has arrived
@@ -72,8 +72,10 @@ public:
     // --------------------------------------------------------------------------
     size_t latency_samples() const { return 0; }
 
-    // Everything that allocates: buffers, queue capacity, the thread.
-    // @max_block_size: the largest block process_block() will be given
+
+    // Allocate and initialize all processing buffers, queue capacity, 
+    // the thread before audio processing begins.
+    // @max_block_size: the largest block process_block() can be given
     void prepare(size_t max_block_size) {
         stop();
 
@@ -153,13 +155,18 @@ public:
         const bool wet_ready = m_output.available() >= num_samples;
 
         // ---- TODO 2 ----------------------------------------------------------
-        // Mix the delayed dry signal with the wet one and write num_samples into
-        // `samples`. Both sides are equally late now, so this is a plain
-        // crossfade with m_mix: 0 is dry only, 1 is wet only. m_dry_block and
-        // m_wet_block are there to pop into; neither side is guaranteed to have
-        // samples ready, and the host gets num_samples either way.
+        // Produce exactly num_samples for the host by mixing the delayed dry
+        // path with the wet path.
+        //   - Read the dry samples from m_dry into m_dry_block.
+        //   - Read wet samples into m_wet_block only when wet_ready is true.
+        //   - For each sample, apply m_mix: 0 means fully dry, 1 means fully wet.
+        //   - Store the mixed result in samples.
+        // Neither side is guaranteed to have samples ready, and the host
+        // gets num_samples either way.
         // ----------------------------------------------------------------------
         std::fill_n(samples, num_samples, 0.0f);
+
+
         // The wet side had nothing for this callback: its share is owed.
         if (!wet_ready) {
             m_wet_debt += num_samples;

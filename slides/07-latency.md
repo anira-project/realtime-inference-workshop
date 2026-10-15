@@ -9,7 +9,7 @@ Note:
 
 ---
 
-<div class="tag">Why</div>
+<div class="tag">Motivation</div>
 
 ## Fixed beats small.
 
@@ -37,7 +37,7 @@ Note:
 
 ---
 
-<div class="tag">Why</div>
+<div class="tag">Motivation</div>
 
 ## Dry and wet have to meet.
 
@@ -74,7 +74,7 @@ Note:
 
 ---
 
-<div class="tag">What's given</div>
+<div class="tag">Given</div>
 
 ## Step 6, plus a dry path.
 
@@ -106,6 +106,8 @@ Note:
     - The host runs in real time, 512 samples per call.
 
 ---
+
+<div class="tag">Task: <code>main.cpp</code></div>
 
 ## Task
 

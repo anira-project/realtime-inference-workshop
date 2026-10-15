@@ -24,7 +24,7 @@ html.tanh .file.new::after {
   content: "new";
   position: absolute;
   top: -6px;
-  right: -14px;
+  right: calc(50% - 70px);
   padding: 1px var(--space-2);
   border-radius: var(--radius-small);
   background: var(--tint-exercise);
@@ -1223,6 +1223,96 @@ html.tanh .meter-label strong {
 }
 
 /*********************************************
+ * Step 3 · the deadline, worked out: block size ÷ sample rate
+ *********************************************/
+
+html.tanh .budget-calc {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-5);
+  font-family: var(--fs-heading-font);
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+html.tanh .budget-calc small {
+  display: block;
+  font-size: 0.5em;
+  font-weight: 400;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .budget-calc b {
+  font-weight: 400;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .budget-calc .result {
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--tint-exercise);
+}
+
+html.tanh .reveal section.present .budget-calc > * {
+  animation: budget-in 0.5s var(--ease) both;
+}
+html.tanh .reveal section.present .budget-calc > :nth-child(2) { animation-delay: 0.15s; }
+html.tanh .reveal section.present .budget-calc > :nth-child(3) { animation-delay: 0.3s; }
+html.tanh .reveal section.present .budget-calc > :nth-child(4) { animation-delay: 0.45s; }
+html.tanh .reveal section.present .budget-calc > :nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes budget-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* The label sits on the last bar, so it hangs to the left instead of centring */
+html.tanh .deadline-bars i.runs span {
+  top: auto;                              /* anchor from the bottom, so a second line grows upward */
+  bottom: calc(100% + var(--space-2));
+  left: auto;
+  right: 0;
+  transform: none;
+  text-align: right;
+  line-height: 1.15;
+  font-style: normal;
+}
+
+/* Two labels: the 31 that wait, the one that runs */
+html.tanh .deadline-axis {
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+html.tanh .deadline-axis span:last-child { color: var(--ink); }
+
+/* Step 3 · meters: the division behind each number, and how far past the deadline */
+html.tanh .meter-calc {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--fs-code-font);
+  font-size: 0.85em;
+  color: var(--ink);
+}
+
+html.tanh .meter-late {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 100%;
+  width: 34%;
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+}
+
+html.tanh .reveal section.present .meter-calc { animation: budget-in 0.5s var(--ease) 0.6s both; }
+html.tanh .reveal section.present .meter.over .meter-calc { animation-delay: 1.3s; }
+html.tanh .reveal section.present .meter-late { animation: meter-late 0.5s var(--ease) 2.6s both; }
+
+@keyframes meter-late { to { opacity: 1; } }
+
+/*********************************************
  * Step 3 Task cards
  *********************************************/
 
@@ -1532,3 +1622,19 @@ html.tanh .reveal section.present .tradeoff-bar span {
     animation-delay: 0s !important;
   }
 }
+
+/* Over budget: the one red on the slides */
+html.tanh { --mark-over: #c0503a; }
+html.tanh[data-theme="dark"] { --mark-over: #e0705a; }
+
+html.tanh .meter.over .meter-bar i { background: var(--ink); }
+
+html.tanh .meter.over .meter-bar::after {
+  background: repeating-linear-gradient(90deg, var(--mark-over) 0 10px, transparent 10px 18px);
+}
+
+/* Optional: the "3.7 ms too late" label and the 375 % number in the same red */
+html.tanh .meter.over .meter-late,
+html.tanh .meter.over .meter-label strong { color: var(--mark-over); }
+
+html.tanh .deadline-bars i.runs { background: var(--mark-over); }

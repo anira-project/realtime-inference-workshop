@@ -1,11 +1,10 @@
 <h1>Neural networks in<br>real-time environments</h1>
 
-What we are integrating today, and where it comes from
+Model types, state, and the model we use today 
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->
 <!-- part: Real-time inference -->
-
 ---
 
 <div class="tag">Overview</div>
@@ -14,14 +13,17 @@ What we are integrating today, and where it comes from
 
 {{INTEGRATION:train}}
 
+<span class="fragment integration-focus"></span>
 
 ---
 
-<div class="tag">Model types</div>
+<div class="tag">Overview</div>
 
-## What goes in, what comes out.<br><span class="then">Three common shapes of model.</span>
+## Model types <br><span class="then">What goes in, what comes out.</span>
 
-<div class="nn-types">
+<span class="then" style="margin-bottom: 200px;">Three common model shapes:</span>
+
+<div class="nn-types" style="margin-top: 30px;">
   <div class="nn-type">
     <div class="nn-io">
       <div class="nn-end">{{ICON:wave}}<span>audio</span></div>
@@ -62,7 +64,7 @@ Note:
     - Parameters → audio: control rate in, audio out, the model is the sound generator; has to deliver every block.
     - Audio → parameters: the model listens; the result often leaves the audio thread (UI, MIDI, file).
 
----
+<!-- ---
 
 <div class="tag">Stateless vs. stateful</div>
 
@@ -170,15 +172,16 @@ Note:
     - Conditioned: the controls are inputs too, and have to reach the model at the right time.
     - Causal: a model that looks ahead needs future samples, so its output is late by that much.
     - Fixed input size: the host block size rarely matches; step 2 is about this.
-    - Rates: not everything runs per sample; control and note rates change how often the model is called.
+    - Rates: not everything runs per sample; control and note rates change how often the model is called. -->
 
 ---
 
 <div class="tag">Our model</div>
 
-## 2048 samples in, 8 numbers between.<br><span class="then">A variational autoencoder.</span>
+## Our model<br><span class="then">A variational autoencoder.</span>
 
-<div class="vae">
+
+<div class="vae" style="margin-top: 50px;">
   <!-- model-figure -->
 <svg class="mf" viewBox="0 0 1600 600" aria-hidden="true">
   <text x="40" y="24" class="mf-row">encoder: time shrinks, channels grow</text>
@@ -205,9 +208,11 @@ Note:
 
 ---
 
-<div class="tag">Training data</div>
+<div class="tag">Our model</div>
 
-## Trained on a magnetic resonator piano.<br><span class="then">Electromagnets play its strings.</span>
+## Training data<br><span class="then">A magnetic resonator piano.</span>
+
+<span> Electromagnets drive the strings. </span>
 
 <div class="mrp">
   <figure><img src="assets/images/mrp/piano.jpg" alt="A grand piano fitted with the magnetic resonator piano kit"></figure>
@@ -224,9 +229,9 @@ Note:
 
 ---
 
-<div class="tag">What it is for</div>
+<div class="tag">Our model</div>
 
-## What the model makes of a synthesized chord.
+## An example<br><span class="then">What the model makes of a synthesized chord.</span>
 
 <div class="spectro-player" data-a="assets/audio/demo_input.wav" data-b="assets/audio/demo_output.wav"
      data-label-a="In" data-label-b="Out — through encoder and decoder"></div>
@@ -238,11 +243,13 @@ Note:
 
 ---
 
-<div class="tag">Where we are</div>
+<div class="tag">Our model</div>
 
-## Training and export are done.<br><span class="then">This workshop covers the third step.</span>
+## Where we are in the process<br><span class="then">Training and export have been completed.</span>
 
 {{INTEGRATION:implement}}
+
+<span class="fragment integration-focus"></span>
 
 
 Note:

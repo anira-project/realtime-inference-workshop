@@ -9,7 +9,7 @@ Note:
 
 ---
 
-<div class="tag">Why</div>
+<div class="tag">Motivation</div>
 
 ## The audio thread moves samples.<br><span class="then">The worker runs the model.</span>
 
@@ -44,7 +44,7 @@ Note:
 
 ---
 
-<div class="tag">What's given</div>
+<div class="tag">Given</div>
 
 ## 1 new helper, 1 file to edit.
 
@@ -78,7 +78,7 @@ Note:
 
 ---
 
-<div class="tag">Helpers · <code>readerwriterqueue.h</code></div>
+<div class="tag">Helpers: <code>readerwriterqueue.h</code></div>
 
 ## One producer, one consumer.<br><span class="then">No locks.</span>
 
@@ -109,6 +109,8 @@ Note:
     - By value, so nobody has to agree on who frees what.
 
 ---
+
+<div class="tag">Task: <code>main.cpp</code></div>
 
 ## Task
 

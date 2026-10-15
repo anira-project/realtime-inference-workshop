@@ -312,7 +312,9 @@ html.tanh .statement-points > div {
 
 /* Only the step's name is marked; the other steps step back */
 html.tanh .integration-step.highlight-step {
-  outline: none;
+  outline: 5px solid var(--tint-exercise);
+  outline-offset: var(--space-3);
+  border-radius: var(--radius-main);
   background: none;
 }
 
@@ -320,12 +322,23 @@ html.tanh .integration:has(.highlight-step) .integration-step:not(.highlight-ste
   opacity: 0.4;
 }
 
-html.tanh .integration-step.highlight-step .integration-label {
+/* html.tanh .integration-step.highlight-step .integration-label {
   display: inline-block;
   padding: 0 var(--space-3);
   border-radius: var(--radius-small);
   background: var(--tint-exercise);
+} */
+ /* {{INTEGRATION:x}} followed by a .integration-focus fragment: all steps
+   look equal until the fragment is shown, then the highlight comes in */
+html.tanh .integration-step {
+  transition: opacity 0.4s var(--ease), outline-color 0.4s var(--ease);
 }
+
+html.tanh .reveal section:has(.integration-focus:not(.visible)) .integration .integration-step {
+  opacity: 1;
+  outline-color: transparent;
+}
+
 
 html.tanh .integration-dots circle {
   fill: var(--ink);
@@ -1355,8 +1368,8 @@ html.tanh .statement-points > div:not(:has(small)) {
 
 /* What's given: larger file icons, so the logos read from the back */
 html.tanh .given .file-icon {
-  width: 112px;
-  height: 139px;
+  width: 96px;
+  height: 119px;
 }
 
 /* Where each group lives in the repository */

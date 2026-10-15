@@ -9,36 +9,44 @@ Note:
 
 ---
 
-<div class="tag">Why</div>
+<div class="tag">Motivation</div>
 
-## Every callback has a deadline.<br><span class="then">One of them runs the model.</span>
+## The problem<br><span class="then">Every callback has a deadline.</span>
+
+<div class="budget-calc">
+  <div><small>host block</small>64 samples</div>
+  <b>÷</b>
+  <div><small>sample rate</small>48 kHz</div>
+  <b>=</b>
+  <div class="result"><small>deadline per callback</small>1.33 ms</div>
+</div>
 
 <div class="deadline">
-  <div class="deadline-budget"><span>budget per callback</span></div>
-  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i><i style="--i:30"></i><i class="runs" style="--i:31"><span>375 %</span></i></div>
-  <div class="deadline-axis">32 callbacks of 64 samples</div>
+  <div class="deadline-budget"><span>deadline · 1.33 ms</span></div>
+  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i><i style="--i:30"></i><i class="runs" style="--i:31"><span>forward pass <br> 5 ms</span></i></div>
+  <div class="deadline-axis"><span>callbacks 1–31 · only copies samples, ≈ 0 ms</span><span>callback 32 · 2048 collected, run the model</span></div>
 </div>
 
 Note:
     - budget = host block size / sample rate: 64 samples at 48 kHz are 1.33 ms; 512 are 10.7 ms; 2048 are 42.7 ms.
     - The model takes 2048 samples, 42.7 ms of audio. The host hands us 64 samples, 1.33 ms of time.
-    - 31 callbacks do nothing. The 32nd runs the whole forward pass, and still has 1.33 ms.
+    - 31 callbacks only fill the ring buffer from step 2. The 32nd has a full block, runs the whole forward pass, and still has 1.33 ms.
     - This is the slide to linger on: the audio duration of the model block and the deadline of a callback are unrelated numbers.
 
 ---
 
-<div class="tag">Why</div>
+<div class="tag">Motivation</div>
 
-## 12 % on average.<br><span class="then">375 % in the callback that runs it.</span>
+## The problem <span class="then">12 % on average but 375 % in the callback that runs it.</span>
 
 <div class="meters">
   <div class="meter">
     <div class="meter-bar"><i style="--load:12%"></i></div>
-    <div class="meter-label">average load<strong>12 %</strong></div>
+    <div class="meter-label"><span>average load · what a CPU meter shows<span class="meter-calc">5 ms ÷ 42.7 ms (32 callbacks × 1.33 ms)</span></span><strong>12 %</strong></div>
   </div>
   <div class="meter over">
-    <div class="meter-bar"><i style="--load:100%"></i></div>
-    <div class="meter-label">the callback that runs the model<strong>375 %</strong></div>
+    <div class="meter-bar"><i style="--load:100%"></i><span class="meter-late">3.7 ms too late</span></div>
+    <div class="meter-label"><span>the callback that runs the model · what you hear<span class="meter-calc">5 ms ÷ 1.33 ms → a click every 42.7 ms</span></span><strong>375 %</strong></div>
   </div>
 </div>
 
@@ -51,7 +59,7 @@ Note:
 
 <div class="tag">Goal</div>
 
-## How long does one call take?<br><span class="then">Typically, and at worst.</span>
+## Goal <span class="then"> Find out how long one call takes.
 
 <div class="statement-points">
   <div><small>1</small>Run the model inside the timed loop</div>
@@ -61,20 +69,20 @@ Note:
 
 ---
 
-<div class="tag">What's given</div>
+<div class="tag">Given</div>
 
-## 1 new library, 1 file to edit.
+## What we get <span class="then">1 new library, 1 file to edit.</span>
 
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/ · common/assets/</div>
+    <div class="given-folder">models/ & common/assets/</div>
     {{FILE:forward_stateful.pt}}
     {{FILE:test_signal.h}}
   </div>
   <div class="given-column">
     <div class="given-label">Helpers</div>
-    <div class="given-folder">common/helpers/ · CMake</div>
+    <div class="given-folder">common/helpers/ & CMake</div>
     {{FILE:libtorch_engine.h}}
     {{FILE:Google Benchmark|new}}
   </div>
@@ -92,9 +100,9 @@ Note:
 
 ---
 
-<div class="tag">Helpers · Google Benchmark</div>
+<div class="tag">Helpers: Google Benchmark</div>
 
-## Only the loop is timed.
+## Google Benchmark <span class="then">Only the loop is timed.</span>
 
 ```cpp
 void forward_pass(benchmark::State& state) {
@@ -112,9 +120,11 @@ Note:
 
 ---
 
+<div class="tag">Task: <code>main.cpp</code></div>
+
 ## Task
 
-<div class="task-timer" data-minutes="5"></div>
+<div class="task-timer" data-minutes="3"></div>
 
 Fill in the TODOs in `steps/03_benchmark/exercise/main.cpp`
 
@@ -152,7 +162,7 @@ cmake --build --preset release --target step03_exercise
 
 <div class="tag">Solution</div>
 
-## TODO 1 · The timed loop
+## TODO 1: The timed loop
 
 ```cpp
 for (auto _ : state) {
@@ -168,7 +178,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 2 · <code>percentile()</code>
+## TODO 2: <code>percentile()</code>
 
 ```cpp
 std::vector<double> sorted(times);
@@ -184,7 +194,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 3 · One call per repetition
+## TODO 3: One call per repetition
 
 ```cpp
 BENCHMARK(forward_pass)

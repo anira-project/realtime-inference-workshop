@@ -10,7 +10,7 @@ Note:
 
 <div class="tag">Goal</div>
 
-## Run the model in C++<br><span class="then">and reproduce the Python output.</span>
+## Goal<br><span class="then">Run the model in C++</span>
 
 <div class="statement-points">
   <div><small>1</small>Load the model with LibTorch</div>
@@ -21,14 +21,14 @@ Note:
 
 ---
 
-<div class="tag">What's given</div>
+<div class="tag">Given</div>
 
-## 3 assets, 1 helper, 1 file to edit.
+## What we get<br><span class="then">3 assets, 1 helper, 1 file to edit.</span>
 
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/ · common/assets/</div>
+    <div class="given-folder">models/ & common/assets/</div>
     {{FILE:forward_stateful.pt}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
@@ -53,7 +53,7 @@ Note:
 
 ---
 
-<div class="tag">Assets · <code>test_signal.h</code> · <code>target_signal.h</code></div>
+<div class="tag">Assets: <code>test_signal.h</code> & <code>target_signal.h</code></div>
 
 ## Input: a sine.<br><span class="then">Reference: the model's output in Python.</span>
 
@@ -70,9 +70,9 @@ Note:
 
 ---
 
-<div class="tag">Helpers · <code>libtorch_engine.h</code></div>
+<div class="tag">Helpers: <code>libtorch_engine.h</code></div>
 
-## The engine interface has three methods.<br><span class="then">Later steps reuse it unchanged.</span>
+## The engine<br><span class="then">The interface has three methods.</span>
 
 ```cpp
 LibTorchEngine engine(path);          // Loads the model
@@ -85,9 +85,9 @@ Note:
 
 ---
 
-<div class="tag">Helpers · <code>libtorch_engine.h</code> — inside</div>
+<div class="tag">Helpers: <code>libtorch_engine.h</code> — inside</div>
 
-## Load once, then one block at a time.
+## The engine<br><span class="then">Load once, then one block at a time.</span>
 
 ```cpp
 // Constructor
@@ -109,6 +109,8 @@ Note:
     - copy_n writes back in place.
 
 ---
+
+<div class="tag">Task: <code>main.cpp</code></div>
 
 ## Task
 
@@ -153,7 +155,7 @@ cmake --build --preset release --target step01_exercise
 
 <div class="tag">Solution</div>
 
-## TODO 1 · Create the engine
+## TODO 1: Create the engine</span>
 
 ```cpp
 std::unique_ptr<LibTorchEngine> engine;
@@ -173,7 +175,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 2 · Pick the block size
+## TODO 2: Pick the block size
 
 ```cpp
 const size_t process_size = static_cast<size_t>(k_model.m_input_size);  // 2048
@@ -194,7 +196,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 3 · Run each block
+## TODO 3: Run each block
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
@@ -209,7 +211,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## Congratulations!<br><span class="then">You integrated an AI model in C++.</span>
+## AI model integrated in C++.
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

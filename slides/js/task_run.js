@@ -3,7 +3,7 @@
 // (its own animations are keyed to that) and .is-current while it is the active one.
 // After the last card the pipeline gets .is-checked, holds, and starts over.
 const RUN_START = 400;
-const RUN_HOLD = 2600;
+const RUN_HOLD = 10600;
 
 window.addEventListener('reveal-ready', () => {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');

@@ -8,9 +8,9 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 
 ---
 
-<div class="tag">anira</div>
+<div class="tag">introduction</div>
 
-## Research on real-time inference since 2020,<br><span class="then">implemented in the open-source library anira (v3).</span>
+## anira<br><span class="then">Research on real-time inference since 2020</span>
 
 <div class="brand anira">
   <img class="brand-mark" src="assets/images/logos/anira-mark.png" alt="anira logo">
@@ -40,20 +40,21 @@ Note:
     - Most of what the workshop shows comes from building anira.
 
 ---
+<div class="tag">introduction</div>
 
-## Who we are
+## About Us
 
 <div class="people">
   <div class="person">
     <img class="person-photo" src="assets/images/people/lina.jpg" alt="Lina Campanella">
     <div class="person-name">Lina Campanella<span class="person-pronouns">she/her</span></div>
-    <div class="person-role">Researcher</div>
+    <div class="person-role">Research Assistant</div>
     <div class="person-affiliation">TU Berlin</div>
   </div>
   <div class="person">
     <img class="person-photo" src="assets/images/people/fares.jpg" alt="Fares Schulz">
     <div class="person-name">Fares Schulz<span class="person-pronouns">he/him</span></div>
-    <div class="person-role">Senior Researcher</div>
+    <div class="person-role">Research Associate</div>
     <div class="person-affiliation">TU Berlin · tanh lab</div>
   </div>
   <div class="person">
@@ -66,9 +67,9 @@ Note:
 
 ---
 
-<div class="tag">tanh lab</div>
+<div class="tag">introduction</div>
 
-## An audio software studio.<br><span class="then">From research to product.</span>
+## tanh lab<br><span class="then">From research to product.</span>
 
 <div class="brand studio">
   <img class="brand-lockup" src="assets/images/logos/tanh-lab.svg" alt="tanh lab">
@@ -86,7 +87,7 @@ Note:
 
 <div class="tag">Scope</div>
 
-## From an exported model<br><span class="then">to real-time safe inference in a plugin.</span>
+## From an exported model<br>to real-time safe inference in a plugin.
 
 <div class="cards spanned">
   <div class="card">{{ICON:model}}<div class="card-title">Exported model</div><div class="card-text">Trained, exported, given</div></div>
@@ -96,20 +97,20 @@ Note:
   <div class="card">{{ICON:shield}}<div class="card-title">Real-time safe</div><div class="card-text">Worker thread, latency</div></div>
   <div class="card-arrow">→</div>
   <div class="card">{{ICON:plug}}<div class="card-title">Plugin</div><div class="card-text">All of it, in a host</div></div>
-  <div class="cards-span"><span>anira</span> solves all three</div>
+  <div class="cards-span" style="margin-bottom: 200px;"><span>anira</span> solves these three steps</div>
 </div>
+
 
 <div class="cards-note">Not today: training, exporting, ML fundamentals, Python.</div>
 
 ---
 
-<div class="tag">Who this is for</div>
 
-## We assume you write real-time audio code in C++.<br><span class="then">We add neural network inference to it.</span>
+## Who this is for<br><span class="then">We assume you write real-time audio code in C++.</span>
 
 <div class="prereqs">
   <div class="prereq">
-    <div class="prereq-label">You should know</div>
+    <div class="prereq-label">Expected knowledge</div>
     <div class="prereq-text">C++, and the audio thread's rules: no allocations, no locks, no waiting</div>
   </div>
   <div class="prereq optional">
@@ -138,11 +139,13 @@ Note:
 
 ---
 
-<div class="tag">How the exercises work</div>
+<div class="tag">explanation</div>
 
-## Each step: a short introduction, then an exercise.<br><span class="then">A reference solution is in the repository.</span>
+## How the exercises work <br>
 
-<div class="cards">
+<span class="then">Each step: a short introduction, then an exercise.<br>A reference solution is in the repository.</span>
+
+<div class="cards" style="margin-bottom: 200px;"> 
   <div class="card">{{ICON:slides}}<div class="card-title">Slides</div><div class="card-text">The problem, and the idea for fixing it</div></div>
   <div class="card-arrow">→</div>
   <div class="card accent">{{ICON:code}}<div class="card-title"><code>exercise/</code></div><div class="card-text">Your code, with TODOs to fill in</div></div>

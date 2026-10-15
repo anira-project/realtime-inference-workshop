@@ -8,9 +8,9 @@ Note:
 
 ---
 
-<div class="tag">Why</div>
+<div class="tag">Motivation</div>
 
-## Two owners, two block sizes.
+## What is the problem? <span class="then">Two owners, two block sizes.</span>
 
 <div class="streams">
   {{STREAM:host=64|model=2048|length=4096|seconds=7}}
@@ -25,11 +25,13 @@ Note:
 
 ---
 
-<div class="tag">Why</div>
+<div class="tag">Approach</div>
 
-## A ring buffer on each side.<br><span class="then">Each side keeps its own pace.</span>
+## The approach<br><span class="then">A ring buffer on each side.</span>
 
-<div class="pump">
+<span> The host and the model each work in their own block size.</span>
+
+<div class="pump" style="margin-bottom: 250px;">
   <div class="pump-node">host in<small>480 per call</small></div>
   <div class="pump-arrow"></div>
   <div class="pump-buffer in"><div class="pump-fill"></div><div class="pump-mark"></div></div>
@@ -49,7 +51,7 @@ Note:
 
 <div class="tag">Goal</div>
 
-## Any host block size.<br><span class="then">The same stream for the model.</span>
+## Goal<br><span class="then">The model should work with any host block size.</span>
 
 <div class="statement-points">
   <div><small>1</small>Size the ring buffers in <code>prepare()</code></div>
@@ -59,14 +61,14 @@ Note:
 
 ---
 
-<div class="tag">What's given</div>
+<div class="tag">Given</div>
 
-## 2 new helpers, 1 file to edit.
+## What we get<br><span class="then">1 new helpers, 1 file to edit.</span>
 
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/ · common/assets/</div>
+    <div class="given-folder">models/ & common/assets/</div>
     {{FILE:forward_stateful.pt}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
@@ -91,15 +93,15 @@ Note:
 
 ---
 
-<div class="tag">Helpers · <code>ring_buffer.h</code></div>
+<div class="tag">Helpers: <code>ring_buffer.h</code></div>
 
-## A fixed-size queue for samples.
+## The ringbuffer <span class="then">A fixed-size queue for samples.</span>
 
 ```cpp
 RingBuffer buffer(capacity);           // Allocates once, never again
 buffer.available();                    // Samples waiting to be read
 buffer.space();                        // Room left for writing
-buffer.push(samples, num_samples);     // Append — throws if it does not fit
+buffer.push(samples, num_samples);     // Append at the back — throws if it does not fit
 buffer.pop(samples, num_samples);      // Take from the front — throws if too few
 ```
 
@@ -115,9 +117,9 @@ Note:
 
 ---
 
-<div class="tag">Helpers · <code>host.h</code></div>
+<div class="tag">Helpers: <code>host.h</code></div>
 
-## A DAW, minus the DAW.
+## The host <span class="then">A DAW, minus the DAW.</span>
 
 ```cpp
 std::vector<float> out = run_host(signal, num_samples, block_size,
@@ -136,6 +138,8 @@ Note:
     - An optional sample rate spaces the calls out in real time; needed from step 6.
 
 ---
+
+<div class="tag">Task: <code>main.cpp</code></div>
 
 ## Task
 
@@ -158,14 +162,14 @@ cmake --build --preset release --target step02_exercise
     </div>
   </div>
   <div class="run-step" data-seconds="3.4">
-    <div class="run-title"><span>2</span>Pump whole blocks</div>
+    <div class="run-title"><span>2</span>Pump the whole blocks</div>
     <div class="run-visual">
       <div class="mini-buf pumping"><div class="mini-fill"></div><div class="mini-mark"></div></div>
       <div class="mini-model">model</div>
     </div>
   </div>
   <div class="run-step" data-seconds="3">
-    <div class="run-title"><span>3</span>Hand the samples back</div>
+    <div class="run-title"><span>3</span>Hand back the samples </div>
     <div class="run-visual run-wave run-out">
       <div class="run-reveal">
         <div class="run-silence"></div>
@@ -180,7 +184,7 @@ cmake --build --preset release --target step02_exercise
 
 <div class="tag">Solution</div>
 
-## TODO 1 · Size the ring buffers
+## TODO 1: Size the ring buffers
 
 ```cpp
 const size_t capacity = max_block_size + 2 * m_model_input_size;
@@ -194,7 +198,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 2 · Pump whole blocks
+## TODO 2: Pump whole blocks
 
 ```cpp
 m_input.push(samples, num_samples);
@@ -214,7 +218,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 3 · Hand the samples back
+## TODO 3: Hand the samples back
 
 ```cpp
 if (m_output.available() >= num_samples) {
@@ -231,7 +235,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## Any host block size.<br><span class="then">The model sees the same stream.</span>
+## The model runs on any host block size.
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

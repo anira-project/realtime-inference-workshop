@@ -9,25 +9,27 @@ Note:
     - Demonstration, no exercise. Run it live if the Homebrew clang is there; the output is the slide.
 
 ---
+<div class="tag">Promise</div>
 
-<div class="tag">The promise</div>
+## The audio thread has a deadline<br><span class="then">Nothing in it may take unbounded time.</span>
 
-## Not slow. Unbounded.
+Inside the callback, never:
 
-The audio thread has a deadline and no second chance. So, inside a callback:
+- **allocate**: the allocator may lock or page-fault
+- **lock**: the holder may be descheduled
+- **call the OS**: no files, no logging, no syscalls
+- **loop without a bound**
 
-- no allocation — the allocator can take a lock and a page fault
-- no lock — whoever holds it may be descheduled
-- no syscall, no file, no logging
-- no unbounded loop
+The average doesn't matter. **The worst case does.**
 
-Not "slow". **Unbounded.** The 99.9th percentile is where it bites.
+Note:
+    - Not "slow", unbounded. The 99.9th percentile is where it bites: one stall is an audible dropout.
 
 ---
 
 <div class="tag">RealtimeSanitizer</div>
 
-## Say it in the type system.
+## Sets the promise in the type system <span class="then">The sanitizer catches what breaks it.</span>
 
 ```cpp
 void audio_callback(Engine& engine, float* samples, size_t n)
@@ -37,16 +39,16 @@ void audio_callback(Engine& engine, float* samples, size_t n)
 }
 ```
 
-`-fsanitize=realtime` then checks every call underneath it, at runtime, and
-reports the first thing that breaks the promise.
+`-fsanitize=realtime` checks every call underneath it, at runtime, and reports the first thing that breaks the promise.
 
 Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang.
 
 ---
 
-<div class="tag">LibTorch</div>
+<div class="tag">RealtimeSanitizer</div>
 
-## It allocates before the model even runs.
+## Wrapping our buffer allocates<br><span class="then">The model hasn't run yet.</span>
+
 
 ```
 ERROR: RealtimeSanitizer: unsafe-library-call
@@ -59,13 +61,12 @@ Intercepted call to real-time unsafe function `malloc`
     audio_callback(...)
 ```
 
-The model has not run yet.
 
 ---
 
 <div class="tag">ONNX Runtime</div>
 
-## Same story, other library.
+## ONNX Runtime <br><span class="then">Same story, other library.</span>
 
 ```
 ERROR: RealtimeSanitizer: unsafe-library-call
@@ -75,8 +76,9 @@ Intercepted call to real-time unsafe function `malloc`
     audio_callback(...)
 ```
 
-One thread, no arena growth, our own side
-preallocated — and it still allocates on the way in.
+One thread. Fixed arena. Our buffers preallocated.<br>
+**Still allocates.**
+
 
 Note:
     - Both engines were verified against the reference first: 2.2e-06 and 5.8e-07. They are correct, and they are unsafe.
@@ -85,7 +87,7 @@ Note:
 
 <div class="tag">Not once — all the time</div>
 
-## Mutexes.<br><span class="then">On the audio thread.</span>
+## Mutexes<br><span class="then">On the audio thread.</span>
 
 | allocations + frees, ten callbacks | per block | first block |
 |---|---|---|

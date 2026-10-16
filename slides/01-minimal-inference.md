@@ -10,7 +10,7 @@ Note:
 
 <div class="tag">Goal</div>
 
-## Goal<br><span class="then">Run the model in C++</span>
+## Goal<br><span class="then">Run the model in C++.</span>
 
 <div class="statement-points">
   <div><small>1</small>Load the model with LibTorch</div>
@@ -55,7 +55,7 @@ Note:
 
 <div class="tag">Assets: <code>test_signal.h</code> & <code>target_signal.h</code></div>
 
-## Input: a sine.<br><span class="then">Reference: the model's output in Python.</span>
+## Input: a sine<br><span class="then">Reference: the model's output in Python.</span>
 
 <div class="signal-pair">
   <div class="signal-label"><code>k_input_signal</code></div>
@@ -211,7 +211,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## AI model integrated in C++.
+## AI model integrated in C++
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

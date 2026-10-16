@@ -210,7 +210,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## You know your worst case.<br><span class="then">Now it has to fit the budget.</span>
+## You know your worst case<br><span class="then">Now it has to fit the budget.</span>
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

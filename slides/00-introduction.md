@@ -42,7 +42,7 @@ Note:
 ---
 <div class="tag">introduction</div>
 
-## About Us
+## About us
 
 <div class="people">
   <div class="person">

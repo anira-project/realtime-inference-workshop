@@ -235,7 +235,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## The model runs on any host block size.
+## The model runs on any host block size
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

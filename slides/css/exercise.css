@@ -1507,6 +1507,10 @@ html.tanh .tradeoff.ships {
   padding-left: 0;
 }
 
+html.tanh .reveal .slides section > p.ships-note {
+  margin-top: calc(var(--space-9) * 3);
+}
+
 html.tanh .tradeoff-axis {
   position: absolute;
   top: 60px;

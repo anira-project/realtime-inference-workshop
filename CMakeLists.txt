@@ -12,6 +12,7 @@ include(benchmark)
 include(readerwriterqueue)
 include(juce)
 include(models)
+include(anira)
 
 # Fetch the engines once, so every step links the same build.
 workshop_setup_libtorch()
@@ -35,6 +36,9 @@ option(WORKSHOP_RTSAN "Build the real-time safety step with -fsanitize=realtime"
 # The plugin step clones and builds JUCE, which takes minutes — off by default.
 option(WORKSHOP_JUCE "Build the JUCE plugin step" OFF)
 
+# Part 2 builds anira from source, which takes a couple of minutes once.
+option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
+
 # Build one step (-DWORKSHOP_STEP=01) or all of them.
 set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01, or all")
 
@@ -42,6 +46,9 @@ set(WORKSHOP_STEPS 01_minimal_inference 02_host_buffer_size 03_benchmark 05_real
 
 if(WORKSHOP_JUCE)
     list(APPEND WORKSHOP_STEPS 08_juce_plugin)
+endif()
+if(WORKSHOP_ANIRA)
+    list(APPEND WORKSHOP_STEPS 09_anira 10_split)
 endif()
 
 foreach(step ${WORKSHOP_STEPS})

@@ -42,7 +42,7 @@ Note:
 
 <div class="tag">Given</div>
 
-## 2 new files, 1 library, 1 file to edit.
+## 1 new library, 2 files to edit.
 
 <div class="given">
   <div class="given-column">
@@ -54,8 +54,7 @@ Note:
   </div>
   <div class="given-column many">
     <div class="given-label">Helpers</div>
-    <div class="given-folder">09_anira/ · CMake</div>
-    {{FILE:model.json|new}}
+    <div class="given-folder">09_anira/exercise/ · CMake</div>
     {{FILE:contract.json|new}}
     {{FILE:anira|new}}
     {{FILE:host.h}}
@@ -64,13 +63,14 @@ Note:
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
     <div class="given-folder">09_anira/exercise/</div>
+    {{FILE:model.json|new}}
     {{FILE:main.cpp}}
   </div>
 </div>
 
 Note:
     - anira is fetched by CMake, pinned to the v3 beta tag, with ONNX Runtime built in. support.h gains report_with_latency: the step 7 comparison, shifted by one number. No LibTorch in this step: the plugin's choice from step 8.
-    - model.json and contract.json are given with gaps: the TODOs are in the files and in main.cpp.
+    - model.json is given with gaps: the tensors are named, shapes and roles are the task. contract.json is complete.
 
 ---
 
@@ -101,13 +101,14 @@ Note:
 ## How it runs.
 
 ```json
-{ "hard": { "budget": "measured", "warmup": "until_stable", "on_miss": "zeros" } }
+{ "hard": { "budget": { "ms": 8.2 }, "warmup": { "fixed": 3 }, "on_miss": "zeros" } }
 ```
 
 Three lines. The geometry comes from the host, at `prepare`.
 
 Note:
-    - budget measured: warm-up runs the model until the time settles, and the worst case seen becomes the budget. Or the number from step 3, as {"ms": 8.2}.
+    - budget: the number from step 3, the worst case we are willing to promise. "measured" would derive it during warm-up; this build of the beta wants it explicit.
+    - warmup fixed 3: three runs on the calling thread before prepare returns.
     - on_miss zeros: what step 7's wet debt did.
 
 ---
@@ -198,21 +199,21 @@ Note:
 ## TODO 3 · Prepare and process
 
 ```cpp
-auto model    = anira::ModelConfig::from_file("model.json");
-auto contract = anira::ContractHandle::from_file("contract.json");
-contract.hard_geometry(k_host_block_size, k_host_block_size, k_model.m_sample_rate);
+const auto model = anira::ModelConfig::from_file(step_dir + "/model.json");
+auto contract    = anira::ContractHandle::from_file(step_dir + "/contract.json");
+contract.hard_geometry(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
 
-anira::Handler handler(context, anira::Pipeline{anira::stage::Inference(model)});
-handler.prepare(contract);
-const size_t latency = handler.get_latency();
-
-run_host(…, [&](float* samples, size_t n) { handler.process(samples, n); }, k_model.m_sample_rate);
-return report_with_latency(output, k_target_output_signal.data(), latency);
+const anira::Pipeline pipeline{anira::stage::Inference(model)};
+anira_handler_create(context.native(), pipeline.native(), &handler.m_handle, &error);
+anira_handler_prepare(handler.m_handle, contract.native(), &error);  // warm-up runs here
+latency = anira_handler_get_latency(handler.m_handle, 0);             // output slot 0
 ```
 
 Note:
-    - The reference already contains the model's 2224; get_latency() includes it too, so the shift is the whole number, no subtraction this time.
-    - Expected: 4272 samples at a host block of 512, and the same max abs diff as step 1.
+    - Every C call returns a status and fills `error`; the solution throws on anything but ANIRA_OK.
+    - The audio callback is given: one tensor over the block, anira_handler_process in place, ANIRA_MISSED counted.
+    - The check is step 7's: shifted by the latency less the model's own 2224, which the reference already carries.
+    - Expected: 4272 samples at a host block of 512, max abs diff 3.9e-07. A few late callbacks on a busy machine are listed and left out.
 
 ---
 
@@ -228,5 +229,5 @@ Note:
 </div>
 
 Note:
-    - No ring buffer, no worker, no queue, no state copy, no latency arithmetic in main.cpp. The check is the one from step 7, and it passes with 2048 samples less.
+    - No ring buffer, no worker, no queue, no state copy, no latency arithmetic in main.cpp. The check is the one from step 7, and it passes with 2048 samples less latency.
     - Next: the model taken apart, encoder and decoder as two handlers.

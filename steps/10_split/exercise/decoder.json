@@ -1,0 +1,38 @@
+{
+  "models": [
+    { "engine": "onnxruntime", "path": "../../../models/model_decoder.onnx" }
+  ],
+  "anchor": "audio",
+  "inputs": [
+    {
+      "name": "latents",
+      "dtype": "float32",
+      "role": "streamed",
+      "axes": [["batch", 1], ["channel", 8], ["time", 1]],
+      "window": { "min": 1, "max": 1 }
+    },
+    {
+      "name": "state_in",
+      "dtype": "float32",
+      "role": "state",
+      "axes": [["batch", 1], ["any", 29184]],
+      "state_source": "state_out"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "audio",
+      "dtype": "float32",
+      "role": "streamed",
+      "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
+      "window": { "min": 2048, "max": 2048 },
+      "latency": 2224
+    },
+    {
+      "name": "state_out",
+      "dtype": "float32",
+      "role": "state",
+      "axes": [["batch", 1], ["any", 29184]]
+    }
+  ]
+}

@@ -33,14 +33,14 @@ Note:
 <div class="statement-points">
   <div><small>1</small>The encoder: audio in, a latent frame out, at 1/2048 of the rate</div>
   <div><small>2</small>Bias and scale on z, on the audio thread</div>
-  <div><small>3</small>The decoder: a latent frame in, audio out; the latency is the sum, frames × 2048 + samples</div>
+  <div><small>3</small>The decoder: a latent frame in, audio out; it declares the sum, frames × 2048 + samples</div>
 </div>
 
 ---
 
 <div class="tag">Given</div>
 
-## 2 models, 4 config files, 1 file to edit.
+## 2 models, 3 config files, 1 file to edit.
 
 <div class="given">
   <div class="given-column">
@@ -51,11 +51,11 @@ Note:
   </div>
   <div class="given-column many">
     <div class="given-label">Helpers</div>
-    <div class="given-folder">10_split/</div>
+    <div class="given-folder">10_split/exercise/ · common/helpers/</div>
     {{FILE:encoder.json|new}}
     {{FILE:decoder.json|new}}
     {{FILE:contract.json}}
-    {{FILE:anira}}
+    {{FILE:support.h}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
@@ -66,7 +66,8 @@ Note:
 
 Note:
     - Both model files carry their own state pair, as in step 9: the encoder's 34,304 floats, the decoder's 29,184.
-    - Nobody buffers between the two handlers but anira: a frame popped from the encoder is pushed into the decoder in the same callback; the decoder's latent ring holds it until its next block, and its latency accounts for it.
+    - Nobody buffers between the two handlers but anira: a frame popped from the encoder is pushed into the decoder in the same callback; the decoder's latent ring holds it. Its computed latency assumes the frame is there when the window starts; ours is late by the encoder's latency, so the sum is declared on the decoder (TODO 3).
+    - The encoder's first frame is its priming, zeros, and a zero latent is a sound: skip it (TODO 1).
     - The decoder anchors on its audio output: its clock is the audio it produces, and the latent input follows at one frame per 2048 samples.
 
 ---
@@ -83,7 +84,7 @@ Note:
                  "axes": [["batch",1],["channel",8],["time",1]],
                  "window": { "min": 1, "max": 1 } },
                { "name": "state_in", "role": "state", … } ],
-  "outputs": [ { "name": "audio", "role": "streamed", "latency": 528,
+  "outputs": [ { "name": "audio", "role": "streamed", "latency": 2224,
                  "axes": [["batch",1],["channel",1],["time",2048]],
                  "window": { "min": 2048, "max": 2048 } },
                … ]
@@ -92,7 +93,7 @@ Note:
 
 Note:
     - "anchor": the streamed tensor the host geometry refers to. For the decoder that is the audio output; the latent input's rate follows from the two windows, 1 per 2048.
-    - The model's own delay is split: 1696 samples in the encoder's network, 528 in the decoder's filter bank. Each file declares its part.
+    - The model's own delay, 2224, is declared once, on the decoder's output: latent frames carry no timing below a frame, so the chain's delay sits where the audio comes out.
 
 ---
 
@@ -115,7 +116,7 @@ cmake --build --preset release --target step10_exercise
     <div class="run-visual run-worker">
       <div class="q small one"><div class="q-slot"><b></b></div></div>
       <div class="mini-model">encoder</div>
-      <div class="run-note">8 × 1 per 2048</div>
+      <div class="run-note">8 × 1 per 2048 · skip the priming</div>
     </div>
   </div>
   <div class="run-step" data-seconds="2.6">
@@ -129,7 +130,7 @@ cmake --build --preset release --target step10_exercise
     <div class="run-visual run-worker">
       <div class="mini-model">decoder</div>
       <div class="q small one out"><div class="q-slot"><b></b></div></div>
-      <div class="run-ok">✓ latency = encoder + decoder</div>
+      <div class="run-ok">✓ declared: encoder + decoder</div>
     </div>
   </div>
 </div>
@@ -141,16 +142,21 @@ cmake --build --preset release --target step10_exercise
 ## TODO 1 · The encoder
 
 ```cpp
-anira::Handler encoder(context, anira::Pipeline{anira::stage::Inference(encoder_model)});
-encoder.prepare(contract);                       // geometry: the host block, at 44.1 kHz
+create(encoder, context, step_dir + "/encoder.json");
+encoder_latency_frames = prepare(encoder, contract);   // in latent frames
 
-// Audio in, latent frames out: one frame of 8 per 2048 samples, when a block is complete
-encoder.push_data(block, 0);
-while (encoder.pop_data(frame, 0, delivered), delivered == 1) { … }   // one frame at a time
+// The callback: audio in, latent frames out, one per 2048 samples
+anira_handler_push_data(encoder.m_handle, &block, 0);
+while (anira_handler_pop_data(encoder.m_handle, &frame, 0, &delivered) == ANIRA_OK
+       && delivered == 1) {
+    if (frames++ < encoder_latency_frames) { continue; }   // priming: not silence
+    …
+}
 ```
 
 Note:
     - push and pop instead of process: the two sides run at different rates, so the output is collected separately. A frame comes back about one latency later; delivered says whether one came back in this callback.
+    - The first frames are the encoder's latency priming, zeros. Fed to the decoder they are not silence: the diff is 0.014 instead of 3e-7. Skip them.
     - What comes out goes straight into the decoder (TODO 3), in the same callback. No buffer of ours in between.
 
 ---
@@ -176,18 +182,20 @@ Note:
 ## TODO 3 · The decoder
 
 ```cpp
-anira::Handler decoder(context, anira::Pipeline{anira::stage::Inference(decoder_model)});
-decoder.prepare(contract);                       // anchored on its audio output
+create(decoder, context, step_dir + "/decoder.json");
+const size_t decoder_latency = prepare(decoder, contract);   // in samples, on its own
+latency = encoder_latency_frames * 2048 + decoder_latency;   // 2048 + 4272
+contract.hard_latency("audio", latency);                     // the frame arrives late
+prepare(decoder, contract);                                  // reports 6320 now
 
-decoder.push_data(frame, 0);                     // one latent frame
-decoder.pop_data(block, 0);                      // 512 samples of audio, or the miss policy
-
-const size_t latency = encoder.get_latency() * 2048   // the encoder counts frames
-                     + decoder.get_latency();         // the decoder counts samples
+// The callback: every real frame in, then the audio for this callback out
+anira_handler_push_data(decoder.m_handle, &frame, 0);
+anira_handler_pop_data(decoder.m_handle, &block, 0, &delivered);   // or the miss policy
 ```
 
 Note:
-    - The encoder's latency is in frames, so times 2048. The decoder's is in samples. The sum is what the host is told.
+    - The decoder's own latency assumes a frame is there when its window starts. Ours arrives one encoder latency late; without the declaration a quarter of the callbacks miss. Declaring the sum primes its ring for the frame to arrive, and is the number the host is told.
+    - The encoder's latency is in frames, so times 2048. The decoder's is in samples.
     - Both handlers share the context: one pool, two stateful streams, each in order.
 
 ---

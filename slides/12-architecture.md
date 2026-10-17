@@ -56,8 +56,8 @@ Note:
 
 ```cpp
 contract.hard_geometry(block, block, sample_rate);
-handler.prepare(contract);
-setLatencySamples(static_cast<int>(handler.get_latency()));
+anira_handler_prepare(handler, contract.native(), &error);
+setLatencySamples(static_cast<int>(anira_handler_get_latency(handler, 0)));
 ```
 
 **`processBlock`** — one tensor over the channel pointers, in place
@@ -66,7 +66,7 @@ setLatencySamples(static_cast<int>(handler.get_latency()));
 const int64_t shape[2] = {buffer.getNumChannels(), buffer.getNumSamples()};
 anira_tensor_init_host_planar(&block, buffer.getArrayOfWritePointers(),
                               buffer.getNumChannels(), ANIRA_DTYPE_F32, 2, shape);
-handler.process(block, 0, block, 0);
+anira_handler_process(handler, &block, 0, &block, 0, nullptr);
 ```
 
 **`releaseResources`** — nothing: the handler's destructor does it

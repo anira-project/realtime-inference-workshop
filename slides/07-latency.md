@@ -57,7 +57,7 @@ Note:
 </div>
 
 Note:
-    - The wet path is late by the design: collect a block, hand it to the worker, pick the result up later.
+    - The wet path is late by the design: collect a block, hand it to the worker, pick the result up later. And the model itself answers late.
     - Mix an undelayed dry with a late wet and you do not get a blend: you get a slap-back, and comb filtering on the way there.
     - So the dry path is delayed by exactly the same amount.
 
@@ -126,6 +126,7 @@ cmake --build --preset release --target step07_exercise
     <div class="run-visual run-latency">
       <div class="lat-part">collect a block</div>
       <div class="lat-part">hand it over</div>
+      <div class="lat-part">the model itself</div>
       <div class="run-size">? samples</div>
     </div>
   </div>
@@ -147,19 +148,25 @@ cmake --build --preset release --target step07_exercise
 ## TODO 1 · Work out the latency
 
 ```cpp
-size_t latency_samples() const { return 2 * k_model.m_input_size; }   // 4096
+size_t latency_samples() const {
+    return 2 * k_model.m_input_size + k_model.m_latency;  // 6320
+}
 ```
 
 <div class="lat-sum">
   <div class="lat-part">collect a block<strong>2048</strong></div>
   <div class="lat-plus">+</div>
   <div class="lat-part">hand it over<strong>2048</strong></div>
+  <div class="lat-plus">+</div>
+  <div class="lat-part">the model itself<strong>2224</strong></div>
   <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>4096</strong></div>
+  <div class="lat-part total">latency<strong>6320</strong></div>
 </div>
 
 Note:
-    - 4096 samples = 92.9 ms at 44.1 kHz.
+    - 6320 samples = 143.3 ms at 44.1 kHz.
+    - The model's 2224 samples (50.4 ms) are its own: causal convolutions and transposed convolutions (1696) plus the filter bank (528). scripts/export_model.py computes it from the export; it is not visible from C++.
+    - The wet path is primed with the two blocks only; the model's delay is already inside what it returns. The dry path is delayed by all 6320.
     - The second block is a choice: it buys the worker a full block of time, and in exchange the latency is a fixed number.
     - In a plugin: setLatencySamples(processor.latency_samples()) once in prepareToPlay; the host compensates every other track. Step 8.
 

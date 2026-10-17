@@ -26,6 +26,11 @@ Feed every `state_out` back in as the next call's `state_in`; zeros start a new
 stream. Forward's state is the encoder's followed by the decoder's, so
 encoder → decoder gives the same audio as forward.
 
+**Latency: 2224 samples** (50.4 ms): the output answers the input this much
+later. 1696 come from the causal network (strides and transposed
+convolutions), 528 from the filter bank. `scripts/export_model.py` computes it
+from the export; the C++ steps carry it as `k_model.m_latency`.
+
 ## Where they come from
 
 The Intelligent Instruments Lab's magnetic resonator piano model,

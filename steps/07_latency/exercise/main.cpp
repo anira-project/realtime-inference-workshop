@@ -36,6 +36,7 @@ constexpr struct {
     const char* m_path = WORKSHOP_MODEL_PATH;
     size_t m_input_size = 2048;
     double m_sample_rate = 44100.0;
+    size_t m_latency = 2224;  // The model's own delay: how much later its output answers its input
 } k_model{};
 
 constexpr size_t k_host_block_size = 512;  // What the host hands over per callback
@@ -62,13 +63,13 @@ public:
     ~LatencyProcessor() { stop(); }
     
     // ---- TODO 1: how late is the wet signal? ---------------------------------
-    // Two things delay it, and both are fixed by the design:
+    // Three things delay it, and all are fixed:
     //   - the model cannot run before a whole block has arrived
     //   - the result is only picked up in a later callback, so the output side
     //     starts out primed with a block of silence
+    //   - the model itself answers late: k_model.m_latency, from the export
     // What the host is told has to be what the host gets, so this number also
-    // decides how far the dry signal is delayed, and how much silence both
-    // paths start with in prepare().
+    // decides how far the dry signal is delayed in prepare().
     // --------------------------------------------------------------------------
     size_t latency_samples() const { return 0; }
 
@@ -90,13 +91,14 @@ public:
         m_late.clear();
         m_late.reserve(k_late_capacity);
 
-        // Prime both paths with the same amount of silence: one block while the
-        // input is still being collected, and one more so the worker has a full
-        // block of time to answer. That is what makes the latency a fixed
-        // number instead of whatever the worker happened to manage.
-        m_silence.assign(latency_samples(), 0.0f);
-        m_output.push(m_silence.data(), m_silence.size());
-        m_dry.push(m_silence.data(), m_silence.size());
+        // Prime the wet path with one block of silence while the input is still
+        // being collected, and one more so the worker has a full block of time
+        // to answer. That is what makes the latency a fixed number instead of
+        // whatever the worker happened to manage. The model's own delay is
+        // already inside what it returns; the dry path gets all of it.
+        m_silence.assign(std::max(latency_samples(), 2 * k_model.m_input_size), 0.0f);
+        m_output.push(m_silence.data(), 2 * k_model.m_input_size);
+        m_dry.push(m_silence.data(), latency_samples());
 
         m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
         m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
@@ -302,7 +304,12 @@ int main() {
     const std::vector<float> wet = run(processor, 1.0f, wet_late);
 
     const float dry_diff = diff_with_latency(dry, k_input_signal.data(), latency, {});
-    const float wet_diff = diff_with_latency(wet, k_target_output_signal.data(), latency, wet_late);
+    // The reference already carries the model's own delay, so the wet path
+    // lines up with it after the rest of the reported latency.
+    const float wet_diff =
+        latency < k_model.m_latency
+            ? 1.0f
+            : diff_with_latency(wet, k_target_output_signal.data(), latency - k_model.m_latency, wet_late);
 
     const bool dry_ok = report_line("dry, delayed by the latency", dry_diff);
     const bool wet_ok = report_line("wet, delayed by the latency", wet_diff);

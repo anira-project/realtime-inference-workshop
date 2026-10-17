@@ -6,9 +6,9 @@
 
 ## What you have
 
-- `models/forward_stateful.pt` — the model as TorchScript: graph and weights in one file. Audio in, audio out, 2048 samples per call, 48 kHz, one channel. The state lives inside the model, so each call continues where the last one ended.
+- `models/model.pt` — the model from the slides (magnetic resonator piano) as TorchScript: graph and weights in one file. Audio in, audio out, 2048 samples per call, 44.1 kHz, one channel. The state lives inside the model, so each call continues where the last one ended.
 - [`common/helpers/libtorch_engine.h`](common/helpers/libtorch_engine.h) — the engine, written for you. Read it first: it is the whole of LibTorch you need.
-- [`common/assets/test_signal.h`](common/assets/test_signal.h) — `k_input_signal`: a 220 Hz sine, 3 blocks of 2048 samples.
+- [`common/assets/test_signal.h`](common/assets/test_signal.h) — `k_input_signal`: a 220 Hz sine, 8 blocks of 2048 samples.
 - `common/assets/target_signal.h` — `k_target_output_signal`: what the model produced for it in Python.
 - `common/helpers/support.h` — the comparison and the report.
 
@@ -41,21 +41,20 @@ cmake --build build -j
 ## Expected output
 
 ```
-OK: max abs diff 2.21e-06, within 0.0001 of the reference.
+OK: max abs diff 4.92e-07, within 0.0001 of the reference.
 ```
 
-Not bit-identical, and that is the point: the reference ran in a different runtime (ONNX Runtime, in Python). Agreeing to about 1e-6 is what "the same model" means across engines.
+Not bit-identical, and that is the point: the reference ran in a different runtime (ONNX Runtime, in Python). Agreeing to below 1e-6 is what "the same model" means across engines.
 
 The first block is nearly silent, because the model's latency has not been filled yet. It still has to match.
 
 ## If you're stuck
 
 - **`TODO 2: pick a size to process in first.`** — `process_size` is still 0.
-- **`process() failed: RuntimeError: The size of tensor a (6) must match ...`** — the size you picked is smaller than the model's block. The export fixed that size: `k_model.m_input_size`, 2048 samples, which is what the reference output was produced with. Larger sizes may go through, but nothing promises the model still lines up with the reference.
-- **`process() failed: the model returned N samples for M in`** — the same thing from the other side: the model emits whole blocks, so it handed back a different number of samples than it was given.
-- **`FAILED: max abs diff 0.904`** — the engine is never used, so `output` still holds the input.
-- **`cannot load .../forward_stateful.pt`** — the model is not in the repo, see [models/README.md](../../models/README.md). Point the build at your copy with `-DWORKSHOP_MODEL=/path/to/forward_stateful.pt`.
-- **It is slow and most blocks are wrong** — the engine is being built inside the loop. Every new model starts from a cleared state, so every block is treated as the first one, and a 65 MB file is loaded each time.
+- **`process() failed: the model returned 2048 samples for M in`** — the size you picked is smaller than the model's block. The export fixed that size: `k_model.m_input_size`, 2048 samples, which is what the reference output was produced with. The model emits whole blocks, so it handed back a different number of samples than it was given. Multiples of 2048 happen to go through, but nothing in the export promises that.
+- **`FAILED: max abs diff 0.593`** — the engine is never used, so `output` still holds the input.
+- **`cannot load .../model.pt`** — the model is not in the repo, see [models/README.md](../../models/README.md). Point the build at your copy with `-DWORKSHOP_MODEL=/path/to/model.pt`.
+- **It is slow and most blocks are wrong** — the engine is being built inside the loop. Every new model starts from a cleared state, so every block is treated as the first one, and a 127 MB file is loaded each time.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
@@ -65,4 +64,4 @@ Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
 ## What broke?
 
-Nothing — the numbers are right. But a forward pass took some amount of time you have not measured, and at 48 kHz with 2048-sample blocks you have 42.7 ms per block. Not on average: every single time. That is step 5.
+Nothing — the numbers are right. But a forward pass took some amount of time you have not measured, and at 44.1 kHz with 2048-sample blocks you have 46.4 ms per block. Not on average: every single time. That is step 5.

@@ -147,8 +147,8 @@ impression of your product.
 We export both:
 
 ```
-forward_stateful.pt     LibTorch, state inside the model
-forward.onnx            ONNX, state in and out
+model.pt                LibTorch, state inside the model
+model_forward.onnx      ONNX, state in and out
 ```
 
 Different `Engine` class, but same three methods `load()`, `forward()`, and `reset()`.

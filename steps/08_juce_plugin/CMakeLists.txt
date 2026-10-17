@@ -19,7 +19,14 @@ juce_add_plugin(step08_plugin
     COPY_PLUGIN_AFTER_BUILD FALSE
 )
 
-target_sources(step08_plugin PRIVATE source/PluginProcessor.cpp)
+target_sources(step08_plugin PRIVATE source/PluginProcessor.cpp source/PluginEditor.cpp)
+
+# The three example slots of the file player, compiled in. Replace the files to
+# change what the slots start with.
+juce_add_binary_data(step08_examples SOURCES
+    assets/example_1.wav
+    assets/example_2.wav
+    assets/example_3.wav)
 
 target_compile_definitions(step08_plugin PUBLIC
     JUCE_WEB_BROWSER=0
@@ -35,6 +42,7 @@ target_include_directories(step08_plugin PRIVATE
 target_link_libraries(step08_plugin PRIVATE
     workshop::onnxruntime_static
     readerwriterqueue
+    step08_examples
     juce::juce_audio_utils
     PUBLIC
     juce::juce_recommended_config_flags

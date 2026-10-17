@@ -6,7 +6,7 @@ Everything from steps 1 to 7, where the host can reach it
 <!-- kind: demo, exercise -->
 
 Note:
-    - Run the standalone here. Play through it, move the dry/wet.
+    - Run the standalone here. Click one of the three example tiles, move the dry/wet. Dropping an audio file on a tile replaces it.
 
 ---
 

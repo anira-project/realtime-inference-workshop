@@ -12,7 +12,7 @@ A callback has to be finished before the host needs the next block:
 budget = host block size / sample rate
 ```
 
-At 48 kHz that is 1.33 ms for 64 samples, 10.7 ms for 512, 42.7 ms for 2048. The model needs a whole 2048-sample block before it can run, but the deadline belongs to whichever callback it runs *in* — so the smaller the host block, the worse the mismatch. The program prints the table before it measures.
+At 44.1 kHz that is 1.45 ms for 64 samples, 11.6 ms for 512, 46.4 ms for 2048. The model needs a whole 2048-sample block before it can run, but the deadline belongs to whichever callback it runs *in* — so the smaller the host block, the worse the mismatch. The program prints the table before it measures.
 
 ## What you have
 
@@ -42,15 +42,15 @@ cmake --build build -j
 On an M-series laptop, Release build:
 
 ```
-forward_pass/iterations:1/repeats:200_mean         5.13 ms
-forward_pass/iterations:1/repeats:200_median       4.57 ms
-forward_pass/iterations:1/repeats:200_stddev       5.83 ms
-forward_pass/iterations:1/repeats:200_p95          5.21 ms
-forward_pass/iterations:1/repeats:200_p99          5.36 ms
-forward_pass/iterations:1/repeats:200_max          84.5 ms
+forward_pass/iterations:1/repeats:200_mean         7.86 ms
+forward_pass/iterations:1/repeats:200_median       7.37 ms
+forward_pass/iterations:1/repeats:200_stddev       4.16 ms
+forward_pass/iterations:1/repeats:200_p95          8.15 ms
+forward_pass/iterations:1/repeats:200_p99          10.2 ms
+forward_pass/iterations:1/repeats:200_max          56.0 ms
 ```
 
-Your numbers will differ. The shape is what matters: **the max is an order of magnitude above the median.** One call in two hundred took 84 ms, against a median of 4.6 ms — and with 2048-sample blocks the budget is 42.7 ms, so that one call misses the deadline twice over.
+Your numbers will differ. The shape is what matters: **the max is close to an order of magnitude above the median.** One call in two hundred took 56 ms, against a median of 7.4 ms — and with 2048-sample blocks the budget is 46.4 ms, so that one call misses the deadline.
 
 Run it a few times. The mean and median barely move; the max moves a lot.
 

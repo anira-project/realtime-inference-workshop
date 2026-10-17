@@ -9,7 +9,7 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 - `steps/` — one buildable folder per step, each with `exercise/` and `solution/`
 - `steps/common/assets/` — the test signal and its target output
 - `steps/common/helpers/` — the engines, the ring buffer, the fake host and the reporting, shared by every step
-- `models/` — the exported seqsynth model (LibTorch `.pt`, ONNX)
+- `models/` — the exported model (LibTorch `.pt`; ONNX forward, encoder and decoder)
 - `setup/` — setup check
 - `cmake/` — shared CMake helpers (backends, anira, RTSan)
 - `slides/` — Reveal.js slides

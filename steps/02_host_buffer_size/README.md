@@ -6,7 +6,7 @@
 
 ## Why this is not a corner case
 
-The model's block size comes from the export. The host's comes from the audio device, the user's settings, and the sample rate — 64, 128, 480, 512, and it can change while you are running. They match by accident, once.
+The model's block size comes from the export. The host's comes from the audio device, the user's settings, and the sample rate — 64, 128, 441, 512, and it can change while you are running. They match by accident, once.
 
 ## What you have
 
@@ -39,17 +39,17 @@ cmake --build build -j
 ## Expected output
 
 ```
-  host block 64            max abs diff 2.21e-06   OK
-  host block 128           max abs diff 2.21e-06   OK
-  host block 480           max abs diff 2.21e-06   OK
-  host block 512           max abs diff 2.21e-06   OK
-  host block 1024          max abs diff 2.21e-06   OK
-  host block 2048          max abs diff 2.21e-06   OK
+  host block 64            max abs diff 4.92e-07   OK
+  host block 128           max abs diff 4.92e-07   OK
+  host block 441           max abs diff 4.25e-07   OK
+  host block 512           max abs diff 4.92e-07   OK
+  host block 1024          max abs diff 4.92e-07   OK
+  host block 2048          max abs diff 4.92e-07   OK
 
 OK: the model saw the same stream at every host block size.
 ```
 
-The check is on **what the model produced**, not on what the host received: the same stream as in step 1, regardless of how the host chopped up the input. 480 does not divide the signal, so that run simply stops a bit earlier.
+The check is on **what the model produced**, not on what the host received: the same stream as in step 1, regardless of how the host chopped up the input. 441 does not divide the signal, so that run simply stops a bit earlier.
 
 ## If you're stuck
 

@@ -20,7 +20,7 @@
 // Model settings taken from the export metadata.
 constexpr struct {
     size_t m_input_size = 2048;
-    double m_sample_rate = 48000.0;
+    double m_sample_rate = 44100.0;
 } k_model{};
 
 constexpr size_t k_queue_capacity = 8;  // Model blocks in flight between the threads

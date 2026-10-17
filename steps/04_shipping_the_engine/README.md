@@ -61,8 +61,8 @@ The engine ships inside the bundle, per architecture. A universal VST3 is over 6
 It is the shortest path from a trained model to a correct result, and correct first is a good order to work in. The model is exported both ways:
 
 ```
-models/forward_stateful.pt    LibTorch, state inside the model
-forward.onnx                  ONNX, state in and out
+models/model.pt              LibTorch, state inside the model
+models/model_forward.onnx    ONNX, state in and out
 ```
 
 Because the engine sits behind three methods, construct, `process`, `reset`, we can easily swap it for a different class, instead of needing a whole new program.

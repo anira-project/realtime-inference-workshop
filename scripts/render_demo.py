@@ -13,7 +13,7 @@ pass is kept: input and output are cut to exactly one loop, the output shifted b
 by the model's measured latency, so both loop seamlessly and line up in time.
 
 Usage:
-    uv run scripts/render_demo.py [--model models/mrp_strengjavera_forward.onnx] [--out slides/assets/audio]
+    uv run scripts/render_demo.py [--model models/model_forward.onnx] [--out slides/assets/audio]
 """
 
 import argparse
@@ -124,7 +124,7 @@ def latency(model_path, hop=64):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=pathlib.Path, default=ROOT / "models/mrp_strengjavera_forward.onnx")
+    parser.add_argument("--model", type=pathlib.Path, default=ROOT / "models/model_forward.onnx")
     parser.add_argument("--out", type=pathlib.Path, default=ROOT / "slides/assets/audio")
     args = parser.parse_args()
 

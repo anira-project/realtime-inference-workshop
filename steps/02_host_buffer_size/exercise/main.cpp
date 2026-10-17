@@ -33,14 +33,14 @@
 constexpr struct {
     const char* m_path = WORKSHOP_MODEL_PATH;
     int m_input_size = 2048;
-    double m_sample_rate = 48000.0;
+    double m_sample_rate = 44100.0;
     int m_channels = 1;
 } k_model{};
 
-// Block sizes a host might pick. Only 2048 happens to match the model. 480 is
-// the awkward one: it is a whole number of milliseconds at 48 kHz, but neither
+// Block sizes a host might pick. Only 2048 happens to match the model. 441 is
+// the awkward one: it is a whole number of milliseconds at 44.1 kHz, but neither
 // a divisor of 2048 nor of the test signal, so that run stops a little early.
-constexpr std::array<size_t, 6> k_host_block_sizes = {64, 128, 480, 512, 1024, 2048};
+constexpr std::array<size_t, 6> k_host_block_sizes = {64, 128, 441, 512, 1024, 2048};
 
 namespace {
 

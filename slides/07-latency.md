@@ -82,7 +82,7 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ · common/assets/</div>
-    {{FILE:forward_stateful.pt}}
+    {{FILE:model.pt}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>
@@ -159,7 +159,7 @@ size_t latency_samples() const { return 2 * k_model.m_input_size; }   // 4096
 </div>
 
 Note:
-    - 4096 samples = 85.3 ms at 48 kHz.
+    - 4096 samples = 92.9 ms at 44.1 kHz.
     - The second block is a choice: it buys the worker a full block of time, and in exchange the latency is a fixed number.
     - In a plugin: setLatencySamples(processor.latency_samples()) once in prepareToPlay; the host compensates every other track. Step 8.
 

@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include "ExamplePlayer.h"
 #include "common/helpers/onnx_engine.h"
 #include "common/helpers/threaded_processor.h"
 
@@ -39,6 +40,12 @@ public:
     void setStateInformation(const void*, int) override {}
 
     juce::AudioProcessorValueTreeState& parameters() { return m_parameters; }
+    ExamplePlayer& player() { return m_player; }
+    juce::String load_error() const { return m_load_error; }
+
+    // Replaces an example slot with a file, with the audio thread held off
+    // while the slot changes. Message thread only.
+    bool load_example(int slot, const juce::File& file);
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout make_layout();
@@ -53,6 +60,8 @@ private:
     std::vector<std::unique_ptr<OnnxEngine>> m_engines;
     std::vector<std::unique_ptr<LatencyProcessor<OnnxEngine>>> m_channels;
     juce::String m_load_error;
+
+    ExamplePlayer m_player;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WorkshopPluginProcessor)
 };

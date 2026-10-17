@@ -81,7 +81,7 @@ One thread. Fixed arena. Our buffers preallocated.<br>
 
 
 Note:
-    - Both engines were verified against the reference first: 2.2e-06 and 5.8e-07. They are correct, and they are unsafe.
+    - Both engines were verified against the reference first: 4.9e-07 and 3.9e-07. They are correct, and they are unsafe.
 
 ---
 
@@ -91,17 +91,17 @@ Note:
 
 | allocations + frees, ten callbacks | per block | first block |
 |---|---|---|
-| LibTorch | 10,960 | **591,393** |
-| ONNX Runtime | 1,932 | 2,000-ish |
+| LibTorch | 10,864 | **610,429** |
+| ONNX Runtime | 2,192 | 2,193 |
 
 ```
-ONNX Runtime     98 × malloc    51 × free    10 × mutex lock/unlock
-LibTorch       4393 × malloc  3103 × free   180 × mutex lock/unlock
+ONNX Runtime     99 × malloc    50 × free    11 × mutex lock/unlock
+LibTorch       4062 × malloc  2413 × free   180 × mutex lock/unlock
 ```
 
 Note:
     - The code block is what RTSan reports for one block.
-    - Block 0 at 591k: TorchScript recompiles while it runs, after the warm-up call. That is the 84 ms outlier from step 3.
+    - Block 0 at 610k: TorchScript recompiles while it runs, after the warm-up call. That is the 56 ms outlier from step 3.
 
 ---
 

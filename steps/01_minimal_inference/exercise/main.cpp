@@ -27,7 +27,7 @@
 constexpr struct {
     const char* m_path = WORKSHOP_MODEL_PATH;
     int m_input_size = 2048;
-    double m_sample_rate = 48000.0;
+    double m_sample_rate = 44100.0;
     int m_channels = 1;
 } k_model{};
 

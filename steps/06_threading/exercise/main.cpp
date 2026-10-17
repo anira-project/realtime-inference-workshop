@@ -39,7 +39,7 @@
 constexpr struct {
     const char* m_path = WORKSHOP_MODEL_PATH;
     size_t m_input_size = 2048;
-    double m_sample_rate = 48000.0;
+    double m_sample_rate = 44100.0;
 } k_model{};
 
 constexpr size_t k_host_block_size = 512;  // What the host hands over per callback
@@ -207,7 +207,7 @@ int main() {
     }
 
     // The host now runs in real time: the worker has to keep up with a block of
-    // audio every 10.7 ms, rather than with a loop going as fast as it can.
+    // audio every 11.6 ms, rather than with a loop going as fast as it can.
     g_allocations.store(0, std::memory_order_relaxed);
 
     run_host(

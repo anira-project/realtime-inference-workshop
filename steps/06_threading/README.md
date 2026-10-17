@@ -41,7 +41,7 @@ TODO 3: the worker never picked a block up.
 ```
   allocations on the audio thread 0
   the model produced           6144 of 6144 samples
-  max abs diff vs. reference   2.21e-06
+  max abs diff vs. reference   4.92e-07
 
 OK: inference ran on the worker thread, the audio thread only moved samples.
 ```
@@ -49,7 +49,7 @@ OK: inference ran on the worker thread, the audio thread only moved samples.
 Two checks, both of which have to hold:
 
 - **Zero allocations in the callback.** The program counts them with its own `operator new`, thread-local, so the worker thread's allocations — tens of thousands per block, see step 5 — do not count.
-- **The output still matches the reference**, to 2.21e-06, as in step 1.
+- **The output still matches the reference**, to 4.92e-07, as in step 1.
 
 Under RTSan the audio thread now reports nothing at all:
 
@@ -63,7 +63,7 @@ cmake --build build-rtsan -j --target step06_solution
 
 ## The host runs in real time now
 
-`run_host` paces the callbacks: one block of audio every `block_size / sample_rate`, 10.7 ms for 512 samples at 48 kHz. Up to now the loop ran as fast as it could, which no worker thread could ever keep up with — and with two threads, keeping up is the whole question.
+`run_host` paces the callbacks: one block of audio every `block_size / sample_rate`, 11.6 ms for 512 samples at 44.1 kHz. Up to now the loop ran as fast as it could, which no worker thread could ever keep up with — and with two threads, keeping up is the whole question.
 
 ## What the audio thread still does
 

@@ -2,8 +2,9 @@
 //
 // Goal: the same three methods as LibTorchEngine — construct, process, reset —
 //       over an export that keeps its state in the open. The ONNX graph takes
-//       audio plus 40 state tensors and returns audio plus 40 new ones, so the
-//       state is carried here instead of inside the model.
+//       audio plus the state (one tensor, 63488 floats: every convolution
+//       cache of encoder and decoder) and returns audio plus the new state, so
+//       the state is carried here instead of inside the model.
 #pragma once
 
 #include <onnxruntime_cxx_api.h>

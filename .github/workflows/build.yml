@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # The models come from this repository's release and never change within
-      # a tag, so they are worth caching: 124 MB per run otherwise.
+      # a tag, so they are worth caching: 380 MB per run otherwise.
       - name: Cache models
         uses: actions/cache@v4
         with:

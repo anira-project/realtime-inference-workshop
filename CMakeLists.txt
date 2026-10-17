@@ -22,10 +22,12 @@ workshop_setup_benchmark()
 # (steps/common/assets/test_signal.h).
 workshop_fetch_models()
 
-set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward_stateful.pt"
+set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model.pt"
     CACHE FILEPATH "TorchScript model to run")
-set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/forward.onnx"
+set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model_forward.onnx"
     CACHE FILEPATH "ONNX model to run")
+workshop_use_current_model(WORKSHOP_MODEL model.pt)
+workshop_use_current_model(WORKSHOP_ONNX_MODEL model_forward.onnx)
 
 # RealtimeSanitizer for step 5; needs a clang that has it, see that step's README.
 option(WORKSHOP_RTSAN "Build the real-time safety step with -fsanitize=realtime" OFF)

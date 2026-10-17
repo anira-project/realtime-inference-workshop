@@ -12,7 +12,7 @@ Nothing here is the engine being slow. It is the design:
 |---|---|---|
 | collecting a block | 2048 | the model cannot run before a whole block has arrived |
 | handing it over | 2048 | the result is picked up in a later callback, so the output side starts primed with silence |
-| **total** | **4096** | 85.3 ms at 48 kHz |
+| **total** | **4096** | 92.9 ms at 44.1 kHz |
 
 The second block is a choice: it buys the worker a full block of time to answer, and in exchange the latency is a **fixed number** instead of whatever the worker managed today. A number that changes with the weather is useless to the host.
 
@@ -33,7 +33,7 @@ TODO 2: mix dry and wet, and hand the result to the host.
 ## Expected output
 
 ```
-Reported latency: 4096 samples (85.3 ms at 48000 Hz)
+Reported latency: 4096 samples (92.9 ms at 44100 Hz)
 
   dry, delayed by the latency  max abs diff 0          OK
   wet, delayed by the latency  max abs diff 3.51e-06   OK
@@ -50,7 +50,7 @@ Which means: a wrong latency number cannot pass. That is also how you would catc
 
 ## Why the dry path needs a delay line at all
 
-Mixing an undelayed dry signal with a wet one that is 85 ms late does not sound like a blend; it sounds like a slap-back echo, and at low mix values like comb filtering. The dry path gets its own ring buffer, primed with the same silence, so both arrive together.
+Mixing an undelayed dry signal with a wet one that is 93 ms late does not sound like a blend; it sounds like a slap-back echo, and at low mix values like comb filtering. The dry path gets its own ring buffer, primed with the same silence, so both arrive together.
 
 In a plugin you report the same number with `setLatencySamples()`, and the host lines the track up with everything else.
 

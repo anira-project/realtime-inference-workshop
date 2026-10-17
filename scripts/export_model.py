@@ -228,6 +228,61 @@ class Stateful(torch.nn.Module):
         return out
 
 
+def network_delay(mod, delay=0):
+    """Delay the streaming network adds, in samples at the rate `mod` runs at.
+
+    cached_conv turns each convolution's future padding into delay. This model
+    was trained causal (no future padding), so only the strides and the
+    transposed convolutions' overlap add up; the stride alignment and branch
+    alignment stored in the model are checked against that on the way.
+    """
+    kind = mod.original_name
+    if kind in ("CachedSequential", "DilatedUnit", "EncoderV2"):
+        target = mod if kind == "CachedSequential" else mod.net
+        for _, child in target.named_children():
+            delay = network_delay(child, delay)
+        return delay
+    if kind == "CachedConv1d":
+        stride, _ = conv_args(mod, False)
+        stride_delay = (stride - delay % stride) % stride
+        if int(mod.downsampling_delay.padding) != stride_delay:
+            raise RuntimeError("the model is not causal; its delay is not covered here")
+        return (stride_delay + delay) // stride
+    if kind == "CachedConvTranspose1d":
+        stride, _ = conv_args(mod, True)
+        return int(mod.cache.shape[-1]) // 2 + delay * stride
+    if kind == "Residual":
+        delays = [network_delay(b) for b in mod.aligned.branches.children()]
+        paddings = [int(p.padding) for p in mod.aligned.paddings.children()]
+        if [max(delays) - d for d in delays] != paddings:
+            raise RuntimeError("branch alignment does not match the computed delays")
+        return delay + max(delays)
+    return delay  # padding caches, activations: no delay of their own
+
+
+def latency(rave):
+    """How much later the output answers the input, in samples.
+
+    The network part comes from the model's structure; the filter bank is linear,
+    so its delay is measured with a click through analysis and synthesis.
+    """
+    ts, bands = rave.ts, int(rave.ts.pqmf.n_band)
+    frames = network_delay(ts.pqmf.forward_conv)
+    frames = network_delay(ts.encoder.encoder, frames)
+    frames = network_delay(ts.decoder.net, frames)
+    frames = network_delay(ts.pqmf.inverse_conv, frames)
+
+    click = torch.zeros(1, 1, rave.block)
+    click[..., rave.block // 4] = 1.0
+    with torch.no_grad():
+        rave.enc.begin(torch.zeros(1, rave.enc.size))
+        bands_signal = reverse_half(rave.enc.run(ts.pqmf.forward_conv, click))
+        rave.dec.begin(torch.zeros(1, rave.dec.size))
+        out = rave.pqmf_inverse(bands_signal).reshape(-1)
+    filter_bank = int(out.abs().argmax()) - rave.block // 4
+    return frames * bands, filter_bank
+
+
 def check_against_torchscript(ts, rave, blocks=40):
     """Streams the same signal and noise through TorchScript's own modules and the re-implementation."""
     torch.manual_seed(0)
@@ -353,7 +408,10 @@ def main():
 
     for path in (pt_path, *paths.values()):
         print(f"  {path.name:20} {path.stat().st_size / 1e6:6.1f} MB")
-    print(f"ENCODER_STATE_SIZE={E} DECODER_STATE_SIZE={D} FORWARD_STATE_SIZE={E + D}")
+    network, filter_bank = latency(StreamingRave(torch.jit.load(str(args.model)).eval()))
+    print(f"latency: network {network} + filter bank {filter_bank} = {network + filter_bank} samples "
+          f"({1000 * (network + filter_bank) / rave.sample_rate:.1f} ms)")
+    print(f"ENCODER_STATE_SIZE={E} DECODER_STATE_SIZE={D} FORWARD_STATE_SIZE={E + D} LATENCY={network + filter_bank}")
 
 
 if __name__ == "__main__":

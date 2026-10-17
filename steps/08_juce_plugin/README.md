@@ -38,7 +38,7 @@ One engine and one processor per channel. The model is mono and stateful, so two
 
 The window has three example slots. Clicking a tile plays its slot in a loop in place of the plugin's input, so the standalone needs no microphone and no DAW; **load** under a tile, or dropping an audio file on it, replaces the slot. The slots start with the files in [`assets/`](assets/), compiled into the plugin — replace `example_1.wav` to `example_3.wav` there to change what they start with. The files play at their own sample rate; the model expects 44.1 kHz.
 
-The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by 4096 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
+The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by 6320 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
 
 ## Which engine, and why it matters here
 

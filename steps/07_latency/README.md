@@ -6,13 +6,14 @@
 
 ## Where the delay comes from
 
-Nothing here is the engine being slow. It is the design:
+Nothing here is the engine being slow. It is the design, and the model:
 
 | | samples | why |
 |---|---|---|
 | collecting a block | 2048 | the model cannot run before a whole block has arrived |
 | handing it over | 2048 | the result is picked up in a later callback, so the output side starts primed with silence |
-| **total** | **4096** | 92.9 ms at 44.1 kHz |
+| the model itself | 2224 | its output answers its input this much later: `k_model.m_latency`, computed by `scripts/export_model.py` |
+| **total** | **6320** | 143.3 ms at 44.1 kHz |
 
 The second block is a choice: it buys the worker a full block of time to answer, and in exchange the latency is a **fixed number** instead of whatever the worker managed today. A number that changes with the weather is useless to the host.
 
@@ -20,7 +21,7 @@ The second block is a choice: it buys the worker a full block of time to answer,
 
 Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO banners.
 
-1. **`latency_samples()`** — the number above. It decides three things at once: what the host is told, how much silence both paths start with, and how far the dry signal is delayed.
+1. **`latency_samples()`** — the number above. It decides what the host is told and how far the dry signal is delayed. The wet path starts with the two blocks of silence only: the model's own delay is already inside what it returns.
 2. **The mix** in `process_block()` — both paths are equally late now, so it is a plain crossfade between the delayed dry signal and the wet one.
 
 Each TODO says so while it is still open:
@@ -33,10 +34,10 @@ TODO 2: mix dry and wet, and hand the result to the host.
 ## Expected output
 
 ```
-Reported latency: 4096 samples (92.9 ms at 44100 Hz)
+Reported latency: 6320 samples (143.3 ms at 44100 Hz)
 
   dry, delayed by the latency  max abs diff 0          OK
-  wet, delayed by the latency  max abs diff 3.51e-06   OK
+  wet, delayed by the latency  max abs diff 4.15e-07   OK
 
 OK: both paths are late by exactly the reported latency, so they mix.
 ```
@@ -44,13 +45,13 @@ OK: both paths are late by exactly the reported latency, so they mix.
 The check is the point: the program runs the signal twice, once at 100% dry and once at 100% wet, and compares each against its reference *shifted by the reported latency*.
 
 - **Dry has to match exactly**, 0.0 difference. It is the input, only later. If the latency is off by a single sample, this number jumps.
-- **Wet matches to 1e-6**, the usual difference between LibTorch here and ONNX Runtime in Python.
+- **Wet matches to 1e-6**, the usual difference between LibTorch here and ONNX Runtime in Python. The reference already carries the model's own delay, so it is shifted by the rest: 6320 − 2224. Leave the model's part out of the latency and this check fails.
 
 Which means: a wrong latency number cannot pass. That is also how you would catch it in a plugin — bypass the model, and the signal has to come out unchanged apart from the delay.
 
 ## Why the dry path needs a delay line at all
 
-Mixing an undelayed dry signal with a wet one that is 93 ms late does not sound like a blend; it sounds like a slap-back echo, and at low mix values like comb filtering. The dry path gets its own ring buffer, primed with the same silence, so both arrive together.
+Mixing an undelayed dry signal with a wet one that is 143 ms late does not sound like a blend; it sounds like a slap-back echo, and at low mix values like comb filtering. The dry path gets its own ring buffer, primed with the full latency in silence, so both arrive together.
 
 In a plugin you report the same number with `setLatencySamples()`, and the host lines the track up with everything else.
 

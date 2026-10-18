@@ -1,6 +1,6 @@
 # The model files, downloaded from the repository's own release.
 #
-# They are not in git: 380 MB of weights would make every clone slow, and Git
+# They are not in git: 400 MB of weights would make every clone slow, and Git
 # LFS has a bandwidth quota that a roomful of people runs through in an hour.
 # Release assets have neither problem.
 #
@@ -23,7 +23,12 @@ set(_workshop_model_files
     "model.pt|f9d732030a859b56ed5a6417aa18bde7a9d06f17b43379bec2492ef19a21f540"
     "model_forward.onnx|a75d50597aa8d4287ba5de73fd933d2df1c0f07c99539f5c88b1d7f694ad6f26"
     "model_encoder.onnx|7c202eede08c638b75a2cd67b571ad3d15a6d8bbd1928a1f71f5a96f564d6d9a"
-    "model_decoder.onnx|66ce39f2b5fc9122852c088b16cde5872a5541dceb59e601262d25f78bf3a4a8")
+    "model_decoder.onnx|66ce39f2b5fc9122852c088b16cde5872a5541dceb59e601262d25f78bf3a4a8"
+    # Step 11: MediaPipe's hand tracking chain as ONNX (Apache 2.0), via anira-cam
+    "hand_detector.onnx|431501d81309306a0526d333df5ff23eccb4e01987bc20d19c56e47a001f2873"
+    "hand_landmarks_detector.onnx|b4ac6e8ad824556264bd2e76141881904beeab80b63c9de56449dedbadf23471"
+    "gesture_embedder.onnx|b58c43055433d21c4075a0a5bdb9d641f418960dbbbf0a8673558a8b2ed6991e"
+    "canned_gesture_classifier.onnx|0878082b485c565b9d95ccd805bf2d83e9a7cebe198d7899f26094d626433cd4")
 
 function(workshop_fetch_models)
     set(base

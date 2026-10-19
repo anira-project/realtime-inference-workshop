@@ -36,7 +36,9 @@ One engine and one processor per channel. The model is mono and stateful, so two
 
 ## What it sounds like
 
-The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by 4096 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
+The window has three example slots. Clicking a tile plays its slot in a loop in place of the plugin's input, so the standalone needs no microphone and no DAW; **load** under a tile, or dropping an audio file on it, replaces the slot. The slots start with the files in [`assets/`](assets/), compiled into the plugin — replace `example_1.wav` to `example_3.wav` there to change what they start with. The files play at their own sample rate; the model expects 44.1 kHz.
+
+The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by 6320 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
 
 ## Which engine, and why it matters here
 
@@ -54,8 +56,8 @@ type name in `PluginProcessor.h` — the processor itself is templated on it.
 
 ## Known rough edges, on purpose
 
-- **The model path is absolute**, baked in at compile time, and `forward.onnx.data` has to stay next to `forward.onnx`. A real plugin ships both inside the bundle.
-- **The sample rate is fixed at 48 kHz** by the export. At another rate the plugin says so and still runs; it is a different instrument then, not a broken one.
+- **The model path is absolute**, baked in at compile time. A real plugin ships `model_forward.onnx` inside the bundle.
+- **The sample rate is fixed at 44.1 kHz** by the export. At another rate the plugin says so and still runs; it is a different instrument then, not a broken one.
 
 ## Slides
 

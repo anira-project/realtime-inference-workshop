@@ -21,8 +21,8 @@ Every mode runs in well under a second.
 Both engines run the same model and agree with the Python reference:
 
 ```
-  libtorch                 max abs diff 2.21e-06   OK
-  onnx                     max abs diff 5.81e-07   OK
+  libtorch                 max abs diff 4.92e-07   OK
+  onnx                     max abs diff 3.87e-07   OK
 ```
 
 ## Building with RTSan
@@ -78,20 +78,20 @@ without RTSan as well:
 
 ```
 LibTorch, 10 blocks through the callback:
-  block  0   591393 allocations and frees
-  block  1    10960 allocations and frees
+  block  0   610429 allocations and frees
+  block  1    10864 allocations and frees
   ...
-  total      690033 over 10 blocks, 69003 per block
+  total      708205 over 10 blocks, 70820 per block
 
 ONNX Runtime, 10 blocks through the callback:
-  block  9     1932 allocations and frees
-  total       19321 over 10 blocks, 1932 per block
+  block  9     2192 allocations and frees
+  total       21921 over 10 blocks, 2192 per block
 ```
 
 Three things to read out of that:
 
 - **Eleven thousand allocations per callback** for LibTorch, two thousand for ONNX Runtime. Not one slip — the engines are built that way.
-- **Block 0 costs 591,393**, fifty times a normal block, although the engine was warmed up before. TorchScript recompiles while it runs. That is the 84 ms worst case from step 3, with a cause.
+- **Block 0 costs 610,429**, fifty-six times a normal block, although the engine was warmed up before. TorchScript recompiles while it runs. That is the 56 ms worst case from step 3, with a cause.
 - **ONNX Runtime is an order of magnitude leaner** and still unusable here.
 
 RTSan can list what kind of violations they are, if you tell it not to stop at
@@ -105,10 +105,10 @@ RTSAN_OPTIONS=halt_on_error=false ./build-rtsan/bin/step05_solution onnx 2>&1 >/
 One block through ONNX Runtime:
 
 ```
-  98 malloc      51 free      10 pthread_mutex_lock      10 pthread_mutex_unlock
+  99 malloc      50 free      11 pthread_mutex_lock      11 pthread_mutex_unlock
 ```
 
-The same for LibTorch: 4,393 × `malloc`, 3,103 × `free`, 265 × `posix_memalign`, 180 × `pthread_mutex_lock`/`unlock`. Locks, on the audio thread.
+The same for LibTorch: 4,062 × `malloc`, 2,413 × `free`, 27 × `posix_memalign`, 180 × `pthread_mutex_lock`/`unlock`. Locks, on the audio thread.
 
 Keep this to a single block: RTSan symbolizes every report, so one LibTorch block takes about 20 seconds, and the counting mode above is the fast way to see the scale.
 

@@ -198,7 +198,7 @@ const LINE_ICONS = {
   people: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5a3 3 0 0 1 0 6M18 14c2 .8 3 2.9 3 6"/>',
 };
 
-// {{FILE:forward_stateful.pt}} → a file icon with its extension on a badge, name below
+// {{FILE:model.pt}} → a file icon with its extension on a badge, name below
 // {{ICON:cpp}} → the C++ hexagon
 function renderIcons(content) {
   // {{FILE:ring_buffer.h|new}} marks a file that is new in this step; a name without an

@@ -16,44 +16,44 @@ Note:
 <div class="budget-calc">
   <div><small>host block</small>64 samples</div>
   <b>÷</b>
-  <div><small>sample rate</small>48 kHz</div>
+  <div><small>sample rate</small>44.1 kHz</div>
   <b>=</b>
-  <div class="result"><small>deadline per callback</small>1.33 ms</div>
+  <div class="result"><small>deadline per callback</small>1.45 ms</div>
 </div>
 
 <div class="deadline">
-  <div class="deadline-budget"><span>deadline · 1.33 ms</span></div>
+  <div class="deadline-budget"><span>deadline · 1.45 ms</span></div>
   <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i><i style="--i:30"></i><i class="runs" style="--i:31"><span>forward pass <br> 5 ms</span></i></div>
   <div class="deadline-axis"><span>callbacks 1–31 · only copies samples, ≈ 0 ms</span><span>callback 32 · 2048 collected, run the model</span></div>
 </div>
 
 Note:
-    - budget = host block size / sample rate: 64 samples at 48 kHz are 1.33 ms; 512 are 10.7 ms; 2048 are 42.7 ms.
-    - The model takes 2048 samples, 42.7 ms of audio. The host hands us 64 samples, 1.33 ms of time.
-    - 31 callbacks only fill the ring buffer from step 2. The 32nd has a full block, runs the whole forward pass, and still has 1.33 ms.
+    - budget = host block size / sample rate: 64 samples at 44.1 kHz are 1.45 ms; 512 are 11.6 ms; 2048 are 46.4 ms.
+    - The model takes 2048 samples, 46.4 ms of audio. The host hands us 64 samples, 1.45 ms of time.
+    - 31 callbacks only fill the ring buffer from step 2. The 32nd has a full block, runs the whole forward pass, and still has 1.45 ms.
     - This is the slide to linger on: the audio duration of the model block and the deadline of a callback are unrelated numbers.
 
 ---
 
 <div class="tag">Motivation</div>
 
-## The problem <span class="then">12 % on average but 375 % in the callback that runs it.</span>
+## The problem <span class="then">16 % on average but 510 % in the callback that runs it.</span>
 
 <div class="meters">
   <div class="meter">
-    <div class="meter-bar"><i style="--load:12%"></i></div>
-    <div class="meter-label"><span>average load · what a CPU meter shows<span class="meter-calc">5 ms ÷ 42.7 ms (32 callbacks × 1.33 ms)</span></span><strong>12 %</strong></div>
+    <div class="meter-bar"><i style="--load:16%"></i></div>
+    <div class="meter-label"><span>average load · what a CPU meter shows<span class="meter-calc">7.4 ms ÷ 46.4 ms (32 callbacks × 1.45 ms)</span></span><strong>16 %</strong></div>
   </div>
   <div class="meter over">
-    <div class="meter-bar"><i style="--load:100%"></i><span class="meter-late">3.7 ms too late</span></div>
-    <div class="meter-label"><span>the callback that runs the model · what you hear<span class="meter-calc">5 ms ÷ 1.33 ms → a click every 42.7 ms</span></span><strong>375 %</strong></div>
+    <div class="meter-bar"><i style="--load:100%"></i><span class="meter-late">6.0 ms too late</span></div>
+    <div class="meter-label"><span>the callback that runs the model · what you hear<span class="meter-calc">7.4 ms ÷ 1.45 ms → a click every 46.4 ms</span></span><strong>510 %</strong></div>
   </div>
 </div>
 
 Note:
-    - Forward pass on this laptop: about 5 ms.
-    - Average: 5 ms of work per 42.7 ms of audio, 12 %. The callback that runs it: 5 ms in a 1.33 ms budget, 375 %.
-    - A CPU meter showing 12 % and an audio stream that clicks every 43 ms.
+    - Forward pass on this laptop: about 7.4 ms.
+    - Average: 7.4 ms of work per 46.4 ms of audio, 16 %. The callback that runs it: 7.4 ms in a 1.45 ms budget, 510 %.
+    - A CPU meter showing 16 % and an audio stream that clicks every 46 ms.
 
 ---
 
@@ -77,7 +77,7 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ & common/assets/</div>
-    {{FILE:forward_stateful.pt}}
+    {{FILE:model.pt}}
     {{FILE:test_signal.h}}
   </div>
   <div class="given-column">

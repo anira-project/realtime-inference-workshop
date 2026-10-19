@@ -10,3 +10,4 @@ models/*.onnx
 models/*.data
 .idea/
 build-*/
+__pycache__/

@@ -14,13 +14,13 @@ Note:
 
 <div class="streams">
   {{STREAM:host=64|model=2048|length=4096|seconds=7}}
-  {{STREAM:host=480|model=2048|length=4096|seconds=7}}
+  {{STREAM:host=441|model=2048|length=4096|seconds=7}}
 </div>
 
 Note:
     - The model's block comes from the export: 2048 samples, fixed at trace time.
-    - The host's block comes from the device and the user's settings: 64, 128, 480, 512, … and it can change while running.
-    - 64: 31 callbacks wait, the 32nd runs the whole model (dark). 480 does not divide 2048 at all: the model runs mid-callback, at a different place every time.
+    - The host's block comes from the device and the user's settings: 64, 128, 441, 512, … and it can change while running.
+    - 64: 31 callbacks wait, the 32nd runs the whole model (dark). 441 does not divide 2048 at all: the model runs mid-callback, at a different place every time.
     - They can match by coincidence, but they are not the same thing.
 
 ---
@@ -32,7 +32,7 @@ Note:
 <span> The host and the model each work in their own block size.</span>
 
 <div class="pump" style="margin-bottom: 250px;">
-  <div class="pump-node">host in<small>480 per call</small></div>
+  <div class="pump-node">host in<small>441 per call</small></div>
   <div class="pump-arrow"></div>
   <div class="pump-buffer in"><div class="pump-fill"></div><div class="pump-mark"></div></div>
   <div class="pump-arrow"></div>
@@ -40,12 +40,12 @@ Note:
   <div class="pump-arrow"></div>
   <div class="pump-buffer out"><div class="pump-fill"></div><div class="pump-mark"></div></div>
   <div class="pump-arrow"></div>
-  <div class="pump-node">host out<small>480 per call</small></div>
+  <div class="pump-node">host out<small>441 per call</small></div>
 </div>
 
 Note:
     - Input side: the host writes whatever it has; the model runs only once a whole block (the dashed line) is in.
-    - Output side: the model writes 2048 at once; the host takes its 480 per call.
+    - Output side: the model writes 2048 at once; the host takes its 441 per call.
 
 ---
 
@@ -69,7 +69,7 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ & common/assets/</div>
-    {{FILE:forward_stateful.pt}}
+    {{FILE:model.pt}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>
@@ -89,7 +89,7 @@ Note:
 
 Note:
     - Model, engine and signals are the ones from step 1.
-    - main.cpp holds ProcessorExample with three TODOs; the host runs it at every block size in {64, 128, 480, 512, 1024, 2048}.
+    - main.cpp holds ProcessorExample with three TODOs; the host runs it at every block size in {64, 128, 441, 512, 1024, 2048}.
 
 ---
 
@@ -128,7 +128,7 @@ std::vector<float> out = run_host(signal, num_samples, block_size,
 
 <div class="streams">
   {{STREAM:host=64|model=0|length=4096|seconds=5}}
-  {{STREAM:host=480|model=0|length=4096|seconds=5}}
+  {{STREAM:host=441|model=0|length=4096|seconds=5}}
   {{STREAM:host=2048|model=0|length=4096|seconds=5}}
 </div>
 
@@ -192,7 +192,7 @@ const size_t capacity = max_block_size + 2 * m_model_input_size;
 
 Note:
     - Size for the worst moment: the host has just written a block, the model has just produced one, and what it produced before is not drained yet.
-    - That happens whenever the host block does not divide the model block: 480.
+    - That happens whenever the host block does not divide the model block: 441.
 
 ---
 

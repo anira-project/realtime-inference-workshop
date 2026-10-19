@@ -1,26 +1,34 @@
 # The model files, downloaded from the repository's own release.
 #
-# They are not in git: 124 MB of weights would make every clone slow, and Git
+# They are not in git: 400 MB of weights would make every clone slow, and Git
 # LFS has a bandwidth quota that a roomful of people runs through in an hour.
 # Release assets have neither problem.
 #
 #   workshop_fetch_models()   -> models/ is complete, or configuring fails
 #
-# Bring your own instead with -DWORKSHOP_MODEL=/path/to/forward_stateful.pt
+# Bring your own instead with -DWORKSHOP_MODEL=/path/to/model.pt
 # (and -DWORKSHOP_ONNX_MODEL=...), which skips the download.
 
 include_guard(GLOBAL)
 
-set(WORKSHOP_MODELS_TAG "models-v1" CACHE STRING "Release tag the model files come from")
+# One release for the model. A new export replaces its files there and the
+# hashes below; the hash check then fetches the new files into every checkout.
+set(WORKSHOP_MODELS_TAG "workshop-model")
 set(WORKSHOP_MODELS_DIR "${CMAKE_CURRENT_LIST_DIR}/../models" CACHE PATH "Where the models live")
 cmake_path(SET WORKSHOP_MODELS_DIR NORMALIZE "${WORKSHOP_MODELS_DIR}")
 
 # name and sha256 of every file in the release, as "name|sha256" — a semicolon
 # would be a list separator and fall apart in the loop below.
 set(_workshop_model_files
-    "forward_stateful.pt|a53723d1519fbf0a574da32e229b437db39b9a6ec93ae470e11b4d0114684183"
-    "forward.onnx|32e18cc1582d4a9064b69fed120cafcd09fa9d9f7c0936eab6b2b57883d185ae"
-    "forward.onnx.data|36e322fef6fbd5c3b4ad7aaaa3017625b85ad5fc96eaa2d221daf0cf263ce75c")
+    "model.pt|f9d732030a859b56ed5a6417aa18bde7a9d06f17b43379bec2492ef19a21f540"
+    "model_forward.onnx|a75d50597aa8d4287ba5de73fd933d2df1c0f07c99539f5c88b1d7f694ad6f26"
+    "model_encoder.onnx|7c202eede08c638b75a2cd67b571ad3d15a6d8bbd1928a1f71f5a96f564d6d9a"
+    "model_decoder.onnx|66ce39f2b5fc9122852c088b16cde5872a5541dceb59e601262d25f78bf3a4a8"
+    # Step 11: MediaPipe's hand tracking chain as ONNX (Apache 2.0), via anira-cam
+    "hand_detector.onnx|431501d81309306a0526d333df5ff23eccb4e01987bc20d19c56e47a001f2873"
+    "hand_landmarks_detector.onnx|b4ac6e8ad824556264bd2e76141881904beeab80b63c9de56449dedbadf23471"
+    "gesture_embedder.onnx|b58c43055433d21c4075a0a5bdb9d641f418960dbbbf0a8673558a8b2ed6991e"
+    "canned_gesture_classifier.onnx|0878082b485c565b9d95ccd805bf2d83e9a7cebe198d7899f26094d626433cd4")
 
 function(workshop_fetch_models)
     set(base
@@ -58,4 +66,26 @@ function(workshop_fetch_models)
                 "or point the build at your own copy with -DWORKSHOP_MODEL=...")
         endif()
     endforeach()
+endfunction()
+
+# A build directory configured against an older release still has the old file
+# names cached, and would keep loading them. Point such a path at the current
+# file; a path outside models/ is someone's own copy and stays.
+#   workshop_use_current_model(WORKSHOP_MODEL model.pt)
+function(workshop_use_current_model variable current_name)
+    set(names "")
+    foreach(entry IN LISTS _workshop_model_files)
+        string(REPLACE "|" ";" parts "${entry}")
+        list(GET parts 0 name)
+        list(APPEND names "${name}")
+    endforeach()
+
+    cmake_path(GET ${variable} PARENT_PATH directory)
+    cmake_path(GET ${variable} FILENAME name)
+    cmake_path(COMPARE "${directory}" EQUAL "${WORKSHOP_MODELS_DIR}" in_models)
+    if(in_models AND NOT name IN_LIST names)
+        message(STATUS "Workshop: ${name} is not part of the release anymore, using ${current_name}")
+        get_property(help CACHE ${variable} PROPERTY HELPSTRING)
+        set(${variable} "${WORKSHOP_MODELS_DIR}/${current_name}" CACHE FILEPATH "${help}" FORCE)
+    endif()
 endfunction()

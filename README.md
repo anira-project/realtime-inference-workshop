@@ -9,9 +9,9 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 - `steps/` — one buildable folder per step, each with `exercise/` and `solution/`
 - `steps/common/assets/` — the test signal and its target output
 - `steps/common/helpers/` — the engines, the ring buffer, the fake host and the reporting, shared by every step
-- `models/` — the exported seqsynth model (LibTorch `.pt`, ONNX)
+- `models/` — the exported model (LibTorch `.pt`; ONNX forward, encoder and decoder)
 - `setup/` — setup check
-- `cmake/` — shared CMake helpers (backends, anira, RTSan)
+- `cmake/` — shared CMake helpers (backends, models, anira, JUCE)
 - `slides/` — Reveal.js slides
 
 ## Setup
@@ -46,6 +46,12 @@ The steps so far:
 6. [Inference on a worker thread](steps/06_threading/README.md) — lock-free queues, and an audio thread that allocates nothing
 7. [Latency and the dry/wet mix](steps/07_latency/README.md) — what to report to the host, and how to prove it
 8. [The plugin](steps/08_juce_plugin/README.md) — all of it inside JUCE; solution only, built with `-DWORKSHOP_JUCE=ON`
+
+Part 2, on anira (fetched and built by CMake, `-DWORKSHOP_ANIRA=OFF` to skip):
+
+9. [The model with anira](steps/09_anira/README.md) — two JSON files and three calls replace steps 2, 6 and 7
+10. [Encoder, latents, decoder](steps/10_split/README.md) — two handlers on one context, eight numbers in between
+11. [Hands on the latents](steps/11_hands/README.md) — a camera and hand tracking drive the decoder; JUCE app, with `-DWORKSHOP_JUCE=ON`
 
 ## License
 

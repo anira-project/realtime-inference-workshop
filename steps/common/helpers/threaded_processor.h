@@ -20,7 +20,8 @@
 // Model settings taken from the export metadata.
 constexpr struct {
     size_t m_input_size = 2048;
-    double m_sample_rate = 48000.0;
+    double m_sample_rate = 44100.0;
+    size_t m_latency = 2224;  // The model's own delay: how much later its output answers its input
 } k_model{};
 
 constexpr size_t k_queue_capacity = 8;  // Model blocks in flight between the threads
@@ -48,14 +49,15 @@ public:
     ~LatencyProcessor() { stop(); }
 
     // ---- TODO 1: how late is the wet signal? ---------------------------------
-    // Two things delay it, and both are fixed by the design:
+    // Three things delay it, and all are fixed:
     //   - the model cannot run before a whole block has arrived
     //   - the result is only picked up in a later callback, so the output side
     //     starts out primed with a block of silence
+    //   - the model itself answers late: k_model.m_latency, from the export
     // What the host is told has to be what the host gets, so this number also
     // decides how far the dry signal is delayed.
     // --------------------------------------------------------------------------
-    size_t latency_samples() const { return 2 * k_model.m_input_size; }
+    size_t latency_samples() const { return 2 * k_model.m_input_size + k_model.m_latency; }
 
     // Everything that allocates: buffers, queue capacity, the thread.
     // @max_block_size: the largest block process_block() will be given
@@ -70,13 +72,14 @@ public:
         m_wet_block.assign(max_block_size, 0.0f);
         m_wet_debt = 0;
 
-        // Prime both paths with the same amount of silence: one block while the
-        // input is still being collected, and one more so the worker has a full
-        // block of time to answer. That is what makes the latency a fixed
-        // number instead of whatever the worker happened to manage.
-        m_silence.assign(latency_samples(), 0.0f);
-        m_output.push(m_silence.data(), m_silence.size());
-        m_dry.push(m_silence.data(), m_silence.size());
+        // Prime the wet path with one block of silence while the input is still
+        // being collected, and one more so the worker has a full block of time
+        // to answer. That is what makes the latency a fixed number instead of
+        // whatever the worker happened to manage. The model's own delay is
+        // already inside what it returns; the dry path gets all of it.
+        m_silence.assign(std::max(latency_samples(), 2 * k_model.m_input_size), 0.0f);
+        m_output.push(m_silence.data(), 2 * k_model.m_input_size);
+        m_dry.push(m_silence.data(), latency_samples());
 
         m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
         m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);

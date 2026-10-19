@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 
+#include "PluginEditor.h"
+
 #include <cstdio>
 
 namespace {
@@ -82,6 +84,9 @@ void WorkshopPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
         return;
     }
 
+    // A playing example slot replaces the input.
+    m_player.render(buffer);
+
     const float mix = m_mix != nullptr ? m_mix->load() : 1.0f;
 
     for (size_t channel = 0; channel < channels; ++channel) {
@@ -91,8 +96,15 @@ void WorkshopPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
     }
 }
 
+bool WorkshopPluginProcessor::load_example(int slot, const juce::File& file) {
+    suspendProcessing(true);
+    const bool loaded = m_player.load(slot, file);
+    suspendProcessing(false);
+    return loaded;
+}
+
 juce::AudioProcessorEditor* WorkshopPluginProcessor::createEditor() {
-    return new juce::GenericAudioProcessorEditor(*this);
+    return new WorkshopPluginEditor(*this);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {

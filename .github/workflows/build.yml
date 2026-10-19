@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # The models come from this repository's release and never change within
-      # a tag, so they are worth caching: 124 MB per run otherwise.
+      # a tag, so they are worth caching: 380 MB per run otherwise.
       - name: Cache models
         uses: actions/cache@v4
         with:
@@ -76,7 +76,7 @@ jobs:
       - name: Run the solutions
         shell: bash
         run: |
-          for binary in step01_solution step02_solution step06_solution step07_solution; do
+          for binary in step01_solution step02_solution step06_solution step07_solution step09_solution step10_solution; do
             path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)
             echo "=== $binary"
             "$path"

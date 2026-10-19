@@ -51,7 +51,7 @@ Note:
 
 <div class="tag">Goal</div>
 
-## Goal<br><span class="then">The model should work with any host block size.</span>
+## The goal<br><span class="then">The model should work with any host block size.</span>
 
 <div class="statement-points">
   <div><small>1</small>Size the ring buffers in <code>prepare()</code></div>
@@ -141,7 +141,7 @@ Note:
 
 <div class="tag">Task: <code>main.cpp</code></div>
 
-## Task
+## The task
 
 <div class="task-timer" data-minutes="5"></div>
 

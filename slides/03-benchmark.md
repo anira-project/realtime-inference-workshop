@@ -59,7 +59,7 @@ Note:
 
 <div class="tag">Goal</div>
 
-## Goal <span class="then"> Find out how long one call takes.
+## The goal <span class="then"> Find out how long one call takes.
 
 <div class="statement-points">
   <div><small>1</small>Run the model inside the timed loop</div>
@@ -122,7 +122,7 @@ Note:
 
 <div class="tag">Task: <code>main.cpp</code></div>
 
-## Task
+## The task
 
 <div class="task-timer" data-minutes="3"></div>
 

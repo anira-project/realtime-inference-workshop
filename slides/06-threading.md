@@ -11,7 +11,7 @@ Note:
 
 <div class="tag">Motivation</div>
 
-## The audio thread moves samples.<br><span class="then">The worker runs the model.</span>
+## The audio thread moves samples<br><span class="then">The worker runs the model.</span>
 
 <div class="lanes">
   <div class="lane-label">audio thread</div>
@@ -34,10 +34,11 @@ Note:
 
 <div class="tag">Goal</div>
 
-## The model on its own thread.<br><span class="then">The audio thread allocates nothing.</span>
+## The goal<br><span class="then">Create two threads.</span>
+
 
 <div class="statement-points">
-  <div><small>1</small>Queues and the worker, in <code>prepare()</code></div>
+  <div><small>1</small>Set queues and the worker in <code>prepare()</code></div>
   <div><small>2</small>The audio thread: samples in, blocks out, results back</div>
   <div><small>3</small>The worker: take, run, hand back</div>
 </div>
@@ -46,7 +47,9 @@ Note:
 
 <div class="tag">Given</div>
 
-## 1 new helper, 1 file to edit.
+## What we get <span class="then">1 new helper, 1 file to edit.</span>
+
+
 
 <div class="given">
   <div class="given-column">
@@ -80,7 +83,7 @@ Note:
 
 <div class="tag">Helpers: <code>readerwriterqueue.h</code></div>
 
-## One producer, one consumer.<br><span class="then">No locks.</span>
+## One producer, one consumer<br><span class="then">No locks.</span>
 
 ```cpp
 struct ModelBlock {
@@ -89,7 +92,11 @@ struct ModelBlock {
 
 moodycamel::ReaderWriterQueue<ModelBlock> m_to_worker{8};
 moodycamel::ReaderWriterQueue<ModelBlock> m_from_worker{8};
+
+m_to_worker.try_enqueue(block);       // copy in  — false if full
+m_to_worker.try_dequeue(block);       // copy out — false if empty
 ```
+
 
 <div class="queue-demo">
   <div class="q">
@@ -107,12 +114,16 @@ Note:
     - Single producer, single consumer: the cheapest lock-free case there is.
     - try_enqueue never grows the queue. It fails, and failing is a decision you can make in 1 µs: the block is dropped, and the host gets silence if nothing came back. Both are glitches; waiting for the worker would be a missed deadline for the entire host, including every other plugin.
     - By value, so nobody has to agree on who frees what.
+      - Only the try_ versions. enqueue() without "try" grows the queue when it is full, and growing allocates.
+    - Each queue has one writer and one reader: to_worker is written by the audio thread, from_worker by the worker.
+    - The audio thread never retries, because there is no time to. The worker may, because it has no deadline. It still checks the stop flag while it retries.
+  
 
 ---
 
 <div class="tag">Task: <code>main.cpp</code></div>
 
-## Task
+## The task
 
 <div class="task-timer" data-minutes="10"></div>
 
@@ -156,7 +167,7 @@ cmake --build --preset release --target step06_exercise
 
 <div class="tag">Solution</div>
 
-## TODO 1 · Queues and the worker
+## TODO 1: Queues and the worker
 
 ```cpp
 m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
@@ -173,7 +184,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 2 · The audio thread
+## TODO 2: The audio thread
 
 ```cpp
 m_input.push(samples, num_samples);
@@ -198,7 +209,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 3 · The worker thread
+## TODO 3: The worker thread
 
 ```cpp
 while (m_running.load(std::memory_order_acquire)) {
@@ -220,7 +231,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## The audio thread is real-time safe.<br><span class="then">The model runs beside it.</span>
+## The audio thread is real-time safe<br><span class="then">The model runs beside it.</span>
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

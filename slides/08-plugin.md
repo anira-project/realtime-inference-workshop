@@ -10,36 +10,38 @@ Note:
 
 ---
 
-<div class="tag">The host</div>
+<div class="tag">Host</div>
 
-## Three places the host talks to us.
+## Three places the host talks to us
 
-**`prepareToPlay`** — load the model, size the buffers, start the threads
+1. **`prepareToPlay`** — load the model, size the buffers, start the threads
 
-```cpp
+<!-- ```cpp
 setLatencySamples(static_cast<int>(processor.latency_samples()));
-```
+``` -->
 
-**`processBlock`** — step 6's callback, unchanged
+2. **`processBlock`** — callback from step 6, unchanged
 
-**`releaseResources`** — stop the threads
+3. **`releaseResources`** — stop the threads
 
 Everything else in the plugin is JUCE boilerplate.
 
 ---
 
-<div class="tag">Which engine ships</div>
+<div class="tag">Engine</div>
 
-## ONNX Runtime, static.<br><span class="then">One 28 MB bundle.</span>
+## ONNX Runtime<br><span class="then">One 28 MB bundle.</span>
 
-Every step so far used LibTorch. The plugin uses **ONNX Runtime, static**:
+
 
 | | what ships |
 |---|---|
 | LibTorch | binary + 318 MB of dylibs to find at load time |
 | ONNX Runtime, static | **one 28 MB bundle** |
 
-The switch is one type name — the processor is templated on the engine, and
+Every step so far used LibTorch. This plugin uses **ONNX Runtime, static**.
+
+We only need to change one type name — the processor is templated on the engine, and
 both engines have the same three methods.
 
 Note:
@@ -47,48 +49,66 @@ Note:
 
 ---
 
-<div class="tag">Stateful and mono</div>
+<div class="tag">Engine</div>
 
-## Two channels, two of everything.
+## A mono, stateful model
 
-The model is **mono and stateful**. Two channels need two states — sharing one
-would mix the left channel's history into the right.
+Each channel needs its own state, so each channel needs its own engine.
 
-So: two engines, two worker threads, two of everything.
+Here, each engine also gets its own worker thread.
 
-For one plugin instance. On one track.
+| Two channels → two states → two engines → two worker threads|
+|---|
+
+Two of everything. For one plugin, on one track.
+
+---
+
+<div class="tag">Test</div>
+
+## Build it and listen<br><span class="then">Standalone or VST3.</span>
+
+Build the implementation and play around with the dry/wet parameter
+
+```bash
+cmake -S . -B build-juce -G Ninja -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
+cmake --build build-juce --target step08_plugin_Standalone   # or step08_plugin_VST3
+
+
+--- 
+
+<div class="tag">Test</div>
+
+## Check the latency in a DAW<br><span class="then">Fully dry has to cancel out.</span>
+
+1. Duplicate a track, put the plugin on the copy
+2. Dry/Wet at **0**, delay compensation **on**
+3. Flip the phase of the copy
+
+**Silence:** the reported latency is right.<br>
+**Anything else:** this track is out of time with the rest of the session.
 
 Note:
-    - Let that sit. This is the problem the second block opens with.
+    - At 0 the plugin outputs only the dry path, delayed by 4096 samples. The host delays every other track by the latency we report, so if the number is right, the two copies line up sample for sample and cancel.
+    - This is the step 7 alignment, checked by the host instead of by us.
 
 ---
 
-<div class="tag">In a DAW</div>
 
-## 100 % dry has to null.
 
-Dry/Wet at 0, delay compensation on:
-
-> a fully dry instance has to **null** against the original track
-
-Same test as in step 7, now in the host. If it does not null, the number is
-wrong, and everything downstream of it is too.
-
----
-
-<div class="tag">What it took</div>
+<div class="tag">Summary</div>
 
 ## All of this is infrastructure,<br><span class="then">before any work on the sound itself.</span>
 
 ```
-ring buffers          step 2
-a benchmark           step 3
-an engine choice      step 4
-RTSan                 step 5
-a worker, two queues  step 6
-a prefill rule        step 7
-a latency calculation step 7
-a dry path to match   step 7
+ring buffers           step 2
+a benchmark            step 3
+an engine choice       step 4
+RTSan                  step 5
+a worker, two queues   step 6
+a prefill rule         step 7
+a latency calculation  step 7
+a dry path to match    step 7
 one engine per channel step 8
 ```
 
@@ -96,7 +116,7 @@ one engine per channel step 8
 
 <div class="tag">Break</div>
 
-## Break.<br><span class="then">Afterwards: how anira handles these steps.</span>
+## Break<br><span class="then">Afterwards: how anira handles these steps.</span>
 
 <div class="statement-points">
   <div>Ten pieces of infrastructure, by hand</div>

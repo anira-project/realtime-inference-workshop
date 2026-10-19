@@ -10,7 +10,7 @@ Note:
 
 <div class="tag">Goal</div>
 
-## Goal<br><span class="then">Run the model in C++.</span>
+## The goal<br><span class="then">Run the model in C++.</span>
 
 <div class="statement-points">
   <div><small>1</small>Load the model with LibTorch</div>
@@ -112,7 +112,7 @@ Note:
 
 <div class="tag">Task: <code>main.cpp</code></div>
 
-## Task
+## The task
 
 <div class="task-timer" data-minutes="5"></div>
 

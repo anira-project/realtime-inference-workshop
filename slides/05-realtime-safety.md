@@ -45,10 +45,26 @@ Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang.
 
 ---
 
+<div class="tag">Verify first</div>
+
+## Both engines are correct<br><span class="then">Are they safe?</span>
+
+```bash
+./build/bin/step05_solution verify           # Both engines produce the reference output 
+
+  libtorch                 max abs diff 2.21e-06   OK
+  onnx                     max abs diff 5.81e-07   OK
+```
+
+Same model, same output as the Python reference.
+
+---
+
 <div class="tag">RealtimeSanitizer</div>
 
 ## Wrapping our buffer allocates<br><span class="then">The model hasn't run yet.</span>
 
+<!-- `from_blob` copies nothing, but it still allocates the tensor object around our buffer. -->
 
 ```
 ERROR: RealtimeSanitizer: unsafe-library-call
@@ -61,6 +77,7 @@ Intercepted call to real-time unsafe function `malloc`
     audio_callback(...)
 ```
 
+No copy, but a new tensor object: that's the `malloc`.
 
 ---
 
@@ -85,29 +102,49 @@ Note:
 
 ---
 
-<div class="tag">Not once — all the time</div>
+<div class="tag">Allocation</div>
 
-## Mutexes<br><span class="then">On the audio thread.</span>
+## Not once<br><span class="then">Every callback.</span>
 
 | allocations + frees, ten callbacks | per block | first block |
 |---|---|---|
 | LibTorch | 10,960 | **591,393** |
 | ONNX Runtime | 1,932 | 2,000-ish |
 
-```
-ONNX Runtime     98 × malloc    51 × free    10 × mutex lock/unlock
-LibTorch       4393 × malloc  3103 × free   180 × mutex lock/unlock
-```
+The 591,393 allocations are the 84 ms from step 3.
+
+Not a slip. The engines are built this way.
 
 Note:
-    - The code block is what RTSan reports for one block.
-    - Block 0 at 591k: TorchScript recompiles while it runs, after the warm-up call. That is the 84 ms outlier from step 3.
+    - Counting mode: our own operator new, ten blocks through the callback. Works without RTSan.
+    -The first LibTorch block costs fifty times a normal one, even after warm-up. nTorchScript recompiles while it runs.
+
 
 ---
 
-<div class="tag">No flag for it</div>
+<div class="tag">Allocation</div>
 
-## The allocation is inside the engine.
+## Locks<br><span class="then">On the audio thread.</span>
+
+One block, as RTSan reports it:
+
+| | malloc | free | mutex lock |
+|---|---|---|---|
+| ONNX Runtime | 98 | 51 | 10 |
+| LibTorch | 4,393 | 3,103 | 180 |
+
+A slow allocation is bad. A lock can wait on another thread.
+
+Note:
+    - RTSAN_OPTIONS=halt_on_error=false, one block only: symbolizing every report takes ~20 s for LibTorch.
+    - Different counter from the previous slide, so the numbers don't add up to the same total.
+
+
+---
+
+<div class="tag">Problem</div>
+
+## The allocation is inside the engine
 
 - The allocation happens **inside** the engine, in a shared library
 - A custom allocator changes where memory comes from, not whether a lock is taken
@@ -118,9 +155,9 @@ Shipping this on the audio thread means hoping the allocator stays fast.
 
 ---
 
-<div class="tag">What that leaves</div>
+<div class="tag">Solution</div>
 
-## Inference does not belong<br><span class="then">on the audio thread.</span>
+## Inference does not belong<br><span>on the audio thread.</span>
 
 <div class="statement-points">
   <div>So it runs somewhere else</div>

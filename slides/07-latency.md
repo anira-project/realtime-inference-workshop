@@ -11,7 +11,7 @@ Note:
 
 <div class="tag">Motivation</div>
 
-## Fixed beats small.
+## Fixed latency over small latency
 
 <div class="align">
   <div class="align-row">
@@ -39,7 +39,7 @@ Note:
 
 <div class="tag">Motivation</div>
 
-## Dry and wet have to meet.
+## Dry and wet align<br><span class="then">The host can crossfade.</span>
 
 <div class="align meet">
   <div class="align-row">
@@ -65,18 +65,18 @@ Note:
 
 <div class="tag">Goal</div>
 
-## One latency number.<br><span class="then">Dry and wet line up.</span>
+## The goal<br><span class="then">One latency number, dry and wet line up.</span>
 
 <div class="statement-points">
   <div><small>1</small><code>latency_samples()</code>: told to the host, primed, delaying dry</div>
-  <div><small>2</small>The mix: both sides equally late, so a crossfade</div>
+  <div><small>2</small>The mix: both sides equally late, so a crossfade possible</div>
 </div>
 
 ---
 
 <div class="tag">Given</div>
 
-## Step 6, plus a dry path.
+## What we get<br><span class="then">Step 6, plus a dry path.</span>
 
 <div class="given">
   <div class="given-column">
@@ -109,7 +109,7 @@ Note:
 
 <div class="tag">Task: <code>main.cpp</code></div>
 
-## Task
+## The task
 
 <div class="task-timer" data-minutes="5"></div>
 
@@ -144,7 +144,7 @@ cmake --build --preset release --target step07_exercise
 
 <div class="tag">Solution</div>
 
-## TODO 1 · Work out the latency
+## TODO 1: Work out the latency
 
 ```cpp
 size_t latency_samples() const { return 2 * k_model.m_input_size; }   // 4096
@@ -167,7 +167,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 2 · Mix dry and wet
+## TODO 2: Mix dry and wet
 
 ```cpp
 std::fill_n(samples, num_samples, 0.0f);
@@ -191,7 +191,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## A fixed latency.<br><span class="then">The host can line it up.</span>
+## A fixed latency<br><span class="then">The host can line it up and cross-fade.</span>
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

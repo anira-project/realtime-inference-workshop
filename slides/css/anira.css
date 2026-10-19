@@ -1,0 +1,490 @@
+/*********************************************
+ * Part 2, anira: the visuals of the talk chapters (the hand-over list, the
+ * crowded host, the history). Loaded after exercise.css and uses its tokens.
+ *********************************************/
+
+/*********************************************
+ * Hand-over: what part 1 built, and what it is called in anira
+ *********************************************/
+
+html.tanh .handoff {
+  display: grid;
+  grid-template-columns: 110px 1fr 1.4fr;
+  column-gap: var(--space-5);
+  row-gap: var(--space-2);
+  align-items: baseline;
+  margin-top: var(--space-6);
+  font-size: 0.62em;
+  text-align: left;
+}
+
+html.tanh .handoff-head {
+  padding-bottom: var(--space-2);
+  border-bottom: var(--hairline) solid var(--fs-border-strong);
+  font-family: var(--fs-heading-font);
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .handoff-step {
+  font-family: var(--fs-code-font);
+  font-size: 0.8em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .handoff-anira {
+  color: var(--ink);
+}
+
+html.tanh .handoff-anira code {
+  font-size: 0.95em;
+}
+
+/*********************************************
+ * The crowded host: instances on the left, cores on the right
+ *********************************************/
+
+html.tanh .crowd {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  grid-template-rows: auto auto;
+  column-gap: var(--space-7);
+  row-gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-6);
+}
+
+html.tanh .crowd-plugins {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-5);
+}
+
+html.tanh .crowd-plugin {
+  display: grid;
+  grid-template-columns: 1fr 40px 40px;
+  align-items: center;
+  column-gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--wash);
+  font-size: 0.55em;
+  text-align: left;
+  opacity: 0;
+}
+
+html.tanh .crowd-plugin span {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+/* Two worker threads per instance */
+html.tanh .crowd-plugin i {
+  height: 30px;
+  border-radius: 4px;
+  background: var(--mark-exercise);
+}
+
+/* Threads beyond the cores: the same chips, in the model tint */
+html.tanh .crowd-plugin.over i {
+  background: var(--mark-model);
+}
+
+html.tanh .crowd-cores {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-main);
+}
+
+html.tanh .crowd-cores span {
+  grid-column: 1 / -1;
+  font-family: var(--fs-heading-font);
+  font-size: 0.55em;
+  font-weight: 600;
+}
+
+html.tanh .crowd-cores b {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--wash);
+}
+
+html.tanh .crowd-count {
+  grid-column: 1 / -1;
+  font-size: 0.7em;
+  color: var(--fs-text-muted-color);
+  opacity: 0;
+}
+
+html.tanh .crowd-count strong {
+  font-family: var(--fs-code-font);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* Instances arrive one by one; the cores fill with the first four, the rest queue up */
+html.tanh .reveal section.present .crowd-plugin {
+  animation: crowd-in 0.4s var(--ease) calc(0.4s + var(--i) * 0.35s) both;
+}
+
+html.tanh .reveal section.present .crowd-cores b {
+  animation: crowd-core 0.3s var(--ease) calc(0.5s + var(--i) * 0.175s) both;
+}
+
+html.tanh .reveal section.present .crowd-count {
+  animation: run-appear 0.4s var(--ease) 4.2s both;
+}
+
+@keyframes crowd-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes crowd-core {
+  to { background: var(--mark-exercise); }
+}
+
+/*********************************************
+ * History: a line of releases
+ *********************************************/
+
+html.tanh .history {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  column-gap: var(--space-3);
+  margin-top: var(--space-7);
+  padding-top: 28px;
+}
+
+html.tanh .history::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--fs-border-strong);
+}
+
+html.tanh .history-item {
+  position: relative;
+  text-align: left;
+}
+
+html.tanh .history-item::before {
+  content: "";
+  position: absolute;
+  top: -27px;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+}
+
+html.tanh .history-year {
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .history-name {
+  font-family: var(--fs-heading-font);
+  font-size: 0.65em;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+html.tanh .history-text {
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .history-note {
+  margin-top: var(--space-7);
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .crowd-plugin,
+  html.tanh .reveal section.present .crowd-cores b,
+  html.tanh .reveal section.present .crowd-count {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/*********************************************
+ * The pool: instances on the left, one queue, the threads on the right
+ *********************************************/
+
+html.tanh .pool {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  column-gap: var(--space-7);
+  align-items: center;
+  margin-top: var(--space-6);
+}
+
+html.tanh .pool-instances,
+html.tanh .pool-threads {
+  display: grid;
+  row-gap: var(--space-2);
+}
+
+html.tanh .pool-instance,
+html.tanh .pool-thread {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--wash);
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  text-align: left;
+}
+
+html.tanh .pool-thread {
+  background: var(--tint-exercise);
+}
+
+html.tanh .pool-queue {
+  display: grid;
+  justify-items: center;
+  row-gap: var(--space-2);
+}
+
+html.tanh .pool-queue span {
+  font-family: var(--fs-code-font);
+  font-size: 0.45em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal section.present .pool-instance {
+  animation: crowd-in 0.4s var(--ease) calc(0.3s + var(--i) * 0.2s) both;
+}
+
+html.tanh .reveal section.present .pool-thread {
+  animation: crowd-in 0.4s var(--ease) calc(1.6s + var(--i) * 0.2s) both;
+}
+
+/*********************************************
+ * Waiting: a bar per policy, the pool's and the audio thread's
+ *********************************************/
+
+html.tanh .waits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-7);
+  margin-top: var(--space-7);
+  text-align: left;
+}
+
+html.tanh .wait-title {
+  margin-bottom: var(--space-5);
+  font-family: var(--fs-heading-font);
+  font-size: 0.7em;
+  font-weight: 600;
+}
+
+html.tanh .wait-row {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--space-5);
+  row-gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-5);
+  font-size: 0.6em;
+}
+
+html.tanh .wait-row code {
+  grid-row: 1 / 3;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+html.tanh .wait-row small {
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .wait-bar {
+  display: flex;
+  gap: 5px;
+  height: 28px;
+}
+
+html.tanh .wait-bar i {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--mark-exercise);
+}
+
+/* Spin with backoff: tries that get sparser */
+html.tanh .wait-bar.spin i { width: 10px; }
+html.tanh .wait-bar.spin i:nth-child(n+5) { margin-left: 10px; }
+html.tanh .wait-bar.spin i:nth-child(n+7) { margin-left: 30px; }
+html.tanh .wait-bar.spin i:nth-child(8) { margin-left: 70px; }
+
+/* Parked: one long pale bar */
+html.tanh .wait-bar.block i { width: 60%; background: var(--wash); border: var(--hairline) solid var(--fs-border-strong); }
+
+/* Never: one tick */
+html.tanh .wait-bar.none i { width: 10px; }
+
+/* A ratio: half the block */
+html.tanh .wait-bar.ratio i { width: 45%; background: var(--mark-model); }
+
+/*********************************************
+ * Three kinds of thread, and the calls on each
+ *********************************************/
+
+html.tanh .threads {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  row-gap: var(--space-4);
+  column-gap: var(--space-5);
+  align-items: center;
+  margin-top: var(--space-6);
+}
+
+html.tanh .threads-label {
+  font-family: var(--fs-heading-font);
+  font-size: 0.65em;
+  font-weight: 600;
+  text-align: right;
+}
+
+html.tanh .threads-lane {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-small);
+  background: var(--wash);
+}
+
+html.tanh .threads-lane span {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--paper);
+  border: var(--hairline) solid var(--fs-border-strong);
+  font-family: var(--fs-code-font);
+  font-size: 0.6em;
+}
+
+html.tanh .threads-lane span.stage { background: var(--tint-exercise); border-color: transparent; }
+html.tanh .threads-lane span.engine { background: var(--tint-model); border-color: transparent; }
+
+/*********************************************
+ * Architecture: rows of boxes, revealed as fragments
+ *********************************************/
+
+html.tanh .arch {
+  display: grid;
+  row-gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+html.tanh .arch-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  column-gap: var(--space-3);
+}
+
+html.tanh .arch-row.pipeline {
+  grid-template-columns: 1fr 2fr 1fr;
+  padding: var(--space-3);
+  border: var(--hairline) dashed var(--fs-border-strong);
+  border-radius: var(--radius-main);
+}
+
+html.tanh .arch-box {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--wash);
+  font-size: 0.5em;
+}
+
+html.tanh .arch-box.handler { background: var(--tint-exercise); }
+html.tanh .arch-box.stage { background: var(--tint-exercise); }
+html.tanh .arch-box.inference { background: var(--tint-model); }
+html.tanh .arch-box.context { background: var(--tint-latent); }
+html.tanh .arch-box.engine { background: var(--paper); border: var(--hairline) solid var(--fs-border-strong); }
+
+html.tanh .arch-title {
+  font-family: var(--fs-heading-font);
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+html.tanh .arch-box small {
+  display: block;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .arch-box code { font-size: 0.9em; }
+
+/*********************************************
+ * Step 9 motivation: the line that goes, the line that comes
+ *********************************************/
+
+html.tanh .state-demo {
+  display: grid;
+  row-gap: var(--space-4);
+  margin-top: var(--space-6);
+  text-align: left;
+}
+
+html.tanh .state-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  column-gap: var(--space-4);
+  align-items: center;
+}
+
+html.tanh .state-row .state-label {
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .state-row code {
+  font-size: 0.5em;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-small);
+}
+
+html.tanh .state-row.was code { text-decoration: line-through; color: var(--fs-text-muted-color); }
+html.tanh .state-row.is code { background: var(--tint-exercise); }
+
+/* An arrow that is a copy until the fragment strikes it out */
+html.tanh .card-arrow.strike {
+  font-family: var(--fs-code-font);
+  font-size: 0.45em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .card-arrow.strike.visible { text-decoration: line-through; opacity: 0.4; }
+
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .pool-instance,
+  html.tanh .reveal section.present .pool-thread {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* The one-line answer under the latency sum */
+html.tanh .lat-why {
+  margin-top: var(--space-5);
+  font-size: 0.55em;
+  color: var(--fs-text-muted-color);
+}

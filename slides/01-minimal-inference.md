@@ -29,7 +29,7 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ & common/assets/</div>
-    {{FILE:forward_stateful.pt}}
+    {{FILE:model.pt}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>
@@ -46,7 +46,7 @@ Note:
 </div>
 
 Note:
-    - forward_stateful.pt: the model, TorchScript, graph + weights, 65 MB; stateful, the state lives inside it.
+    - model.pt: the model, TorchScript, graph + weights, 127 MB; stateful, the state lives inside it.
     - WORKSHOP_MODEL_PATH: set by CMake (-DWORKSHOP_MODEL=...), read in main.cpp as k_model.m_path.
     - support.h (report_line, k_tolerance) is plumbing for the checks and stays off the slides.
     - test_signal.h / target_signal.h: compiled in, no audio files, no Python.
@@ -65,7 +65,7 @@ Note:
 </div>
 
 Note:
-    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 48 kHz; shown here: blocks 3 and 4, the dashed line between them is a block boundary.
+    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 44.1 kHz; shown here: blocks 3 and 4, the dashed line between them is a block boundary.
     - Target: what the model made of it, in Python. The first block is nearly silent — the model's latency has not filled yet.
 
 ---
@@ -128,7 +128,7 @@ cmake --build --preset release --target step01_exercise
   <div class="run-step" data-seconds="2">
     <div class="run-title"><span>1</span>Create the engine</div>
     <div class="run-visual">
-      <div class="run-file">{{FILE:forward_stateful.pt}}</div>
+      <div class="run-file">{{FILE:model.pt}}</div>
       <div class="run-engine">{{ICON:cpp}}<small>LibTorch</small></div>
     </div>
   </div>
@@ -169,7 +169,7 @@ try {
 
 Note:
     - Outside the loop. Created inside, block 1 is already wrong: the state was thrown away.
-    - Slow, too: 65 MB read per block. The engine lives as long as the stream.
+    - Slow, too: 127 MB read per block. The engine lives as long as the stream.
 
 ---
 
@@ -189,8 +189,8 @@ const size_t process_size = static_cast<size_t>(k_model.m_input_size);  // 2048
 
 Note:
     - The model sets it, fixed at export.
-    - Anything else fails inside LibTorch, with an error about tensors, not blocks:
-      "The size of tensor a (6) must match the size of tensor b (0) at non-singleton dimension 2".
+    - Smaller sizes: the traced model still hands back 2048 samples, and the engine stops with "the model returned 2048 samples for 512 in".
+    - Multiples of 2048 happen to go through and match here; nothing in the export promises that.
 
 ---
 

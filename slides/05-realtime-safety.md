@@ -98,7 +98,7 @@ One thread. Fixed arena. Our buffers preallocated.<br>
 
 
 Note:
-    - Both engines were verified against the reference first: 2.2e-06 and 5.8e-07. They are correct, and they are unsafe.
+    - Both engines were verified against the reference first: 4.9e-07 and 3.9e-07. They are correct, and they are unsafe.
 
 ---
 
@@ -108,8 +108,8 @@ Note:
 
 | allocations + frees, ten callbacks | per block | first block |
 |---|---|---|
-| LibTorch | 10,960 | **591,393** |
-| ONNX Runtime | 1,932 | 2,000-ish |
+| LibTorch | 10,864 | **610,429** |
+| ONNX Runtime | 2,192 | 2,193 |
 
 The 591,393 allocations are the 84 ms from step 3.
 

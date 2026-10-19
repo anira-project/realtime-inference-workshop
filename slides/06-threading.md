@@ -55,7 +55,7 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ · common/assets/</div>
-    {{FILE:forward_stateful.pt}}
+    {{FILE:model.pt}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>

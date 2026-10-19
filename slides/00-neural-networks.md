@@ -33,7 +33,7 @@ Model types, state, and the model we use today
       <div class="nn-end">{{ICON:wave}}<span>audio</span></div>
     </div>
     <div class="card-title">Audio to audio</div>
-    <div class="nn-examples"><span>Examples:</span> RAVE, Demucs, amp models</div>
+    <div class="nn-examples"><span>Examples:</span> Realtime Audio Variational autoEncoder, Demucs, amp models</div>
   </div>
   <div class="nn-type">
     <div class="nn-io">

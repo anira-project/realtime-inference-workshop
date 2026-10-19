@@ -1,0 +1,13 @@
+{
+  "models": [
+    { "engine": "onnxruntime", "path": "../../../models/model_forward.onnx" }
+  ],
+  "inputs": [
+    { "name": "audio",     "dtype": "float32", "role": "streamed" },
+    { "name": "state_in",  "dtype": "float32", "role": "state" }
+  ],
+  "outputs": [
+    { "name": "audio_out", "dtype": "float32", "role": "streamed" },
+    { "name": "state_out", "dtype": "float32", "role": "state" }
+  ]
+}

@@ -488,3 +488,145 @@ html.tanh .lat-why {
   font-size: 0.55em;
   color: var(--fs-text-muted-color);
 }
+
+/*********************************************
+ * The architecture overview and the stages, as SVG
+ *********************************************/
+
+html.tanh .ov,
+html.tanh .st {
+  width: 100%;
+  height: auto;
+  margin-top: var(--space-4);
+  font-family: var(--fs-body-font, inherit);
+}
+
+html.tanh .ov { max-height: 780px; }
+html.tanh .st { max-height: 640px; }
+
+html.tanh .ov-thread { fill: var(--wash); }
+html.tanh .ov-thread.audio { fill: var(--tint-exercise); }
+html.tanh .ov-thread.pool { fill: var(--tint-model); }
+
+html.tanh .ov-thread-label,
+html.tanh .st-lane-label {
+  font-family: var(--fs-heading-font);
+  font-size: 20px;
+  font-weight: 600;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+html.tanh .st-lane-label { text-anchor: start; }
+
+html.tanh .ov-row {
+  font-family: var(--fs-code-font);
+  font-size: 18px;
+  fill: var(--fs-text-muted-color);
+  text-anchor: middle;
+}
+
+html.tanh .ov-col-label {
+  font-size: 19px;
+  font-style: italic;
+  fill: var(--fs-text-muted-color);
+  text-anchor: middle;
+}
+
+html.tanh .ov-box {
+  fill: var(--wash);
+  stroke: var(--fs-border-strong);
+  stroke-width: 1;
+}
+
+html.tanh .ov-box.context { fill: var(--tint-latent); }
+
+html.tanh .ov-title {
+  font-family: var(--fs-heading-font);
+  font-size: 23px;
+  font-weight: 600;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+html.tanh .ov-sub {
+  font-family: var(--fs-heading-font);
+  font-size: 19px;
+  font-weight: 600;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+html.tanh .ov-sep { stroke: var(--fs-border-strong); stroke-width: 1; }
+
+html.tanh .ov-pill {
+  fill: var(--paper);
+  stroke: var(--fs-border-strong);
+  stroke-width: 1;
+}
+
+html.tanh .ov-pill.dim { fill: transparent; stroke-dasharray: 4 4; }
+html.tanh .ov-pill.stage { fill: var(--tint-exercise); stroke: none; }
+html.tanh .ov-pill.tensor { fill: var(--tint-latent); stroke: none; }
+html.tanh .ov-pill.engine { fill: var(--tint-model); stroke: none; }
+
+html.tanh .ov-pill-text {
+  font-family: var(--fs-code-font);
+  font-size: 17px;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+html.tanh .ov-note {
+  font-size: 16px;
+  font-style: italic;
+  fill: var(--fs-text-muted-color);
+  text-anchor: middle;
+}
+
+html.tanh .ov-flow {
+  fill: none;
+  stroke: var(--fs-text-muted-color);
+  stroke-width: 1.5;
+}
+
+html.tanh .ov-flow.strong { stroke: var(--ink); stroke-width: 2.5; }
+html.tanh .ov-flow.state { stroke: var(--mark-latent); stroke-width: 2.5; stroke-dasharray: 8 6; }
+html.tanh .ov-arrowhead { fill: var(--ink); }
+
+html.tanh .ov-ring {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 5;
+  stroke-dasharray: 9 6;
+}
+
+html.tanh .ov-threadrow rect { fill: var(--paper); stroke: var(--mark-model); stroke-width: 1.5; }
+
+html.tanh .ov-slot { fill: var(--paper); stroke: var(--fs-border-strong); }
+html.tanh .ov-slot.busy { fill: var(--tint-model); stroke: none; }
+
+html.tanh .st-lane { fill: var(--wash); }
+html.tanh .st-lane.audio { fill: color-mix(in srgb, var(--tint-exercise) 45%, var(--paper)); }
+html.tanh .st-lane.pool { fill: color-mix(in srgb, var(--tint-model) 45%, var(--paper)); }
+
+html.tanh .st-text {
+  font-family: var(--fs-code-font);
+  font-size: 21px;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+html.tanh .st-text.strong { font-family: var(--fs-heading-font); font-weight: 600; font-size: 24px; }
+
+html.tanh .st-caption {
+  font-size: 17px;
+  fill: var(--fs-text-muted-color);
+  text-anchor: middle;
+}
+
+html.tanh .st-caption.left { text-anchor: start; }
+
+/* Reveal fades fragments; the SVG groups follow */
+html.tanh .ov g.fragment,
+html.tanh .st g.fragment { transition: opacity 0.4s var(--ease); }

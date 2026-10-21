@@ -572,7 +572,7 @@ html.tanh .ov-pill.engine { fill: var(--tint-model); stroke: none; }
 
 html.tanh .ov-pill-text {
   font-family: var(--fs-code-font);
-  font-size: 17px;
+  font-size: 15px;
   fill: var(--ink);
   text-anchor: middle;
 }
@@ -590,8 +590,8 @@ html.tanh .ov-flow {
   stroke-width: 1.5;
 }
 
-html.tanh .ov-flow.strong { stroke: var(--ink); stroke-width: 2.5; }
-html.tanh .ov-flow.state { stroke: var(--mark-latent); stroke-width: 2.5; stroke-dasharray: 8 6; }
+html.tanh .ov-flow.strong { stroke: var(--ink); stroke-width: 2; }
+html.tanh .ov-flow.state { stroke: var(--mark-latent); stroke-width: 2; stroke-dasharray: 6 5; }
 html.tanh .ov-arrowhead { fill: var(--ink); }
 
 html.tanh .ov-ring {
@@ -612,7 +612,7 @@ html.tanh .st-lane.pool { fill: color-mix(in srgb, var(--tint-model) 45%, var(--
 
 html.tanh .st-text {
   font-family: var(--fs-code-font);
-  font-size: 21px;
+  font-size: 18px;
   fill: var(--ink);
   text-anchor: middle;
 }

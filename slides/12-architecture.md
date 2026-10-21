@@ -57,19 +57,11 @@ Note:
     <text x="1440" y="268" class="ov-sub">the queue</text>
     <rect class="ov-pill" x="1316" y="286" width="248" height="30" rx="6"/><text x="1440" y="306" class="ov-pill-text">lock-free, every handler</text>
     <line class="ov-sep" x1="1300" y1="376" x2="1580" y2="376"/>
-    <g class="ov-threadrow"><rect x="1330" y="420" width="220" height="40" rx="8"/><text x="1440" y="446" class="ov-pill-text">thread 1 · inference</text></g>
-    <g class="ov-threadrow"><rect x="1330" y="476" width="220" height="40" rx="8"/><text x="1440" y="502" class="ov-pill-text">thread 2 · inference</text></g>
-    <g class="ov-threadrow"><rect x="1330" y="532" width="220" height="40" rx="8"/><text x="1440" y="558" class="ov-pill-text">thread 3 · inference</text></g>
-    <circle class="ov-lens" cx="1500" cy="440" r="24"/>
-    <line class="ov-lens" x1="1517" y1="457" x2="1532" y2="472"/>
-    <line class="ov-lens-ray" x1="1480" y1="456" x2="1330" y2="588"/>
-    <line class="ov-lens-ray" x1="1520" y1="461" x2="1560" y2="588"/>
-    <rect class="ov-lens-frame" x="1322" y="588" width="246" height="106" rx="8"/>
-    <rect class="ov-pill stage" x="1334" y="596" width="222" height="24" rx="5"/><text x="1445" y="613" class="ov-pill-text small">before_inference</text>
-    <line class="ov-flow strong" x1="1445" y1="620" x2="1445" y2="630" marker-end="url(#ov-arrow)"/>
-    <rect class="ov-pill engine" x="1334" y="630" width="222" height="24" rx="5"/><text x="1445" y="647" class="ov-pill-text small">the engine · state swapped</text>
-    <line class="ov-flow strong" x1="1445" y1="654" x2="1445" y2="664" marker-end="url(#ov-arrow)"/>
-    <rect class="ov-pill stage" x="1334" y="664" width="222" height="24" rx="5"/><text x="1445" y="681" class="ov-pill-text small">after_inference</text>
+    <g class="ov-threadrow"><rect x="1322" y="420" width="200" height="40" rx="8"/><text x="1422" y="446" class="ov-pill-text">thread 1 · inference</text></g>
+    <g class="ov-threadrow"><rect x="1322" y="476" width="200" height="40" rx="8"/><text x="1422" y="502" class="ov-pill-text">thread 2 · inference</text></g>
+    <g class="ov-threadrow"><rect x="1322" y="532" width="200" height="40" rx="8"/><text x="1422" y="558" class="ov-pill-text">thread 3 · inference</text></g>
+    <circle class="ov-lens" cx="1532" cy="440" r="18"/>
+    <line class="ov-lens-ray" x1="1532" y1="458" x2="1532" y2="604"/>
   </g>
   <g class="ov-col fragment" data-fragment-index="2">
     <text x="465" y="70" class="ov-col-label">public C ABI</text>
@@ -117,17 +109,23 @@ Note:
   </g>
   <g class="ov-col fragment" data-fragment-index="4">
     <text x="1165" y="400" class="ov-sub">slots</text>
-    <rect class="ov-box" x="1100" y="412" width="130" height="276" rx="10"/>
+    <rect class="ov-box" x="1100" y="412" width="130" height="172" rx="10"/>
     <rect class="ov-slot busy" x="1112" y="425" width="106" height="30" rx="5"/>
     <rect class="ov-slot busy" x="1112" y="481" width="106" height="30" rx="5"/>
-    <rect class="ov-slot busy" x="1112" y="537" width="106" height="30" rx="5"/>
-    <rect class="ov-slot" x="1112" y="593" width="106" height="30" rx="5"/>
-    <rect class="ov-slot" x="1112" y="649" width="106" height="30" rx="5"/>
+    <rect class="ov-slot" x="1112" y="537" width="106" height="30" rx="5"/>
     <path class="ov-flow strong" d="M1014 461 H1060 V440 H1100" marker-end="url(#ov-arrow)"/>
-    <path class="ov-flow strong" d="M1100 608 H1060 V621 H1014" marker-end="url(#ov-arrow)"/>
-    <line class="ov-flow strong" x1="1218" y1="440" x2="1330" y2="440" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
-    <line class="ov-flow strong" x1="1218" y1="496" x2="1330" y2="496" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
-    <line class="ov-flow strong" x1="1218" y1="552" x2="1330" y2="552" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
+    <path class="ov-flow strong" d="M1100 565 H1060 V621 H1014" marker-end="url(#ov-arrow)"/>
+    <line class="ov-flow strong" x1="1218" y1="440" x2="1322" y2="440" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
+    <line class="ov-flow strong" x1="1218" y1="496" x2="1322" y2="496" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
+    <line class="ov-flow strong" x1="1218" y1="552" x2="1322" y2="552" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
+    <rect class="ov-lens-frame" x="1100" y="604" width="480" height="92" rx="8"/>
+    <text x="1112" y="624" class="ov-note left">one inference, on a pool thread</text>
+    <rect class="ov-pill stage" x="1112" y="636" width="140" height="28" rx="6"/><text x="1182" y="655" class="ov-pill-text small">before_inference</text>
+    <line class="ov-flow strong" x1="1252" y1="650" x2="1276" y2="650" marker-end="url(#ov-arrow)"/>
+    <rect class="ov-pill engine" x="1276" y="636" width="120" height="28" rx="6"/><text x="1336" y="655" class="ov-pill-text small">the engine</text>
+    <text x="1336" y="684" class="ov-note">state_out → state_in</text>
+    <line class="ov-flow strong" x1="1396" y1="650" x2="1420" y2="650" marker-end="url(#ov-arrow)"/>
+    <rect class="ov-pill stage" x="1420" y="636" width="140" height="28" rx="6"/><text x="1490" y="655" class="ov-pill-text small">after_inference</text>
   </g>
 </svg>
 

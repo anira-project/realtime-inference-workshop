@@ -577,6 +577,8 @@ html.tanh .ov-pill-text {
   text-anchor: middle;
 }
 
+html.tanh .ov-pill-text.small { font-size: 13px; }
+
 html.tanh .ov-note {
   font-size: 16px;
   font-style: italic;

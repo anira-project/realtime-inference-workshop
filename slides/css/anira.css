@@ -501,7 +501,7 @@ html.tanh .st {
   font-family: var(--fs-body-font, inherit);
 }
 
-html.tanh .ov { max-height: 780px; }
+html.tanh .ov { max-height: 720px; }
 html.tanh .st { max-height: 640px; }
 
 html.tanh .ov-thread { fill: var(--wash); }

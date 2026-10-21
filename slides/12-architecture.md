@@ -57,10 +57,23 @@ Note:
     <text x="1440" y="268" class="ov-sub">the queue</text>
     <rect class="ov-pill" x="1316" y="286" width="248" height="30" rx="6"/><text x="1440" y="306" class="ov-pill-text">lock-free, every handler</text>
     <line class="ov-sep" x1="1300" y1="376" x2="1580" y2="376"/>
-    <g class="ov-threadrow"><rect x="1330" y="420" width="220" height="40" rx="8"/><text x="1440" y="446" class="ov-pill-text">thread 1 · engine</text></g>
-    <g class="ov-threadrow"><rect x="1330" y="476" width="220" height="40" rx="8"/><text x="1440" y="502" class="ov-pill-text">thread 2 · engine</text></g>
-    <g class="ov-threadrow"><rect x="1330" y="532" width="220" height="40" rx="8"/><text x="1440" y="558" class="ov-pill-text">thread 3 · engine</text></g>
-    <text x="1440" y="612" class="ov-pill-text">…</text>
+    <g class="ov-threadrow"><rect x="1312" y="420" width="256" height="40" rx="8"/>
+      <rect class="ov-pill stage" x="1320" y="428" width="72" height="24" rx="5"/><text x="1356" y="445" class="ov-pill-text small">before</text>
+      <rect class="ov-pill engine" x="1398" y="428" width="84" height="24" rx="5"/><text x="1440" y="445" class="ov-pill-text small">engine</text>
+      <rect class="ov-pill stage" x="1488" y="428" width="72" height="24" rx="5"/><text x="1524" y="445" class="ov-pill-text small">after</text>
+    </g>
+    <g class="ov-threadrow"><rect x="1312" y="476" width="256" height="40" rx="8"/>
+      <rect class="ov-pill stage" x="1320" y="484" width="72" height="24" rx="5"/><text x="1356" y="501" class="ov-pill-text small">before</text>
+      <rect class="ov-pill engine" x="1398" y="484" width="84" height="24" rx="5"/><text x="1440" y="501" class="ov-pill-text small">engine</text>
+      <rect class="ov-pill stage" x="1488" y="484" width="72" height="24" rx="5"/><text x="1524" y="501" class="ov-pill-text small">after</text>
+    </g>
+    <g class="ov-threadrow"><rect x="1312" y="532" width="256" height="40" rx="8"/>
+      <rect class="ov-pill stage" x="1320" y="540" width="72" height="24" rx="5"/><text x="1356" y="557" class="ov-pill-text small">before</text>
+      <rect class="ov-pill engine" x="1398" y="540" width="84" height="24" rx="5"/><text x="1440" y="557" class="ov-pill-text small">engine</text>
+      <rect class="ov-pill stage" x="1488" y="540" width="72" height="24" rx="5"/><text x="1524" y="557" class="ov-pill-text small">after</text>
+    </g>
+    <text x="1440" y="598" class="ov-pill-text">…</text>
+    <text x="1440" y="630" class="ov-note">before_inference · the engine · after_inference</text>
     <text x="1440" y="668" class="ov-note">spin, backoff, or blocking</text>
   </g>
   <g class="ov-col fragment" data-fragment-index="2">
@@ -117,9 +130,9 @@ Note:
     <rect class="ov-slot" x="1112" y="649" width="106" height="30" rx="5"/>
     <path class="ov-flow strong" d="M1014 461 H1060 V440 H1100" marker-end="url(#ov-arrow)"/>
     <path class="ov-flow strong" d="M1100 608 H1060 V621 H1014" marker-end="url(#ov-arrow)"/>
-    <line class="ov-flow strong" x1="1218" y1="440" x2="1330" y2="440" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
-    <line class="ov-flow strong" x1="1218" y1="496" x2="1330" y2="496" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
-    <line class="ov-flow strong" x1="1218" y1="552" x2="1330" y2="552" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
+    <line class="ov-flow strong" x1="1218" y1="440" x2="1312" y2="440" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
+    <line class="ov-flow strong" x1="1218" y1="496" x2="1312" y2="496" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
+    <line class="ov-flow strong" x1="1218" y1="552" x2="1312" y2="552" marker-end="url(#ov-arrow)" marker-start="url(#ov-arrow)"/>
   </g>
 </svg>
 
@@ -129,7 +142,7 @@ Note:
     - The handler: the public surface. Every entry is a C function with a thread tag; create and prepare on the main thread, process nonblocking on the audio thread.
     - The session, private: at create the plans (one per engine and provider), the state pairs; at prepare the latency, the rings and slots, the warm-up that measures the budget.
     - In process: ring in, the stage's pre_process forms the model tensor, a stamp orders it, a slot carries it to a pool thread. Back the same way: next stamp, post_process, ring out.
-    - Slots are preallocated at prepare, two per inference in flight. The audio thread claims a free one and leaves; a pool thread takes it from the queue.
+    - Slots are preallocated at prepare, two per inference in flight. The audio thread claims a free one and leaves; a pool thread takes it from the queue, runs before_inference, the engine, after_inference on it, and hands it back.
     - Nothing on the audio side allocates, locks or waits. That was steps 5 to 7.
 
 ---

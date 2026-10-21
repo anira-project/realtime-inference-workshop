@@ -215,10 +215,12 @@ html.tanh .pitch-engines .card-icon {
   margin: 0 auto var(--space-2);
 }
 
+/* Two by two, so the row stays as narrow as the engines above it */
 html.tanh .pitch-hosts {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto;
   justify-content: center;
-  gap: var(--space-4);
+  gap: var(--space-3) var(--space-4);
 }
 
 html.tanh .pitch-hosts span {
@@ -256,6 +258,13 @@ html.tanh .reveal .pitch-engines img {
 html.tanh .reveal .pitch figcaption {
   font-size: 0.5em;
   color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .pitch figcaption small {
+  display: block;
+  font-family: var(--fs-code-font);
+  font-size: 0.8em;
+  color: var(--fs-text-subtle-color);
 }
 
 /* Three devices drawn in lines, the platforms on their screens */
@@ -388,6 +397,55 @@ html.tanh[data-theme="dark"] .reveal .pitch-engines img,
 html.tanh[data-theme="dark"] .reveal .device-screen img,
 html.tanh[data-theme="dark"] .reveal .pitch-mark img {
   filter: invert(1);
+}
+
+/*********************************************
+ * In production: one card per shipping product
+ *********************************************/
+
+html.tanh .cards.shipped {
+  align-items: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+html.tanh .reveal .cards.shipped figure {
+  flex: 1;
+  margin: 0;
+}
+
+/* The products stand free, bottom-aligned, each in its own shape */
+html.tanh .card-photo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 380px;
+}
+
+html.tanh .reveal .card-photo img {
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  border-radius: var(--radius-main);
+  box-shadow: 0 var(--space-2) var(--space-6) var(--fs-shadow-color-light);
+}
+
+html.tanh .cards.shipped figcaption {
+  margin-top: var(--space-5);
+  font-family: var(--fs-heading-font);
+  font-size: 0.85em;
+  font-weight: 600;
+  text-align: center;
+  color: var(--fs-heading-color);
+}
+
+html.tanh .card-company {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: 0.55em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
 }
 
 /*********************************************

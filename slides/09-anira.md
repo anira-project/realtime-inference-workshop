@@ -66,13 +66,14 @@ Note:
         <figure class="device desktop"><div class="device-screen"><img src="assets/images/platforms/apple.svg" alt="macOS"><img src="assets/images/platforms/windows.svg" alt="Windows"><img src="assets/images/platforms/linux.svg" alt="Linux"></div><figcaption>Desktop</figcaption></figure>
         <figure class="device phone"><div class="device-screen"><img src="assets/images/platforms/ios.svg" alt="iOS"><img src="assets/images/platforms/android.svg" alt="Android"></div><figcaption>Mobile</figcaption></figure>
         <figure class="device browser"><div class="device-screen"><img src="assets/images/platforms/webassembly.svg" alt="WebAssembly"></div><figcaption>Web</figcaption></figure>
-        <figure class="device board"><div class="device-screen"><span>Bela</span></div><figcaption>Embedded</figcaption></figure>
+        <figure class="device board"><div class="device-screen"><span>Bela</span></div><figcaption>Embedded<small>ARMv7 · ARM64</small></figcaption></figure>
       </div>
     </div>
     <div class="pitch-row fragment">
       <div class="pitch-sublabel">Hosts</div>
       <div class="pitch-hosts">
         <span>{{ICON:plug}}Audio plugins</span>
+        <span>{{ICON:slides}}Standalone apps</span>
         <span>{{ICON:wave}}<code>anira~</code> in Max/MSP</span>
         <span>{{ICON:camera}}Real-time video</span>
       </div>
@@ -84,7 +85,26 @@ Note:
     - What part 1 built by hand is the inside of anira. You only say what the model is and what the host promises; the rest is the library's.
     - Audio plugins first, and real-time video since the async contract: step 11 runs hand tracking on camera frames.
     - Since v3 the library is one versioned C ABI. The C++ API and the TypeScript package on npm are generated from it, so every language sees the same library.
-    - Click: every engine, or your own. Click: desktop, mobile, the browser, and embedded boards like Bela. Click: in a plugin, as the anira~ external in Max/MSP, or on camera frames. Solve it once.
+    - Click: every engine, or your own. Click: desktop, mobile, the browser, and embedded boards like Bela, on ARMv7 and ARM64. Click: in a plugin or a standalone app, as the anira~ external in Max/MSP, or on camera frames. Solve it once.
+
+---
+
+<div class="tag">In production</div>
+
+## Battle-tested in the industry.<br><span class="then">Two plugins on sale, one hardware project.</span>
+
+<div class="cards shipped">
+  <figure class="fragment"><div class="card-photo"><img src="assets/images/products/drum-gate-2.jpg" alt=""></div><figcaption><span class="card-company">Sonnox · Plugin</span>Oxford Drum Gate 2</figcaption></figure>
+  <figure class="fragment"><div class="card-photo"><img src="assets/images/products/subculture.jpg" alt=""></div><figcaption><span class="card-company">Baby Audio · Plugin</span>SubCulture</figcaption></figure>
+  <figure class="fragment"><div class="card-photo"><img src="assets/images/products/lydia.jpg" alt=""></div><figcaption><span class="card-company">Neutone · Embedded</span>Project LYDIA</figcaption></figure>
+</div>
+
+Note:
+    - Sonnox Oxford Drum Gate 2 (February 2026): the gate classifies drum hits by timbre, not level. Its models run through anira.
+    - Baby Audio SubCulture (July 2026): pitch-tracking bass enhancer; its models run through anira.
+    - Project LYDIA by Neutone: Neutone's Morpho on a Raspberry Pi 5, the embedded case from the slide before. A hardware project, not a product on sale yet.
+    - Two commercial plugins on every desktop host, and a pedal on ARM: the same library in all three.
+    - Images: the Sonnox hero shot and the Baby Audio screenshot from their product pages, the pedal from Neutone.
 
 ---
 

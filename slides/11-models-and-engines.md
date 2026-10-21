@@ -121,8 +121,7 @@ Note:
     "axes": [["batch",1],["channel",1],["time",2048]] },
   { "name": "state_in",  "role": "state",    "axes": [["batch",1],["any",63488]],
     "state_source": "state_out" }
-],
-"outputs": [
+], "outputs": [
   { "name": "audio_out", "role": "streamed", …, "latency": 2224 },
   { "name": "state_out", "role": "state",    "axes": [["batch",1],["any",63488]] }
 ]

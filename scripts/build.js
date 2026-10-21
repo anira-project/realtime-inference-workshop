@@ -65,7 +65,9 @@ async function generateHTML(isDev = false) {
     content = renderIntegration(content, integrationTemplate);
     content = renderStreams(renderIcons(await renderWaveforms(content)));
     content = await renderQrCodes(content);
-    slidesContent += `<section id="${chapter.id}">
+    // data-part lets the chapter overview (Esc) group the chapters by part
+    const partAttribute = chapter.part ? ` data-part="${chapter.part}"` : '';
+    slidesContent += `<section id="${chapter.id}"${partAttribute}>
       ${await buildSlidesContent([{ ...chapter, content }])}</section>
       `;
   }

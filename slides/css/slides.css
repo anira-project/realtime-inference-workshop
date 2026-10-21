@@ -265,7 +265,7 @@
   opacity: 0.8;
 }
 
-.theme-switch {
+.header-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -279,11 +279,11 @@
   cursor: pointer;
 }
 
-.theme-switch:hover {
+.header-button:hover {
   opacity: 1;
 }
 
-.theme-switch svg {
+.header-button svg {
   width: 70%;
   height: 70%;
 }
@@ -518,6 +518,8 @@
   gap: 24px;
   padding: 24px;
   box-sizing: border-box;
+  /* Chapters and slides scroll together when they do not fit */
+  overflow-y: auto;
   background: var(--fs-background-color);
 }
 
@@ -528,16 +530,54 @@
 .chapter-overview-chapters {
   display: flex;
   flex: none;
+  flex-direction: column;
   gap: 16px;
   /* Room for the outline of the current chapter */
   padding: 6px 6px 12px 6px;
-  overflow-x: auto;
   border-bottom: 1px solid var(--fs-border);
+}
+
+.chapter-overview-section {
+  flex: none;
+}
+
+.chapter-overview-heading {
+  flex: none;
+  margin: 0 6px 8px 6px;
+  font-family: var(--fs-heading-font);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fs-heading-color);
+}
+
+.chapter-overview-heading-chapter {
+  font-weight: 400;
+  color: var(--fs-text-muted-color);
+}
+
+.chapter-overview-heading-chapter::before {
+  content: " · ";
+}
+
+.chapter-overview-part-label {
+  margin-bottom: 10px;
+  font-family: var(--fs-heading-font);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-muted-color);
+}
+
+/* Every chapter of the part visible at once, in as many rows as it takes */
+.chapter-overview-part-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 /* Always visible, macOS hides overlay scrollbars otherwise */
 .chapter-overview ::-webkit-scrollbar {
-  height: 8px;
   width: 8px;
 }
 
@@ -570,9 +610,7 @@
 }
 
 .chapter-overview-slides {
-  flex: 1;
   padding: 6px;
-  overflow-y: auto;
 }
 
 .chapter-overview-list {

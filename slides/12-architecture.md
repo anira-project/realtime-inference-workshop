@@ -209,6 +209,8 @@ Note:
 
 ## Three places, three calls.
 
+<!-- .slide: class="tight-code" -->
+
 **`prepareToPlay`** — geometry into the contract
 
 ```cpp

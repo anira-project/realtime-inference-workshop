@@ -204,6 +204,12 @@ html.tanh .reveal .slides section > p {
   margin: var(--space-4) 0;
 }
 
+/* Labelled code blocks, one after another: each label sits with its code */
+html.tanh .reveal .slides section.tight-code > p,
+html.tanh .reveal .tight-code pre {
+  margin: var(--space-2) 0;
+}
+
 html.tanh .reveal pre code {
   border: var(--hairline) solid var(--fs-border);
   border-radius: var(--radius-main);
@@ -518,7 +524,7 @@ html.tanh .agenda-break {
   border-width: var(--hairline);
 }
 
-html.tanh .theme-switch {
+html.tanh .header-button {
   transition: background-color var(--duration) var(--ease);
 }
 

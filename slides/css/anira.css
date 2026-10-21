@@ -1,44 +1,393 @@
 /*********************************************
- * Part 2, anira: the visuals of the talk chapters (the hand-over list, the
+ * Part 2, anira: the visuals of the talk chapters (the hand-over cards, the
  * crowded host, the history). Loaded after exercise.css and uses its tokens.
  *********************************************/
 
 /*********************************************
- * Hand-over: what part 1 built, and what it is called in anira
+ * Hand-over: what real-time inference needs, solved the simple way in part 1;
+ * one click checks every card and names anira below
  *********************************************/
 
-html.tanh .handoff {
+html.tanh .needs {
   display: grid;
-  grid-template-columns: 110px 1fr 1.4fr;
-  column-gap: var(--space-5);
-  row-gap: var(--space-2);
-  align-items: baseline;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
   margin-top: var(--space-6);
-  font-size: 0.62em;
   text-align: left;
 }
 
-html.tanh .handoff-head {
-  padding-bottom: var(--space-2);
-  border-bottom: var(--hairline) solid var(--fs-border-strong);
+html.tanh .need {
+  position: relative;
+  padding: var(--space-5);
+  transition: background-color var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+
+html.tanh .need .card-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .need .card-text {
+  font-size: 0.66em;
+}
+
+/* The check in the corner of every card, once anira is named */
+html.tanh .need::after {
+  content: '✓';
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-5);
+  font-size: 0.9em;
+  font-weight: 700;
+  color: var(--mark-check);
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
+}
+
+html.tanh .needs:has(.needs-anira.visible) .need {
+  border-color: transparent;
+  background: var(--tint-check);
+}
+
+html.tanh .needs:has(.needs-anira.visible) .need::after {
+  opacity: 1;
+}
+
+html.tanh .needs-anira {
+  grid-column: 1 / -1;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-main);
+  background: var(--wash);
+  font-size: 0.7em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .needs-anira span {
+  margin-right: var(--space-2);
   font-family: var(--fs-heading-font);
-  font-size: 0.8em;
   font-weight: 600;
+  font-size: 1.3em;
+  color: var(--fs-heading-color);
+}
+
+/*********************************************
+ * What anira is: two files in, anira in the middle, every engine and
+ * device out
+ *********************************************/
+
+html.tanh .pitch {
+  display: grid;
+  /* The arrows take what is left, so anira sits midway between both sides */
+  grid-template-columns: auto 1fr auto 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-5);
+  margin-top: var(--space-7);
+  text-align: center;
+}
+
+/* The three labels on one line above their columns */
+html.tanh .pitch-label {
+  grid-row: 1;
+  font-family: var(--fs-heading-font);
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--fs-heading-color);
+}
+
+html.tanh .pitch-label.config { grid-column: 1; }
+html.tanh .pitch-label.hub { grid-column: 3; }
+html.tanh .pitch-label.targets { grid-column: 5; }
+
+html.tanh .pitch-files { grid-row: 2; grid-column: 1; }
+html.tanh .pitch-arrow.first { grid-row: 2; grid-column: 2; }
+html.tanh .pitch-hub { grid-row: 2; grid-column: 3; }
+html.tanh .pitch-arrow.second { grid-row: 2; grid-column: 4; }
+html.tanh .pitch-targets { grid-row: 2; grid-column: 5; }
+
+html.tanh .pitch-files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+html.tanh .pitch-arrow {
+  font-size: 1.6em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pitch-mark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 240px;
+  height: 240px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--tint-exercise);
+}
+
+html.tanh .reveal .pitch-mark img {
+  width: 150px;
+  height: 150px;
+  margin: 0;
+  object-fit: contain;
+}
+
+/* A C++ library: the hexagon as a badge on the mark */
+html.tanh .pitch-mark .cpp-icon {
+  position: absolute;
+  right: -6px;
+  bottom: 4px;
+  width: 64px;
+  height: 72px;
+}
+
+html.tanh .pitch-does {
+  margin-top: var(--space-4);
+  font-size: 0.5em;
+  line-height: 1.4;
   color: var(--fs-text-muted-color);
 }
 
-html.tanh .handoff-step {
+/* What every binding is generated from */
+html.tanh .pitch-abi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
   font-family: var(--fs-code-font);
-  font-size: 0.8em;
+  font-size: 0.5em;
+}
+
+html.tanh .pitch-abi-bindings {
+  display: flex;
+  gap: var(--space-2);
+}
+
+html.tanh .pitch-abi span {
+  padding: var(--space-1) var(--space-3);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-small);
+}
+
+html.tanh .pitch-abi span.core {
+  border-color: transparent;
+  background: var(--tint-exercise);
+}
+
+html.tanh .pitch-abi span.arrow {
+  padding: 0;
+  border: none;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pitch-targets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+html.tanh .pitch-sublabel {
+  margin-bottom: var(--space-3);
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pitch-engines {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-7);
+}
+
+html.tanh .pitch-engines .card-icon {
+  display: block;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto var(--space-2);
+}
+
+html.tanh .pitch-hosts {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+html.tanh .pitch-hosts span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-main);
+  font-size: 0.5em;
+}
+
+html.tanh .pitch-hosts .card-icon {
+  width: 28px;
+  height: 28px;
   color: var(--fs-text-muted-color);
 }
 
-html.tanh .handoff-anira {
-  color: var(--ink);
+html.tanh .reveal .pitch-hosts code {
+  padding: 0;
+  background: none;
 }
 
-html.tanh .handoff-anira code {
-  font-size: 0.95em;
+html.tanh .reveal .pitch figure {
+  margin: 0;
+}
+
+html.tanh .reveal .pitch-engines img {
+  display: block;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto var(--space-2);
+}
+
+html.tanh .reveal .pitch figcaption {
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+/* Three devices drawn in lines, the platforms on their screens */
+html.tanh .pitch-devices {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: var(--space-7);
+}
+
+html.tanh .device-screen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  margin: 0 auto var(--space-3);
+  border: 4px solid var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .device-screen img {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+}
+
+html.tanh .device.desktop .device-screen {
+  width: 230px;
+  height: 140px;
+  margin-bottom: calc(var(--space-3) + 30px);
+  border-radius: 10px;
+}
+
+/* The stand: a neck and a foot */
+html.tanh .device.desktop .device-screen::before,
+html.tanh .device.desktop .device-screen::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--fs-text-muted-color);
+}
+
+html.tanh .device.desktop .device-screen::before {
+  bottom: -26px;
+  width: 8px;
+  height: 22px;
+}
+
+html.tanh .device.desktop .device-screen::after {
+  bottom: -32px;
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+html.tanh .device.phone .device-screen {
+  flex-direction: column;
+  width: 96px;
+  height: 170px;
+  border-radius: 18px;
+}
+
+/* The earpiece */
+html.tanh .device.phone .device-screen::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 30px;
+  height: 5px;
+  border-radius: 3px;
+  transform: translateX(-50%);
+  background: var(--fs-text-muted-color);
+}
+
+html.tanh .device.browser .device-screen {
+  width: 210px;
+  height: 140px;
+  padding-top: 26px;
+  border-radius: 8px;
+}
+
+/* The title bar, with its three dots */
+html.tanh .device.browser .device-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  border-bottom: 4px solid var(--fs-text-muted-color);
+  background:
+    radial-gradient(circle, var(--fs-text-muted-color) 4px, transparent 5px) 8px 50% / 18px 18px no-repeat,
+    radial-gradient(circle, var(--fs-text-muted-color) 4px, transparent 5px) 28px 50% / 18px 18px no-repeat,
+    radial-gradient(circle, var(--fs-text-muted-color) 4px, transparent 5px) 48px 50% / 18px 18px no-repeat;
+}
+
+/* A board with a pin header along each long side, its name on the silicon */
+html.tanh .device.board .device-screen {
+  width: 180px;
+  height: 120px;
+  border-radius: 6px;
+}
+
+html.tanh .device.board .device-screen::before,
+html.tanh .device.board .device-screen::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  height: 8px;
+  background: radial-gradient(circle, var(--fs-text-muted-color) 3px, transparent 3.5px) 0 50% / 14px 8px repeat-x;
+}
+
+html.tanh .device.board .device-screen::before { top: 8px; }
+html.tanh .device.board .device-screen::after { bottom: 8px; }
+
+html.tanh .device.board .device-screen span {
+  padding: var(--space-1) var(--space-3);
+  border: 3px solid var(--fs-text-muted-color);
+  border-radius: 4px;
+  font-family: var(--fs-heading-font);
+  font-size: 0.55em;
+  font-weight: 700;
+}
+
+html.tanh[data-theme="dark"] .reveal .pitch-engines img,
+html.tanh[data-theme="dark"] .reveal .device-screen img,
+html.tanh[data-theme="dark"] .reveal .pitch-mark img {
+  filter: invert(1);
 }
 
 /*********************************************

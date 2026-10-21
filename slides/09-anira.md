@@ -14,30 +14,106 @@ Note:
 
 <div class="tag">Part 1</div>
 
-## Everything we built<br><span class="then">has a name in anira.</span>
+## Six things real-time inference needs.<br><span class="then">We solved each one, the simple way.</span>
 
-<div class="handoff">
-  <div class="handoff-head"></div>
-  <div class="handoff-head">by hand</div>
-  <div class="handoff-head">anira</div>
-  <div class="handoff-step">step 2</div><div class="handoff-ours">ring buffers</div><div class="handoff-anira fragment">a ring per streamed tensor</div>
-  <div class="handoff-step">step 3</div><div class="handoff-ours">a benchmark</div><div class="handoff-anira fragment">a budget, measured and checked</div>
-  <div class="handoff-step">step 4</div><div class="handoff-ours">an engine choice</div><div class="handoff-anira fragment">a plan per engine</div>
-  <div class="handoff-step">step 5</div><div class="handoff-ours">RTSan</div><div class="handoff-anira fragment"><code>nonblocking</code> entries, RTSan in CI</div>
-  <div class="handoff-step">step 6</div><div class="handoff-ours">a worker, two queues</div><div class="handoff-anira fragment">one pool per process</div>
-  <div class="handoff-step">step 7</div><div class="handoff-ours">a prefill rule</div><div class="handoff-anira fragment">an <code>on_miss</code> policy</div>
-  <div class="handoff-step">step 7</div><div class="handoff-ours">a latency calculation</div><div class="handoff-anira fragment"><code>get_latency()</code>, closed form</div>
-  <div class="handoff-step">step 7</div><div class="handoff-ours">a dry path</div><div class="handoff-anira fragment">still yours, one number to delay it by</div>
-  <div class="handoff-step">step 8</div><div class="handoff-ours">one engine per channel</div><div class="handoff-anira fragment">one handler per stream, one pool underneath</div>
+<div class="needs">
+  <div class="card need">{{ICON:model}}<div class="card-title">Inference</div><div class="card-text">steps 1, 2, 4 · one engine, one block size</div></div>
+  <div class="card need">{{ICON:gauge}}<div class="card-title">Benchmarking</div><div class="card-text">step 3 · one benchmark, on our machine</div></div>
+  <div class="card need">{{ICON:shield}}<div class="card-title">Real-time safety</div><div class="card-text">step 5 · RTSan, run once</div></div>
+  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 6, 8 · a worker per channel</div></div>
+  <div class="card need">{{ICON:clock}}<div class="card-title">Minimal latency</div><div class="card-text">step 7 · a prefill, counted by hand</div></div>
+  <div class="card need">{{ICON:flag}}<div class="card-title">Real-time guarantees</div><div class="card-text">steps 3, 7 · hoping the budget holds</div></div>
+  <div class="needs-anira fragment"><span>anira</span> has an answer to all six, built for production: from one plugin instance to many.</div>
 </div>
 
 Note:
-    - The list from the end of step 8, one more time. Reveal the right column row by row.
-    - Every row is one of the concepts in the next two chapters. The dry path is the one thing that stays in your code: anira reports the number, the mix is the plugin's.
+    - What we did in part 1, as six needs. Every one works, and every one is the simple version: one engine, one machine, one instance.
+    - Click once: anira covers all six, from years of plugins in production. Not how yet; the next two chapters open them one by one.
+    - The dry path is the one thing that stays in your code: anira reports the number, the mix is the plugin's.
 
 ---
 
-<div class="tag">Motivation</div>
+<div class="tag">What anira is</div>
+
+## A C++ library for real-time inference.<br><span class="then">Configure once, run everywhere.</span>
+
+<div class="pitch">
+  <div class="pitch-label config">You configure</div>
+  <div class="pitch-label hub">Real-time</div>
+  <div class="pitch-label targets">Everywhere</div>
+  <div class="pitch-files">{{FILE:model.json}}{{FILE:contract.json}}</div>
+  <div class="pitch-arrow first">→</div>
+  <div class="pitch-hub">
+    <div class="pitch-mark"><img src="assets/images/logos/anira-mark.png" alt="anira">{{ICON:cpp}}</div>
+    <div class="pitch-does">threads · buffers · latency · safety</div>
+    <div class="pitch-abi"><span class="core">one C ABI</span><span class="arrow">↓</span><div class="pitch-abi-bindings"><span>C++</span><span>TypeScript</span></div></div>
+  </div>
+  <div class="pitch-arrow second">→</div>
+  <div class="pitch-targets">
+    <div class="pitch-row fragment">
+      <div class="pitch-sublabel">Engines</div>
+      <div class="pitch-engines">
+        <figure><img src="assets/images/engines/pytorch.svg" alt=""><figcaption>LibTorch</figcaption></figure>
+        <figure><img src="assets/images/engines/onnx.svg" alt=""><figcaption>ONNX Runtime</figcaption></figure>
+        <figure><img src="assets/images/engines/tensorflow.svg" alt=""><figcaption>LiteRT</figcaption></figure>
+        <figure><img src="assets/images/engines/pytorch.svg" alt=""><figcaption>ExecuTorch</figcaption></figure>
+        <figure>{{ICON:code}}<figcaption>Custom</figcaption></figure>
+      </div>
+    </div>
+    <div class="pitch-row fragment">
+      <div class="pitch-sublabel">Devices</div>
+      <div class="pitch-devices">
+        <figure class="device desktop"><div class="device-screen"><img src="assets/images/platforms/apple.svg" alt="macOS"><img src="assets/images/platforms/windows.svg" alt="Windows"><img src="assets/images/platforms/linux.svg" alt="Linux"></div><figcaption>Desktop</figcaption></figure>
+        <figure class="device phone"><div class="device-screen"><img src="assets/images/platforms/ios.svg" alt="iOS"><img src="assets/images/platforms/android.svg" alt="Android"></div><figcaption>Mobile</figcaption></figure>
+        <figure class="device browser"><div class="device-screen"><img src="assets/images/platforms/webassembly.svg" alt="WebAssembly"></div><figcaption>Web</figcaption></figure>
+        <figure class="device board"><div class="device-screen"><span>Bela</span></div><figcaption>Embedded</figcaption></figure>
+      </div>
+    </div>
+    <div class="pitch-row fragment">
+      <div class="pitch-sublabel">Hosts</div>
+      <div class="pitch-hosts">
+        <span>{{ICON:plug}}Audio plugins</span>
+        <span>{{ICON:wave}}<code>anira~</code> in Max/MSP</span>
+        <span>{{ICON:camera}}Real-time video</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+Note:
+    - What part 1 built by hand is the inside of anira. You only say what the model is and what the host promises; the rest is the library's.
+    - Audio plugins first, and real-time video since the async contract: step 11 runs hand tracking on camera frames.
+    - Since v3 the library is one versioned C ABI. The C++ API and the TypeScript package on npm are generated from it, so every language sees the same library.
+    - Click: every engine, or your own. Click: desktop, mobile, the browser, and embedded boards like Bela. Click: in a plugin, as the anira~ external in Max/MSP, or on camera frames. Solve it once.
+
+---
+
+<div class="tag">How you use it</div>
+
+## Three configs say what, how, and with what.<br><span class="then">The handler runs it.</span>
+
+<div class="cards">
+  <div class="card">{{ICON:model}}<div class="card-title">ModelConfig</div><div class="card-text">what: the files, every tensor, its role</div></div>
+  <div class="card-arrow">→</div>
+  <div class="card">{{ICON:sliders}}<div class="card-title">Contract</div><div class="card-text">how: <em>Hard</em> for a stream, <em>Async</em> for jobs</div></div>
+  <div class="card-arrow">→</div>
+  <div class="card">{{ICON:chip}}<div class="card-title">ContextConfig</div><div class="card-text">with what: threads, engines, log</div></div>
+  <div class="card-arrow">→</div>
+  <div class="card accent">{{ICON:shield}}<div class="card-title">Handler</div><div class="card-text"><code>prepare</code> · <code>process</code> · <code>get_latency</code></div></div>
+</div>
+
+<div class="cards-note">Two JSON files and three calls. The rest is the library's. Today: v3.0.0-beta, pinned by CMake.</div>
+
+Note:
+    - ModelConfig: which files, which engines may run them, every tensor with a name and a role (streamed, static, state).
+    - Contract: what the host promises and what it gets. Hard: a block size range, a time budget, what happens on a miss; the latency follows from it. Async: a job with a deadline, for things like a camera frame. Everything in the hands-on is Hard, except the hand tracking in step 11.
+    - Version: the workshop pins the v3 beta tag; CMake fetches it with ONNX Runtime built in.
+    - ContextConfig: the process-wide part, threads and enabled engines. One per process, like the pool.
+    - Handler: the three calls from step 8, prepareToPlay, processBlock and setLatencySamples, one each.
+
+---
+
+<div class="tag">Why anira</div>
 
 ## One plugin, two threads.<br><span class="then">Ten plugins, twenty threads, eight cores.</span>
 
@@ -63,7 +139,7 @@ Note:
 </div>
 
 Note:
-    - Step 8 ended here: one engine and one worker per channel, per instance. The host does not know, and keeps adding instances.
+    - Why it exists at all. Step 8 ended here: one engine and one worker per channel, per instance. The host does not know, and keeps adding instances.
     - Real-time threads that outnumber cores take turns. A worker that is not scheduled misses its block, and the miss lands in someone else's plugin.
     - This is the problem anira was written for. Everything else followed from it.
 
@@ -90,31 +166,6 @@ Note:
     - v1: anira::Context, one pool shared by every handler; multichannel. v2: arbitrary tensors, non-audio inputs and outputs, different rates in and out.
     - 2026: web (WASM), Android and iOS, LiteRT and ExecuTorch, generators and analysers, a closed-form latency. Then v3: a versioned C ABI, so every host and language sees the same library.
     - Since 2026 funded by the BMFTR through the Prototype Fund; Lina joined the team.
-
----
-
-<div class="tag">What anira is</div>
-
-## Three configs say what, how, and with what.<br><span class="then">The handler runs it.</span>
-
-<div class="cards">
-  <div class="card">{{ICON:model}}<div class="card-title">ModelConfig</div><div class="card-text">what: the files, every tensor, its role</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:sliders}}<div class="card-title">Contract</div><div class="card-text">how: <em>Hard</em> for a stream, <em>Async</em> for jobs</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:chip}}<div class="card-title">ContextConfig</div><div class="card-text">with what: threads, engines, log</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card accent">{{ICON:shield}}<div class="card-title">Handler</div><div class="card-text"><code>prepare</code> · <code>process</code> · <code>get_latency</code></div></div>
-</div>
-
-<div class="cards-note">Two JSON files and three calls. The rest is the library's. Today: v3.0.0-beta, pinned by CMake.</div>
-
-Note:
-    - ModelConfig: which files, which engines may run them, every tensor with a name and a role (streamed, static, state).
-    - Contract: what the host promises and what it gets. Hard: a block size range, a time budget, what happens on a miss; the latency follows from it. Async: a job with a deadline, for things like a camera frame. Everything in the hands-on is Hard, except the hand tracking in step 11.
-    - Version: the workshop pins the v3 beta tag; CMake fetches it with ONNX Runtime built in.
-    - ContextConfig: the process-wide part, threads and enabled engines. One per process, like the pool.
-    - Handler: the three calls from step 8, prepareToPlay, processBlock and setLatencySamples, one each.
 
 ---
 

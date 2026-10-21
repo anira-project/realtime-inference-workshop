@@ -243,7 +243,8 @@
 
 .header-logo-box {
   position: absolute;
-  z-index: 1001;
+  /* Above the chapter overview too, so its buttons stay at hand there */
+  z-index: 2001;
   right: 0;
   top: -0.5vw;
   display: flex;
@@ -286,6 +287,16 @@
 .header-button svg {
   width: 70%;
   height: 70%;
+}
+
+/* The overview button shows where it leads: the overview, or back to a slide */
+.icon-slide,
+.overview-open .icon-overview {
+  display: none;
+}
+
+.overview-open .icon-slide {
+  display: block;
 }
 
 .slide-footer {

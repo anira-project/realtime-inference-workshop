@@ -26,12 +26,14 @@ class ChapterOverview {
             this.build();
         }
         this.element.classList.add('open');
+        document.documentElement.classList.add('overview-open');
         this.update();
     }
 
     close() {
         if (this.element !== null) {
             this.element.classList.remove('open');
+            document.documentElement.classList.remove('overview-open');
         }
     }
 

@@ -284,6 +284,19 @@ html.tanh .card.accent {
   color: var(--ink);
 }
 
+/* The file (or the calls) a card stands for, at its foot */
+html.tanh .card-file {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+  color: var(--ink);
+}
+
+html.tanh .card-file.optional {
+  color: var(--fs-text-muted-color);
+}
+
 html.tanh .card.accent .card-text {
   color: var(--fs-text-muted-color);
   opacity: 1;
@@ -1348,6 +1361,10 @@ html.tanh .statement-points > div {
   border-top: none;
   text-align: center;
   font-size: 0.9em;
+}
+
+html.tanh .statement-points.two {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 html.tanh .statement-points small {

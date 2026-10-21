@@ -958,6 +958,97 @@ html.tanh .combos-audio em {
 }
 
 /*********************************************
+ * Two kinds of thread: short real-time callbacks, long model runs
+ *********************************************/
+
+html.tanh .kinds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  margin-top: var(--space-7);
+  text-align: left;
+}
+
+html.tanh .kind {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-main);
+}
+
+html.tanh .kind.audio { background: var(--tint-exercise); }
+html.tanh .kind.inference { background: var(--tint-model); }
+
+html.tanh .kind-name {
+  font-family: var(--fs-heading-font);
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+html.tanh .kind-role {
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .kind-track {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 150px;
+  margin-top: var(--space-3);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--paper);
+}
+
+html.tanh .kind-row {
+  position: relative;
+  height: 30px;
+}
+
+/* Callbacks: a tick per deadline, a short bar of work at the start of each */
+html.tanh .kind-row.callbacks {
+  height: 56px;
+  background:
+    repeating-linear-gradient(90deg, var(--mark-exercise) 0 9px, transparent 9px 70px) left center / 100% 60% no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 68px, var(--fs-border-strong) 68px 70px);
+}
+
+html.tanh .kind-row i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--mark-model);
+}
+
+html.tanh .kind-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.45em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .kind-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+html.tanh .kind-rules b {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--paper);
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+}
+
+/*********************************************
  * History: a line of releases
  *********************************************/
 
@@ -1046,7 +1137,7 @@ html.tanh .history-ask {
 html.tanh .history-ask span {
   display: block;
   margin-top: var(--space-3);
-  font-family: var(--fs-body-font, inherit);
+  font-family: var(--fs-main-font);
   font-size: 0.6em;
   font-weight: 400;
   color: var(--fs-text-muted-color);
@@ -1120,11 +1211,50 @@ html.tanh .pool-queue span {
 }
 
 html.tanh .reveal section.present .pool-instance {
-  animation: crowd-in 0.4s var(--ease) calc(0.3s + var(--i) * 0.2s) both;
+  animation:
+    crowd-in 0.4s var(--ease) calc(0.3s + var(--i) * 0.2s) both,
+    pool-send 3.2s linear calc(2.6s + var(--i) * 0.64s) infinite;
+}
+
+/* A thread fills while it runs a model, then is free again; the four are
+   offset by a quarter cycle, so a free one is always there to take the next job */
+html.tanh .pool-thread {
+  background-image: linear-gradient(var(--mark-model), var(--mark-model));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
 }
 
 html.tanh .reveal section.present .pool-thread {
-  animation: crowd-in 0.4s var(--ease) calc(1.6s + var(--i) * 0.2s) both;
+  animation:
+    crowd-in 0.4s var(--ease) calc(1.6s + var(--i) * 0.2s) both,
+    pool-busy 3.2s linear calc(2.6s + var(--i) * 0.8s) infinite;
+}
+
+/* Jobs come and go in the queue, oldest first */
+html.tanh .reveal section.present .pool-queue .q-slot b {
+  animation: pool-job 3.2s linear infinite;
+}
+
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(1) b { animation-delay: 2.6s; }
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(2) b { animation-delay: 3.4s; }
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(3) b { animation-delay: 4.2s; }
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(4) b { animation-delay: 5.0s; }
+
+@keyframes pool-send {
+  0%, 12%, 100% { background-color: var(--wash); }
+  4% { background-color: var(--tint-exercise); }
+}
+
+@keyframes pool-busy {
+  0% { background-size: 0% 100%; }
+  55% { background-size: 100% 100%; }
+  56%, 100% { background-size: 0% 100%; }
+}
+
+@keyframes pool-job {
+  0% { opacity: 0; }
+  6%, 30% { opacity: 1; }
+  36%, 100% { opacity: 0; }
 }
 
 /*********************************************
@@ -1193,6 +1323,320 @@ html.tanh .wait-bar.none i { width: 10px; }
 
 /* A ratio: half the block */
 html.tanh .wait-bar.ratio i { width: 45%; background: var(--mark-model); }
+
+/* The pool's two policies: what each costs on the audio thread and on the pool */
+html.tanh .policies {
+  display: grid;
+  grid-template-columns: 260px 300px 1fr 1fr;
+  column-gap: var(--space-5);
+  row-gap: var(--space-5);
+  align-items: center;
+  margin-top: var(--space-7);
+  text-align: left;
+}
+
+html.tanh .policy-head {
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .policy-name {
+  font-size: 0.7em;
+}
+
+html.tanh .policies .wait-bar {
+  height: 36px;
+}
+
+html.tanh .policy-cell {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-small);
+  font-size: 0.6em;
+}
+
+html.tanh .policy-cell.ok { background: var(--tint-check); }
+html.tanh .policy-cell.warn { background: var(--tint-model); }
+
+html.tanh .policy-cell.ok::before { content: '✓  '; font-weight: 700; color: var(--mark-check); }
+html.tanh .policy-cell.warn::before { content: '!  '; font-weight: 700; color: var(--ink); }
+
+html.tanh .policy-advice {
+  margin-top: var(--space-7);
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+  text-align: left;
+}
+
+html.tanh .policy-advice span {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  color: var(--fs-heading-color);
+}
+
+/*********************************************
+ * Pipeline: audio in, a ring buffer, slots, the pool, a ring buffer, audio
+ * out; animated by js/pipeline.js. Simplified, not to scale.
+ *********************************************/
+
+html.tanh .pipeline {
+  display: grid;
+  grid-template-columns: 170px 140px 250px 120px 1fr 110px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-6);
+  align-items: center;
+  margin-top: var(--space-7);
+  text-align: left;
+  font-size: 0.55em;
+}
+
+html.tanh .pl-label {
+  margin-bottom: var(--space-2);
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pl-in { grid-row: 1; grid-column: 1; }
+html.tanh .pl-arrow.a1 { grid-row: 1; grid-column: 2; }
+html.tanh .pl-ring.in { grid-row: 1; grid-column: 3; }
+html.tanh .pl-arrow.a2 { grid-row: 1; grid-column: 4; }
+html.tanh .pl-slots { grid-row: 1 / 3; grid-column: 5; }
+html.tanh .pl-arrow.a3 { grid-row: 1 / 3; grid-column: 6; }
+html.tanh .pl-threads { grid-row: 1 / 3; grid-column: 7; }
+html.tanh .pl-out { grid-row: 2; grid-column: 1; }
+html.tanh .pl-arrow.a4 { grid-row: 2; grid-column: 2; }
+html.tanh .pl-ring.out { grid-row: 2; grid-column: 3; }
+html.tanh .pl-arrow.a5 { grid-row: 2; grid-column: 4; }
+
+/* An audio block: a waveform, lit when a callback moves it */
+html.tanh .pl-audio {
+  height: 80px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-main);
+  background: var(--wash);
+  transition: background-color 0.25s;
+}
+
+html.tanh .pl-wave {
+  width: 110px;
+  height: 40px;
+  fill: none;
+  stroke: var(--mark-exercise);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+html.tanh .pl-audio.on { background: var(--tint-exercise); }
+html.tanh .pl-wave .flat { display: none; stroke: var(--fs-border-strong); }
+html.tanh .pl-audio.silence .pl-wave .wave { display: none; }
+html.tanh .pl-audio.silence .pl-wave .flat { display: inline; }
+
+/* Ring buffers: segments that fill and empty */
+html.tanh .pl-circle svg {
+  display: block;
+  width: 230px;
+  height: 230px;
+}
+
+html.tanh .pl-seg {
+  fill: none;
+  stroke: var(--wash);
+  stroke-width: 26;
+  transition: stroke 0.25s;
+}
+
+html.tanh .pl-seg.full { stroke: var(--mark-exercise); }
+html.tanh .pl-ring.out .pl-seg.full { stroke: var(--mark-check); }
+
+/* Arrows: forward on top, back below */
+html.tanh .pl-arrow {
+  position: relative;
+  height: 2px;
+  background: var(--ink);
+  margin: 0 var(--space-2);
+}
+
+html.tanh .pl-arrow::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: -2px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 14px solid var(--ink);
+}
+
+html.tanh .pl-arrow.back::after {
+  right: auto;
+  left: -2px;
+  border-left: none;
+  border-right: 14px solid var(--ink);
+}
+
+html.tanh .pl-arrow.both::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: -2px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 14px solid var(--ink);
+}
+
+html.tanh .pl-arrow span {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--fs-code-font);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 0.25s;
+}
+
+html.tanh .pl-arrow span.on { background: var(--tint-exercise); }
+
+/* The labels of the arrows back sit under their line */
+html.tanh .pl-arrow.back span {
+  bottom: auto;
+  top: 12px;
+}
+
+/* The audio thread goes straight from the enqueue down to the dequeue */
+html.tanh .pl-down {
+  grid-row: 1 / 3;
+  grid-column: 4;
+  align-self: stretch;
+  position: relative;
+}
+
+html.tanh .pl-down span {
+  position: absolute;
+  left: 50%;
+  top: 27%;
+  bottom: 27%;
+  width: 0;
+  border-left: 2px solid var(--ink);
+  border-radius: 2px;
+}
+
+html.tanh .pl-down span::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: -9px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 14px solid var(--ink);
+}
+
+/* The allowed wait beside the way down: a dashed box as long as the ratio
+   allows, filled while the audio thread blocks */
+html.tanh .pl-wait {
+  position: absolute;
+  left: calc(50% + 14px);
+  top: 27%;
+  width: 20px;
+  height: calc(46% * var(--share));
+  border: 2px dashed var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+html.tanh .pl-wait-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  background: repeating-linear-gradient(135deg, var(--mark-model) 0 5px, var(--tint-model) 5px 10px);
+}
+
+html.tanh .pl-case {
+  margin-top: var(--space-4);
+  font-size: 0.6em;
+}
+
+html.tanh .pl-down span.on {
+  border-left-color: var(--mark-exercise);
+  box-shadow: -3px 0 0 var(--tint-exercise), 3px 0 0 var(--tint-exercise);
+}
+
+/* Slots: colour only */
+html.tanh .pl-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+html.tanh .pl-slot {
+  height: 56px;
+  border-radius: var(--radius-small);
+  transition: background-color 0.25s;
+}
+
+html.tanh .pl-slot.free { border: 2px dashed var(--fs-border); }
+html.tanh .pl-slot.queued { background: var(--tint-exercise); border: 2px solid var(--mark-exercise); }
+html.tanh .pl-slot.running { background: var(--mark-model); }
+html.tanh .pl-slot.done { background: var(--mark-check); }
+
+html.tanh .pl-legend {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .pl-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  border-radius: 3px;
+}
+
+html.tanh .pl-legend .queued::before { background: var(--tint-exercise); border: 2px solid var(--mark-exercise); }
+html.tanh .pl-legend .running::before { background: var(--mark-model); }
+html.tanh .pl-legend .done::before { background: var(--mark-check); }
+
+/* Threads: a bar that fills while the model runs */
+html.tanh .pl-thread {
+  position: relative;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--wash);
+  overflow: hidden;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+html.tanh .pl-thread span { position: relative; }
+
+html.tanh .pl-thread-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--mark-model);
+}
 
 /*********************************************
  * Three kinds of thread, and the calls on each
@@ -1329,9 +1773,9 @@ html.tanh .card-arrow.strike.visible { text-decoration: line-through; opacity: 0
 
 @media (prefers-reduced-motion: reduce) {
   html.tanh .reveal section.present .pool-instance,
-  html.tanh .reveal section.present .pool-thread {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0s !important;
+  html.tanh .reveal section.present .pool-thread,
+  html.tanh .reveal section.present .pool-queue .q-slot b {
+    animation: none !important;
   }
 }
 
@@ -1351,7 +1795,7 @@ html.tanh .st {
   width: 100%;
   height: auto;
   margin-top: var(--space-4);
-  font-family: var(--fs-body-font, inherit);
+  font-family: var(--fs-main-font);
 }
 
 html.tanh .ov { max-height: 720px; }

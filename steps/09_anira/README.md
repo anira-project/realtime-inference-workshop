@@ -53,7 +53,7 @@ Compare with [`solution/`](solution/) when you want to.
 
 ## Slides
 
-[`slides/13-anira-inference.md`](../../slides/13-anira-inference.md).
+[`slides/14-anira-inference.md`](../../slides/14-anira-inference.md).
 
 ## What's next
 

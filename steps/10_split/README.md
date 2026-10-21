@@ -50,7 +50,7 @@ Compare with [`solution/`](solution/) when you want to.
 
 ## Slides
 
-[`slides/14-split.md`](../../slides/14-split.md).
+[`slides/15-split.md`](../../slides/15-split.md).
 
 ## What's next
 

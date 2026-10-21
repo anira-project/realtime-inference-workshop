@@ -8,7 +8,7 @@ Replacing the hand-built parts
 
 Note:
     - Part 2. Everything in part 1 was built so that this part can name it.
-    - Talk first: what anira is, then the concepts one by one, then the architecture. Hands-on after that.
+    - This chapter: what anira is, who uses it, how it evolved, and what we look at next. How it works is the next chapter.
 
 ---
 
@@ -185,7 +185,7 @@ Note:
 </div>
 
 Note:
-    - IS² 2024: the static thread pool presented scientifically, as a paper; it won the Industry Award.
+    - IS² 2024: the static thread pool from the last slide, presented scientifically as a paper; it won the Industry Award.
 
 ---
 
@@ -251,26 +251,6 @@ Note:
 
 ---
 
-<div class="tag">History</div>
-
-## How anira evolved.<br><span class="then">From one thread per plugin to one C ABI.</span>
-
-<div class="history">
-  <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
-  <div class="history-item"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
-  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
-  <div class="history-item"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
-  <div class="history-item current"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
-  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
-  <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
-</div>
-
-Note:
-    - 2026, mobile: iOS and Android, the browser through WASM, LiteRT and ExecuTorch, generators and analysers, a closed-form latency (v2.1 to v2.3).
-    - Each of these added a special case to a design built for audio plugins on the desktop.
-
----
-
 <div class="tag">anira on the web</div>
 
 ## A multithreaded library in the browser.<br><span class="then">How we ported anira to WebAssembly.</span>
@@ -291,6 +271,26 @@ Note:
 Note:
     - TODO: dummy slide. Replace the QR target with the paper's URL and the title with the paper's title once it is out.
     - For anyone interested in how the thread pool and the real-time path work in a browser: the details are in the paper.
+
+---
+
+<div class="tag">History</div>
+
+## How anira evolved.<br><span class="then">From one thread per plugin to one C ABI.</span>
+
+<div class="history">
+  <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
+  <div class="history-item"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
+  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
+  <div class="history-item"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
+  <div class="history-item current"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
+  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
+  <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
+</div>
+
+Note:
+    - 2026, mobile: iOS and Android, the browser through WASM, LiteRT and ExecuTorch, generators and analysers, a closed-form latency (v2.1 to v2.3).
+    - Each of these added a special case to a design built for audio plugins on the desktop.
 
 ---
 
@@ -457,43 +457,3 @@ Note:
     - Click: for audio, the CPU paths are measured and meet real-time. The GPU paths are barely studied for real-time audio, where the transfer and the launch cost count against a block of a few milliseconds.
     - After the v3.0 release at the end of November we benchmark these combinations systematically; anira's benchmark tools and the plan candidates of v3 are built for exactly that sweep.
     - Click: anyone who has numbers for one of these paths, or a model that behaves differently, please talk to us. Same lesson as with the thread pool.
-
----
-
-<div class="tag">How you use it</div>
-
-## Three configs say what, how, and with what.<br><span class="then">The handler runs it.</span>
-
-<div class="cards">
-  <div class="card">{{ICON:model}}<div class="card-title">ModelConfig</div><div class="card-text">what: the files, every tensor, its role</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:sliders}}<div class="card-title">Contract</div><div class="card-text">how: <em>Hard</em> for a stream, <em>Async</em> for jobs</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:chip}}<div class="card-title">ContextConfig</div><div class="card-text">with what: threads, engines, log</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card accent">{{ICON:shield}}<div class="card-title">Handler</div><div class="card-text"><code>prepare</code> · <code>process</code> · <code>get_latency</code></div></div>
-</div>
-
-<div class="cards-note">Two JSON files and three calls. The rest is the library's. Today: a v3 pre-release, pinned by CMake. v3.0 ships at the end of November.</div>
-
-Note:
-    - ModelConfig: which files, which engines may run them, every tensor with a name and a role (streamed, static, state).
-    - Contract: what the host promises and what it gets. Hard: a block size range, a time budget, what happens on a miss; the latency follows from it. Async: a job with a deadline, for things like a camera frame. Everything in the hands-on is Hard, except the hand tracking in step 11.
-    - Version: the workshop pins a v3 pre-release commit (after v3.0.0-alpha.1); CMake fetches it with ONNX Runtime built in. The proper v3.0 release follows at the end of November; details may still move until then.
-    - ContextConfig: the process-wide part, threads and enabled engines. One per process, like the pool.
-    - Handler: the three calls from step 8, prepareToPlay, processBlock and setLatencySamples, one each.
-
----
-
-<div class="tag">Take away</div>
-
-## Three kinds of thread.<br><span class="then">Each does one thing.</span>
-
-<div class="statement-points">
-  <div>The main thread plans: configs, <code>prepare</code>, the latency</div>
-  <div>The audio thread moves samples: <code>process</code>, nothing else</div>
-  <div>The pool runs the models</div>
-</div>
-
-Note:
-    - That is the whole library in one sentence. The next two chapters go through the concepts behind it, each one starting from the step in part 1 that built it by hand.

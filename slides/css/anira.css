@@ -605,6 +605,10 @@ html.tanh .ov-ring {
 
 html.tanh .ov-threadrow rect { fill: var(--paper); stroke: var(--mark-model); stroke-width: 1.5; }
 
+html.tanh .ov-lens { fill: none; stroke: var(--ink); stroke-width: 2.5; }
+html.tanh .ov-lens-ray { stroke: var(--fs-text-muted-color); stroke-width: 1; stroke-dasharray: 4 4; }
+html.tanh .ov-lens-frame { fill: var(--paper); stroke: var(--fs-text-muted-color); stroke-width: 1; stroke-dasharray: 4 4; }
+
 html.tanh .ov-slot { fill: var(--paper); stroke: var(--fs-border-strong); }
 html.tanh .ov-slot.busy { fill: var(--tint-model); stroke: none; }
 

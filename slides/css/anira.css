@@ -1639,6 +1639,65 @@ html.tanh .pl-thread-bar {
 }
 
 /*********************************************
+ * A late block as zeros: a waveform with a gap, and the click at its edges
+ *********************************************/
+
+html.tanh .click {
+  margin-top: var(--space-7);
+}
+
+html.tanh .click-labels {
+  position: relative;
+  height: 1.6em;
+  font-size: 0.55em;
+}
+
+html.tanh .click-labels span {
+  position: absolute;
+  text-align: center;
+  white-space: nowrap;
+  font-family: var(--fs-code-font);
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .click-wave {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+html.tanh .click-gap { fill: var(--wash); }
+html.tanh .click-div { stroke: var(--fs-border); stroke-width: 1.5; stroke-dasharray: 4 6; }
+
+html.tanh .click-line {
+  fill: none;
+  stroke: var(--mark-exercise);
+  stroke-width: 3;
+  stroke-linejoin: miter;
+}
+
+/* The two jumps: straight down to zero, straight back up */
+html.tanh .click-jump {
+  stroke: var(--ink);
+  stroke-width: 7;
+  stroke-linecap: square;
+}
+
+html.tanh .click-note {
+  margin-top: var(--space-5);
+  font-size: 0.65em;
+}
+
+html.tanh .click-note b {
+  margin-right: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--fs-code-font);
+}
+
+/*********************************************
  * Three kinds of thread, and the calls on each
  *********************************************/
 
@@ -1935,3 +1994,37 @@ html.tanh .st-caption.left { text-anchor: start; }
 /* Reveal fades fragments; the SVG groups follow */
 html.tanh .ov g.fragment,
 html.tanh .st g.fragment { transition: opacity 0.4s var(--ease); }
+
+/*********************************************
+ * Part 1 recap and anira answer: a band across the top names each half of
+ * a pair, beige for how we did it, green for how anira does it
+ *********************************************/
+
+/* Above the content, so it takes no room from the slide */
+html.tanh .reveal .slides section.recap::before,
+html.tanh .reveal .slides section.answer::before {
+  position: absolute;
+  top: -56px;
+  left: 0;
+  right: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 6px solid;
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: left;
+}
+
+html.tanh .reveal .slides section.recap::before {
+  content: 'Recap · how we did it in part 1';
+  border-color: var(--mark-model);
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .slides section.answer::before {
+  content: 'Improvement · how anira does it';
+  border-color: var(--mark-check);
+  color: var(--fs-text-muted-color);
+}

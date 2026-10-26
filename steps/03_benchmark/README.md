@@ -1,6 +1,6 @@
 # Step 3: Benchmarking and the real-time budget
 
-**Goal:** measure how long one forward pass takes — mean, p95, p99, and the worst one.
+**Goal:** measure how long one forward pass takes — mean, the fastest and the slowest.
 
 **Problem it reveals:** the mean is comfortable and the worst case is not, and only the worst case decides whether you get a dropout.
 
@@ -24,7 +24,7 @@ At 44.1 kHz that is 1.45 ms for 64 samples, 11.6 ms for 512, 46.4 ms for 2048. T
 Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners.
 
 1. **Call the model inside the timed loop.** Only what stands in that loop is measured.
-2. **Implement `percentile()`.** Google Benchmark hands you one time per repetition; sort a copy and index into it.
+2. **Implement `fastest()` and `slowest()`.** Google Benchmark hands you one time per repetition; return the smallest and the largest of them. p95 and p99 are already computed for you by the given `percentile()`.
 3. **Fix the registration.** Left alone, Google Benchmark runs the body as often as it likes and reports the average — the one number that cannot show a worst case. One call per repetition, `k_repetitions` of them.
 
 Each TODO says so while it is still open, in the order above.
@@ -45,6 +45,7 @@ On an M-series laptop, Release build:
 forward_pass/iterations:1/repeats:200_mean         7.86 ms
 forward_pass/iterations:1/repeats:200_median       7.37 ms
 forward_pass/iterations:1/repeats:200_stddev       4.16 ms
+forward_pass/iterations:1/repeats:200_min          7.12 ms
 forward_pass/iterations:1/repeats:200_p95          8.15 ms
 forward_pass/iterations:1/repeats:200_p99          10.2 ms
 forward_pass/iterations:1/repeats:200_max          56.0 ms
@@ -52,13 +53,13 @@ forward_pass/iterations:1/repeats:200_max          56.0 ms
 
 Your numbers will differ. The shape is what matters: **the max is close to an order of magnitude above the median.** One call in two hundred took 56 ms, against a median of 7.4 ms — and with 2048-sample blocks the budget is 46.4 ms, so that one call misses the deadline.
 
-Run it a few times. The mean and median barely move; the max moves a lot.
+Run it a few times. The mean, median and min barely move; the max moves a lot.
 
 ## If you're stuck
 
 - **`ERROR OCCURRED: 'TODO 1: call the model inside the timed loop'`** — the loop body is still empty.
+- **`ERROR OCCURRED: 'TODO 2: return the fastest and the slowest time'`** — `fastest()` or `slowest()` does not return the smallest or largest entry yet.
 - **`ERROR OCCURRED: 'TODO 3: time one single call per repetition'`** — the registration still lets Google Benchmark choose, so every repetition is already an average.
-- **`TODO 2: implement percentile(), it still returns 0`**, and `p95`/`p99` read `0.000 ms` next to a mean of several milliseconds.
 - **Every number is suspiciously small** — a Debug build measures something else entirely. Use `-DCMAKE_BUILD_TYPE=Release`.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.

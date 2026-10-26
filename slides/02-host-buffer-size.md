@@ -54,8 +54,8 @@ Note:
 ## The goal<br><span class="then">The model should work with any host block size.</span>
 
 <div class="statement-points">
-  <div><small>1</small>Size the ring buffers in <code>prepare()</code></div>
-  <div><small>2</small>Pump whole model blocks in <code>process_block()</code></div>
+  <div><small>1</small>Give the ring buffers a size in <code>prepare()</code></div>
+  <div><small>2</small>Pump whole blocks through the model</div>
   <div><small>3</small>Hand the host its samples back</div>
 </div>
 
@@ -63,7 +63,7 @@ Note:
 
 <div class="tag">Given</div>
 
-## What we get<br><span class="then">1 new helpers, 1 file to edit.</span>
+## What we get<br><span class="then">2 new helpers, 1 file to edit.</span>
 
 <div class="given">
   <div class="given-column">

@@ -105,7 +105,7 @@ Note:
 </svg><h3>Rates</h3><div class="tile-description">audio, control, per note</div></div>
 </div>
 
-Note:
+(hidden) Note:
     - Conditioned: the controls are inputs too, and have to reach the model at the right time.
     - Causal: a model that looks ahead needs future samples, so its output is late by that much.
     - Fixed input size: the host block size rarely matches; step 2 is about this.

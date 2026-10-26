@@ -13,47 +13,41 @@ Note:
 
 ## The problem<br><span class="then">Every callback has a deadline.</span>
 
-<div class="budget-calc">
-  <div><small>host block</small>64 samples</div>
-  <b>÷</b>
-  <div><small>sample rate</small>44.1 kHz</div>
-  <b>=</b>
-  <div class="result"><small>deadline per callback</small>1.45 ms</div>
+<div class="budget-calcs">
+  <div class="budget-calc">
+    <div><small>host block</small>64 samples</div>
+    <b>÷</b>
+    <div><small>sample rate</small>44.1 kHz</div>
+    <b>=</b>
+    <div class="result"><small>deadline per callback</small>1.45 ms</div>
+  </div>
+  <div class="budget-calc load">
+    <div><small>forward pass</small>7.4 ms</div>
+    <b>÷</b>
+    <div><small>32 callbacks, one model block</small>46.4 ms</div>
+    <b>=</b>
+    <div class="result"><small>average load · what a CPU meter shows</small>16 %</div>
+  </div>
+  <div class="budget-calc load over">
+    <div><small>forward pass</small>7.4 ms</div>
+    <b>÷</b>
+    <div><small>the callback that runs it</small>1.45 ms</div>
+    <b>=</b>
+    <div class="result"><small>load in callback 32 · what you hear</small>510 %</div>
+  </div>
 </div>
 
 <div class="deadline">
-  <div class="deadline-budget"><span>deadline · 1.45 ms</span></div>
-  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i><i style="--i:30"></i><i class="runs" style="--i:31"><span>forward pass <br> 5 ms</span></i></div>
+  <div class="deadline-budget"><span>deadline</span></div>
+  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i><i style="--i:30"></i><i class="runs" style="--i:31"><span>forward pass <br> 7.4 ms</span></i></div>
   <div class="deadline-axis"><span>callbacks 1–31 · only copies samples, ≈ 0 ms</span><span>callback 32 · 2048 collected, run the model</span></div>
 </div>
 
 Note:
     - budget = host block size / sample rate: 64 samples at 44.1 kHz are 1.45 ms; 512 are 11.6 ms; 2048 are 46.4 ms.
-    - The model takes 2048 samples, 46.4 ms of audio. The host hands us 64 samples, 1.45 ms of time.
-    - 31 callbacks only fill the ring buffer from step 2. The 32nd has a full block, runs the whole forward pass, and still has 1.45 ms.
+    - 31 callbacks only fill the ring buffer from step 2. The 32nd has a full block of 2048 samples and runs the whole forward pass: about 7.4 ms on this laptop, in a 1.45 ms budget.
+    - Spread over all 32 callbacks, 46.4 ms of audio, that is 16 %: what a CPU meter shows. In the callback that runs it, 510 %: a click every 46.4 ms.
     - This is the slide to linger on: the audio duration of the model block and the deadline of a callback are unrelated numbers.
-
----
-
-<div class="tag">Motivation</div>
-
-## The problem <span class="then">16 % on average but 510 % in the callback that runs it.</span>
-
-<div class="meters">
-  <div class="meter">
-    <div class="meter-bar"><i style="--load:16%"></i></div>
-    <div class="meter-label"><span>average load · what a CPU meter shows<span class="meter-calc">7.4 ms ÷ 46.4 ms (32 callbacks × 1.45 ms)</span></span><strong>16 %</strong></div>
-  </div>
-  <div class="meter over">
-    <div class="meter-bar"><i style="--load:100%"></i><span class="meter-late">6.0 ms too late</span></div>
-    <div class="meter-label"><span>the callback that runs the model · what you hear<span class="meter-calc">7.4 ms ÷ 1.45 ms → a click every 46.4 ms</span></span><strong>510 %</strong></div>
-  </div>
-</div>
-
-Note:
-    - Forward pass on this laptop: about 7.4 ms.
-    - Average: 7.4 ms of work per 46.4 ms of audio, 16 %. The callback that runs it: 7.4 ms in a 1.45 ms budget, 510 %.
-    - A CPU meter showing 16 % and an audio stream that clicks every 46 ms.
 
 ---
 
@@ -63,7 +57,7 @@ Note:
 
 <div class="statement-points">
   <div><small>1</small>Run the model inside the timed loop</div>
-  <div><small>2</small>Implement <code>percentile()</code> for p95 and p99</div>
+  <div><small>2</small>Implement <code>fastest()</code> and <code>slowest()</code> for max and min</div>
   <div><small>3</small>Time one call per repetition</div>
 </div>
 
@@ -142,10 +136,9 @@ cmake --build --preset release --target step03_exercise
     </div>
   </div>
   <div class="run-step" data-seconds="3">
-    <div class="run-title"><span>2</span><code>percentile()</code></div>
-    <div class="run-visual run-sort">
-      <div class="sort-bars"><i style="--h:30%;--from:0;--to:1"></i><i style="--h:70%;--from:1;--to:6"></i><i style="--h:45%;--from:2;--to:3"></i><i style="--h:90%;--from:3;--to:7"></i><i style="--h:20%;--from:4;--to:0"></i><i style="--h:55%;--from:5;--to:4"></i><i style="--h:40%;--from:6;--to:2"></i><i style="--h:65%;--from:7;--to:5"></i></div>
-      <div class="sort-mark">p95</div>
+    <div class="run-title"><span>2</span><code>fastest()</code> and <code>slowest()</code></div>
+    <div class="run-visual run-extremes">
+      <div class="times-bars"><i style="--h:45%"></i><i class="min" style="--h:20%"><span>min</span></i><i style="--h:55%"></i><i style="--h:35%"></i><i style="--h:60%"></i><i style="--h:40%"></i><i class="max" style="--h:80%"><span>max</span></i><i style="--h:50%"></i></div>
     </div>
   </div>
   <div class="run-step" data-seconds="3">
@@ -178,13 +171,17 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 2: <code>percentile()</code>
+## TODO 2: <code>fastest()</code> & <code>slowest()</code>
 
 ```cpp
-std::vector<double> sorted(times);
-std::sort(sorted.begin(), sorted.end());
-const auto index = static_cast<size_t>(fraction * (sorted.size() - 1) + 0.5);
-return sorted[index];
+double fastest(const std::vector<double>& times) {
+    // ---- TODO 2: the smallest and the largest entry -----------------------
+    return *std::min_element(times.begin(), times.end());
+}
+
+double slowest(const std::vector<double>& times) {
+    return *std::max_element(times.begin(), times.end());
+}
 ```
 
 Note:

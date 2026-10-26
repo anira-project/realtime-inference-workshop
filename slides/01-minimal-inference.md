@@ -14,8 +14,8 @@ Note:
 
 <div class="statement-points">
   <div><small>1</small>Load the model with LibTorch</div>
-  <div><small>2</small>Run the test signal through it, block by block</div>
-  <div><small>3</small>Compare with what the model made in Python</div>
+  <div><small>2</small>Run a test signal through the model</div>
+  <div><small>3</small>Compare results with the model in Python</div>
 </div>
 
 

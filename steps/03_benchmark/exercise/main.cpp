@@ -1,7 +1,7 @@
 // Step 3 — Benchmarking the forward pass
 //
 // Goal:   find out how long one forward pass takes, and how long it takes in
-//         the worst case.
+//         the best and worst case.
 // Given:  Google Benchmark, and the engine from step 1.
 // Task:   fill in the three TODO banners.
 // Check:  the numbers, against the budget a host block size gives you.
@@ -30,7 +30,7 @@ constexpr struct {
 } k_model{};
 
 // How many times the forward pass is measured. Each repetition times one single
-// call, so a percentile over these is a percentile over real calls.
+// call, so the statistics over these are statistics over real calls.
 constexpr int k_repetitions = 200;
 
 namespace {
@@ -71,34 +71,38 @@ void forward_pass(benchmark::State& state) {
     }
 }
 
-// The n-th percentile of the times Google Benchmark collected.
+// The n-th percentile of the times Google Benchmark collected. Given.
 // @times: one entry per repetition, in seconds, in the order they were measured
 // @fraction: 0.95 returns the time that 95 percent of the calls stayed under
 double percentile(const std::vector<double>& times, double fraction) {
-    // ---- TODO 2 ------------------------------------------------------------
-    // Sort a copy of `times` and return the entry at `fraction` of the way
-    // through it.
-    // ------------------------------------------------------------------------
-    std::vector<double> sorted(times);  // Sort this copy, leave `times` alone
-    const size_t index = 0;             // Which entry is `fraction` of the way in?
-
+    std::vector<double> sorted(times);
+    std::sort(sorted.begin(), sorted.end());
+    const auto index = static_cast<size_t>(fraction * static_cast<double>(sorted.size() - 1) + 0.5);
     return sorted[index];
 }
 
-// Says once that TODO 2 is still open. A p95 that is 0, or that equals the
-// fastest call of all, is not a percentile.
-double checked_percentile(const std::vector<double>& times, double fraction) {
-    const double value = percentile(times, fraction);
+// The fastest and the slowest of the times Google Benchmark collected.
+// @times: one entry per repetition, in seconds, in the order they were measured
+double fastest(const std::vector<double>& times) {
+    // ---- TODO 2 ------------------------------------------------------------
+    // Return the smallest entry of `times`, and in slowest() the largest.
+    // Hint: <algorithm> has a function for each.
+    // ------------------------------------------------------------------------
+    return 0.0;
+}
 
+double slowest(const std::vector<double>& times) {
+    return 0.0;
+}
+
+// Says once that TODO 2 is still open. A call that took no time at all is not
+// a call that was measured.
+double checked(const char* name, double value) {
     static bool reported = false;
-    if (!times.empty() && !reported) {
-        const double fastest = *std::min_element(times.begin(), times.end());
-        if (value <= fastest) {
-            std::fprintf(stderr,
-                         "TODO 2: percentile() still returns %s\n",
-                         value == 0.0 ? "0" : "the fastest call");
-            reported = true;
-        }
+    if (value <= 0.0 && !reported) {
+        std::fprintf(stderr, "Process stopped. TODO 2: calculate the fastest and the slowest call\n", name);
+        reported = true;
+        exit(1);
     }
     return value;
 }
@@ -113,15 +117,14 @@ double checked_percentile(const std::vector<double>& times, double fraction) {
 // ------------------------------------------------------------------------------
 BENCHMARK(forward_pass)
     ->Unit(benchmark::kMillisecond)
-    ->ComputeStatistics("p95",
-                        [](const std::vector<double>& t) { return checked_percentile(t, 0.95); })
-    ->ComputeStatistics("p99",
-                        [](const std::vector<double>& t) { return checked_percentile(t, 0.99); })
+    ->ComputeStatistics("min",
+                        [](const std::vector<double>& t) { return checked("fastest", fastest(t)); })
+    ->ComputeStatistics("p95", [](const std::vector<double>& t) { return percentile(t, 0.95); })
+    ->ComputeStatistics("p99", [](const std::vector<double>& t) { return percentile(t, 0.99); })
     ->ComputeStatistics("max",
-                        [](const std::vector<double>& t) {
-                            return *std::max_element(t.begin(), t.end());
-                        })
+                        [](const std::vector<double>& t) { return checked("slowest", slowest(t)); })
     ->ReportAggregatesOnly(true);
+
 
 int main(int argc, char** argv) {
     try {

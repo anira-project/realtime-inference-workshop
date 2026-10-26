@@ -89,7 +89,7 @@ Note:
 
 <div class="tag">Engines</div>
 
-## Libtorch<br><span class="then">PyTorch, minus Python.</span>
+## LibTorch<br><span class="then">PyTorch, minus Python.</span>
 
 It is not an inference engine. It is **PyTorch**, minus Python:
 
@@ -158,7 +158,7 @@ Note:
 
 ---
 
-<div class="tag">Deepedive</div>
+<div class="tag">Deep dive</div>
 
 ## Stateless vs. stateful<br><span class="then">Some models remember others read the past at every call.</span>
 
@@ -225,7 +225,7 @@ Note:
 
 <div class="tag">Take away</div>
 
-## The choice of engine is important<br><span class="then">Affects performance anddistribution.</span>
+## The choice of engine is important<br><span class="then">Affects performance and distribution.</span>
 
 <div class="statement-points">
   <div>Measure the size early — it is hard to walk back after a release</div>

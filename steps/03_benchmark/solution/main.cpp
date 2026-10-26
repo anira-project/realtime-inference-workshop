@@ -27,7 +27,7 @@ constexpr struct {
 } k_model{};
 
 // How many times the forward pass is measured. Each repetition times one single
-// call, so a percentile over these is a percentile over real calls.
+// call, so the statistics over these are statistics over real calls.
 constexpr int k_repetitions = 200;
 
 namespace {
@@ -36,6 +36,27 @@ namespace {
 LibTorchEngine& engine() {
     static LibTorchEngine instance(k_model.m_path);
     return instance;
+}
+
+// The n-th percentile of the times Google Benchmark collected. Given.
+// @times: one entry per repetition, in seconds, in the order they were measured
+// @fraction: 0.95 returns the time that 95 percent of the calls stayed under
+double percentile(const std::vector<double>& times, double fraction) {
+    std::vector<double> sorted(times);
+    std::sort(sorted.begin(), sorted.end());
+    const auto index = static_cast<size_t>(fraction * static_cast<double>(sorted.size() - 1) + 0.5);
+    return sorted[index];
+}
+
+// The fastest and the slowest of the times Google Benchmark collected.
+// @times: one entry per repetition, in seconds, in the order they were measured
+double fastest(const std::vector<double>& times) {
+    // ---- TODO 2: the smallest and the largest entry -----------------------
+    return *std::min_element(times.begin(), times.end());
+}
+
+double slowest(const std::vector<double>& times) {
+    return *std::max_element(times.begin(), times.end());
 }
 
 // What Google Benchmark times. Everything inside the loop below is measured.
@@ -51,17 +72,6 @@ void forward_pass(benchmark::State& state) {
     }
 }
 
-// The n-th percentile of the times Google Benchmark collected.
-// @times: one entry per repetition, in seconds, in the order they were measured
-// @fraction: 0.95 returns the time that 95 percent of the calls stayed under
-double percentile(const std::vector<double>& times, double fraction) {
-    // ---- TODO 2: sort a copy and index into it ----------------------------
-    std::vector<double> sorted(times);
-    std::sort(sorted.begin(), sorted.end());
-    const auto index = static_cast<size_t>(fraction * static_cast<double>(sorted.size() - 1) + 0.5);
-    return sorted[index];
-}
-
 }  // namespace
 
 // ---- TODO 3: one single call per repetition, k_repetitions of them -----------
@@ -72,12 +82,10 @@ BENCHMARK(forward_pass)
     ->Unit(benchmark::kMillisecond)
     ->Iterations(1)
     ->Repetitions(k_repetitions)
+    ->ComputeStatistics("min", [](const std::vector<double>& t) { return fastest(t); })
     ->ComputeStatistics("p95", [](const std::vector<double>& t) { return percentile(t, 0.95); })
     ->ComputeStatistics("p99", [](const std::vector<double>& t) { return percentile(t, 0.99); })
-    ->ComputeStatistics("max",
-                        [](const std::vector<double>& t) {
-                            return *std::max_element(t.begin(), t.end());
-                        })
+    ->ComputeStatistics("max", [](const std::vector<double>& t) { return slowest(t); })
     ->ReportAggregatesOnly(true);
 
 int main(int argc, char** argv) {

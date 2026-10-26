@@ -11,3 +11,4 @@ models/*.data
 .idea/
 build-*/
 __pycache__/
+presenter-notes/

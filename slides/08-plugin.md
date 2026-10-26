@@ -34,33 +34,45 @@ Everything else in the plugin is JUCE boilerplate.
 
 
 
-| | what ships |
-|---|---|
-| LibTorch | binary + 318 MB of dylibs to find at load time |
-| ONNX Runtime, static | **one 28 MB bundle** |
+<div class="tradeoff ships">
+  <div class="tradeoff-name">LibTorch</div>
+  <div class="tradeoff-bar weight" style="--v:100%;--i:0"><span>318 MB</span></div>
+  <div class="tradeoff-name">ONNX Runtime, static</div>
+  <div class="tradeoff-bar weight" style="--v:8.8%;--i:1"><span>28 MB</span></div>
+</div>
 
-Every step so far used LibTorch. This plugin uses **ONNX Runtime, static**.
-
-We only need to change one type name — the processor is templated on the engine, and
-both engines have the same three methods.
+```cpp
+LatencyProcessor<LibTorchEngine>   // steps 1 to 7
+LatencyProcessor<OnnxEngine>       // the plugin
+```
 
 Note:
+    - Every step so far used LibTorch: the binary plus 318 MB of dylibs to find at load time. The plugin uses ONNX Runtime, linked statically: one 28 MB bundle.
+    - Switching is one type name: the processor is templated on the engine, and both engines have the same three methods.
     - This is step 4's argument arriving: the size difference is not theoretical, it is the bundle you upload.
 
 ---
 
 <div class="tag">Engine</div>
 
-## A mono, stateful model
+## A mono, stateful model<br><span class="then">Two of everything, for one plugin on one track.</span>
 
-Each channel needs its own state, so each channel needs its own engine.
 
-Here, each engine also gets its own worker thread.
+<div class="per-channel">
+Mono:
+  <b>mono</b><span>state</span><i>→</i><span>engine</span><i>→</i><span>worker thread</span>
+</div>
 
-| Two channels → two states → two engines → two worker threads|
-|---|
+<div class="per-channel">
+Stereo:
+  <b>Left</b><span>state</span><i>→</i><span>engine</span><i>→</i><span>worker thread</span>
+  <b>Right</b><span>state</span><i>→</i><span>engine</span><i>→</i><span>worker thread</span>
+</div>
 
-Two of everything. For one plugin, on one track.
+Note:
+    - The model is mono and stateful: each channel needs its own state, so each channel needs its own engine.
+    - Here, each engine also gets its own worker thread.
+    - Two channels → two states → two engines → two worker threads. Keep it in mind: part 2 starts here.
 
 ---
 
@@ -119,12 +131,7 @@ one engine per channel step 8
 
 ## Break<br><span class="then">Afterwards: how anira handles these steps.</span>
 
-<div class="statement-points">
-  <div>Ten pieces of infrastructure, by hand</div>
-  <div>Every one of them a place to get it wrong</div>
-  <div>anira does them for you</div>
-</div>
-
+<div class="break-mug">{{ICON:coffee}}</div>
 
 Note:
     - 30 minutes. Then the architecture talk.

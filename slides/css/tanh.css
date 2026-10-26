@@ -204,6 +204,12 @@ html.tanh .reveal .slides section > p {
   margin: var(--space-4) 0;
 }
 
+/* Labelled code blocks, one after another: each label sits with its code */
+html.tanh .reveal .slides section.tight-code > p,
+html.tanh .reveal .tight-code pre {
+  margin: var(--space-2) 0;
+}
+
 html.tanh .reveal pre code {
   border: var(--hairline) solid var(--fs-border);
   border-radius: var(--radius-main);
@@ -276,6 +282,19 @@ html.tanh .card.accent {
   border-color: transparent;
   background: var(--tint-exercise);
   color: var(--ink);
+}
+
+/* The file (or the calls) a card stands for, at its foot */
+html.tanh .card-file {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+  color: var(--ink);
+}
+
+html.tanh .card-file.optional {
+  color: var(--fs-text-muted-color);
 }
 
 html.tanh .card.accent .card-text {
@@ -520,7 +539,7 @@ html.tanh .agenda-break {
   border-width: var(--hairline);
 }
 
-html.tanh .theme-switch {
+html.tanh .header-button {
   transition: background-color var(--duration) var(--ease);
 }
 
@@ -1344,6 +1363,10 @@ html.tanh .statement-points > div {
   border-top: none;
   text-align: center;
   font-size: 0.9em;
+}
+
+html.tanh .statement-points.two {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 html.tanh .statement-points small {

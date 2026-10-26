@@ -1,5 +1,5 @@
 /**
- * Chapter overview (Esc): a scrollable row of chapters on top, the slides of the
+ * Chapter overview (Esc): every chapter on top, one block per part, wrapped into rows, the slides of the
  * selected chapter below. Replaces Reveal's overview, which only renders the
  * slides near the current one.
  * Click a chapter to show its slides, click a slide to jump to it. While open,
@@ -26,12 +26,14 @@ class ChapterOverview {
             this.build();
         }
         this.element.classList.add('open');
+        document.documentElement.classList.add('overview-open');
         this.update();
     }
 
     close() {
         if (this.element !== null) {
             this.element.classList.remove('open');
+            document.documentElement.classList.remove('overview-open');
         }
     }
 
@@ -39,27 +41,53 @@ class ChapterOverview {
         this.element = document.createElement('div');
         this.element.className = 'chapter-overview';
 
+        const chapterSection = document.createElement('div');
+        chapterSection.className = 'chapter-overview-section';
+        chapterSection.appendChild(this.heading('Chapters'));
         const chapterRow = document.createElement('div');
         chapterRow.className = 'chapter-overview-chapters';
-        this.element.appendChild(chapterRow);
+        chapterSection.appendChild(chapterRow);
+        this.element.appendChild(chapterSection);
 
+        // "Slides · <the selected chapter>", the chapter part set on select
+        const slideSection = document.createElement('div');
+        slideSection.className = 'chapter-overview-section';
+        const slideHeading = this.heading('Slides');
+        this.slideHeadingChapter = document.createElement('span');
+        this.slideHeadingChapter.className = 'chapter-overview-heading-chapter';
+        slideHeading.appendChild(this.slideHeadingChapter);
+        slideSection.appendChild(slideHeading);
         this.slidesPanel = document.createElement('div');
         this.slidesPanel.className = 'chapter-overview-slides';
-        this.element.appendChild(this.slidesPanel);
+        slideSection.appendChild(this.slidesPanel);
+        this.element.appendChild(slideSection);
 
+        let part = null;
         document.querySelectorAll('.reveal .slides > section').forEach((chapter, h) => {
             const slides = chapter.querySelectorAll(':scope > section');
+
+            // One block per part, as in the agenda; the introduction opens the first
+            const partName = chapter.dataset.part;
+            if (part === null || (partName && part.name && partName !== part.name)) {
+                part = this.addPart(chapterRow);
+            }
+            if (partName && !part.name) {
+                part.name = partName;
+                part.label.textContent = `Part ${chapterRow.children.length} · ${partName}`;
+            }
 
             const card = document.createElement('div');
             card.className = 'chapter-overview-chapter';
             card.appendChild(this.thumbnail(slides[0]));
             const title = document.createElement('div');
             title.className = 'chapter-overview-title';
-            const heading = slides[0]?.querySelector('h1, h2');
-            title.textContent = heading ? heading.innerText.replace(/\s+/g, ' ') : chapter.id;
+            const heading = slides[0]?.querySelector('h1, h2')?.cloneNode(true);
+            // Hidden slides render no line breaks, so innerText would glue "Step 1" to the title
+            heading?.querySelectorAll('br').forEach(br => br.replaceWith(' '));
+            title.textContent = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : chapter.id;
             card.appendChild(title);
             card.addEventListener('click', () => this.select(h));
-            chapterRow.appendChild(card);
+            part.chapters.appendChild(card);
 
             const list = document.createElement('div');
             list.className = 'chapter-overview-list';
@@ -74,10 +102,30 @@ class ChapterOverview {
             });
             this.slidesPanel.appendChild(list);
 
-            this.chapters.push({ card, list, thumbs });
+            this.chapters.push({ card, list, thumbs, title: title.textContent });
         });
 
         document.querySelector('.reveal').appendChild(this.element);
+    }
+
+    heading(text) {
+        const heading = document.createElement('div');
+        heading.className = 'chapter-overview-heading';
+        heading.textContent = text;
+        return heading;
+    }
+
+    // A labelled block of chapter cards; the label is set by its first chapter with a part
+    addPart(chapterRow) {
+        const element = document.createElement('div');
+        element.className = 'chapter-overview-part';
+        const label = document.createElement('div');
+        label.className = 'chapter-overview-part-label';
+        const chapters = document.createElement('div');
+        chapters.className = 'chapter-overview-part-chapters';
+        element.append(label, chapters);
+        chapterRow.appendChild(element);
+        return { name: null, label, chapters };
     }
 
     // A static copy of the slide with every fragment shown; it lives outside
@@ -106,7 +154,7 @@ class ChapterOverview {
             chapter.card.classList.toggle('selected', i === h);
             chapter.list.classList.toggle('selected', i === h);
         });
-        this.chapters[h].card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        this.slideHeadingChapter.textContent = this.chapters[h].title;
     }
 
     // Selects the current chapter and marks the current slide

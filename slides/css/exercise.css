@@ -1550,6 +1550,72 @@ html.tanh .tradeoff.ships {
   padding-left: 0;
 }
 
+/* Step 8: the one-line engine swap under the size bars */
+html.tanh .reveal .tradeoff.ships + pre {
+  margin-top: calc(var(--space-9) * 2);
+}
+
+/* Step 8: one state, one engine, one worker per channel */
+html.tanh .per-channel {
+  display: grid;
+  grid-template-columns: 200px 1fr auto 1fr auto 1fr;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-5);
+  margin-top: var(--space-9);
+}
+
+html.tanh .per-channel b {
+  grid-column: 1;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  font-size: 0.7em;
+}
+
+html.tanh .per-channel span {
+  padding: var(--space-5);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-main);
+  font-size: 0.7em;
+  text-align: center;
+}
+
+html.tanh .per-channel i {
+  font-style: normal;
+  color: var(--fs-text-subtle-color);
+}
+
+/* Step 8 · the break: a mug, its steam rising while the slide is up */
+html.tanh .break-mug {
+  margin-top: var(--space-7);
+  text-align: center;
+}
+
+html.tanh .break-mug .card-icon {
+  width: 280px;
+  height: 280px;
+  stroke-width: 1.2;
+  color: var(--ink);
+}
+
+html.tanh .break-mug .steam {
+  stroke: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal section.present .break-mug .steam {
+  animation: break-steam 2.4s ease-in-out infinite;
+}
+
+@keyframes break-steam {
+  0%   { transform: translateY(1px); opacity: 0; }
+  40%  { opacity: 1; }
+  100% { transform: translateY(-2px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .break-mug .steam { animation: none; }
+}
+
 html.tanh .reveal .slides section > p.ships-note {
   margin-top: calc(var(--space-9) * 3);
 }
@@ -1655,6 +1721,141 @@ html.tanh .reveal section.present .tradeoff-bar.work::before {
 html.tanh .reveal section.present .tradeoff-bar span {
   animation: tradeoff-fade 0.3s var(--ease) backwards;
   animation-delay: calc(0.9s + var(--i) * 0.35s);
+}
+
+/* Butterfly: weight grows to the left of a centre line, your work to the
+   right, so the two read as one diagonal */
+html.tanh .tradeoff.butterfly {
+  column-gap: 0;
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-name {
+  padding-right: var(--space-6);
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-head.weight {
+  justify-content: flex-end;
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-head small {
+  order: -1;
+  font-family: var(--fs-body-font, inherit);
+  font-weight: 400;
+  font-size: 0.8em;
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-bar.weight::before {
+  left: auto;
+  right: 0;
+  transform-origin: right;
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-bar.weight span {
+  left: auto;
+  right: calc(max(var(--v), 6px) + var(--space-3));
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-bar.weight[style*="--v:100%"] span {
+  right: auto;
+  left: var(--space-3);
+}
+
+/* The centre line, unbroken across the row gaps */
+html.tanh .tradeoff.butterfly .tradeoff-bar.work::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--space-5) / -2);
+  bottom: calc(var(--space-5) / -2);
+  left: -1px;
+  width: 2px;
+  background: var(--ink);
+}
+
+html.tanh .tradeoff.butterfly .tradeoff-bar.work span {
+  font-family: var(--fs-body-font, inherit);
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal section.present .tradeoff.butterfly .tradeoff-bar.work span {
+  animation-delay: calc(2.4s + var(--i) * 0.35s);
+}
+
+/* One row of the butterfly, on top of the LibTorch and hand-written slides:
+   which end of the trade-off we are at */
+html.tanh .tradeoff.butterfly.mini {
+  grid-template-columns: 1fr 1fr;
+  padding-left: 0;
+  margin-top: var(--space-5);
+}
+
+/* What an engine gives you, and what it costs: a check, then a cross */
+html.tanh .cards.getpay .card {
+  flex-basis: 0;
+}
+
+html.tanh .cards.getpay ul.checks {
+  margin: 0;
+  font-size: 0.6em;
+}
+
+html.tanh .cards.getpay ul.checks li + li {
+  margin-top: var(--space-3);
+}
+
+html.tanh .reveal .cards.getpay ul.costs li::before {
+  content: '✗';
+  color: var(--mark-over);
+}
+
+/* Step 5 · what we tried against the engine's allocations, and why it fails */
+html.tanh .attempts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-top: var(--space-7);
+}
+
+html.tanh .attempt {
+  display: grid;
+  grid-template-columns: 1.4em 420px 1fr;
+  align-items: baseline;
+  padding-bottom: var(--space-4);
+  border-bottom: var(--hairline) solid var(--fs-border-strong);
+}
+
+html.tanh .attempt::before {
+  content: '✗';
+  color: var(--mark-over);
+  font-weight: bold;
+}
+
+html.tanh .attempt b {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+html.tanh .attempt span {
+  font-size: 0.8em;
+  color: var(--fs-text-muted-color);
+}
+
+/* Step 5 · the teaser: where the model goes is step 6's answer */
+html.tanh .big-question {
+  margin-top: var(--space-7);
+  text-align: center;
+  font-family: var(--fs-heading-font);
+  font-size: 6em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--fs-text-muted-color);
 }
 
 /* Visible by default; the animation only adds the way in, so a browser that

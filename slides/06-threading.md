@@ -170,8 +170,10 @@ cmake --build --preset release --target step06_exercise
 ## TODO 1: Queues and the worker
 
 ```cpp
-m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
-m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
+const size_t queue_capacity = k_queue_capacity;
+
+m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
+m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
 
 m_running.store(true, std::memory_order_release);
 m_worker = std::thread([this] { worker(); });

@@ -68,8 +68,8 @@ Note:
 ## The goal<br><span class="then">One latency number, dry and wet line up.</span>
 
 <div class="statement-points">
-  <div><small>1</small><code>latency_samples()</code>: told to the host, primed, delaying dry</div>
-  <div><small>2</small>The mix: both sides equally late, so a crossfade possible</div>
+  <div><small>1</small>Pass latency to host</div>
+  <div><small>2</small>Delay the dry signal so both sides align and crossfade is possible</div>
 </div>
 
 ---

@@ -202,6 +202,8 @@ const LINE_ICONS = {
   flag: '<path d="M5 21V4M5 4h12l-2.5 4 2.5 4H5"/>',
   camera: '<path d="M3 8a1 1 0 0 1 1-1h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="12" cy="13" r="3.5"/>',
   people: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5a3 3 0 0 1 0 6M18 14c2 .8 3 2.9 3 6"/>',
+  // The steam is its own group, so the break slide can let it rise
+  coffee: '<path d="M4 10h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M16 11.5h1.5a2.5 2.5 0 0 1 0 5H16M3 22h14"/><g class="steam"><path d="M8 3c-1 1.2 1 2.3 0 3.5M12 3c-1 1.2 1 2.3 0 3.5"/></g>',
 };
 
 // {{FILE:model.pt}} → a file icon with its extension on a badge, name below

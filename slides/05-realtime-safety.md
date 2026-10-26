@@ -111,7 +111,6 @@ Note:
 | LibTorch | 10,864 | **610,429** |
 | ONNX Runtime | 2,192 | 2,193 |
 
-The 591,393 allocations are the 84 ms from step 3.
 
 Not a slip. The engines are built this way.
 
@@ -133,7 +132,8 @@ One block, as RTSan reports it:
 | ONNX Runtime | 98 | 51 | 10 |
 | LibTorch | 4,393 | 3,103 | 180 |
 
-A slow allocation is bad. A lock can wait on another thread.
+A slow allocation is bad. <br>
+A lock is worse: it can wait on another thread.
 
 Note:
     - RTSAN_OPTIONS=halt_on_error=false, one block only: symbolizing every report takes ~20 s for LibTorch.
@@ -144,27 +144,31 @@ Note:
 
 <div class="tag">Problem</div>
 
-## The allocation is inside the engine
+## The allocation is inside the engine<br><span class="then">Nothing on our side reaches it.</span>
 
-- The allocation happens **inside** the engine, in a shared library
-- A custom allocator changes where memory comes from, not whether a lock is taken
-- One thread removes the pool, not the allocations
-- Preallocating on your side moves your allocations, not theirs
+<div class="attempts">
+  <div class="attempt"><b>Custom allocator</b><span>other memory, same locks</span></div>
+  <div class="attempt"><b>One thread</b><span>no pool, same allocations</span></div>
+  <div class="attempt"><b>Preallocate</b><span>ours move, theirs stay</span></div>
+</div>
 
-Shipping this on the audio thread means hoping the allocator stays fast.
+Note:
+    - The allocation happens inside the engine, in a shared library we don't control.
+    - A custom allocator changes where memory comes from, not whether a lock is taken.
+    - One thread removes the engine's thread pool, not its allocations.
+    - Preallocating on our side moves our allocations, not theirs.
+    - Shipping this on the audio thread means hoping the allocator stays fast.
 
 ---
 
 <div class="tag">Solution</div>
 
-## Inference does not belong<br><span>on the audio thread.</span>
+## Inference does not belong on the audio thread. <br><span class="then">So where does it go?</span>
 
-<div class="statement-points">
-  <div>So it runs somewhere else</div>
-  <div>The two threads pass audio without locking</div>
-  <div>…without allocating, and without waiting</div>
-</div>
+<div class="big-question">?</div>
 
 
 Note:
+    - So the model runs somewhere else: on its own thread.
+    - The two threads pass audio without locking, without allocating, and without waiting.
     - Next step: a worker thread plus lock-free hand-over, and the latency that comes with it.

@@ -60,23 +60,23 @@ Note:
 
 ## The trade-off<br><span class="then">Less work vs. less weight.</span>
 
-<div class="tradeoff">
+<div class="tradeoff butterfly">
   <div class="tradeoff-axis"><span>high level</span><span>low level</span></div>
   <div class="tradeoff-head"></div>
-  <div class="tradeoff-head">weight</div>
+  <div class="tradeoff-head weight">weight<small>log scale</small></div>
   <div class="tradeoff-head">your work</div>
-  <div class="tradeoff-name">LibTorch<small>export, load, call</small></div>
+  <div class="tradeoff-name">LibTorch</div>
   <div class="tradeoff-bar weight" style="--v:100%;--i:0"><span>318 MB</span></div>
-  <div class="tradeoff-bar work" style="--v:12%;--i:0"></div>
-  <div class="tradeoff-name">ONNX Runtime<small>still easy</small></div>
+  <div class="tradeoff-bar work" style="--v:10%;--i:0"><span>export, load, call</span></div>
+  <div class="tradeoff-name">ONNX Runtime</div>
   <div class="tradeoff-bar weight" style="--v:55%;--i:1"><span>24 MB</span></div>
-  <div class="tradeoff-bar work" style="--v:28%;--i:1"></div>
-  <div class="tradeoff-name">LiteRT<small>leaner, fewer ops</small></div>
-  <div class="tradeoff-bar weight" style="--v:30%;--i:2"></div>
-  <div class="tradeoff-bar work" style="--v:55%;--i:2"></div>
-  <div class="tradeoff-name">Your own code<small>fastest, if you are good</small></div>
+  <div class="tradeoff-bar work" style="--v:25%;--i:1"><span>check the ops</span></div>
+  <div class="tradeoff-name">LiteRT</div>
+  <div class="tradeoff-bar weight" style="--v:30%;--i:2"><span>3 MB download</span></div>
+  <div class="tradeoff-bar work" style="--v:45%;--i:2"><span>convert, fewer ops</span></div>
+  <div class="tradeoff-name">Your own code</div>
   <div class="tradeoff-bar weight" style="--v:3%;--i:3"><span>~ 0</span></div>
-  <div class="tradeoff-bar work" style="--v:100%;--i:3"></div>
+  <div class="tradeoff-bar work" style="--v:70%;--i:3"><span>write every layer</span></div>
 </div>
 
 Note:
@@ -91,13 +91,34 @@ Note:
 
 ## LibTorch<br><span class="then">PyTorch, minus Python.</span>
 
-It is not an inference engine. It is **PyTorch**, minus Python:
+<div class="tradeoff butterfly mini">
+  <div class="tradeoff-bar weight" style="--v:100%;--i:0"><span>318 MB</span></div>
+  <div class="tradeoff-bar work" style="--v:10%;--i:0"><span>export, load, call</span></div>
+</div>
 
-- Autograd, the whole operator set, JIT, quantisation, sparse tensors
-- Every kernel for every dtype, whether your model uses it or not
-- `libtorch_cpu.dylib` is one 206 MB object; the linker cannot drop what it cannot see
+<div class="cards getpay">
+  <div class="card">
+    <div class="card-title">You get</div>
+    <ul class="checks">
+      <li>The traced model is exactly what runs</li>
+      <li>Every operator, every dtype</li>
+      <li>Export, load, call</li>
+    </ul>
+  </div>
+  <div class="card fragment">
+    <div class="card-title">You pay</div>
+    <ul class="checks costs">
+      <li>318 MB, one file alone is 206 MB</li>
+      <li>Autograd, JIT, training: shipped, never used</li>
+      <li>The linker cannot drop what it cannot see</li>
+    </ul>
+  </div>
+</div>
 
-Convenient, because the thing you traced is exactly the thing that runs.
+Note:
+    - It is not an inference engine. It is PyTorch, minus Python: autograd, the whole operator set, JIT, quantisation, sparse tensors, every kernel for every dtype.
+    - libtorch_cpu.dylib is one 206 MB object, so the linker has nothing to strip.
+    - The bar on top is the LibTorch row from the trade-off slide: the top end.
 
 ---
 
@@ -105,13 +126,35 @@ Convenient, because the thing you traced is exactly the thing that runs.
 
 ## Hand-written <br><span class="then">Potentially the smallest and fastest.</span>
 
-A GRU with 32 units, a small TCN, a biquad-shaped network: a few hundred lines of
-plain C++, no dependency, no allocation, no graph.
+<div class="tradeoff butterfly mini">
+  <div class="tradeoff-bar weight" style="--v:3%;--i:0"><span>~ 0</span></div>
+  <div class="tradeoff-bar work" style="--v:70%;--i:0"><span>write every layer</span></div>
+</div>
 
-**But:** vectorisation, cache layout, denormals, and every architecture change
-means writing it again. Fast code is not the default — <b>it is a project</b>.
+<div class="cards getpay">
+  <div class="card">
+    <div class="card-title">You get</div>
+    <ul class="checks">
+      <li>~ 0 MB, no dependency</li>
+      <li>No allocation, no graph</li>
+      <li>Complete control over the implementation</li>
+    </ul>
+  </div>
+  <div class="card fragment">
+    <div class="card-title">You pay</div>
+    <ul class="checks costs">
+      <li>Vectorisation and cache layout, by hand</li>
+      <li>Denormals</li>
+      <li>New architecture: write it again</li>
+    </ul>
+  </div>
+</div>
+
+<div class="cards-note fragment">Fast code is not the default — <b>it is a project</b>.</div>
 
 Note:
+    - A GRU with 32 units, a small TCN, a biquad-shaped network: a few hundred lines of plain C++.
+    - The bar on top is the "your own code" row from the trade-off slide: the bottom end.
     - RTNeural as the known example. Ask who in the room has done it, and what it cost them.
 
 ---
@@ -142,9 +185,9 @@ impression of your product.
 
 ## Start with LibTorch<br><span class="then">Optimise against it.</span>
 
-**Good first step**: LibTorch is a good and fast reference for correctness
+**Good first step**: First LibTorch<br> **then** lower lever engine.
 
-We export both:
+For this workshop:
 
 ```
 model.pt                LibTorch, state inside the model
@@ -228,9 +271,9 @@ Note:
 ## The choice of engine is important<br><span class="then">Affects performance and distribution.</span>
 
 <div class="statement-points">
-  <div>Measure the size early — it is hard to walk back after a release</div>
+  <div>Measure the size early </div>
   <div>Correct first, small second, fast third</div>
-  <div>Keep the engine behind a thin interface, and the choice stays open</div>
+  <div>If you keep the engine behind a thin interface, the choice stays open</div>
 </div>
 
 

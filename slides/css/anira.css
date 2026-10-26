@@ -1,44 +1,451 @@
 /*********************************************
- * Part 2, anira: the visuals of the talk chapters (the hand-over list, the
+ * Part 2, anira: the visuals of the talk chapters (the hand-over cards, the
  * crowded host, the history). Loaded after exercise.css and uses its tokens.
  *********************************************/
 
 /*********************************************
- * Hand-over: what part 1 built, and what it is called in anira
+ * Hand-over: what real-time inference needs, solved the simple way in part 1;
+ * one click checks every card and names anira below
  *********************************************/
 
-html.tanh .handoff {
+html.tanh .needs {
   display: grid;
-  grid-template-columns: 110px 1fr 1.4fr;
-  column-gap: var(--space-5);
-  row-gap: var(--space-2);
-  align-items: baseline;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
   margin-top: var(--space-6);
-  font-size: 0.62em;
   text-align: left;
 }
 
-html.tanh .handoff-head {
-  padding-bottom: var(--space-2);
-  border-bottom: var(--hairline) solid var(--fs-border-strong);
-  font-family: var(--fs-heading-font);
-  font-size: 0.8em;
-  font-weight: 600;
+html.tanh .need {
+  position: relative;
+  padding: var(--space-5);
+  transition: background-color var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+
+html.tanh .need .card-icon {
+  width: 40px;
+  height: 40px;
   color: var(--fs-text-muted-color);
 }
 
-html.tanh .handoff-step {
+html.tanh .need .card-text {
+  font-size: 0.66em;
+}
+
+/* The check in the corner of every card, once anira is named */
+html.tanh .need::after {
+  content: '✓';
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-5);
+  font-size: 0.9em;
+  font-weight: 700;
+  color: var(--mark-check);
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
+}
+
+html.tanh .needs:has(.needs-anira.visible) .need {
+  border-color: transparent;
+  background: var(--tint-check);
+}
+
+html.tanh .needs:has(.needs-anira.visible) .need::after {
+  opacity: 1;
+}
+
+html.tanh .needs-anira {
+  grid-column: 1 / -1;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-main);
+  background: var(--wash);
+  font-size: 0.7em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .needs-anira span {
+  margin-right: var(--space-2);
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  font-size: 1.3em;
+  color: var(--fs-heading-color);
+}
+
+/*********************************************
+ * What anira is: two files in, anira in the middle, every engine and
+ * device out
+ *********************************************/
+
+html.tanh .pitch {
+  display: grid;
+  /* The arrows take what is left, so anira sits midway between both sides */
+  grid-template-columns: auto 1fr auto 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-5);
+  margin-top: var(--space-7);
+  text-align: center;
+}
+
+/* The three labels on one line above their columns */
+html.tanh .pitch-label {
+  grid-row: 1;
+  font-family: var(--fs-heading-font);
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--fs-heading-color);
+}
+
+html.tanh .pitch-label.config { grid-column: 1; }
+html.tanh .pitch-label.hub { grid-column: 3; }
+html.tanh .pitch-label.targets { grid-column: 5; }
+
+html.tanh .pitch-files { grid-row: 2; grid-column: 1; }
+html.tanh .pitch-arrow.first { grid-row: 2; grid-column: 2; }
+html.tanh .pitch-hub { grid-row: 2; grid-column: 3; }
+html.tanh .pitch-arrow.second { grid-row: 2; grid-column: 4; }
+html.tanh .pitch-targets { grid-row: 2; grid-column: 5; }
+
+html.tanh .pitch-files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+html.tanh .pitch-arrow {
+  font-size: 1.6em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pitch-mark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 240px;
+  height: 240px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--tint-exercise);
+}
+
+html.tanh .reveal .pitch-mark img {
+  width: 150px;
+  height: 150px;
+  margin: 0;
+  object-fit: contain;
+}
+
+/* A C++ library: the hexagon as a badge on the mark */
+html.tanh .pitch-mark .cpp-icon {
+  position: absolute;
+  right: -6px;
+  bottom: 4px;
+  width: 64px;
+  height: 72px;
+}
+
+html.tanh .pitch-does {
+  margin-top: var(--space-4);
+  font-size: 0.5em;
+  line-height: 1.4;
+  color: var(--fs-text-muted-color);
+}
+
+/* What every binding is generated from */
+html.tanh .pitch-abi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+  font-family: var(--fs-code-font);
+  font-size: 0.5em;
+}
+
+html.tanh .pitch-abi-bindings {
+  display: flex;
+  gap: var(--space-2);
+}
+
+html.tanh .pitch-abi span {
+  padding: var(--space-1) var(--space-3);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-small);
+}
+
+html.tanh .pitch-abi span.core {
+  border-color: transparent;
+  background: var(--tint-exercise);
+}
+
+html.tanh .pitch-abi span.arrow {
+  padding: 0;
+  border: none;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pitch-targets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+html.tanh .pitch-sublabel {
+  margin-bottom: var(--space-3);
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pitch-engines {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-7);
+}
+
+html.tanh .pitch-engines .card-icon {
+  display: block;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto var(--space-2);
+}
+
+/* Two by two, so the row stays as narrow as the engines above it */
+html.tanh .pitch-hosts {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+html.tanh .pitch-hosts span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-main);
+  font-size: 0.5em;
+}
+
+html.tanh .pitch-hosts .card-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .pitch-hosts code {
+  padding: 0;
+  background: none;
+}
+
+html.tanh .reveal .pitch figure {
+  margin: 0;
+}
+
+html.tanh .reveal .pitch-engines img {
+  display: block;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto var(--space-2);
+}
+
+html.tanh .reveal .pitch figcaption {
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .pitch figcaption small {
+  display: block;
   font-family: var(--fs-code-font);
   font-size: 0.8em;
-  color: var(--fs-text-muted-color);
+  color: var(--fs-text-subtle-color);
 }
 
-html.tanh .handoff-anira {
-  color: var(--ink);
+/* Three devices drawn in lines, the platforms on their screens */
+html.tanh .pitch-devices {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: var(--space-7);
 }
 
-html.tanh .handoff-anira code {
-  font-size: 0.95em;
+html.tanh .device-screen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  margin: 0 auto var(--space-3);
+  border: 4px solid var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .device-screen img {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+}
+
+html.tanh .device.desktop .device-screen {
+  width: 230px;
+  height: 140px;
+  margin-bottom: calc(var(--space-3) + 30px);
+  border-radius: 10px;
+}
+
+/* The stand: a neck and a foot */
+html.tanh .device.desktop .device-screen::before,
+html.tanh .device.desktop .device-screen::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--fs-text-muted-color);
+}
+
+html.tanh .device.desktop .device-screen::before {
+  bottom: -26px;
+  width: 8px;
+  height: 22px;
+}
+
+html.tanh .device.desktop .device-screen::after {
+  bottom: -32px;
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+html.tanh .device.phone .device-screen {
+  flex-direction: column;
+  width: 96px;
+  height: 170px;
+  border-radius: 18px;
+}
+
+/* The earpiece */
+html.tanh .device.phone .device-screen::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 30px;
+  height: 5px;
+  border-radius: 3px;
+  transform: translateX(-50%);
+  background: var(--fs-text-muted-color);
+}
+
+html.tanh .device.browser .device-screen {
+  width: 210px;
+  height: 140px;
+  padding-top: 26px;
+  border-radius: 8px;
+}
+
+/* The title bar, with its three dots */
+html.tanh .device.browser .device-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  border-bottom: 4px solid var(--fs-text-muted-color);
+  background:
+    radial-gradient(circle, var(--fs-text-muted-color) 4px, transparent 5px) 8px 50% / 18px 18px no-repeat,
+    radial-gradient(circle, var(--fs-text-muted-color) 4px, transparent 5px) 28px 50% / 18px 18px no-repeat,
+    radial-gradient(circle, var(--fs-text-muted-color) 4px, transparent 5px) 48px 50% / 18px 18px no-repeat;
+}
+
+/* A board with a pin header along each long side, its name on the silicon */
+html.tanh .device.board .device-screen {
+  width: 180px;
+  height: 120px;
+  border-radius: 6px;
+}
+
+html.tanh .device.board .device-screen::before,
+html.tanh .device.board .device-screen::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  height: 8px;
+  background: radial-gradient(circle, var(--fs-text-muted-color) 3px, transparent 3.5px) 0 50% / 14px 8px repeat-x;
+}
+
+html.tanh .device.board .device-screen::before { top: 8px; }
+html.tanh .device.board .device-screen::after { bottom: 8px; }
+
+html.tanh .device.board .device-screen span {
+  padding: var(--space-1) var(--space-3);
+  border: 3px solid var(--fs-text-muted-color);
+  border-radius: 4px;
+  font-family: var(--fs-heading-font);
+  font-size: 0.55em;
+  font-weight: 700;
+}
+
+html.tanh[data-theme="dark"] .reveal .pitch-engines img,
+html.tanh[data-theme="dark"] .reveal .device-screen img,
+html.tanh[data-theme="dark"] .reveal .pitch-mark img {
+  filter: invert(1);
+}
+
+/*********************************************
+ * In production: one card per shipping product
+ *********************************************/
+
+html.tanh .cards.shipped {
+  align-items: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+html.tanh .reveal .cards.shipped figure {
+  flex: 1;
+  margin: 0;
+}
+
+/* The products stand free, bottom-aligned, each in its own shape */
+html.tanh .card-photo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 380px;
+}
+
+html.tanh .reveal .card-photo img {
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  border-radius: var(--radius-main);
+  box-shadow: 0 var(--space-2) var(--space-6) var(--fs-shadow-color-light);
+}
+
+html.tanh .cards.shipped figcaption {
+  margin-top: var(--space-5);
+  font-family: var(--fs-heading-font);
+  font-size: 0.85em;
+  font-weight: 600;
+  text-align: center;
+  color: var(--fs-heading-color);
+}
+
+html.tanh .card-company {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: 0.55em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
 }
 
 /*********************************************
@@ -148,6 +555,499 @@ html.tanh .reveal section.present .crowd-count {
   to { background: var(--mark-exercise); }
 }
 
+/* anira v1: a plugin cannot fix it from inside, a static library can */
+html.tanh .solutions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-top: var(--space-7);
+  text-align: left;
+}
+
+html.tanh .solution {
+  padding: var(--space-4) var(--space-5);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-main);
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .solution.library {
+  border-color: transparent;
+  background: var(--tint-check);
+  color: var(--ink);
+}
+
+html.tanh .solution span {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-family: var(--fs-heading-font);
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--fs-heading-color);
+}
+
+/*********************************************
+ * anira v2: audio and control data at their own rates, into one model
+ *********************************************/
+
+html.tanh .rates {
+  display: grid;
+  grid-template-columns: 220px 1fr 200px auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: var(--space-5);
+  row-gap: var(--space-6);
+  margin-top: var(--space-8);
+  text-align: left;
+}
+
+html.tanh .rates-label {
+  font-family: var(--fs-heading-font);
+  font-size: 0.6em;
+  font-weight: 600;
+  color: var(--fs-heading-color);
+}
+
+html.tanh .rates-rate {
+  font-size: 0.5em;
+  color: var(--fs-text-muted-color);
+}
+
+/* One tick per value: dense for audio, sparse for control data */
+html.tanh .rates-track {
+  height: 56px;
+  border-bottom: 2px solid var(--fs-border-strong);
+}
+
+html.tanh .rates-track.audio {
+  background: repeating-linear-gradient(90deg, var(--mark-exercise) 0 2px, transparent 2px 6px) bottom / 100% 70% no-repeat;
+}
+
+html.tanh .rates-track.control {
+  background: repeating-linear-gradient(90deg, var(--mark-latent) 0 8px, transparent 8px 90px) bottom / 100% 70% no-repeat;
+}
+
+html.tanh .rates-model {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-main);
+  background: var(--tint-model);
+  font-family: var(--fs-heading-font);
+  font-size: 0.6em;
+  font-weight: 600;
+}
+
+html.tanh .rates-out {
+  grid-column: 5;
+  grid-row: 1 / 3;
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+}
+
+/*********************************************
+ * anira on the web: the paper, with a QR code beside it
+ *********************************************/
+
+html.tanh .paper {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--space-9);
+  margin-top: var(--space-7);
+  text-align: left;
+}
+
+html.tanh .paper .qr-code {
+  width: 420px;
+  height: 420px;
+}
+
+html.tanh .paper .qr {
+  text-align: center;
+}
+
+html.tanh .paper-kind {
+  font-family: var(--fs-heading-font);
+  font-size: 0.55em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .paper-title {
+  margin-top: var(--space-3);
+  font-family: var(--fs-heading-font);
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--fs-heading-color);
+}
+
+html.tanh .paper-points {
+  margin-top: var(--space-4);
+  font-size: 0.65em;
+  color: var(--fs-text-muted-color);
+}
+
+/*********************************************
+ * anira v3: one card per limit of v2, the v3 answer below it
+ *********************************************/
+
+html.tanh .limits {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+  margin-top: var(--space-8);
+  text-align: left;
+}
+
+html.tanh .limit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-main);
+}
+
+html.tanh .limit .card-icon {
+  width: 56px;
+  height: 56px;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .limit-v2,
+html.tanh .limit-v3 {
+  font-size: 0.66em;
+  line-height: 1.35;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .limit-v2 span,
+html.tanh .limit-v3 > span {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-family: var(--fs-code-font);
+  font-size: 0.9em;
+  font-weight: 700;
+  color: var(--fs-text-subtle-color);
+}
+
+/* The answer fills the rest of the card, so all four line up */
+html.tanh .limit-v3 {
+  flex: 1;
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--tint-check);
+  color: var(--ink);
+}
+
+html.tanh .limit-v3 > span {
+  color: var(--mark-check);
+}
+
+html.tanh .chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+html.tanh .chips b {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--paper);
+  font-family: var(--fs-heading-font);
+  font-size: 1.05em;
+  font-weight: 600;
+}
+
+html.tanh .chips b.core {
+  background: var(--tint-exercise);
+}
+
+html.tanh .chips i {
+  font-style: normal;
+  color: var(--fs-text-subtle-color);
+}
+
+/*********************************************
+ * anira v3: engines against accelerators, a dot per prebuilt package
+ *********************************************/
+
+html.tanh .engine-matrix {
+  display: grid;
+  grid-template-columns: 240px repeat(10, 1fr);
+  align-items: center;
+  margin-top: var(--space-7);
+  font-size: 0.6em;
+}
+
+html.tanh .engine-matrix > div {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: var(--hairline) solid var(--fs-border);
+}
+
+html.tanh .engine-matrix .mx-col {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  color: var(--fs-text-muted-color);
+  border-bottom-color: var(--fs-border-strong);
+}
+
+html.tanh .engine-matrix .mx-corner {
+  border-bottom-color: var(--fs-border-strong);
+}
+
+html.tanh .engine-matrix .mx-engine {
+  justify-content: flex-start;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+html.tanh .engine-matrix .mx-yes::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--mark-check);
+}
+
+html.tanh .engine-matrix .mx-no::before {
+  content: '';
+  width: 8px;
+  height: 2px;
+  background: var(--fs-border-strong);
+}
+
+/*********************************************
+ * Outlook: hardware, provider and engine, every path a combination
+ *********************************************/
+
+html.tanh .combos {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 300px);
+  justify-content: space-between;
+  margin-top: var(--space-6);
+  text-align: left;
+}
+
+html.tanh .combos-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  z-index: 0;
+}
+
+html.tanh .combos-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+html.tanh .combos-head {
+  margin-bottom: var(--space-1);
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .combos-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 var(--space-4);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--fs-background-color);
+  font-size: 0.5em;
+}
+
+html.tanh .combos-line {
+  fill: none;
+  stroke: var(--fs-border);
+  stroke-width: 1.5;
+}
+
+html.tanh .combos-hot-line {
+  fill: none;
+  stroke: var(--mark-exercise);
+  stroke-width: 3;
+}
+
+html.tanh .combos-q rect {
+  fill: var(--ink);
+}
+
+html.tanh .combos-q text {
+  fill: var(--paper);
+  font-family: var(--fs-heading-font);
+  font-size: 20px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+html.tanh .combos-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: var(--space-6);
+  margin-top: var(--space-5);
+}
+
+html.tanh .combos-audio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-main);
+  font-size: 0.55em;
+}
+
+html.tanh .combos-audio span {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+html.tanh .combos-audio b {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+  font-family: var(--fs-heading-font);
+}
+
+html.tanh .combos-audio b.ok {
+  background: var(--tint-check);
+}
+
+html.tanh .combos-audio b.open {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+html.tanh .combos-invite {
+  margin-top: var(--space-5);
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .combos-audio em {
+  font-style: normal;
+  color: var(--fs-text-muted-color);
+}
+
+/*********************************************
+ * Two kinds of thread: short real-time callbacks, long model runs
+ *********************************************/
+
+html.tanh .kinds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  margin-top: var(--space-7);
+  text-align: left;
+}
+
+html.tanh .kind {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-main);
+}
+
+html.tanh .kind.audio { background: var(--tint-exercise); }
+html.tanh .kind.inference { background: var(--tint-model); }
+
+html.tanh .kind-name {
+  font-family: var(--fs-heading-font);
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+html.tanh .kind-role {
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .kind-track {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 150px;
+  margin-top: var(--space-3);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--paper);
+}
+
+html.tanh .kind-row {
+  position: relative;
+  height: 30px;
+}
+
+/* Callbacks: a tick per deadline, a short bar of work at the start of each */
+html.tanh .kind-row.callbacks {
+  height: 56px;
+  background:
+    repeating-linear-gradient(90deg, var(--mark-exercise) 0 9px, transparent 9px 70px) left center / 100% 60% no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 68px, var(--fs-border-strong) 68px 70px);
+}
+
+html.tanh .kind-row i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--mark-model);
+}
+
+html.tanh .kind-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.45em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .kind-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+html.tanh .kind-rules b {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--paper);
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+}
+
 /*********************************************
  * History: a line of releases
  *********************************************/
@@ -155,7 +1055,7 @@ html.tanh .reveal section.present .crowd-count {
 html.tanh .history {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   column-gap: var(--space-3);
   margin-top: var(--space-7);
   padding-top: 28px;
@@ -206,10 +1106,54 @@ html.tanh .history-text {
   color: var(--fs-text-muted-color);
 }
 
+/* Part 1 of the story: where we stood, the rest of the line only hinted */
+html.tanh .history-item.current::before {
+  background: var(--ink);
+}
+
+/* Not out yet: the release at the end of the line */
+html.tanh .history-item.upcoming::before {
+  border-style: dashed;
+}
+
+html.tanh .history-item.later {
+  opacity: 0.25;
+}
+
+/* The question from the conversations after the talk */
+html.tanh .history-ask {
+  margin-top: var(--space-8);
+  padding: var(--space-5) var(--space-6);
+  border-left: 4px solid var(--mark-exercise);
+  border-radius: 0 var(--radius-main) var(--radius-main) 0;
+  background: var(--tint-exercise);
+  font-family: var(--fs-heading-font);
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+html.tanh .history-ask span {
+  display: block;
+  margin-top: var(--space-3);
+  font-family: var(--fs-main-font);
+  font-size: 0.6em;
+  font-weight: 400;
+  color: var(--fs-text-muted-color);
+}
+
 html.tanh .history-note {
   margin-top: var(--space-7);
   font-size: 0.5em;
   color: var(--fs-text-muted-color);
+}
+
+/* The lesson of the story, not a footnote */
+html.tanh .history-note.lesson {
+  margin-top: var(--space-6);
+  font-size: 0.7em;
+  color: var(--fs-heading-color);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -267,11 +1211,50 @@ html.tanh .pool-queue span {
 }
 
 html.tanh .reveal section.present .pool-instance {
-  animation: crowd-in 0.4s var(--ease) calc(0.3s + var(--i) * 0.2s) both;
+  animation:
+    crowd-in 0.4s var(--ease) calc(0.3s + var(--i) * 0.2s) both,
+    pool-send 3.2s linear calc(2.6s + var(--i) * 0.64s) infinite;
+}
+
+/* A thread fills while it runs a model, then is free again; the four are
+   offset by a quarter cycle, so a free one is always there to take the next job */
+html.tanh .pool-thread {
+  background-image: linear-gradient(var(--mark-model), var(--mark-model));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
 }
 
 html.tanh .reveal section.present .pool-thread {
-  animation: crowd-in 0.4s var(--ease) calc(1.6s + var(--i) * 0.2s) both;
+  animation:
+    crowd-in 0.4s var(--ease) calc(1.6s + var(--i) * 0.2s) both,
+    pool-busy 3.2s linear calc(2.6s + var(--i) * 0.8s) infinite;
+}
+
+/* Jobs come and go in the queue, oldest first */
+html.tanh .reveal section.present .pool-queue .q-slot b {
+  animation: pool-job 3.2s linear infinite;
+}
+
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(1) b { animation-delay: 2.6s; }
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(2) b { animation-delay: 3.4s; }
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(3) b { animation-delay: 4.2s; }
+html.tanh .reveal section.present .pool-queue .q-slot:nth-child(4) b { animation-delay: 5.0s; }
+
+@keyframes pool-send {
+  0%, 12%, 100% { background-color: var(--wash); }
+  4% { background-color: var(--tint-exercise); }
+}
+
+@keyframes pool-busy {
+  0% { background-size: 0% 100%; }
+  55% { background-size: 100% 100%; }
+  56%, 100% { background-size: 0% 100%; }
+}
+
+@keyframes pool-job {
+  0% { opacity: 0; }
+  6%, 30% { opacity: 1; }
+  36%, 100% { opacity: 0; }
 }
 
 /*********************************************
@@ -340,6 +1323,379 @@ html.tanh .wait-bar.none i { width: 10px; }
 
 /* A ratio: half the block */
 html.tanh .wait-bar.ratio i { width: 45%; background: var(--mark-model); }
+
+/* The pool's two policies: what each costs on the audio thread and on the pool */
+html.tanh .policies {
+  display: grid;
+  grid-template-columns: 260px 300px 1fr 1fr;
+  column-gap: var(--space-5);
+  row-gap: var(--space-5);
+  align-items: center;
+  margin-top: var(--space-7);
+  text-align: left;
+}
+
+html.tanh .policy-head {
+  font-family: var(--fs-heading-font);
+  font-size: 0.5em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .policy-name {
+  font-size: 0.7em;
+}
+
+html.tanh .policies .wait-bar {
+  height: 36px;
+}
+
+html.tanh .policy-cell {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-small);
+  font-size: 0.6em;
+}
+
+html.tanh .policy-cell.ok { background: var(--tint-check); }
+html.tanh .policy-cell.warn { background: var(--tint-model); }
+
+html.tanh .policy-cell.ok::before { content: '✓  '; font-weight: 700; color: var(--mark-check); }
+html.tanh .policy-cell.warn::before { content: '!  '; font-weight: 700; color: var(--ink); }
+
+html.tanh .policy-advice {
+  margin-top: var(--space-7);
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+  text-align: left;
+}
+
+html.tanh .policy-advice span {
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  color: var(--fs-heading-color);
+}
+
+/*********************************************
+ * Pipeline: audio in, a ring buffer, slots, the pool, a ring buffer, audio
+ * out; animated by js/pipeline.js. Simplified, not to scale.
+ *********************************************/
+
+html.tanh .pipeline {
+  display: grid;
+  grid-template-columns: 170px 140px 250px 120px 1fr 110px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-6);
+  align-items: center;
+  margin-top: var(--space-7);
+  text-align: left;
+  font-size: 0.55em;
+}
+
+html.tanh .pl-label {
+  margin-bottom: var(--space-2);
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .pl-in { grid-row: 1; grid-column: 1; }
+html.tanh .pl-arrow.a1 { grid-row: 1; grid-column: 2; }
+html.tanh .pl-ring.in { grid-row: 1; grid-column: 3; }
+html.tanh .pl-arrow.a2 { grid-row: 1; grid-column: 4; }
+html.tanh .pl-slots { grid-row: 1 / 3; grid-column: 5; }
+html.tanh .pl-arrow.a3 { grid-row: 1 / 3; grid-column: 6; }
+html.tanh .pl-threads { grid-row: 1 / 3; grid-column: 7; }
+html.tanh .pl-out { grid-row: 2; grid-column: 1; }
+html.tanh .pl-arrow.a4 { grid-row: 2; grid-column: 2; }
+html.tanh .pl-ring.out { grid-row: 2; grid-column: 3; }
+html.tanh .pl-arrow.a5 { grid-row: 2; grid-column: 4; }
+
+/* An audio block: a waveform, lit when a callback moves it */
+html.tanh .pl-audio {
+  height: 80px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-main);
+  background: var(--wash);
+  transition: background-color 0.25s;
+}
+
+html.tanh .pl-wave {
+  width: 110px;
+  height: 40px;
+  fill: none;
+  stroke: var(--mark-exercise);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+html.tanh .pl-audio.on { background: var(--tint-exercise); }
+html.tanh .pl-wave .flat { display: none; stroke: var(--fs-border-strong); }
+html.tanh .pl-audio.silence .pl-wave .wave { display: none; }
+html.tanh .pl-audio.silence .pl-wave .flat { display: inline; }
+
+/* Ring buffers: segments that fill and empty */
+html.tanh .pl-circle svg {
+  display: block;
+  width: 230px;
+  height: 230px;
+}
+
+html.tanh .pl-seg {
+  fill: none;
+  stroke: var(--wash);
+  stroke-width: 26;
+  transition: stroke 0.25s;
+}
+
+html.tanh .pl-seg.full { stroke: var(--mark-exercise); }
+html.tanh .pl-ring.out .pl-seg.full { stroke: var(--mark-check); }
+
+/* Arrows: forward on top, back below */
+html.tanh .pl-arrow {
+  position: relative;
+  height: 2px;
+  background: var(--ink);
+  margin: 0 var(--space-2);
+}
+
+html.tanh .pl-arrow::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: -2px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 14px solid var(--ink);
+}
+
+html.tanh .pl-arrow.back::after {
+  right: auto;
+  left: -2px;
+  border-left: none;
+  border-right: 14px solid var(--ink);
+}
+
+html.tanh .pl-arrow.both::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: -2px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 14px solid var(--ink);
+}
+
+html.tanh .pl-arrow span {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--fs-code-font);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 0.25s;
+}
+
+html.tanh .pl-arrow span.on { background: var(--tint-exercise); }
+
+/* The labels of the arrows back sit under their line */
+html.tanh .pl-arrow.back span {
+  bottom: auto;
+  top: 12px;
+}
+
+/* The audio thread goes straight from the enqueue down to the dequeue */
+html.tanh .pl-down {
+  grid-row: 1 / 3;
+  grid-column: 4;
+  align-self: stretch;
+  position: relative;
+}
+
+html.tanh .pl-down span {
+  position: absolute;
+  left: 50%;
+  top: 27%;
+  bottom: 27%;
+  width: 0;
+  border-left: 2px solid var(--ink);
+  border-radius: 2px;
+}
+
+html.tanh .pl-down span::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: -9px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 14px solid var(--ink);
+}
+
+/* The allowed wait beside the way down: a dashed box as long as the ratio
+   allows, filled while the audio thread blocks */
+html.tanh .pl-wait {
+  position: absolute;
+  left: calc(50% + 14px);
+  top: 27%;
+  width: 20px;
+  height: calc(46% * var(--share));
+  border: 2px dashed var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+html.tanh .pl-wait-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  background: repeating-linear-gradient(135deg, var(--mark-model) 0 5px, var(--tint-model) 5px 10px);
+}
+
+html.tanh .pl-case {
+  margin-top: var(--space-4);
+  font-size: 0.6em;
+}
+
+html.tanh .pl-down span.on {
+  border-left-color: var(--mark-exercise);
+  box-shadow: -3px 0 0 var(--tint-exercise), 3px 0 0 var(--tint-exercise);
+}
+
+/* Slots: colour only */
+html.tanh .pl-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+html.tanh .pl-slot {
+  height: 56px;
+  border-radius: var(--radius-small);
+  transition: background-color 0.25s;
+}
+
+html.tanh .pl-slot.free { border: 2px dashed var(--fs-border); }
+html.tanh .pl-slot.queued { background: var(--tint-exercise); border: 2px solid var(--mark-exercise); }
+html.tanh .pl-slot.running { background: var(--mark-model); }
+html.tanh .pl-slot.done { background: var(--mark-check); }
+
+html.tanh .pl-legend {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .pl-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  border-radius: 3px;
+}
+
+html.tanh .pl-legend .queued::before { background: var(--tint-exercise); border: 2px solid var(--mark-exercise); }
+html.tanh .pl-legend .running::before { background: var(--mark-model); }
+html.tanh .pl-legend .done::before { background: var(--mark-check); }
+
+/* Threads: a bar that fills while the model runs */
+html.tanh .pl-thread {
+  position: relative;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--wash);
+  overflow: hidden;
+  font-family: var(--fs-heading-font);
+  font-weight: 600;
+}
+
+html.tanh .pl-thread span { position: relative; }
+
+html.tanh .pl-thread-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--mark-model);
+}
+
+/*********************************************
+ * A late block as zeros: a waveform with a gap, and the click at its edges
+ *********************************************/
+
+html.tanh .click {
+  margin-top: var(--space-7);
+}
+
+html.tanh .click-labels {
+  position: relative;
+  height: 1.6em;
+  font-size: 0.55em;
+}
+
+html.tanh .click-labels span {
+  position: absolute;
+  text-align: center;
+  white-space: nowrap;
+  font-family: var(--fs-code-font);
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .click-wave {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+html.tanh .click-gap { fill: var(--wash); }
+html.tanh .click-div { stroke: var(--fs-border); stroke-width: 1.5; stroke-dasharray: 4 6; }
+
+html.tanh .click-line {
+  fill: none;
+  stroke: var(--mark-exercise);
+  stroke-width: 3;
+  stroke-linejoin: miter;
+}
+
+/* The two jumps: straight down to zero, straight back up */
+html.tanh .click-jump {
+  stroke: var(--ink);
+  stroke-width: 7;
+  stroke-linecap: square;
+}
+
+html.tanh .click-note {
+  margin-top: var(--space-5);
+  font-size: 0.65em;
+}
+
+html.tanh .click-note b {
+  margin-right: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--fs-code-font);
+}
 
 /*********************************************
  * Three kinds of thread, and the calls on each
@@ -476,9 +1832,9 @@ html.tanh .card-arrow.strike.visible { text-decoration: line-through; opacity: 0
 
 @media (prefers-reduced-motion: reduce) {
   html.tanh .reveal section.present .pool-instance,
-  html.tanh .reveal section.present .pool-thread {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0s !important;
+  html.tanh .reveal section.present .pool-thread,
+  html.tanh .reveal section.present .pool-queue .q-slot b {
+    animation: none !important;
   }
 }
 
@@ -498,10 +1854,10 @@ html.tanh .st {
   width: 100%;
   height: auto;
   margin-top: var(--space-4);
-  font-family: var(--fs-body-font, inherit);
+  font-family: var(--fs-main-font);
 }
 
-html.tanh .ov { max-height: 780px; }
+html.tanh .ov { max-height: 720px; }
 html.tanh .st { max-height: 640px; }
 
 html.tanh .ov-thread { fill: var(--wash); }
@@ -572,10 +1928,14 @@ html.tanh .ov-pill.engine { fill: var(--tint-model); stroke: none; }
 
 html.tanh .ov-pill-text {
   font-family: var(--fs-code-font);
-  font-size: 17px;
+  font-size: 15px;
   fill: var(--ink);
   text-anchor: middle;
 }
+
+html.tanh .ov-pill-text.small { font-size: 13px; }
+
+html.tanh .ov-note.left { text-anchor: start; }
 
 html.tanh .ov-note {
   font-size: 16px;
@@ -590,8 +1950,8 @@ html.tanh .ov-flow {
   stroke-width: 1.5;
 }
 
-html.tanh .ov-flow.strong { stroke: var(--ink); stroke-width: 2.5; }
-html.tanh .ov-flow.state { stroke: var(--mark-latent); stroke-width: 2.5; stroke-dasharray: 8 6; }
+html.tanh .ov-flow.strong { stroke: var(--ink); stroke-width: 2; }
+html.tanh .ov-flow.state { stroke: var(--mark-latent); stroke-width: 2; stroke-dasharray: 6 5; }
 html.tanh .ov-arrowhead { fill: var(--ink); }
 
 html.tanh .ov-ring {
@@ -603,6 +1963,10 @@ html.tanh .ov-ring {
 
 html.tanh .ov-threadrow rect { fill: var(--paper); stroke: var(--mark-model); stroke-width: 1.5; }
 
+html.tanh .ov-lens { fill: none; stroke: var(--ink); stroke-width: 2.5; }
+html.tanh .ov-lens-ray { stroke: var(--fs-text-muted-color); stroke-width: 1; stroke-dasharray: 4 4; }
+html.tanh .ov-lens-frame { fill: var(--paper); stroke: var(--fs-text-muted-color); stroke-width: 1; stroke-dasharray: 4 4; }
+
 html.tanh .ov-slot { fill: var(--paper); stroke: var(--fs-border-strong); }
 html.tanh .ov-slot.busy { fill: var(--tint-model); stroke: none; }
 
@@ -612,7 +1976,7 @@ html.tanh .st-lane.pool { fill: color-mix(in srgb, var(--tint-model) 45%, var(--
 
 html.tanh .st-text {
   font-family: var(--fs-code-font);
-  font-size: 21px;
+  font-size: 18px;
   fill: var(--ink);
   text-anchor: middle;
 }
@@ -630,3 +1994,37 @@ html.tanh .st-caption.left { text-anchor: start; }
 /* Reveal fades fragments; the SVG groups follow */
 html.tanh .ov g.fragment,
 html.tanh .st g.fragment { transition: opacity 0.4s var(--ease); }
+
+/*********************************************
+ * Part 1 recap and anira answer: a band across the top names each half of
+ * a pair, beige for how we did it, green for how anira does it
+ *********************************************/
+
+/* Above the content, so it takes no room from the slide */
+html.tanh .reveal .slides section.recap::before,
+html.tanh .reveal .slides section.answer::before {
+  position: absolute;
+  top: -56px;
+  left: 0;
+  right: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 6px solid;
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: left;
+}
+
+html.tanh .reveal .slides section.recap::before {
+  content: 'Recap · how we did it in part 1';
+  border-color: var(--mark-model);
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .slides section.answer::before {
+  content: 'Improvement · how anira does it';
+  border-color: var(--mark-check);
+  color: var(--fs-text-muted-color);
+}

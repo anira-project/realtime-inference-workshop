@@ -69,7 +69,7 @@ Note:
 </div>
 
 Note:
-    - anira is fetched by CMake, pinned to the v3 beta tag, with ONNX Runtime built in. support.h gains report_with_latency: the step 7 comparison, shifted by one number. No LibTorch in this step: the plugin's choice from step 8.
+    - anira is fetched by CMake, pinned to a v3 pre-release commit, with ONNX Runtime built in. support.h gains report_with_latency: the step 7 comparison, shifted by one number. No LibTorch in this step: the plugin's choice from step 8.
     - model.json is given with gaps: the tensors are named, shapes and roles are the task. contract.json is complete.
 
 ---
@@ -107,7 +107,7 @@ Note:
 Three lines. The geometry comes from the host, at `prepare`.
 
 Note:
-    - budget: the number from step 3, the worst case we are willing to promise. "measured" would derive it during warm-up; this build of the beta wants it explicit.
+    - budget: the number from step 3, the worst case we are willing to promise. "measured" would derive it during warm-up; this pre-release wants it explicit.
     - warmup fixed 3: three runs on the calling thread before prepare returns.
     - on_miss zeros: what step 7's wet debt did.
 

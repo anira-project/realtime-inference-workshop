@@ -10,9 +10,11 @@ Note:
 
 ---
 
+<!-- .slide: class="recap" -->
+
 <div class="tag">Part 1 · Step 4</div>
 
-## Every engine has its own API.<br><span class="then">And its own weight.</span>
+## Every engine has its own API.<br><span class="then">One class per engine, written by hand.</span>
 
 <div class="tradeoff ships">
   <div class="tradeoff-name">LibTorch</div>
@@ -32,6 +34,8 @@ Note:
     - Two engines, two classes, and the state handled differently in each. The plugin picked one at compile time.
 
 ---
+
+<!-- .slide: class="answer" -->
 
 <div class="tag">anira · Engines</div>
 
@@ -59,6 +63,8 @@ Note:
 
 ---
 
+<!-- .slide: class="recap" -->
+
 <div class="tag">Part 1 · Steps 2 and 7</div>
 
 ## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
@@ -74,6 +80,8 @@ Note:
     - Ring in, model block out, model block in, ring out: that is pre- and post-processing, and ours knew only one shape, audio to audio.
 
 ---
+
+<!-- .slide: class="answer" -->
 
 <div class="tag">anira · Stages</div>
 
@@ -97,6 +105,8 @@ Note:
 
 ---
 
+<!-- .slide: class="recap" -->
+
 <div class="tag">Part 1 · ONNX</div>
 
 ## 63,488 floats of state,<br><span class="then">carried by hand.</span>
@@ -111,6 +121,8 @@ Note:
 
 ---
 
+<!-- .slide: class="answer" -->
+
 <div class="tag">anira · State</div>
 
 ## Every tensor has a role.<br><span class="then">State is one of them.</span>
@@ -121,8 +133,7 @@ Note:
     "axes": [["batch",1],["channel",1],["time",2048]] },
   { "name": "state_in",  "role": "state",    "axes": [["batch",1],["any",63488]],
     "state_source": "state_out" }
-],
-"outputs": [
+], "outputs": [
   { "name": "audio_out", "role": "streamed", …, "latency": 2224 },
   { "name": "state_out", "role": "state",    "axes": [["batch",1],["any",63488]] }
 ]
@@ -141,6 +152,8 @@ Note:
 
 ---
 
+<!-- .slide: class="recap" -->
+
 <div class="tag">Part 1 · Steps 3 and 5</div>
 
 ## We measured and checked by hand.
@@ -154,6 +167,8 @@ Note:
     - A benchmark we wrote, a sanitizer we ran once. Both have to be repeated for every model, every engine, every machine.
 
 ---
+
+<!-- .slide: class="answer" -->
 
 <div class="tag">anira · Safety</div>
 

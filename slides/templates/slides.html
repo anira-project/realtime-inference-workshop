@@ -15,7 +15,11 @@
   <div class="reveal">
     <header class="slide-header">
       <div class="header-logo-box">
-        <button class="theme-switch" onclick="toggleTheme()" title="Toggle dark/light mode" aria-label="Toggle dark/light mode">
+        <button class="header-button" onclick="chapterOverview.toggle()" title="Chapter overview (Esc)" aria-label="Chapter overview">
+          <svg class="icon-overview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <svg class="icon-slide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
+        </button>
+        <button class="header-button" onclick="toggleTheme()" title="Toggle dark/light mode" aria-label="Toggle dark/light mode">
           {{THEME_ICONS}}
         </button>
       </div>
@@ -43,6 +47,8 @@
   <script src="js/custom_speaker_notes.js?v={{BUILD_ID}}"></script>
   <script src="js/timeline.js?v={{BUILD_ID}}"></script>
   <script src="js/chapter_overview.js?v={{BUILD_ID}}"></script>
+  <script src="js/combinations.js?v={{BUILD_ID}}"></script>
+  <script src="js/pipeline.js?v={{BUILD_ID}}"></script>
   <script src="js/task_timer.js?v={{BUILD_ID}}"></script>
   <script src="js/spectrogram_player.js?v={{BUILD_ID}}"></script>
   <script src="js/task_run.js?v={{BUILD_ID}}"></script>
@@ -80,6 +86,8 @@
         local: 'katex',
       },
       transition: 'none',
+      // The URL follows the current slide, so a copied link or a reload lands there
+      hash: true,
       // The footer draws its own progress, per chapter
       progress: false,
       // Chapters are vertical stacks; left/right still step through every slide

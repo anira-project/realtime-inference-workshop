@@ -334,7 +334,9 @@ html.tanh .integration-step {
   transition: opacity 0.4s var(--ease), outline-color 0.4s var(--ease);
 }
 
-html.tanh .reveal section:has(.integration-focus:not(.visible)) .integration .integration-step {
+/* The slide's own section only: the chapter around it would also match while a
+   later slide's fragment is still hidden */
+html.tanh .reveal section:not(:has(section)):has(.integration-focus:not(.visible)) .integration .integration-step {
   opacity: 1;
   outline-color: transparent;
 }

@@ -1124,7 +1124,7 @@ html.tanh .deadline-bars i {
   transform-origin: bottom;
 }
 
-/* Budget at 25 % of the height, so 375 % reaches the top */
+/* Budget at 18 % of the height, so the forward pass, 510 %, reaches the top */
 html.tanh .deadline-bars i.runs {
   height: 94%;
   background: var(--ink);
@@ -1156,7 +1156,7 @@ html.tanh .deadline-budget {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(40px + (100% - 40px) * 0.25);
+  bottom: calc(40px + (100% - 40px) * 0.18);
   z-index: 1;
   border-top: 2px dashed var(--ink);
 }
@@ -1281,6 +1281,29 @@ html.tanh .reveal section.present .budget-calc > :nth-child(3) { animation-delay
 html.tanh .reveal section.present .budget-calc > :nth-child(4) { animation-delay: 0.45s; }
 html.tanh .reveal section.present .budget-calc > :nth-child(5) { animation-delay: 0.6s; }
 
+/* Step 3 · the forward pass against the average and against its own callback */
+html.tanh .budget-calcs {
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  justify-content: start;
+  column-gap: var(--space-5);
+  row-gap: var(--space-4);
+}
+
+/* Rows share the grid's columns, so the three divisions line up */
+html.tanh .budget-calcs .budget-calc { display: contents; }
+html.tanh .budget-calcs .budget-calc > * { align-self: end; }
+
+html.tanh .budget-calc.over .result {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+html.tanh .budget-calc.over .result small { color: inherit; opacity: 0.7; }
+
+html.tanh .reveal section.present .budget-calc.load > * { animation-delay: 1.2s; }
+html.tanh .reveal section.present .budget-calc.over > * { animation-delay: 2s; }
+
 @keyframes budget-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* The label sits on the last bar, so it hangs to the left instead of centring */
@@ -1362,34 +1385,29 @@ html.tanh .run-step.is-on .run-timed .mini-model { animation: pump-run 2s var(--
 
 @keyframes stopwatch { to { transform: rotate(720deg); } }
 
-/* TODO 2: the times sort themselves, p95 is near the end */
-html.tanh .sort-bars {
-  position: relative;
+/* TODO 2: the times as they came, the fastest and the slowest picked out */
+html.tanh .times-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
   width: 80%;
   height: 100px;
   border-bottom: 2px solid var(--ink);
 }
 
-html.tanh .sort-bars i {
-  position: absolute;
-  bottom: 0;
-  left: calc(var(--from) * 12.5% + 1%);
-  width: 10.5%;
+html.tanh .times-bars i {
+  position: relative;
+  flex: 1;
   height: var(--h);
   border-radius: 3px 3px 0 0;
   background: var(--mark-exercise);
 }
 
-html.tanh .run-step.is-on .sort-bars i { animation: sort-move 1.2s var(--ease) 0.4s both; }
-
-@keyframes sort-move {
-  to { left: calc(var(--to) * 12.5% + 1%); }
-}
-
-html.tanh .sort-mark {
+html.tanh .times-bars span {
   position: absolute;
-  right: 10%;
-  top: 0;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
   padding: 0 var(--space-2);
   border-radius: var(--radius-small);
   background: var(--ink);
@@ -1399,7 +1417,12 @@ html.tanh .sort-mark {
   opacity: 0;
 }
 
-html.tanh .run-step.is-on .sort-mark { animation: run-appear 0.3s var(--ease) 1.9s both; }
+html.tanh .run-step.is-on .times-bars i.min { animation: times-pick 0.3s var(--ease) 0.6s both; }
+html.tanh .run-step.is-on .times-bars i.max { animation: times-pick 0.3s var(--ease) 1.4s both; }
+html.tanh .run-step.is-on .times-bars i.min span { animation: run-appear 0.3s var(--ease) 0.6s both; }
+html.tanh .run-step.is-on .times-bars i.max span { animation: run-appear 0.3s var(--ease) 1.4s both; }
+
+@keyframes times-pick { to { background: var(--ink); } }
 
 /* TODO 3: 200 single calls make a distribution, with a tail */
 html.tanh .hist-bars {

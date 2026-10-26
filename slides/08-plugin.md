@@ -73,6 +73,7 @@ Build the implementation and play around with the dry/wet parameter
 ```bash
 cmake -S . -B build-juce -G Ninja -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
 cmake --build build-juce --target step08_plugin_Standalone   # or step08_plugin_VST3
+```
 
 
 --- 
@@ -89,7 +90,7 @@ cmake --build build-juce --target step08_plugin_Standalone   # or step08_plugin_
 **Anything else:** this track is out of time with the rest of the session.
 
 Note:
-    - At 0 the plugin outputs only the dry path, delayed by 4096 samples. The host delays every other track by the latency we report, so if the number is right, the two copies line up sample for sample and cancel.
+    - At 0 the plugin outputs only the dry path, delayed by 6320 samples. The host delays every other track by the latency we report, so if the number is right, the two copies line up sample for sample and cancel.
     - This is the step 7 alignment, checked by the host instead of by us.
 
 ---

@@ -111,7 +111,7 @@ Note:
 <div class="prereqs">
   <div class="prereq">
     <div class="prereq-label">Expected knowledge</div>
-    <div class="prereq-text">C++, and the audio thread's rules: no allocations, no locks, no waiting</div>
+    <div class="prereq-text">C++, and the audio thread's rules</div>
   </div>
   <div class="prereq optional">
     <div class="prereq-label">Helpful knowledge, not required</div>

@@ -1,3 +1,10 @@
+<!-- .slide: data-background-image="assets/images/adc26-title.webp" data-background-size="cover" data-state="no-footer" -->
+
+Note:
+    - The ADC title card, while people come in.
+
+---
+
 <h1>Real-Time Neural<br>Inference</h1>
 
 From an exported neural model to a real-time-safe audio plugin

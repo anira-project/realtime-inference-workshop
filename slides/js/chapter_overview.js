@@ -78,10 +78,12 @@ class ChapterOverview {
 
             const card = document.createElement('div');
             card.className = 'chapter-overview-chapter';
-            card.appendChild(this.thumbnail(slides[0]));
+            // The first slide with a heading stands for the chapter; a bare title card does not
+            const lead = [...slides].find(slide => slide.querySelector('h1, h2')) || slides[0];
+            card.appendChild(this.thumbnail(lead));
             const title = document.createElement('div');
             title.className = 'chapter-overview-title';
-            const heading = slides[0]?.querySelector('h1, h2')?.cloneNode(true);
+            const heading = lead?.querySelector('h1, h2')?.cloneNode(true);
             // Hidden slides render no line breaks, so innerText would glue "Step 1" to the title
             heading?.querySelectorAll('br').forEach(br => br.replaceWith(' '));
             title.textContent = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : chapter.id;

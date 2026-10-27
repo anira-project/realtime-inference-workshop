@@ -81,8 +81,8 @@ async function generateHTML(isDev = false) {
   await fs.writeFile(path.join(distDir, 'workshop.html'), html);
   console.log('✅ Generated workshop.html');
   
-  // Generate index.html landing page
-  await generateIndexPage(chapters, distDir, isDev);
+  // The site root opens the deck; the chapters are reached from inside it (Esc, the agenda)
+  await generateIndexPage(distDir);
   
   console.log('✅ All HTML files generated successfully!');
 }
@@ -316,24 +316,23 @@ function extractTitle(content, isHtml) {
   return formatTitle || 'Untitled Presentation';
 }
 
-async function generateIndexPage(chapters, distDir, isDev) {
-  const indexTemplatePath = path.join(__dirname, '../slides/templates/index.html');
-  const indexTemplate = await fs.readFile(indexTemplatePath, 'utf-8');
-  
-  const presentationsList = chapters.map(chapter => 
-    `    <a href="workshop.html#/${chapter.id}" class="presentation-card">
-      <h2>${chapter.title}</h2>
-      <p class="filename">${chapter.part ?? 'Introduction'}</p>
-    </a>`
-  ).join('\n');
-  
-  const indexHTML = renderTemplate(indexTemplate, {
-    PRESENTATIONS_LIST: presentationsList,
-    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>' : ''
-  });
-
+// index.html forwards to the deck and keeps the hash, so a link to /#/latency still lands there
+async function generateIndexPage(distDir) {
+  const indexHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Real-Time Neural Inference Workshop</title>
+  <script>location.replace('workshop.html' + location.hash);</script>
+  <meta http-equiv="refresh" content="0; url=workshop.html">
+</head>
+<body>
+  <a href="workshop.html">Real-Time Neural Inference Workshop</a>
+</body>
+</html>
+`;
   await fs.writeFile(path.join(distDir, 'index.html'), indexHTML);
-  console.log('✅ Generated index.html (landing page)');
+  console.log('✅ Generated index.html (forwards to workshop.html)');
 }
 
 async function buildSlidesContent(slides) {

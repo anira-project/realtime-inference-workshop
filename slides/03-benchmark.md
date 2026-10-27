@@ -7,6 +7,10 @@ Note:
     - How long does it take, and how long in the worst case?
     - Ask the room: who measures worst case rather than average? What do you measure with?
 
+**Script:**
+
+"To know whether we can run the model in time, we need to measure how long a forward pass takes. We will do that with Google Benchmark, which is a library for measuring code performance. It will give us the average time, but also the worst case, which is what we care about."
+
 ---
 
 <div class="tag">Motivation</div>
@@ -49,6 +53,13 @@ Note:
     - Spread over all 32 callbacks, 46.4 ms of audio, that is 16 %: what a CPU meter shows. In the callback that runs it, 510 %: a click every 46.4 ms.
     - This is the slide to linger on: the audio duration of the model block and the deadline of a callback are unrelated numbers.
 
+**Script:**
+
+"Every callback has a deadline, that we should not exceed. In the case of a host block size of 64 samples at 44.1 kHz gives you a budget of 1.45 milliseconds per callback. The model takes 2048 samples, at 44.1kHz that is 46 milliseconds of audio. So the budget of the model is 46 ms, but the deadline for each callback is only 1.45 ms.
+The actual forward pass on my mac takes 7.4 ms, which is only one fifth of the budget of the model, but it is 5 times the budget of a callback on the host's side. The first 31 callbacks of the host just copy samples, which costs virtually no time. The 32nd has to run the whole network, and it still only has 1.45 ms. That is an issue. So as we can see, we need to measure the forward pass and see how it compares to the budget of the host."
+
+*Linger here. This is the key insight of the first half.*
+
 ---
 
 <div class="tag">Goal</div>
@@ -57,9 +68,14 @@ Note:
 
 <div class="statement-points">
   <div><small>1</small>Run the model inside the timed loop</div>
-  <div><small>2</small>Implement <code>fastest()</code> and <code>slowest()</code> for max and min</div>
+  <div><small>2</small>Find out the maximum and minimum runtimes</div>
   <div><small>3</small>Time one call per repetition</div>
 </div>
+
+Note:
+**Script:**
+
+"So let's measure it properly. To tho that we will have to run the model inside a loop that we time. We will find the fastest and slowest times the model processes a block and we'll do this one call at a time."
 
 ---
 
@@ -92,6 +108,10 @@ Note:
     - The input is the first 2048 samples of test_signal.h. The model is loaded once, before anything is timed: loading is not what we measure.
     - main.cpp: three TODOs, k_repetitions = 200.
 
+**Script:**
+
+"For this we will use Google Benchmark, fetched by CMake. It's what anira benchmarks with too. The model is loaded before timing, because loading isn't what we want to measure."
+
 ---
 
 <div class="tag">Helpers: Google Benchmark</div>
@@ -111,6 +131,12 @@ BENCHMARK(forward_pass)
 
 Note:
     - Mean, median and standard deviation come for free. p95, p99 and max we add.
+
+**Script:**
+
+"Only the body of the loop is timed. By default it runs that body as often as it
+likes and gives you the average. We want the opposite: one call per
+repetition, many repetitions, and our own minimum and maximum times."
 
 ---
 
@@ -151,6 +177,12 @@ cmake --build --preset release --target step03_exercise
   </div>
 </div>
 
+Note:
+**Script:**
+
+*Timebox.*
+So to summerize, we will time a loop which processes one block. Then we look for the fastest and the slowest callbacks. And we want this one call per repetition. You have 3 minutes to try and solve the task.
+
 ---
 
 <div class="tag">Solution</div>
@@ -166,6 +198,10 @@ for (auto _ : state) {
 
 Note:
     - Only the call itself: copying, allocating or printing in here is measured too.
+
+**Script:**
+
+" It's important to only time the call. Anything else in there gets measured too. We need `DoNotOptimize` to keep the compiler from deleting our work."
 
 ---
 
@@ -187,6 +223,10 @@ double slowest(const std::vector<double>& times) {
 Note:
     - Sort a copy, and take the entry `fraction` of the way through it.
 
+**Script:**
+
+"This is pretty straight forward, I don't think we need to get into it. Nothing fancy."
+
 ---
 
 <div class="tag">Solution</div>
@@ -202,6 +242,11 @@ BENCHMARK(forward_pass)
 
 Note:
     - Left alone, Google Benchmark runs the body as often as it likes and reports the average: the one number that cannot show a worst case.
+
+**Script:**
+
+"We need `Iterations(1)`. Otherwise we'll get an average, and an average can't show you
+a worst case."
 
 ---
 
@@ -221,3 +266,9 @@ Note:
     - mean / median: what a CPU meter shows. p95 / p99: what most users hit sometimes. max: what decides whether you shipped a broken plugin.
     - Page faults, the allocator, a thermal step, the scheduler. The worst case has to fit the budget, with room to spare: everything else in the host is fighting for that deadline too.
     - Measured on an ordinary thread, with nothing competing. In a callback, allocations, locks and page faults are not slow but fatal: step 5.
+
+**Script:**
+
+*Have people run it three times.*
+"As we can see in the results, if you run it multiple times, the mean stays quite stable, but the max changes a lot at every run, and the max is what
+decides if your plugin is going to work under the worst-case scenario. Mean is your CPU meter, p99 is what users hit 99% of the time. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in step 5. But first, we will talk little more about our engine."

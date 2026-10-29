@@ -1,14 +1,17 @@
 // Step 1 — Minimal C++ inference, reference implementation
 //
-// Goal:  load the model with LibTorch and run the test signal through it.
-// Given: common/helpers/libtorch_engine.h, the engine.
-// Check: the output within 1e-4 of what the model produced in Python.
+// Goal:   load the model with LibTorch and run the test signal through it.
+// Given:  common/helpers/libtorch_engine.h, the engine — read it first.
+// Task:   wire it up, at the three TODO banners below.
+// Check:  the output within 1e-4 of what the model produced in Python.
+//
+// It builds and runs as it is, and says what is still missing.
 
 #include <array>
 #include <cstddef>
 #include <cstdio>
-#include <memory>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "common/helpers/libtorch_engine.h"
@@ -31,14 +34,20 @@ constexpr struct {
 } k_model{};
 
 int main() {
-    // ---- TODO 1: create the engine -----------------------------------------
-    // Once, outside the loop: loading is slow, and the model carries the state
-    // from block to block. A fresh model per block would lose it.
-    std::unique_ptr<LibTorchEngine> engine;
-    try {
-        engine = std::make_unique<LibTorchEngine>(k_model.m_path);
-    } catch (const std::runtime_error& error) {
-        std::fprintf(stderr, "%s\n", error.what());
+    // ---- TODO 1 --------------------------------------------------------
+    // Load the model from k_model.m_path. load_model() throws if the file is
+    // not there, which is what the catch is for.
+    // Note where this sits: outside the loop below, and why that matters.
+    //
+    // Hint: look at the struct above
+    // --------------------------------------------------------------------
+    LibTorchEngine engine;
+
+    const std::string model_path = k_model.m_path; // <- fill out
+    engine.load_model(model_path);
+
+    if (!engine.is_model_loaded()) {
+        std::fprintf(stderr, "TODO 1: load the model first, with the path to it\n");
         return 2;
     }
 
@@ -48,21 +57,38 @@ int main() {
 
     static_assert(input.size() == target.size(), "the target was generated for another signal");
 
-    // ---- TODO 2: in what size to process ------------------------------------
-    // Not a free choice: the export fixed it. The model was traced for
-    // k_model.m_input_size samples per forward pass and refuses anything else.
-    // Whole blocks only: the last k_test_signal_length % process_size samples
-    // would stay unprocessed.
-    const size_t process_size = static_cast<size_t>(k_model.m_input_size);
-    const size_t num_blocks = k_test_signal_length / process_size;
+    // ---- TODO 2 ------------------------------------------------------------
+    // In what size do you want to process the signal? Pick a number, run it,
+    // and see whether the model agrees with you. Whole blocks only: the last
+    // k_test_signal_length % process_size samples stay unprocessed.
+    //
+    // Hint: a model often has a fixed processing block size
+    // ------------------------------------------------------------------------
+    const size_t process_size = k_model.m_input_size; // <- fill out
+
+    if (process_size == 0) {
+        std::fprintf(stderr, "TODO 2: pick a size to process in first.\n");
+        return 2;
+    }
+    // The ternary is not for safety — the guard above already returned. MSVC
+    // rejects a division by a constant zero at compile time, so the expression
+    // has to stay valid while process_size is still 0.
+    const size_t num_blocks = process_size > 0 ? k_test_signal_length / process_size : 0;
 
     // The whole signal in one buffer, processed in place block by block.
     std::vector<float> output(input.begin(), input.end());
 
     try {
         for (size_t i = 0; i < num_blocks; ++i) {
-            // ---- TODO 3: run the block through the engine ------------------
-            engine->process(output.data() + i * process_size, process_size);
+            // ---- TODO 3 ----------------------------------------------------
+            // Run this block through the engine: it starts at
+            // output.data() + i * process_size and is process_size samples
+            // long. It is processed in place, so afterwards `output` holds the
+            // model's output for this block.
+            // ----------------------------------------------------------------
+            const size_t start = i * process_size;
+
+            engine.process(output.data() + start, process_size); // <- fill out
         }
     } catch (const std::exception& error) {
         std::fprintf(stderr, "process() failed: %s\n", error_summary(error.what()).c_str());

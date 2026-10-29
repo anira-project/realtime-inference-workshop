@@ -237,7 +237,7 @@ Note:
 ## TODO 1: Size the ring buffers
 
 ```cpp
-const size_t capacity = max_block_size + 2 * m_model_input_size;
+const size_t capacity = max_block_size + 2 * m_model_input_size; // <- fill out
 ```
 
 Note:
@@ -255,22 +255,25 @@ Note:
 ## TODO 2: Pump whole blocks
 
 ```cpp
-m_input.push(samples, num_samples);
+m_input.push(samples, num_samples); // <- fill out
 
-while (m_input.available() >= m_model_input_size) {        // Whole blocks only
-    m_input.pop(m_block.data(), m_model_input_size);
-    m_engine.process(m_block.data(), m_model_input_size);
-    m_output.push(m_block.data(), m_model_input_size);
-    m_produced.insert(m_produced.end(), m_block.begin(), m_block.end());
+const size_t num_model_blocks = m_input.available() / m_model_input_size; // <- fill out
+
+for (size_t b = 0; b < num_model_blocks; ++b) {
+    m_input.pop(m_model_block.data(), m_model_input_size); // <- fill out
+    m_engine.process(m_model_block.data(), m_model_input_size);
+    m_output.push(m_model_block.data(), m_model_input_size); // <- fill out
+    …
 }
 ```
 
 Note:
-    - while, not if: one big host block can complete more than one model block.
+    - A count, not one: one big host block can complete more than one model block.
+    - The rest, less than one model block, waits in m_input for the next callback.
 
 **Script:**
 
-"We should only pump the block when we have at least 2048 samples. So we need to check how many samples are in our input ring buffer. We need to be checking all the time, so we have minimal latency and be prepared for a host block size that's bigger than the model block size, that's why we use `while`, not `if`. We will take the samples that came in first with pop, then process them and push them into the output ring buffer."
+"We should only pump the block when we have at least 2048 samples. So we need to check how many samples are in our input ring buffer. So first we push the host's samples into the input ring buffer, and then we count how many whole model blocks are waiting: available divided by 2048. That can be more than one, if the host block is bigger than the model block. For each of them we pop the samples that came in first into our model block, process them, and push them into the output ring buffer. Whatever is left waits for the next callback."
 
 ---
 
@@ -279,8 +282,8 @@ Note:
 ## TODO 3: Hand the samples back
 
 ```cpp
-if (m_output.available() >= num_samples) {
-    m_output.pop(samples, num_samples);
+if (m_output.available() >= num_samples) { // <- fill out
+    m_output.pop(samples, num_samples); // <- fill out
 } else {
     std::fill_n(samples, num_samples, 0.0f);   // Nothing ready yet: silence
 }

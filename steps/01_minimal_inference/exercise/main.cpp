@@ -1,7 +1,7 @@
 // Step 1 — Minimal C++ inference
 //
 // Goal:   load the model with LibTorch and run the test signal through it.
-// Given:  common/libtorch_engine.h, the engine — read it first.
+// Given:  common/helpers/libtorch_engine.h, the engine — read it first.
 // Task:   wire it up, at the three TODO banners below.
 // Check:  the output within 1e-4 of what the model produced in Python.
 //
@@ -10,6 +10,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdio>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "common/helpers/libtorch_engine.h"
@@ -32,20 +34,20 @@ constexpr struct {
 } k_model{};
 
 int main() {
-    std::unique_ptr<LibTorchEngine> engine;
-    try {
-        // ---- TODO 1 --------------------------------------------------------
-        // Create the engine with k_model.m_path. It throws if the file is not
-        // there, which is what the catch is for.
-        // Note where this sits: outside the loop below, and why that matters.
-        // --------------------------------------------------------------------
-    } catch (const std::runtime_error& error) {
-        std::fprintf(stderr, "%s\n", error.what());
-        return 2;
-    }
+    // ---- TODO 1 --------------------------------------------------------
+    // Load the model from k_model.m_path. load_model() throws if the file is
+    // not there, which is what the catch is for.
+    // Note where this sits: outside the loop below, and why that matters.
+    //
+    // Hint: look at the struct above
+    // --------------------------------------------------------------------
+    LibTorchEngine engine;
 
-    if (engine == nullptr) {
-        std::fprintf(stderr, "TODO 1: construct engine first with path to model\n");
+    const std::string model_path = ""; // <- fill out
+    engine.load_model(model_path);
+
+    if (!engine.is_model_loaded()) {
+        std::fprintf(stderr, "TODO 1: load the model first, with the path to it\n");
         return 2;
     }
 
@@ -59,8 +61,10 @@ int main() {
     // In what size do you want to process the signal? Pick a number, run it,
     // and see whether the model agrees with you. Whole blocks only: the last
     // k_test_signal_length % process_size samples stay unprocessed.
+    //
+    // Hint: a model often has a fixed processing block size
     // ------------------------------------------------------------------------
-    const size_t process_size = 0;
+    const size_t process_size = 0; // <- fill out
 
     if (process_size == 0) {
         std::fprintf(stderr, "TODO 2: pick a size to process in first.\n");
@@ -82,6 +86,9 @@ int main() {
             // long. It is processed in place, so afterwards `output` holds the
             // model's output for this block.
             // ----------------------------------------------------------------
+            const size_t start = i * process_size;
+
+            // engine.process(output.data() + ?, ?); // <- fill out
         }
     } catch (const std::exception& error) {
         std::fprintf(stderr, "process() failed: %s\n", error_summary(error.what()).c_str());

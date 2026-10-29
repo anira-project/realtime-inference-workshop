@@ -1,16 +1,16 @@
 // Step 2 — Model input size vs. host buffer size, reference implementation
 //
-// Goal:  feed a model that only takes 2048 samples from a host that hands you
-//        whatever it likes.
-// Given: common/helpers/ring_buffer.h and common/helpers/host.h.
-// Check: the stream the model produced is the same for every host block size.
+// Goal:   feed a model that only takes 2048 samples from a host that hands you
+//         whatever it likes.
+// Given:  common/helpers/ring_buffer.h and common/helpers/host.h — read both first.
+// Task:   fill in ProcessorExample, at the three TODO banners.
+// Check:  is the stream the model produced the same for every host block size?
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -44,9 +44,10 @@ constexpr std::array<size_t, 6> k_host_block_sizes = {64, 128, 441, 512, 1024, 2
 namespace {
 
 // Like a plugin, allocate buffers after the host reports its block size in
-// prepare(). The host then makes repeated process_block() calls. Ring buffers
-// translate between the host's block size and the model's fixed block size,
-// with one model block between an input and an output ring buffer.
+// prepare(). The host then makes repeated process_block() calls. Two ring
+// buffers translate between the host's block size and the model's fixed one:
+//
+//   host block -> m_input -> m_model_block -> model -> m_output -> host block
 class ProcessorExample {
 public:
     explicit ProcessorExample(LibTorchEngine& engine, size_t model_input_size)
@@ -54,17 +55,30 @@ public:
 
     // Allocate and initialize all processing buffers before audio processing begins.
     // @max_block_size: the largest block process_block() can be given
-    void prepare(size_t max_block_size) {
-        // ---- TODO 1: ring buffer capacity ------------------------------------
-        // The worst moment: the host has just written a block, the model has
-        // just produced one, and what it produced before is not drained yet —
-        // which happens whenever the host block does not divide the model one.
-        const size_t capacity = max_block_size + 2 * m_model_input_size;
+    void prepare([[maybe_unused]] size_t max_block_size) {
+        // ---- TODO 1 --------------------------------------------------------
+        // Choose a ring buffer size: a capacity that can absorb the mismatch
+        // between the host block size and the model block size. Think about the
+        // worst moment — the host has just delivered a block, the model has just
+        // produced one, and the one before it has not been drained yet. This
+        // happens as soon as the host block does not divide the model block.
+        // Otherwise push() throws.
+        //
+        // Hint: one host block, plus the model blocks that can wait at once
+        // --------------------------------------------------------------------
+        const size_t capacity = max_block_size + 2 * m_model_input_size; // <- fill out
 
+        if (capacity == 0) {
+            throw std::runtime_error("TODO 1: give the ring buffers a capacity in prepare()");
+        }
         m_input = RingBuffer(capacity);
         m_output = RingBuffer(capacity);
 
-        m_block.assign(m_model_input_size, 0.0f);
+        // Given: room for exactly one model block. A block popped from m_input
+        // lands here, the model processes it in place, and it is pushed on to
+        // m_output from here.
+        m_model_block.assign(m_model_input_size, 0.0f);
+
         m_produced.clear();
         m_engine.reset();
     }
@@ -72,31 +86,52 @@ public:
     // Processes one block supplied by the host. The same buffer is used for input
     // and output, and its length is given by num_samples.
     void process_block(float* samples, size_t num_samples) {
-        // ---- TODO 2: take samples in and run whole model blocks --------------
-        // Adds the host-provided samples to the input side.
-        m_input.push(samples, num_samples);
+        // ---- TODO 2 --------------------------------------------------------
+        // From the host through the model:
+        //   1. push the host's samples into m_input
+        //   2. count the whole model blocks waiting in m_input; the rest waits
+        //      for the next callback
+        //   3. for each one: pop it into m_model_block, run the model (given),
+        //      push the result into m_output
+        //
+        // Hint: available() says how many samples are waiting
+        // --------------------------------------------------------------------
+        m_input.push(samples, num_samples); // <- fill out
 
-        // Whole model blocks only — the rest waits for the next callback.
-        while (m_input.available() >= m_model_input_size) {
-            m_input.pop(m_block.data(), m_model_input_size);
-            m_engine.process(m_block.data(), m_model_input_size);
-            m_output.push(m_block.data(), m_model_input_size);
-            m_produced.insert(m_produced.end(), m_block.begin(), m_block.end());
+        const size_t num_model_blocks = m_input.available() / m_model_input_size; // <- fill out
+
+        for (size_t b = 0; b < num_model_blocks; ++b) {
+            m_input.pop(m_model_block.data(), m_model_input_size); // <- fill out
+            m_engine.process(m_model_block.data(), m_model_input_size);
+            m_output.push(m_model_block.data(), m_model_input_size); // <- fill out
+
+            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
         }
 
-        // ---- TODO 3: give the host its samples back --------------------------
-        // Hand back what is ready. At the start nothing is, so the host gets
-        // silence — that is latency, and it has its own step.
-        if (m_output.available() >= num_samples) {
-            m_output.pop(samples, num_samples);
+        // ---- TODO 3 --------------------------------------------------------
+        // From m_output back to the host: pop num_samples straight into the
+        // host's buffer, if that many are waiting. At the start they are not,
+        // and the host gets silence (given).
+        // --------------------------------------------------------------------
+        if (m_output.available() >= num_samples) { // <- fill out
+            m_output.pop(samples, num_samples); // <- fill out
         } else {
             std::fill_n(samples, num_samples, 0.0f);
         }
+
+        // After a finished callback, less than one model block waits for the
+        // model, and at most one model block plus one host block for the host:
+        // anything more means samples are piling up.
+        if (m_input.available() >= m_model_input_size) {
+            throw std::runtime_error("TODO 2: run the model on the samples that arrived");
+        }
+        if (m_output.available() > m_model_input_size + num_samples) {
+            throw std::runtime_error("TODO 3: give the host its samples back");
+        }
     }
 
-    // Stores the model's output blocks in processing order for the final check.
-    // It grows as process_block() runs; this is fine for the exercise, but
-    // a real-time implementation would avoid expanding a vector during audio processing.
+    // Everything the model produced, in order — what the check reads. It grows
+    // inside process_block(), which is fine offline and a problem later.
     const std::vector<float>& produced() const { return m_produced; }
 
 private:
@@ -104,16 +139,16 @@ private:
     size_t m_model_input_size;
     RingBuffer m_input{0};
     RingBuffer m_output{0};
-    std::vector<float> m_block;
+    std::vector<float> m_model_block;
     std::vector<float> m_produced;
 };
 
 }  // namespace
 
 int main() {
-    std::unique_ptr<LibTorchEngine> engine;
+    LibTorchEngine engine;
     try {
-        engine = std::make_unique<LibTorchEngine>(k_model.m_path);
+        engine.load_model(k_model.m_path);
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
         return 2;
@@ -123,7 +158,7 @@ int main() {
     const std::array<float, k_signal_length>& target = k_target_output_signal;
     const auto model_input_size = static_cast<size_t>(k_model.m_input_size);
 
-    ProcessorExample processor(*engine, model_input_size);
+    ProcessorExample processor(engine, model_input_size);
     bool all_ok = true;
 
     for (const size_t host_block_size : k_host_block_sizes) {
@@ -155,6 +190,14 @@ int main() {
         // The host has to be given something back, even if it is silence.
         if (std::equal(host_output.begin(), host_output.end(), input.begin())) {
             std::printf("  %-24s TODO 3: the host got its own input back   <-- FAILED\n",
+                        label.c_str());
+            all_ok = false;
+            continue;
+        }
+
+        // The model ran, but none of it reached the host.
+        if (std::all_of(host_output.begin(), host_output.end(), [](float x) { return x == 0.0f; })) {
+            std::printf("  %-24s TODO 2: nothing was pushed into m_output   <-- FAILED\n",
                         label.c_str());
             all_ok = false;
             continue;

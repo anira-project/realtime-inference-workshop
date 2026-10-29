@@ -37,7 +37,10 @@ namespace {
 
 // The model is loaded once. Loading is slow and is not what we measure.
 LibTorchEngine& engine() {
-    static LibTorchEngine instance(k_model.m_path);
+    static LibTorchEngine instance;
+    if (!instance.is_model_loaded()) {
+        instance.load_model(k_model.m_path);
+    }
     return instance;
 }
 

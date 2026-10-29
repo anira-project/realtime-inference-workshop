@@ -15,7 +15,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
-#include <memory>
 #include <new>
 #include <stdexcept>
 #include <thread>
@@ -208,15 +207,15 @@ private:
 }  // namespace
 
 int main() {
-    std::unique_ptr<LibTorchEngine> engine;
+    LibTorchEngine engine;
     try {
-        engine = std::make_unique<LibTorchEngine>(k_model.m_path);
+        engine.load_model(k_model.m_path);
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
         return 2;
     }
 
-    ThreadedProcessor processor(*engine);
+    ThreadedProcessor processor(engine);
     try {
         processor.prepare(k_host_block_size);
     } catch (const std::runtime_error& error) {

@@ -1,6 +1,6 @@
 // The inference engine for step 1, given complete.
 //
-// Goal: LibTorch behind three methods — construct, reset, process. Later steps
+// Goal: LibTorch behind three methods — load_model, reset, process. Later steps
 //       keep this interface and change who calls process(), and from which
 //       thread.
 #pragma once
@@ -15,15 +15,20 @@
 
 class LibTorchEngine {
 public:
-    // Loads the TorchScript file: graph and weights in one file, so there is
-    // no model class to link against. Throws if the file cannot be read.
-    explicit LibTorchEngine(const std::string& model_path) {
+    LibTorchEngine() = default;
+
+    void load_model(const std::string& model_path) {
         try {
             m_model = torch::jit::load(model_path);
+            m_initialized = true;
         } catch (const c10::Error& error) {
             throw std::runtime_error("cannot load " + model_path + "\n" + error.what());
         }
         m_model.eval();  // Inference mode: no dropout, no batchnorm updates
+    }
+
+    bool is_model_loaded() const {
+        return m_initialized;
     }
 
     // Clears the model's state, for a new stream — what prepare() does in a
@@ -57,4 +62,5 @@ public:
 
 private:
     torch::jit::script::Module m_model;
+    bool m_initialized = false;
 };

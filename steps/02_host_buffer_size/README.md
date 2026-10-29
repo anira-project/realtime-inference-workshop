@@ -25,8 +25,8 @@ processor.process_block(samples, num_samples) // Per callback, in place
 ```
 
 1. **Size the two ring buffers**, in `prepare()`. How much can be in flight at once, given a host block of N and a model block of 2048? Everything that allocates belongs here, not in the callback.
-2. **The pump**, in `process_block()`. Take the host's samples in, and run the model whenever a whole block has arrived. What is left over waits for the next call.
-3. **Give the host its samples back**, in place. At the start the model has produced nothing — so what goes out?
+2. **The pump**, in `process_block()`. Push the host's samples into the input ring buffer, count the whole model blocks waiting there, and for each one pop it into `m_model_block`, run the model (given) and push the result into the output ring buffer. What is left over waits for the next call.
+3. **Give the host its samples back**, in place: pop them from the output ring buffer, if enough are there. At the start the model has produced nothing, and the host gets silence (given).
 
 Build and run from the repository root:
 
@@ -56,8 +56,9 @@ The check is on **what the model produced**, not on what the host received: the 
 Each TODO says so when it is still missing:
 
 - **`TODO 1: give the ring buffers a capacity in prepare()`** — `capacity` is still 0. Think about the worst moment: the host has just written a full block and the model has not taken anything out yet.
-- **`TODO 2: the model never ran`** — nothing was pushed or processed in `process_block()`.
-- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: probably one model block per callback, rather than as many as are ready.
+- **`TODO 2: the model never ran`** — nothing was pushed into the input ring buffer, or `num_model_blocks` is still 0.
+- **`TODO 2: nothing was pushed into m_output`** — the model ran, but its results never reached the output ring buffer.
+- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: the block is not popped from `m_input`, or only one model block is counted per callback rather than as many as are waiting.
 - **`TODO 3: give the host its samples back`** — the output is piling up instead of going out.
 - **`TODO 3: the host got its own input back`** — the host buffer was never written to.
 
@@ -66,7 +67,7 @@ The ring buffer complains too:
 - **`ring buffer overflow: 64 samples pushed, room for 0`** — the capacity from TODO 1 is too small.
 - **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; TODO 3 decides what the host gets instead.
 - **`produced 4096 samples, expected 6144`** — samples are being dropped. Everything the host gives you has to go in, and only whole model blocks come out.
-- **It passes at 2048 and fails everywhere else** — the pump only works when the sizes happen to match: probably one model block per callback, rather than as many as are ready.
+- **It passes at 2048 and fails everywhere else** — the pump only works when the sizes happen to match: `num_model_blocks` has to count every whole block that is waiting, not just one.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 

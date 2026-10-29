@@ -95,7 +95,8 @@ Note:
 ## The engine<br><span class="then">The interface has three methods.</span>
 
 ```cpp
-LibTorchEngine engine(path);          // Loads the model
+LibTorchEngine engine;
+engine.load_model(path);              // Loads the model
 engine.process(samples, num_samples); // One block, processed in place
 engine.reset();                       // Clears the model's state
 ```
@@ -105,7 +106,7 @@ Note:
 
 **Script:**
 
-"Let's take a deeper look into ur helper file. The engine has three methods: construct, `process`, `reset`. the constructor loads the model. `process` processes the audio one block at the time. `reset` clears the models state, meaning it wipes it's memory. The model has convolutional layers that "remeber" information from past blocks. Its convolutions look back into the past, so internally it keeps the end of the previous block(s): cached history buffers inside the network. We will get deeper into stateful and stateless models in step 4. Remember those
+"Let's take a deeper look into ur helper file. The engine has three methods: `load_model`, `process`, `reset`. `load_model` loads the model. `process` processes the audio one block at the time. `reset` clears the models state, meaning it wipes it's memory. The model has convolutional layers that "remeber" information from past blocks. Its convolutions look back into the past, so internally it keeps the end of the previous block(s): cached history buffers inside the network. We will get deeper into stateful and stateless models in step 4. Remember those
 three methods, since we will need them throughout the workshop."
 
 ---
@@ -115,7 +116,7 @@ three methods, since we will need them throughout the workshop."
 ## The engine<br><span class="then">Load once, then one block at a time.</span>
 
 ```cpp
-// Constructor
+// load_model()
 m_model = torch::jit::load(model_path);
 m_model.eval();
 
@@ -135,7 +136,7 @@ Note:
 
 **Script:**
 
-"Let's take a quick look inside the engine. In the constructor we load the model with torch::jit::load. That file contains everything: the structure of the network and all the trained weights, so we don’t need to rebuild the model in C++. Loading it takes a moment, it’s 127 megabytes, so we do it once and keep the engine around. eval() tells the model: we’re not training anymore, we’re only using you.
+"Let's take a quick look inside the engine. In load_model we load the model with torch::jit::load. That file contains everything: the structure of the network and all the trained weights, so we don’t need to rebuild the model in C++. Loading it takes a moment, it’s 127 megabytes, so we do it once and keep the engine around. eval() tells the model: we’re not training anymore, we’re only using you.
 
 Then for every block: the NoGradGuard also says we're not training, so LibTorch can skip all the bookkeeping it would need for learning.
 
@@ -204,9 +205,12 @@ not code problems.*
 ## TODO 1: Create the engine</span>
 
 ```cpp
-std::unique_ptr<LibTorchEngine> engine;
+LibTorchEngine engine;
 try {
-    engine = std::make_unique<LibTorchEngine>(k_model.m_path);
+    const std::string model_path = k_model.m_path; // <- fill out
+    if (!model_path.empty()) {
+        engine.load_model(model_path);
+    }
 } catch (const std::runtime_error& error) {
     std::fprintf(stderr, "%s\n", error.what());
     return 2;
@@ -236,7 +240,7 @@ model's state every block. The engine lives as long as the stream. So make sure 
 </div>
 
 ```cpp
-const size_t process_size = static_cast<size_t>(k_model.m_input_size);  // 2048
+const size_t process_size = static_cast<size_t>(k_model.m_input_size); // <- fill out
 ```
 
 Note:
@@ -257,7 +261,9 @@ model returned 2048 samples for 512 in."
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine->process(output.data() + i * process_size, process_size);
+    const size_t start = i * process_size;
+
+    engine.process(output.data() + start, process_size); // <- fill out
 }
 ```
 

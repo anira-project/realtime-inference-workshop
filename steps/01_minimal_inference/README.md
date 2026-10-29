@@ -17,7 +17,8 @@ Both signals are compiled in, so there are no files to read and no audio format 
 The engine is three methods:
 
 ```cpp
-LibTorchEngine engine(model_path);        // Loads the model, throws if it cannot
+LibTorchEngine engine;
+engine.load_model(model_path);            // Loads the model, throws if it cannot
 engine.process(samples, num_samples);     // One block, in place
 engine.reset();                           // Clears the state for a new stream, like prepare()
 ```
@@ -26,7 +27,7 @@ engine.reset();                           // Clears the state for a new stream, 
 
 Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners.
 
-1. **Create the engine.** The `try`/`catch` around it is given. Note where it sits — outside the loop — and why that matters: loading is slow, and the model carries its state from block to block.
+1. **Load the model.** Set the path to the model; the call to `load_model` is given. Note where it sits — outside the loop — and why that matters: loading is slow, and the model carries its state from block to block.
 2. **Pick the size you process in** (`process_size`). It starts unset, and the program says so. Choose a number, run it, and see whether the model agrees with you. Whole blocks only: a size that does not divide the signal leaves the remainder unprocessed.
 3. **Process each block**, in place.
 

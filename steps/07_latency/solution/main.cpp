@@ -16,7 +16,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <memory>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -260,15 +259,15 @@ float diff_with_latency(const std::vector<float>& got, const float* want, size_t
 }  // namespace
 
 int main() {
-    std::unique_ptr<LibTorchEngine> engine;
+    LibTorchEngine engine;
     try {
-        engine = std::make_unique<LibTorchEngine>(k_model.m_path);
+        engine.load_model(k_model.m_path);
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
         return 2;
     }
 
-    LatencyProcessor processor(*engine);
+    LatencyProcessor processor(engine);
     const size_t latency = processor.latency_samples();
 
     std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",

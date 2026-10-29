@@ -10,6 +10,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdio>
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -35,21 +36,20 @@ constexpr struct {
 
 int main() {
     // ---- TODO 1 --------------------------------------------------------
-    // Load the model from k_model.m_path. load_model() throws if the file is
-    // not there, which is what the catch is for.
+    // Load the model from k_model.m_path.
     // Note where this sits: outside the loop below, and why that matters.
     //
     // Hint: look at the struct above
     // --------------------------------------------------------------------
     LibTorchEngine engine;
+    const std::string model_path = k_model.m_path; // <- solution
 
-    const std::string model_path = k_model.m_path; // <- fill out
-    engine.load_model(model_path);
-
-    if (!engine.is_model_loaded()) {
+    // Only load what is there: an empty or a wrong path stops here.
+    if (!std::filesystem::exists(model_path)) {
         std::fprintf(stderr, "TODO 1: load the model first, with the path to it\n");
         return 2;
     }
+    engine.load_model(model_path);
 
     constexpr size_t k_test_signal_length = k_signal_length;
     const std::array<float, k_test_signal_length>& input = k_input_signal;
@@ -64,7 +64,7 @@ int main() {
     //
     // Hint: a model often has a fixed processing block size
     // ------------------------------------------------------------------------
-    const size_t process_size = k_model.m_input_size; // <- fill out
+    const size_t process_size = k_model.m_input_size; // <- solution
 
     if (process_size == 0) {
         std::fprintf(stderr, "TODO 2: pick a size to process in first.\n");
@@ -88,7 +88,7 @@ int main() {
             // ----------------------------------------------------------------
             const size_t start = i * process_size;
 
-            engine.process(output.data() + start, process_size); // <- fill out
+            engine.process(output.data() + start, process_size); // <- solution
         }
     } catch (const std::exception& error) {
         std::fprintf(stderr, "process() failed: %s\n", error_summary(error.what()).c_str());

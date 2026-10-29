@@ -63,13 +63,13 @@ public:
         // produced one, and the one before it has not been drained yet. This
         // happens as soon as the host block does not divide the model block.
         // Otherwise push() throws.
-        //
         // --------------------------------------------------------------------
         const size_t capacity = 0; // <- fill out
 
         if (capacity == 0) {
             throw std::runtime_error("TODO 1: give the ring buffers a capacity in prepare()");
         }
+
         m_input = RingBuffer(capacity);
         m_output = RingBuffer(capacity);
 
@@ -108,8 +108,8 @@ public:
 
         // ---- TODO 3 --------------------------------------------------------
         // From m_output back to the host: pop num_samples straight into the
-        // host's buffer, if that many are waiting. At the start they are not,
-        // and the host gets silence (given).
+        // host's buffer, if there are enough samples waiting. At the start they are not,
+        // and the host gets silence.
         // --------------------------------------------------------------------
         if (m_output.available() >= 0) { // <- fill out
             // m_output.pop(?, ?); // <- fill out
@@ -172,9 +172,10 @@ int main() {
                                        processor.process_block(samples, num_samples);
                                    });
         } catch (const std::exception& error) {
+            // Stop at the first error: the other block sizes would only repeat it.
             std::printf("  %-24s %s\n", label.c_str(), error_summary(error.what()).c_str());
-            all_ok = false;
-            continue;
+            std::printf("\nFAILED.\n");
+            return 1;
         }
 
         // Nothing came out of the model at all.

@@ -54,9 +54,10 @@ void forward_pass(benchmark::State& state) {
 
     for (auto _ : state) {
         // ---- TODO 1 --------------------------------------------------------
-        // Run one forward pass on `block`, with `block_size` samples. Only what
+        // Run one forward pass on a block, with the correct number of samples. Only what
         // stands in this loop is timed, so nothing else belongs here.
         // --------------------------------------------------------------------
+        // engine().process(?, ?); // <- fill out
 
         benchmark::DoNotOptimize(block.data());
     }
@@ -84,17 +85,13 @@ double percentile(const std::vector<double>& times, double fraction) {
     return sorted[index];
 }
 
-// The fastest and the slowest of the times Google Benchmark collected.
+// The slowest of the times Google Benchmark collected.
 // @times: one entry per repetition, in seconds, in the order they were measured
-double fastest(const std::vector<double>& times) {
-    // ---- TODO 2 ------------------------------------------------------------
-    // Return the smallest entry of `times`, and in slowest() the largest.
-    // Hint: <algorithm> has a function for each.
-    // ------------------------------------------------------------------------
-    return 0.0;
-}
-
 double slowest(const std::vector<double>& times) {
+    // ---- TODO 2 ------------------------------------------------------------
+    // Return the largest entry of `times`.
+    // Hint: <algorithm> has a function for it.
+    // ------------------------------------------------------------------------
     return 0.0;
 }
 
@@ -103,7 +100,7 @@ double slowest(const std::vector<double>& times) {
 double checked(const char* name, double value) {
     static bool reported = false;
     if (value <= 0.0 && !reported) {
-        std::fprintf(stderr, "Process stopped. TODO 2: calculate the fastest and the slowest call\n", name);
+        std::fprintf(stderr, "Process stopped. TODO 2: calculate the %s call\n", name);
         reported = true;
         exit(1);
     }
@@ -116,12 +113,11 @@ double checked(const char* name, double value) {
 // Left alone, Google Benchmark runs the body as often as it likes and reports
 // the average — which is the one number that cannot show a worst case. Make
 // every repetition time a single call, and measure k_repetitions of them.
-// Hint: ->Iterations(...) and ->Repetitions(...), like ->Unit() below.
 // ------------------------------------------------------------------------------
 BENCHMARK(forward_pass)
     ->Unit(benchmark::kMillisecond)
-    ->ComputeStatistics("min",
-                        [](const std::vector<double>& t) { return checked("fastest", fastest(t)); })
+    // ->Iterations(?) // <- fill out
+    // ->Repetitions(?)// <- fill out
     ->ComputeStatistics("p95", [](const std::vector<double>& t) { return percentile(t, 0.95); })
     ->ComputeStatistics("p99", [](const std::vector<double>& t) { return percentile(t, 0.99); })
     ->ComputeStatistics("max",

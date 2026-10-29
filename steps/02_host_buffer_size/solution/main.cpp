@@ -63,14 +63,13 @@ public:
         // produced one, and the one before it has not been drained yet. This
         // happens as soon as the host block does not divide the model block.
         // Otherwise push() throws.
-        //
-        // Hint: one host block, plus the model blocks that can wait at once
         // --------------------------------------------------------------------
-        const size_t capacity = max_block_size + 2 * m_model_input_size; // <- fill out
+        const size_t capacity = max_block_size + 2 * m_model_input_size; // <- solution
 
         if (capacity == 0) {
             throw std::runtime_error("TODO 1: give the ring buffers a capacity in prepare()");
         }
+
         m_input = RingBuffer(capacity);
         m_output = RingBuffer(capacity);
 
@@ -89,32 +88,31 @@ public:
         // ---- TODO 2 --------------------------------------------------------
         // From the host through the model:
         //   1. push the host's samples into m_input
-        //   2. count the whole model blocks waiting in m_input; the rest waits
-        //      for the next callback
-        //   3. for each one: pop it into m_model_block, run the model (given),
+        //   2. check if m_input has enough samples for a model block
+        //   3. for each block: pop it into m_model_block, run the model (given),
         //      push the result into m_output
         //
         // Hint: available() says how many samples are waiting
         // --------------------------------------------------------------------
-        m_input.push(samples, num_samples); // <- fill out
+        m_input.push(samples, num_samples); // <- solution
 
-        const size_t num_model_blocks = m_input.available() / m_model_input_size; // <- fill out
+        const size_t num_model_blocks = m_input.available() / m_model_input_size; // <- solution
 
         for (size_t b = 0; b < num_model_blocks; ++b) {
-            m_input.pop(m_model_block.data(), m_model_input_size); // <- fill out
+            m_input.pop(m_model_block.data(), m_model_input_size); // <- solution
             m_engine.process(m_model_block.data(), m_model_input_size);
-            m_output.push(m_model_block.data(), m_model_input_size); // <- fill out
+            m_output.push(m_model_block.data(), m_model_input_size); // <- solution
 
             m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
         }
 
         // ---- TODO 3 --------------------------------------------------------
         // From m_output back to the host: pop num_samples straight into the
-        // host's buffer, if that many are waiting. At the start they are not,
-        // and the host gets silence (given).
+        // host's buffer, if there are enough samples waiting. At the start they are not,
+        // and the host gets silence.
         // --------------------------------------------------------------------
-        if (m_output.available() >= num_samples) { // <- fill out
-            m_output.pop(samples, num_samples); // <- fill out
+        if (m_output.available() >= num_samples) { // <- solution
+            m_output.pop(samples, num_samples); // <- solution
         } else {
             std::fill_n(samples, num_samples, 0.0f);
         }
@@ -174,9 +172,10 @@ int main() {
                                        processor.process_block(samples, num_samples);
                                    });
         } catch (const std::exception& error) {
+            // Stop at the first error: the other block sizes would only repeat it.
             std::printf("  %-24s %s\n", label.c_str(), error_summary(error.what()).c_str());
-            all_ok = false;
-            continue;
+            std::printf("\nFAILED.\n");
+            return 1;
         }
 
         // Nothing came out of the model at all.

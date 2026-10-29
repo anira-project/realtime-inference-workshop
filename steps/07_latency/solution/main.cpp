@@ -1,10 +1,13 @@
 // Step 7 — Latency and the dry/wet mix, reference implementation
 //
-// Goal:  work out how late the processed signal is, report it, and delay the
-//        dry signal by the same amount so the two can be mixed.
-// Given: the threaded processor from step 6, with a dry path added.
-// Check: at 100% dry the output is the input, delayed by exactly the reported
-//        latency — if the number is wrong, the check says so.
+// Goal:   work out how late the processed signal is, report it, and delay the
+//         dry signal by the same amount so the two can be mixed.
+// Given:  the threaded processor from step 6, with a dry path added.
+// Task:   fill in the three TODO banners.
+// Check:  at 100% dry the output is the input, delayed by exactly the reported
+//         latency — if the number is wrong, the check says so.
+//
+// It builds and runs as it is, and says which TODO is still open.
 
 #include <readerwriterqueue.h>
 
@@ -57,17 +60,22 @@ public:
     explicit LatencyProcessor(LibTorchEngine& engine) : m_engine(engine) {}
 
     ~LatencyProcessor() { stop(); }
-
-    // ---- TODO 1: how late is the wet signal? ---------------------------------
+    
+    // ---- TODO 1 -------------------------------------------------------------
+    // How late is the wet signal?
     // Three things delay it, and all are fixed:
     //   - the model cannot run before a whole block has arrived
     //   - the result is only picked up in a later callback, so the output side
     //     starts out primed with a block of silence
     //   - the model itself answers late: k_model.m_latency, from the export
     // What the host is told has to be what the host gets, so this number also
-    // decides how far the dry signal is delayed.
+    // decides how far the dry signal is delayed in prepare().
     // --------------------------------------------------------------------------
-    size_t latency_samples() const { return 2 * k_model.m_input_size + k_model.m_latency; }
+    size_t latency_samples() const { 
+        size_t latency = 2 * k_model.m_input_size + k_model.m_latency; // <- solution
+        return latency; 
+    }
+
 
     // Allocate and initialize all processing buffers, queue capacity, 
     // the thread before audio processing begins.
@@ -93,7 +101,14 @@ public:
         // already inside what it returns; the dry path gets all of it.
         m_silence.assign(std::max(latency_samples(), 2 * k_model.m_input_size), 0.0f);
         m_output.push(m_silence.data(), 2 * k_model.m_input_size);
-        m_dry.push(m_silence.data(), latency_samples());
+
+        // ---- TODO 2 --------------------------------------------------------
+        // Delay the dry signal.
+        // The host aligns everything to latency_samples(). How far behind does
+        // the dry signal have to start, so it lines up with the wet one?
+        // ---------------------------------------------------------------------
+        m_dry.push(m_silence.data(), latency_samples()); // <- solution
+     
 
         m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
         m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
@@ -143,23 +158,28 @@ public:
         }
         const bool wet_ready = m_output.available() >= num_samples;
 
-        // ---- TODO 2: mix the delayed dry signal with the wet one -------------
-        // Both sides are now equally late, so this is a plain crossfade. If the
-        // wet side has nothing ready, the dry side still has to come through.
-        // ----------------------------------------------------------------------
         std::fill_n(samples, num_samples, 0.0f);
+
+        // ---- TODO 3 ---------------------------------------------------------
+        // Crossfade the dry and wet paths according to m_mix.
+        // Both sides are equally late now. m_mix = 0 is fully dry, 1 is fully wet.
+        // ---------------------------------------------------------------------
+        const float dry_gain = 1.0f - m_mix; // <- solution
+        const float wet_gain = m_mix; // <- solution
 
         if (m_dry.available() >= num_samples) {
             m_dry.pop(m_dry_block.data(), num_samples);
             for (size_t i = 0; i < num_samples; ++i) {
-                samples[i] += (1.0f - m_mix) * m_dry_block[i];
+                samples[i] += dry_gain * m_dry_block[i];
             }
         }
 
         if (m_output.available() >= num_samples) {
             m_output.pop(m_wet_block.data(), num_samples);
-            for (size_t i = 0; i < num_samples; ++i) { samples[i] += m_mix * m_wet_block[i]; }
+            for (size_t i = 0; i < num_samples; ++i) { samples[i] += wet_gain * m_wet_block[i]; }
         }
+
+
         // The wet side had nothing for this callback: its share is owed.
         if (!wet_ready) {
             m_wet_debt += num_samples;
@@ -270,6 +290,11 @@ int main() {
     LatencyProcessor processor(engine);
     const size_t latency = processor.latency_samples();
 
+    if (latency == 0) {
+        std::printf("TODO 1: work out the latency the design introduces.\n");
+        return 1;
+    }
+
     std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
                 latency,
                 1000.0 * static_cast<double>(latency) / k_model.m_sample_rate,
@@ -278,7 +303,20 @@ int main() {
     std::vector<size_t> dry_late;
     std::vector<size_t> wet_late;
     const std::vector<float> dry = run(processor, 0.0f, dry_late);
+    if (std::all_of(dry.begin(), dry.end(), [](float x) { return x == 0.0f; })) {
+        std::printf("TODO 3: at mix 0 the dry signal has to come through.\n");
+        return 1;
+    }
+    if (diff_with_latency(dry, k_input_signal.data(), 0, {}) <= k_tolerance) {
+        std::printf("TODO 2: the dry signal comes out undelayed, so it cannot line up with the wet one.\n");
+        return 1;
+    }
+
     const std::vector<float> wet = run(processor, 1.0f, wet_late);
+    if (std::all_of(wet.begin(), wet.end(), [](float x) { return x == 0.0f; })) {
+        std::printf("TODO 3: at mix 1 the wet signal has to come through.\n");
+        return 1;
+    }
 
     const float dry_diff = diff_with_latency(dry, k_input_signal.data(), latency, {});
     // The reference already carries the model's own delay, so the wet path

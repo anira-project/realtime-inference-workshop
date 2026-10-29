@@ -1,10 +1,13 @@
 // Step 6 — Inference on a worker thread, reference implementation
 //
-// Goal:  get the engine off the audio thread, and keep the audio thread free of
-//        allocations and locks.
-// Given: moodycamel's lock-free queues, the ring buffers, the fake host.
-// Check: the model still produces the reference output, and the callback does
-//        not allocate once.
+// Goal:   get the engine off the audio thread, and keep the audio thread free
+//         of allocations and locks.
+// Given:  moodycamel's lock-free queues, the ring buffers, the fake host.
+// Task:   fill in the three TODO banners.
+// Check:  the model still produces the reference output, and the callback does
+//         not allocate once.
+//
+// It builds and runs as it is, and says which TODO is still open.
 
 #include <readerwriterqueue.h>
 
@@ -107,16 +110,23 @@ public:
         m_produced.clear();
         m_produced.reserve(k_signal_length);
 
-        // ---- TODO 1: queue capacity, and the worker thread -------------------
-        // The queues allocate their blocks up front; try_enqueue() never grows
-        // them, it fails instead — which is what the audio thread needs.
-        const size_t queue_capacity = k_queue_capacity;
+        // ---- TODO 1 --------------------------------------------------------
+        //   1. Give both queues the capacity they need. The queues allocate
+        //      their blocks when they are constructed, so try_enqueue() never
+        //      has to grow them in the callback — it fails instead, which is
+        //      what the audio thread needs.
+        //   2. Start the worker thread. Which function does it run?
+        // --------------------------------------------------------------------
+        const size_t queue_capacity = k_queue_capacity; // <- solution
 
+        if (queue_capacity == 0) {
+            throw std::runtime_error("TODO 1: give the queues a capacity and start the worker");
+        }
         m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
         m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
 
         m_running.store(true, std::memory_order_release);
-        m_worker = std::thread([this] { worker(); });
+        m_worker = std::thread([this] { worker(); }); // <- solution
     }
 
     // Finish what is still in flight, then stop the thread.
@@ -128,28 +138,36 @@ public:
 
     // The audio thread: no engine, no allocation, no lock. Only copies.
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
-        // ---- TODO 2: the audio thread ----------------------------------------
-        m_input.push(samples, num_samples);
+         m_input.push(samples, num_samples);
 
-        // pass complete model blocks to the worker. If the queue is full the
-        // worker is behind. Dropping is bad, but blocking here would be worse.
         while (m_input.available() >= k_model.m_input_size) {
             ModelBlock block;
             m_input.pop(block.m_samples.data(), k_model.m_input_size);
+            
+        // ---- TODO 2 --------------------------------------------------------
+        // The audio thread. 
+        //   1. pass complete model blocks to the worker
+        //   2. collect completed blocks
+        //   3. push them into m_output — handing them to the host is given
+        //
+        // Hint:
+        //   - try_enqueue() and try_dequeue() fail instead of blocking.
+        // --------------------------------------------------------------------
+            const bool hand_over_block = m_to_worker.try_enqueue(block); // <- solution
 
-            // Queue full means the worker is behind. The block is already out
-            // of the ring buffer, so it is dropped — a glitch, but a bounded
-            // one. Keeping it would let the backlog grow without end.
-            if (!m_to_worker.try_enqueue(block)) {
-                m_dropped.fetch_add(1, std::memory_order_relaxed);
+            if (!hand_over_block) {
+                m_dropped.fetch_add(1, std::memory_order_relaxed);     // if it's not handed over, then it's dropped
             }
         }
 
-        // Collect what came back since the last callback — but only as much as
-        // there is room for, so push() can never overflow.
         ModelBlock done;
-        while (m_output.space() >= k_model.m_input_size && m_from_worker.try_dequeue(done)) {
-            m_output.push(done.m_samples.data(), k_model.m_input_size);
+        while (m_output.space() >= k_model.m_input_size) { // while there is space in the output buffer, try to collect completed blocks
+
+            const bool got_a_block = m_from_worker.try_dequeue(done); // <- solution
+
+            if (!got_a_block) { break; } 
+
+            m_output.push(done.m_samples.data(), k_model.m_input_size); // <- solution
         }
 
         if (m_output.available() >= num_samples) {
@@ -162,26 +180,39 @@ public:
     // Everything the model produced, in order — what the check reads.
     const std::vector<float>& produced() const { return m_produced; }
 
+    // Blocks the audio thread handed over that nobody picked up.
+    size_t pending() const { return m_to_worker.size_approx(); }
+
+    // True once prepare() has started the worker thread.
+    bool worker_started() const { return m_worker.joinable(); }
+
 private:
     // The worker thread: the engine lives here, and everything the engine does
     // — allocating, locking, growing arenas — is allowed on this side.
     void worker() {
         ModelBlock block;
         while (m_running.load(std::memory_order_acquire)) {
-            // ---- TODO 3: the worker thread -------------------------------------------
-            if (!m_to_worker.try_dequeue(block)) {
+            // ---- TODO 3 ----------------------------------------------------
+            // The worker thread. 
+            //   1. Take a block out of m_to_worker 
+            //   2. run the engine on it
+            //   3. hand the block back through m_from_worker. 
+            // Nothing here is real-time: sleeping, waiting and allocating are
+            // all allowed on this side.
+            // ------------------------------------------------------------------
+            const bool got_a_block = m_to_worker.try_dequeue(block); // <- solution
+
+            if (!got_a_block) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
                 continue;
             }
 
-            m_engine.process(block.m_samples.data(), k_model.m_input_size);
+            m_engine.process(block.m_samples.data(), k_model.m_input_size); // <- solution
             m_produced.insert(m_produced.end(), block.m_samples.begin(), block.m_samples.end());
 
-            // Wait for room, but keep watching the stop flag: the audio thread
-            // may have stopped calling us, and then this would never return —
-            // a lock-free queue does not save you from a deadlock at shutdown.
-            while (!m_from_worker.try_enqueue(block)) {
-                if (!m_running.load(std::memory_order_acquire)) { break; }
+            while (m_running.load(std::memory_order_acquire)) {
+                const bool hand_back_block = m_from_worker.try_enqueue(block); // <- solution
+                if (hand_back_block) { break; }
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
         }
@@ -201,7 +232,7 @@ private:
     std::thread m_worker;
     std::atomic<bool> m_running{false};
     std::atomic<long> m_dropped{0};  // Blocks the worker could not take in time
-    std::vector<float> m_produced;   // Written on the worker thread only
+    std::vector<float> m_produced;  // Written on the worker thread only
 };
 
 }  // namespace
@@ -222,17 +253,24 @@ int main() {
         std::printf("%s\n", error.what());
         return 1;
     }
+    if (!processor.worker_started()) {
+        std::printf("TODO 1: start the worker thread.\n");
+        return 1;
+    }
 
     // The host now runs in real time: the worker has to keep up with a block of
     // audio every 11.6 ms, rather than with a loop going as fast as it can.
     g_allocations.store(0, std::memory_order_relaxed);
 
-    run_host(
+    // Only what happens inside the callback counts as the audio thread.
+    const std::vector<float> host_output = run_host(
         k_input_signal.data(),
         k_input_signal.size(),
         k_host_block_size,
         [&processor](float* samples, size_t num_samples) {
+            t_on_audio_thread = true;
             processor.process_block(samples, num_samples);
+            t_on_audio_thread = false;
         },
         k_model.m_sample_rate);
 
@@ -240,6 +278,20 @@ int main() {
 
     const long allocations = g_allocations.load(std::memory_order_relaxed);
     const std::vector<float>& produced = processor.produced();
+
+    if (produced.empty()) {
+        std::printf(processor.pending() == 0
+                        ? "TODO 2: the audio thread never handed a block over.\n"
+                        : "TODO 3: the worker never picked a block up.\n");
+        return 1;
+    }
+
+    // The worker ran the model, but nothing came back to the host.
+    if (std::all_of(host_output.begin(), host_output.end(), [](float x) { return x == 0.0f; })) {
+        std::printf("TODO 2 or 3: the host only got silence. Does the worker hand its blocks\n"
+                    "back, and does the audio thread collect them?\n");
+        return 1;
+    }
 
     std::printf("  %-28s %ld\n", "allocations on the audio thread", allocations);
     std::printf("  %-28s %zu of %zu samples\n",

@@ -33,6 +33,18 @@ cmake --build --preset release --target step01_exercise
 ./build/bin/step01_exercise
 ```
 
+To step through a task in a debugger, use the debug preset. It builds into
+`build-debug/`, next to the release build:
+
+```bash
+cmake --preset debug
+cmake --build --preset debug --target step01_exercise
+./build-debug/bin/step01_exercise
+```
+
+Timings, such as the benchmark in step 3, only mean something in the release
+build.
+
 Build a single step with `-DWORKSHOP_STEP=01`. See
 [models/README.md](models/README.md) for the model.
 

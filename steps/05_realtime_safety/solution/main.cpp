@@ -166,14 +166,16 @@ int main(int argc, char** argv) {
                 OnnxEngine engine(k_model.m_onnx_path);
                 count_violations(engine, "ONNX Runtime", k_blocks);
             } else {
-                LibTorchEngine engine(k_model.m_torchscript_path);
+                LibTorchEngine engine;
+                engine.load_model(k_model.m_torchscript_path);
                 count_violations(engine, "LibTorch", k_blocks);
             }
             return 0;
         }
 
         if (which == "verify") {
-            LibTorchEngine libtorch(k_model.m_torchscript_path);
+            LibTorchEngine libtorch;
+            libtorch.load_model(k_model.m_torchscript_path);
             OnnxEngine onnx(k_model.m_onnx_path);
             verify(libtorch, "libtorch");
             verify(onnx, "onnx");
@@ -199,7 +201,8 @@ int main(int argc, char** argv) {
             engine.process(block.data(), block.size());  // Warm up outside the callback
             audio_callback(engine, block.data(), block.size());
         } else {
-            LibTorchEngine engine(k_model.m_torchscript_path);
+            LibTorchEngine engine;
+            engine.load_model(k_model.m_torchscript_path);
             engine.process(block.data(), block.size());  // Warm up outside the callback
             audio_callback(engine, block.data(), block.size());
         }

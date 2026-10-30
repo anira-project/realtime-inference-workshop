@@ -111,10 +111,11 @@ public:
         m_produced.reserve(k_signal_length);
 
         // ---- TODO 1 --------------------------------------------------------
-        //   1. Give both queues the capacity they need. The queues allocate
+        // Prepare the queues and start the worker thread. The queues allocate
         //      their blocks when they are constructed, so try_enqueue() never
         //      has to grow them in the callback — it fails instead, which is
         //      what the audio thread needs.
+        //   1. Give both queues the capacity they need.
         //   2. Start the worker thread. Which function does it run?
         // --------------------------------------------------------------------
         const size_t queue_capacity = 0; // <- 1. fill out

@@ -198,7 +198,7 @@ cmake --build --preset release --target step02_exercise
 
 <div class="run">
   <div class="run-step" data-seconds="2.2">
-    <div class="run-title"><span>1</span>Size the ring buffers</div>
+    <div class="run-title"><span>1</span>Give the ring buffers a size</div>
     <div class="run-visual run-size-buffers">
       <div class="mini-buf grow"></div>
       <div class="mini-buf grow"></div>
@@ -255,14 +255,14 @@ Note:
 ## TODO 2: Pump whole blocks
 
 ```cpp
-m_input.push(samples, num_samples); // <- fill out
+m_input.push(samples, num_samples); // <- 1. fill out
 
-const size_t num_model_blocks = m_input.available() / m_model_input_size; // <- fill out
+const size_t num_model_blocks = m_input.available() / m_model_input_size; // <- 2. fill out
 
 for (size_t b = 0; b < num_model_blocks; ++b) {
-    m_input.pop(m_model_block.data(), m_model_input_size); // <- fill out
+    m_input.pop(m_model_block.data(), m_model_input_size); // <- 3. fill out
     m_engine.process(m_model_block.data(), m_model_input_size);
-    m_output.push(m_model_block.data(), m_model_input_size); // <- fill out
+    m_output.push(m_model_block.data(), m_model_input_size); // <- 3. fill out
     …
 }
 ```

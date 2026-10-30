@@ -68,14 +68,14 @@ The actual forward pass on my mac takes 7.4 ms, which is only one fifth of the b
 
 <div class="statement-points">
   <div><small>1</small>Run the model inside the timed loop</div>
-  <div><small>2</small>Find out the maximum and minimum runtimes</div>
+  <div><small>2</small>Find out the slowest runtime</div>
   <div><small>3</small>Time one call per repetition</div>
 </div>
 
 Note:
 **Script:**
 
-"So let's measure it properly. To tho that we will have to run the model inside a loop that we time. We will find the fastest and slowest times the model processes a block and we'll do this one call at a time."
+"So let's measure it properly. To tho that we will have to run the model inside a loop that we time. We will find the slowest time the model takes for a block and we'll do this one call at a time."
 
 ---
 
@@ -136,7 +136,7 @@ Note:
 
 "Only the body of the loop is timed. By default it runs that body as often as it
 likes and gives you the average. We want the opposite: one call per
-repetition, many repetitions, and our own minimum and maximum times."
+repetition, many repetitions, and our own maximum time."
 
 ---
 
@@ -162,9 +162,9 @@ cmake --build --preset release --target step03_exercise
     </div>
   </div>
   <div class="run-step" data-seconds="3">
-    <div class="run-title"><span>2</span><code>fastest()</code> and <code>slowest()</code></div>
+    <div class="run-title"><span>2</span><code>slowest()</code></div>
     <div class="run-visual run-extremes">
-      <div class="times-bars"><i style="--h:45%"></i><i class="min" style="--h:20%"><span>min</span></i><i style="--h:55%"></i><i style="--h:35%"></i><i style="--h:60%"></i><i style="--h:40%"></i><i class="max" style="--h:80%"><span>max</span></i><i style="--h:50%"></i></div>
+      <div class="times-bars"><i style="--h:45%"></i><i style="--h:20%"></i><i style="--h:55%"></i><i style="--h:35%"></i><i style="--h:60%"></i><i style="--h:40%"></i><i class="max" style="--h:80%"><span>max</span></i><i style="--h:50%"></i></div>
     </div>
   </div>
   <div class="run-step" data-seconds="3">
@@ -181,7 +181,7 @@ Note:
 **Script:**
 
 *Timebox.*
-So to summerize, we will time a loop which processes one block. Then we look for the fastest and the slowest callbacks. And we want this one call per repetition. You have 3 minutes to try and solve the task.
+So to summerize, we will time a loop which processes one block. Then we look for the slowest call. And we want this one call per repetition. You have 3 minutes to try and solve the task.
 
 ---
 
@@ -191,7 +191,7 @@ So to summerize, we will time a loop which processes one block. Then we look for
 
 ```cpp
 for (auto _ : state) {
-    engine().process(block.data(), block_size);
+    engine().process(block.data(), block_size); // <- fill out
     benchmark::DoNotOptimize(block.data());
 }
 ```
@@ -207,21 +207,17 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 2: <code>fastest()</code> & <code>slowest()</code>
+## TODO 2: <code>slowest()</code>
 
 ```cpp
-double fastest(const std::vector<double>& times) {
-    // ---- TODO 2: the smallest and the largest entry -----------------------
-    return *std::min_element(times.begin(), times.end());
-}
-
 double slowest(const std::vector<double>& times) {
-    return *std::max_element(times.begin(), times.end());
+    return *std::max_element(times.begin(), times.end()); // <- fill out
 }
 ```
 
 Note:
-    - Sort a copy, and take the entry `fraction` of the way through it.
+    - The largest entry: `std::max_element` returns an iterator to it, `*` reads the value.
+    - p95 and p99 are given: sort a copy, and take the entry `fraction` of the way through it.
 
 **Script:**
 
@@ -235,8 +231,8 @@ Note:
 
 ```cpp
 BENCHMARK(forward_pass)
-    ->Iterations(1)
-    ->Repetitions(k_repetitions)
+    ->Iterations(1) // <- fill out
+    ->Repetitions(k_repetitions) // <- fill out
     // ...
 ```
 

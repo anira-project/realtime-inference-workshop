@@ -83,8 +83,9 @@ If we mix a dry signal that isn't delayed with a wet signal that is, we don't ge
 ## The goal<br><span class="then">One latency number, dry and wet line up.</span>
 
 <div class="statement-points">
-  <div><small>1</small>Pass latency to host</div>
-  <div><small>2</small>Delay the dry signal so both sides align and crossfade is possible</div>
+  <div><small>1</small>Work out the latency and pass it to the host</div>
+  <div><small>2</small>Delay the dry signal so both sides align</div>
+  <div><small>3</small>Crossfade dry and wet</div>
 </div>
 
 Note:
@@ -122,7 +123,7 @@ Note:
 </div>
 
 Note:
-    - LatencyProcessor is step 6's processor plus a dry path: a third ring buffer, primed with latency_samples() of silence in prepare(), and set_mix().
+    - LatencyProcessor is step 6's processor plus a dry path: a third ring buffer and set_mix(). How much silence the dry ring buffer starts with is TODO 2.
     - The host runs in real time, 512 samples per call.
 
 **Script:**
@@ -154,8 +155,15 @@ cmake --build --preset release --target step07_exercise
       <div class="run-size">? samples</div>
     </div>
   </div>
+  <div class="run-step" data-seconds="2.6">
+    <div class="run-title"><span>2</span>Delay the dry signal</div>
+    <div class="run-visual run-wave run-delay">
+      <div class="mix-wave dry">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
+      <div class="mix-wave wet">{{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
+    </div>
+  </div>
   <div class="run-step" data-seconds="3.6">
-    <div class="run-title"><span>2</span>Mix dry and wet</div>
+    <div class="run-title"><span>3</span>Mix dry and wet</div>
     <div class="run-visual run-wave run-mix">
       <div class="mix-wave dry">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
       <div class="mix-wave wet">{{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
@@ -168,7 +176,7 @@ cmake --build --preset release --target step07_exercise
 Note:
 **Script:**
 
-"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: collecting a block, handing it over to the worker, and the model itself. The second TODO is the mix. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
+"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: collecting a block, handing it over to the worker, and the model itself. In the second TODO you delay the dry signal by that number, and the third is the mix. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
 
 *Timebox.*
 
@@ -178,24 +186,25 @@ Note:
 
 ## TODO 1: Work out the latency
 
-<div class="lat-sum fragment" style="margin-bottom: 5rem">
-  <div class="lat-part fragment">collect a block<strong>2048</strong></div>
-  <div class="lat-plus fragment">+</div>
-  <div class="lat-part fragment">hand it over<strong>2048</strong></div>
-  <div class="lat-plus fragment">+</div>
-  <div class="lat-part fragment">the model itself<strong>2224</strong></div>
-  <div class="lat-plus fragment">=</div>
-  <div class="lat-part total fragment">latency<strong>6320</strong></div>
+<div class="lat-sum" style="margin-bottom: 5rem">
+  <div class="lat-part">collect a block<strong>2048</strong></div>
+  <div class="lat-plus">+</div>
+  <div class="lat-part">hand it over<strong>2048</strong></div>
+  <div class="lat-plus">+</div>
+  <div class="lat-part">the model itself<strong>2224</strong></div>
+  <div class="lat-plus">=</div>
+  <div class="lat-part total">latency<strong>6320</strong></div>
 </div>
 
-<div class=fragment>
+<!-- <div class=fragment> -->
 
 ```cpp
 size_t latency_samples() const {
-    return 2 * k_model.m_input_size + k_model.m_latency;  // 6320
+    size_t latency = 2 * k_model.m_input_size + k_model.m_latency; // <- fill out
+    return latency;                                                // 6320
 }
 ```
-</div>
+<!-- </div> -->
 
 Note:
     - 6320 samples = 143.3 ms at 44.1 kHz.
@@ -213,19 +222,40 @@ So in total: 6320 samples, that's about 143 milliseconds at 44.1 kHz. In a plugi
 
 <div class="tag">Solution</div>
 
-## TODO 2: Mix dry and wet
+## TODO 2: Delay the dry signal
 
 ```cpp
-std::fill_n(samples, num_samples, 0.0f);
+// in prepare(): the wet path is primed with silence, and so is the dry one
+m_output.push(m_silence.data(), 2 * k_model.m_input_size);    // given
+m_dry.push(m_silence.data(), latency_samples());              // <- fill out
+```
+
+Note:
+    - The dry path starts with latency_samples() of silence, so every input sample comes out exactly that much later.
+    - The wet path is only primed with the two blocks: the model's own 2224 samples are already inside what it returns.
+
+**Script:**
+
+"The host aligns everything to the number we report. So the dry signal has to start exactly that much later: we fill the dry ring buffer with latency_samples() of silence before the first callback. Then every sample we push in comes out 6320 samples later, just like the wet one."
+
+---
+
+<div class="tag">Solution</div>
+
+## TODO 3: Mix dry and wet
+
+```cpp
+const float dry_gain = 1.0f - m_mix;   // <- fill out
+const float wet_gain = m_mix;          // <- fill out
 
 if (m_dry.available() >= num_samples) {
     m_dry.pop(m_dry_block.data(), num_samples);
-    for (size_t i = 0; i < num_samples; ++i) { samples[i] += (1.0f - m_mix) * m_dry_block[i]; }
+    for (size_t i = 0; i < num_samples; ++i) { samples[i] += dry_gain * m_dry_block[i]; }
 }
 
 if (m_output.available() >= num_samples) {
     m_output.pop(m_wet_block.data(), num_samples);
-    for (size_t i = 0; i < num_samples; ++i) { samples[i] += m_mix * m_wet_block[i]; }
+    for (size_t i = 0; i < num_samples; ++i) { samples[i] += wet_gain * m_wet_block[i]; }
 }
 ```
 

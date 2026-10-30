@@ -769,7 +769,17 @@ html.tanh .run-step.is-on .run-latency .run-size { animation: run-appear 0.3s va
   to { opacity: 1; transform: none; }
 }
 
-/* Task card 2: a fader crossfades the delayed dry into the wet */
+/* Task card 2: the dry wave slides back until it lines up with the wet one */
+html.tanh .run-delay .mix-wave.wet { transform: translateX(18%); }
+html.tanh .run-step.is-on .run-delay .mix-wave.dry { animation: delay-dry 2s var(--ease) 0.3s both; }
+html.tanh .run-step.is-on .run-delay .mix-wave.wet { animation: none; }
+
+@keyframes delay-dry {
+  from { transform: none; }
+  to { transform: translateX(18%); }
+}
+
+/* Task card 3: a fader crossfades the delayed dry into the wet */
 html.tanh .mix-wave {
   position: absolute;
   inset: 0 0 24px 0;
@@ -1417,10 +1427,8 @@ html.tanh .times-bars span {
   opacity: 0;
 }
 
-html.tanh .run-step.is-on .times-bars i.min { animation: times-pick 0.3s var(--ease) 0.6s both; }
-html.tanh .run-step.is-on .times-bars i.max { animation: times-pick 0.3s var(--ease) 1.4s both; }
-html.tanh .run-step.is-on .times-bars i.min span { animation: run-appear 0.3s var(--ease) 0.6s both; }
-html.tanh .run-step.is-on .times-bars i.max span { animation: run-appear 0.3s var(--ease) 1.4s both; }
+html.tanh .run-step.is-on .times-bars i.max { animation: times-pick 0.3s var(--ease) 0.6s both; }
+html.tanh .run-step.is-on .times-bars i.max span { animation: run-appear 0.3s var(--ease) 0.6s both; }
 
 @keyframes times-pick { to { background: var(--ink); } }
 

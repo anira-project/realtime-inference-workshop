@@ -47,9 +47,9 @@ The worker is allowed to take its time, to allocate, even to sleep. It doesn't h
 
 
 <div class="statement-points">
-  <div><small>1</small>Set queues</div>
-  <div><small>2</small>Create the audio thread</div>
-  <div><small>3</small>Create the worker thread</div>
+  <div><small>1</small>Set up the queues and start the worker</div>
+  <div><small>2</small>Hand blocks over on the audio thread</div>
+  <div><small>3</small>Run the model on the worker thread</div>
 </div>
 
 Note:
@@ -202,13 +202,13 @@ Note:
 ## TODO 1: Queues and the worker
 
 ```cpp
-const size_t queue_capacity = k_queue_capacity;
+const size_t queue_capacity = k_queue_capacity; // <- fill out
 
 m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
 m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(queue_capacity);
 
 m_running.store(true, std::memory_order_release);
-m_worker = std::thread([this] { worker(); });
+m_worker = std::thread([this] { worker(); }); // <- fill out
 ```
 
 Note:
@@ -225,18 +225,18 @@ Note:
 ## TODO 2: The audio thread
 
 ```cpp
-m_input.push(samples, num_samples);
 while (m_input.available() >= k_model.m_input_size) {
-    ModelBlock block;
-    m_input.pop(block.m_samples.data(), k_model.m_input_size);
-    if (!m_to_worker.try_enqueue(block)) { m_dropped.fetch_add(1); }   // Worker is behind
+    // ...pop a block
+    const bool hand_over_block = m_to_worker.try_enqueue(block);    // <- fill out
+    if (!hand_over_block) { m_dropped.fetch_add(1); }                // Worker is behind: drop
 }
+
 ModelBlock done;
-while (m_output.space() >= k_model.m_input_size && m_from_worker.try_dequeue(done)) {
-    m_output.push(done.m_samples.data(), k_model.m_input_size);
+while (m_output.space() >= k_model.m_input_size) {
+    const bool got_a_block = m_from_worker.try_dequeue(done);       // <- fill out
+    if (!got_a_block) { break; }                                     // Nothing finished yet
+    m_output.push(done.m_samples.data(), k_model.m_input_size);     // <- fill out
 }
-if (m_output.available() >= num_samples) { m_output.pop(samples, num_samples); }
-else                                     { std::fill_n(samples, num_samples, 0.0f); }
 ```
 
 Note:
@@ -257,18 +257,22 @@ Notice what's not in here: no `new`, no mutex, and no engine."
 
 ```cpp
 while (m_running.load(std::memory_order_acquire)) {
-    if (!m_to_worker.try_dequeue(block)) { sleep_for(100us); continue; }
-    m_engine.process(block.m_samples.data(), k_model.m_input_size);
-    m_produced.insert(m_produced.end(), block.m_samples.begin(), block.m_samples.end());
-    while (!m_from_worker.try_enqueue(block)) {
-        if (!m_running.load(std::memory_order_acquire)) { break; }   // Do not hang at stop
+    const bool got_a_block = m_to_worker.try_dequeue(block);              // <- fill out
+    if (!got_a_block) { sleep_for(100us); continue; }
+
+    m_engine.process(block.m_samples.data(), k_model.m_input_size);       // <- fill out
+
+    while (m_running.load(std::memory_order_acquire)) {                   // Do not hang at stop
+        const bool hand_back_block = m_from_worker.try_enqueue(block);    // <- fill out
+        if (hand_back_block) { break; }
         sleep_for(100us);
     }
 }
 ```
 
 Note:
-    - After the loop: drain m_to_worker and process what is left.
+    - The inner loop retries until the block is handed back, and gives up when m_running goes false.
+    - After the loop (given): drain m_to_worker and process what is left.
     - Common fail: waiting for room without checking m_running. The audio thread has stopped calling, and stop() waits forever.
 
 **Script:**

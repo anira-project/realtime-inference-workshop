@@ -206,15 +206,13 @@ not code problems.*
 
 ```cpp
 LibTorchEngine engine;
-try {
-    const std::string model_path = k_model.m_path; // <- fill out
-    if (!model_path.empty()) {
-        engine.load_model(model_path);
-    }
-} catch (const std::runtime_error& error) {
-    std::fprintf(stderr, "%s\n", error.what());
+const std::string model_path = k_model.m_path; // <- fill out
+
+if (!std::filesystem::exists(model_path)) {
+    std::fprintf(stderr, "TODO 1: load the model first, with the path to it\n");
     return 2;
 }
+engine.load_model(model_path);
 ```
 
 Note:
@@ -240,7 +238,7 @@ model's state every block. The engine lives as long as the stream. So make sure 
 </div>
 
 ```cpp
-const size_t process_size = static_cast<size_t>(k_model.m_input_size); // <- fill out
+const size_t process_size = k_model.m_input_size; // <- fill out
 ```
 
 Note:

@@ -25,6 +25,13 @@ Note:
     <b>=</b>
     <div class="result"><small>deadline per callback</small>1.45 ms</div>
   </div>
+  <div class="budget-calc">
+    <div><small>model block</small>2048 samples</div>
+    <b>÷</b>
+    <div><small>sample rate</small>44.1 kHz</div>
+    <b>=</b>
+    <div class="result"><small>deadline per block</small>46.4 ms</div>
+  </div>
   <div class="budget-calc load">
     <div><small>forward pass</small>7.4 ms</div>
     <b>÷</b>

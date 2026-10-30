@@ -1111,7 +1111,7 @@ html.tanh .run-step.is-on .run-worker .q.out .q-slot b { animation: run-appear 0
 
 html.tanh .deadline {
   position: relative;
-  height: 380px;
+  height: 320px;
   margin-top: var(--space-6);
 }
 
@@ -1261,7 +1261,7 @@ html.tanh .budget-calc {
   align-items: flex-end;
   gap: var(--space-5);
   font-family: var(--fs-heading-font);
-  font-size: 0.9em;
+  font-size: 0.75em;
   font-weight: 600;
 }
 
@@ -1297,10 +1297,10 @@ html.tanh .budget-calcs {
   grid-template-columns: repeat(5, auto);
   justify-content: start;
   column-gap: var(--space-5);
-  row-gap: var(--space-4);
+  row-gap: var(--space-3);
 }
 
-/* Rows share the grid's columns, so the three divisions line up */
+/* Rows share the grid's columns, so the four divisions line up */
 html.tanh .budget-calcs .budget-calc { display: contents; }
 html.tanh .budget-calcs .budget-calc > * { align-self: end; }
 

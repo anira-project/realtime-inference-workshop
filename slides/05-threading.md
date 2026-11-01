@@ -1,15 +1,15 @@
-<h1>Step 6<br>Inference on a<br>worker thread</h1>
+<h1>Step 5<br>Inference on a<br>worker thread</h1>
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: exercise -->
 
 Note:
     - The engine has to go somewhere, just not on the audio thread.
-    - Step 5 ended with "not on the audio thread". This is the answer.
+    - Step 4 ended with "not on the audio thread". This is the answer.
 
 **Script:**
 
-"In step 5 we found out that the engine can't run on the audio thread. The solution was to move the inference to a separate thread. In this step we'll give it its own thread, the worker thread."
+"In step 4 we found out that the engine can't run on the audio thread. The solution was to move the inference to a separate thread. In this step we'll give it its own thread, the worker thread."
 
 ---
 
@@ -32,12 +32,14 @@ Note:
 Note:
     - The audio thread keeps its pace: every callback moves samples, nothing else (the even ticks).
     - A whole block goes down to the worker through one queue, the result comes back up through the other.
-    - The worker may take its time, allocate, sleep. The audio thread never waits for it.
+    - The worker may allocate and sleep. The audio thread never waits for it.
+    - This also answers step 3: the forward pass that was 510 % of one callback no longer runs inside a callback.
 
 **Script:**
 
 "Here's the idea. We now have two threads. The audio thread keeps its pace: in every callback it only moves samples around, nothing else. Once it has collected a full block of 2048 samples, it sends that block down to the worker thread through a queue, `to_worker`. The worker runs the model and sends the result back up through a second queue, `from_worker`.
-The worker is allowed to take its time, to allocate, even to sleep. It doesn't have a deadline. The audio thread never waits for it."
+The worker is allowed to allocate and even to sleep. It doesn't have a per-callback deadline. It does have a budget, and we'll come back to that in step 6. The audio thread never waits for it.
+And this also answers step 3: the forward pass that was 510 percent of one callback no longer runs inside any callback."
 
 ---
 
@@ -83,7 +85,7 @@ Note:
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
-    <div class="given-folder">06_threading/exercise/</div>
+    <div class="given-folder">05_threading/exercise/</div>
     {{FILE:main.cpp}}
   </div>
 </div>
@@ -134,14 +136,11 @@ Note:
     - By value, so nobody has to agree on who frees what.
       - Only the try_ versions. enqueue() without "try" grows the queue when it is full, and growing allocates.
     - Each queue has one writer and one reader: to_worker is written by the audio thread, from_worker by the worker.
-    - The audio thread never retries, because there is no time to. The worker may, because it has no deadline. It still checks the stop flag while it retries.
+    - The audio thread never retries, because there is no time to. The worker may, because it has no per-callback deadline. It still checks the stop flag while it retries.
 
 **Script:**
 
-"Let's look at the queue. Each queue has exactly one thread writing and one thread reading. `to_worker` is written by the audio thread, `from_worker` by the worker. That's the simplest lock-free case there is.
-We put whole blocks of 2048 samples in, by value. So nobody has to agree on who frees the memory.
-And one important thing: **only use the `try_` functions**. `try_enqueue` returns false if the queue is full, and `try_dequeue` returns false if it's empty. The plain `enqueue` would grow the queue when it's full, and growing allocates, which is exactly what we want to avoid.
-So what happens if the queue is full? The audio thread drops the block. That's a glitch, yes. But the alternative would be to wait for the worker, and that would be a missed deadline for the whole host, including every other plugin in the session."
+"Let's look at the queue. Each one has exactly one thread writing and one thread reading, which is the simplest lock-free case there is, and we put whole blocks in by value, so nobody has to agree on who frees the memory. Only use the `try_` functions: plain `enqueue` grows the queue when it's full, and growing allocates. If the queue is full, the audio thread drops the block. That's a glitch, but waiting would be a missed deadline for the whole host."
   
 
 ---
@@ -150,13 +149,13 @@ So what happens if the queue is full? The audio thread drops the block. That's a
 
 ## The task
 
-<div class="task-timer" data-minutes="10"></div>
+<div class="task-timer" data-minutes="5"></div>
 
-Fill in the TODOs in `steps/06_threading/exercise/main.cpp`
+Fill in the TODOs in `steps/05_threading/exercise/main.cpp`
 
 ```bash
-cmake --build --preset release --target step06_exercise
-./build/bin/step06_exercise
+cmake --build --preset release --target step05_exercise
+./build/bin/step05_exercise
 ```
 
 <div class="run">
@@ -191,9 +190,9 @@ cmake --build --preset release --target step06_exercise
 Note:
 **Script:**
 
-"Now it's your turn. There are three TODOs: first prepare the queues and the worker in `prepare`, the audio thread, and the worker thread. You'll find the `main.cpp` in `steps/06_threading/exercise`, and the build commands are on the slide. This is the biggest task so far, so you get 10 minutes. When it works, the program should report 0 allocations on the audio thread. And as always, the solution is in the `solution` folder."
+"Now it's your turn. There are three TODOs: first prepare the queues and the worker in `prepare`, the audio thread, and the worker thread. You'll find the `main.cpp` in `steps/05_threading/exercise`, and the build commands are on the slide. This is the biggest task so far, but it's one line at a time, so you get 5 minutes. When it works, the program should report 0 allocations on the audio thread. And as always, the solution is in the `solution` folder."
 
-*Timebox, the longest one so far. Remind people of the stop-flag pitfall early.*
+*Timebox.*
 
 ---
 
@@ -273,12 +272,12 @@ while (m_running.load(std::memory_order_acquire)) {
 Note:
     - The inner loop retries until the block is handed back, and gives up when m_running goes false.
     - After the loop (given): drain m_to_worker and process what is left.
-    - Common fail: waiting for room without checking m_running. The audio thread has stopped calling, and stop() waits forever.
+    - Why the given inner loop checks m_running: without it, the audio thread has stopped calling, and stop() waits forever.
 
 **Script:**
 
 "The worker runs in a loop as long as the running flag is set. It takes a block from the queue. If there's nothing there, it sleeps for a moment and tries again. If it gets a block, it runs the model on it and sends it back. Unlike the audio thread, the worker is allowed to retry and sleep, because the deadline is much looser. It has no hard per-callback deadline.
-There's one common bug here: when the worker waits for space in the output queue, it has to check the running flag too. Otherwise, when we stop, the audio thread doesn't take blocks anymore, the queue never gets space, and `stop()` waits forever."
+Notice one thing in the loop we gave you: when the worker waits for space in the output queue, it also checks the running flag. Otherwise, when we stop, the audio thread doesn't take blocks anymore, the queue never gets space, and `stop()` waits forever."
 
 ---
 
@@ -295,11 +294,11 @@ There's one common bug here: when the worker waits for space in the output queue
 
 Note:
     - Counted with our own operator new, thread-local: the worker's allocations per block do not count, and should not. Same output as step 1. Under RTSan: no report at all.
-    - Worth running live next to step 5, which stops at the first line of the engine.
-    - Open: the first blocks came back as silence. How many samples late, exactly, and how do you tell the host? Step 7.
+    - Worth running live next to step 4, which stops at the first line of the engine.
+    - Open: the first blocks came back as silence. How many samples late, exactly, and how do you tell the host? Step 6.
 
 **Script:**
 
 "The result: zero allocations on the audio thread, the same output as in step 1, and the sanitizer doesn't report anything anymore. The audio thread is now real-time safe, and the model runs beside it."
-*If possible, run it next to step 5 live.*
-"But if you look at the output, the first blocks came back as silence again. So how many samples late is our output exactly? And how do we tell the host? In out next step we'll talk about latency."
+*If possible, run it next to step 4 live.*
+"But if you look at the output, the first blocks came back as silence again. So how many samples late is our output exactly? And how do we tell the host? In our next step we'll talk about latency."

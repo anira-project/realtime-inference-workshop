@@ -1,4 +1,4 @@
-// Step 5 — Real-time safety, demonstration
+// Step 4 — Real-time safety, demonstration
 //
 // Goal:  show that these engines are not real-time safe. Not a question of
 //        being fast enough: they allocate, lock and call into the system.

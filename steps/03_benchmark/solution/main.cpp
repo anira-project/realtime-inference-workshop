@@ -3,7 +3,7 @@
 // Goal:   find out how long one forward pass takes, and how long it takes in
 //         the best and worst case.
 // Given:  Google Benchmark, and the engine from step 1.
-// Task:   fill in the three TODO banners.
+// Task:   fill in the two TODO banners.
 // Check:  the numbers, against the budget a host block size gives you.
 //
 // It builds and runs as it is, and says which TODO is still open.
@@ -71,7 +71,7 @@ void forward_pass(benchmark::State& state) {
     // the number of iterations itself, every repetition is already an average,
     // and an average cannot show a worst case.
     if (state.iterations() != 1) {
-        state.SkipWithError("TODO 3: time one single call per repetition");
+        state.SkipWithError("TODO 2: time one single call per repetition");
     }
 }
 
@@ -85,31 +85,15 @@ double percentile(const std::vector<double>& times, double fraction) {
     return sorted[index];
 }
 
-// The slowest of the times Google Benchmark collected.
+// The slowest of the times Google Benchmark collected. Given.
 // @times: one entry per repetition, in seconds, in the order they were measured
 double slowest(const std::vector<double>& times) {
-    // ---- TODO 2 ------------------------------------------------------------
-    // Return the largest entry of `times`.
-    // Hint: <algorithm> has a function for it.
-    // ------------------------------------------------------------------------
-    return *std::max_element(times.begin(), times.end()); // <- solution
-}
-
-// Says once that TODO 2 is still open. A call that took no time at all is not
-// a call that was measured.
-double checked(const char* name, double value) {
-    static bool reported = false;
-    if (value <= 0.0 && !reported) {
-        std::fprintf(stderr, "Process stopped. TODO 2: calculate the %s call\n", name);
-        reported = true;
-        exit(1);
-    }
-    return value;
+    return *std::max_element(times.begin(), times.end());
 }
 
 }  // namespace
 
-// ---- TODO 3 ------------------------------------------------------------------
+// ---- TODO 2 ------------------------------------------------------------------
 // Left alone, Google Benchmark runs the body as often as it likes and reports
 // the average — which is the one number that cannot show a worst case. Make
 // every repetition time a single call, and measure k_repetitions of them.
@@ -121,7 +105,7 @@ BENCHMARK(forward_pass)
     ->ComputeStatistics("p95", [](const std::vector<double>& t) { return percentile(t, 0.95); })
     ->ComputeStatistics("p99", [](const std::vector<double>& t) { return percentile(t, 0.99); })
     ->ComputeStatistics("max",
-                        [](const std::vector<double>& t) { return checked("slowest", slowest(t)); })
+                        [](const std::vector<double>& t) { return slowest(t); })
     ->ReportAggregatesOnly(true);
 
 

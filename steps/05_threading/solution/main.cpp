@@ -1,4 +1,4 @@
-// Step 6 — Inference on a worker thread, reference implementation
+// Step 5 — Inference on a worker thread, reference implementation
 //
 // Goal:   get the engine off the audio thread, and keep the audio thread free
 //         of allocations and locks.
@@ -82,7 +82,7 @@ static_assert(std::tuple_size<decltype(ModelBlock::m_samples)>::value == k_model
               "the block the queues carry has to be the block the model takes");
 
 // The audio callback promises not to block. Marking it is what lets RTSan check
-// everything underneath, see step 5.
+// everything underneath, see step 4.
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
 #define WORKSHOP_AUDIO_CALLBACK [[clang::nonblocking]]
 #else

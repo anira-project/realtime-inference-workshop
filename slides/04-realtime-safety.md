@@ -1,6 +1,6 @@
-<h1>Step 5<br>Real-time safety</h1>
+<h1>Step 4<br>Real-time safety</h1>
 
-Fast enough is not the same as safe
+Even if it were fast enough, it wouldn't be safe
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: demo -->
@@ -10,7 +10,7 @@ Note:
 
 **Script:**
 
-"In step 3 we measured how fast the model is. But fast enough is not the same as safe. In this step we won't write code, we'll run a demo and look at what actually happens on the audio thread when we call our engine."
+"In step 3 we saw that the forward pass doesn't fit into one small callback. But even if it did, it wouldn't be safe. In this step we won't write code, we'll run a demo and look at what actually happens on the audio thread when we call our engine."
 
 ---
 <div class="tag">Promise</div>
@@ -65,10 +65,10 @@ If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Cl
 ## Both engines are correct<br><span class="then">Are they safe?</span>
 
 ```bash
-./build/bin/step05_solution verify           # Both engines produce the reference output 
+./build/bin/step04_solution verify           # Both engines produce the reference output 
 
-  libtorch                 max abs diff 2.21e-06   OK
-  onnx                     max abs diff 5.81e-07   OK
+  libtorch                 max abs diff 4.92e-07   OK
+  onnx                     max abs diff 3.87e-07   OK
 ```
 
 Same model, same output as the Python reference.
@@ -76,8 +76,8 @@ Same model, same output as the Python reference.
 Note:
 **Script:**
 
-*Run `step05_solution verify` live if possible.*
-"Before we check whether it's safe, let's make sure it's correct. For this demo we use both engines from step 4, LibTorch and ONNX Runtime. Both give us the same output as the Python reference, the difference is tiny. So both are correct. The question is: are they safe?"
+*Run `step04_solution verify` live if possible.*
+"Before we check whether it's safe, let's make sure it's correct. For this demo we use two engines. One is LibTorch, which we've used so far. The other is ONNX Runtime, a much smaller engine. ONNX is an open file format for models, so we exported the same model to it, and ONNX Runtime is the engine that runs that file. We'll compare the two properly in step 7. Both give us the same output as the Python reference, the difference is tiny. So both are correct. The question is: are they safe?"
 
 ---
 
@@ -121,16 +121,16 @@ Intercepted call to real-time unsafe function `malloc`
     audio_callback(...)
 ```
 
-One thread. Fixed arena. Our buffers preallocated.<br>
+One thread. Our buffers preallocated.<br>
 **Still allocates.**
 
 
 Note:
-    - Both engines were verified against the reference first: 2.21e-06 and 5.81e-07. They are correct, and they are unsafe.
+    - Both engines were verified against the reference first: 4.92e-07 and 3.87e-07. They are correct, and they are unsafe.
 
 **Script:**
 
-"So maybe ONNX Runtime is better? Not really. We have the same story, but a different library. Creating the tensor that wraps our buffer allocates too. And this is with ONNX Runtime set up as carefully as we could: one thread, a fixed memory arena, all our buffers preallocated. It still allocates. So both engines are correct, but neither of them is real-time safe."
+"So maybe ONNX Runtime is better? Not really. We have the same story, but a different library. Creating the tensor that wraps our buffer allocates too. And this is with ONNX Runtime on one thread and our own buffers preallocated. It still allocates. So both engines are correct, but neither of them is real-time safe."
 
 ---
 
@@ -140,7 +140,7 @@ Note:
 
 | allocations + frees, ten callbacks | per block | first block |
 |---|---|---|
-| LibTorch | 10,864 | **610,429** |
+| LibTorch | 8,904 | **600,629** |
 | ONNX Runtime | 2,192 | 2,193 |
 
 
@@ -148,37 +148,36 @@ Not a slip. The engines are built this way.
 
 Note:
     - Counting mode: our own operator new, ten blocks through the callback. Works without RTSan.
-    -The first LibTorch block costs fifty times a normal one, even after warm-up. TorchScript recompiles while it runs.
+    -The first LibTorch block costs about 67 times a normal one, even after warm-up. TorchScript recompiles while it runs.
 
 **Script:**
 
-"And it doesn't happen just once. Here we counted the allocations and frees over ten callbacks. LibTorch does about ten thousand per block, and in the very first block more than half a million, because TorchScript optimises the model while it runs it for the first time. ONNX Runtime is much better, but still about two thousand per block.
+"And it doesn't happen just once. Here we counted the allocations and frees over ten callbacks. LibTorch does about nine thousand per block, and in the very first block more than half a million, even though we already ran one block as a warm-up, because TorchScript is still optimising the model while it runs. ONNX Runtime is much better, but still about two thousand per block.
 So this isn't a small mistake we can fix. The engines are built this way: they're made for throughput, not for real-time."
 
 
 ---
 
-<div class="tag">Allocation</div>
+<div class="tag">Locks</div>
 
 ## Locks<br><span class="then">On the audio thread.</span>
 
 One block, as RTSan reports it:
 
-| | malloc | free | mutex lock |
-|---|---|---|---|
-| ONNX Runtime | 98 | 51 | 10 |
-| LibTorch | 4,393 | 3,103 | 180 |
+| | mutex locks |
+|---|---|
+| ONNX Runtime | 11 |
+| LibTorch | 180 |
 
 A slow allocation is bad. <br>
 A lock is worse: it can wait on another thread.
 
 Note:
     - RTSAN_OPTIONS=halt_on_error=false, one block only: symbolizing every report takes ~20 s for LibTorch.
-    - Different counter from the previous slide, so the numbers don't add up to the same total.
 
 **Script:**
 
-"And it's not only allocations. Here's one single block, as the sanitizer reports it: next to the mallocs and frees there are also mutex locks. Ten for ONNX Runtime, 180 for LibTorch. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
+"And it's not only allocations. Here's one single block, as the sanitizer reports it: there are also mutex locks. Eleven for ONNX Runtime, 180 for LibTorch. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
 
 
 ---

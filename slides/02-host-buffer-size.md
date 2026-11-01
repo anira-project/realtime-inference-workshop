@@ -8,7 +8,7 @@ Note:
 
 **Script:**
 
-*Ask the room: "What buffer size do you run your DAW at?" Collect a few
+*Ask the room: "What buffer sizes do you ship with?" Collect a few
 numbers: 64, 128, 256, 441...*
 "As we can hear we have a wide range of host block sizes. The model takes 2048 samples, but the host can give us anything. So we need to make the model work with any host block size."
 
@@ -43,7 +43,7 @@ Sometimes the block sizes will match by coincidence, but we cannot count on that
 <span> The host and the model each work in their own block size.</span>
 
 <div class="pump" style="margin-bottom: 250px;">
-  <div class="pump-node">host in<small>441 per call</small></div>
+  <div class="pump-node">host in<small>512 per call</small></div>
   <div class="pump-arrow"></div>
   <div class="pump-buffer in"><div class="pump-fill"></div><div class="pump-mark"></div></div>
   <div class="pump-arrow"></div>
@@ -51,18 +51,18 @@ Sometimes the block sizes will match by coincidence, but we cannot count on that
   <div class="pump-arrow"></div>
   <div class="pump-buffer out"><div class="pump-fill"></div><div class="pump-mark"></div></div>
   <div class="pump-arrow"></div>
-  <div class="pump-node">host out<small>441 per call</small></div>
+  <div class="pump-node">host out<small>512 per call</small></div>
 </div>
 
 Note:
     - Input side: the host writes whatever it has; the model runs only once a whole block (the dashed line) is in.
-    - Output side: the model writes 2048 at once; the host takes its 441 per call.
+    - Output side: the model writes 2048 at once; the host takes its 512 per call.
 
 **Script:**
 
-"So we need a reliable way of passing samples from the host to the model that makes sure the model will always get a block of 2048 and the host will always get the amount of samples it needs back in time. The approuch is to use ring buffers on each side of the mdoel. The host pushes whatever it has into the first ring buffer. Once a
+"So we need a reliable way of passing samples from the host to the model that makes sure the model will always get a block of 2048 and the host will always get the amount of samples it needs back in time. The approach is to use ring buffers on each side of the model. The host pushes whatever it has into the first ring buffer. Once a
 full model block is in, the model runs and writes 2048 samples to the output
-ring buffer. From there the host can take the amount of samples it's buffersize is set to at each call."
+ring buffer. From there the host takes as many samples as its block size asks for at each call, 512 in this picture."
 
 ---
 
@@ -71,7 +71,7 @@ ring buffer. From there the host can take the amount of samples it's buffersize 
 ## The goal<br><span class="then">The model should work with any host block size.</span>
 
 <div class="statement-points">
-  <div><small>1</small>Create a ringbuffer</div>
+  <div><small>1</small>Create the ring buffers</div>
   <div><small>2</small>Pump whole blocks through the model</div>
   <div><small>3</small>Hand the host its samples back</div>
 </div>
@@ -143,15 +143,7 @@ Note:
 
 **Script:**
 
-"But let's have a look into the ringbuffer header anyway. You can think of it as a queue for samples with a fixed size.
-
-We create it once, with a capacity, and that’s the only time it allocates memory. After that it never changes its size.
-
-Then there are four functions. available() tells us how many samples are waiting to be read. space() tells us how much room is left for writing.
-
-With push we add samples at the back, and with pop we take them out at the front, so first in, first out. The ‘ring’ just means that when we reach the end of the memory, we wrap around to the beginning, so nothing has to be moved.
-
-And if we push more than fits, or pop more than there is, it throws. That’s on purpose: if we size it wrong, we’ll notice right away instead of getting strange audio."
+"Let's look at the ring buffer: a queue for samples with a fixed size. It allocates once, when we create it, and never again. We add samples at the back with push and take them from the front with pop, first in, first out. And if we size it wrong, it throws, so we notice right away instead of getting strange audio."
 
 ---
 
@@ -166,20 +158,20 @@ std::vector<float> out = run_host(signal, num_samples, block_size,
 
 <div class="streams">
   {{STREAM:host=64|model=0|length=4096|seconds=5}}
-  {{STREAM:host=441|model=0|length=4096|seconds=5}}
+  {{STREAM:host=512|model=0|length=4096|seconds=5}}
   {{STREAM:host=2048|model=0|length=4096|seconds=5}}
 </div>
 
 Note:
     - Calls you block by block, in place, like a DAW's audio callback.
     - The block size is a parameter instead of a driver setting, so it runs in CI.
-    - An optional sample rate spaces the calls out in real time; needed from step 6.
+    - An optional sample rate spaces the calls out in real time; needed from step 5.
 
 **Script:**
 
 "And this is our host. It’s a DAW without the DAW: you give it a signal and a block size, and it calls your callback block by block, just like an audio callback, so you overwrite the samples in place.
 
-Because the block size is just a parameter, we can test lots of sizes in one run. Here you see 64, 441 and 2048. For this exercise we our goal is that your code works for all of the blocks sizes, and that the output is the same as the reference."
+Because the block size is just a parameter, we can test lots of sizes in one run. Here you see 64, 512 and 2048. For this exercise we our goal is that your code works for all of the blocks sizes, and that the output is the same as the reference."
 
 ---
 
@@ -227,7 +219,7 @@ cmake --build --preset release --target step02_exercise
 Note:
 **Script:**
 
-"Now it's your turn again. We will now give the ring buffers the proper size. Then we will pump a whole block though our model and finally hand the samples back to the host. The you'll find the main.cpp in steps/02-host_buffer_size/exercise. The build commands are on the slide. You get 5 minutes to try and solve it. Again, don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solutions main.cpp too."
+"Now it's your turn again. We will now give the ring buffers the proper size. Then we will pump a whole block though our model and finally hand the samples back to the host. You'll find the main.cpp in steps/02_host_buffer_size/exercise. The build commands are on the slide. You get 5 minutes to try and solve it. Again, don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solutions main.cpp too."
 *Timebox. The interesting TODO is the sizing. Let people argue about it.*
 
 ---
@@ -242,11 +234,11 @@ const size_t capacity = max_block_size + 2 * m_model_input_size; // <- fill out
 
 Note:
     - Size for the worst moment: the host has just written a block, the model has just produced one, and what it produced before is not drained yet.
-    - That happens whenever the host block does not divide the model block: 441.
+    - That happens whenever the host block does not divide the model block.
 
 **Script:**
 
-"We need to give the ring buffers a size that will be big enough for our worst case scenario. . So the worst case would be: the host just wrote a block, the model just produced one, and the previous one isn't drained yet. That happens whenever the sizes don't divide, like at 441." That will be `max_block_size + 2 * model_size`.
+"We need to give the ring buffers a size that will be big enough for our worst case scenario. So the worst case would be: the host just wrote a block, the model just produced one, and the previous one isn't drained yet. That happens whenever the sizes don't divide. That will be `max_block_size + 2 * model_size`."
 
 ---
 
@@ -294,7 +286,7 @@ Note:
 
 **Script:**
 
-"In the last todo we hand back the saples to the host. However, we have to deal with the case where there are no samples to hand back, yet, at the beginning of the process. If nothing's ready, we need to write silence. If you leave the buffer alone, the host just
+"In the last TODO we hand back the samples to the host. However, we have to deal with the case where there are no samples to hand back, yet, at the beginning of the process. If nothing's ready, we need to write silence. If you leave the buffer alone, the host just
 hears its own input."
 
 ---

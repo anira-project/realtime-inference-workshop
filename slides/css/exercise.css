@@ -451,9 +451,31 @@ html.tanh .pump-mark {
 
 html.tanh .pump-buffer.out .pump-mark { display: none; }
 
-html.tanh .reveal section.present .pump-buffer.in .pump-fill { animation: pump-in 7s steps(1, end) infinite; }
-html.tanh .reveal section.present .pump-buffer.out .pump-fill { animation: pump-out 7s steps(1, end) infinite; }
-html.tanh .reveal section.present .pump-node.model { animation: pump-run 7s var(--ease) infinite; }
+html.tanh .reveal section.present .pump-buffer.in .pump-fill { animation: pump-in-512 8.4s infinite; }
+html.tanh .reveal section.present .pump-buffer.out .pump-fill { animation: pump-out-512 8.4s infinite; }
+html.tanh .reveal section.present .pump-node.model { animation: pump-run-512 8.4s var(--ease) infinite; }
+
+/* 512 per call against a 2048 block (60 % of the bar): 4 calls per model block.
+   12 units of 700 ms: 4 calls, the model runs for 2, 4 calls, the model runs for 2. */
+@keyframes pump-in-512 {
+  0% { width: 0; animation-timing-function: steps(4, end); }
+  33.33% { width: 60%; animation-timing-function: step-end; }
+  50% { width: 0; animation-timing-function: steps(4, end); }
+  83.33%, 100% { width: 60%; animation-timing-function: step-end; }
+}
+
+@keyframes pump-run-512 {
+  0%, 33.33%, 50%, 83.33%, 100% { background: var(--tint-model); color: var(--ink); }
+  34.5%, 49%, 84.5%, 99% { background: var(--ink); color: var(--paper); }
+}
+
+@keyframes pump-out-512 {
+  0% { width: 0; animation-timing-function: step-end; }
+  41.67% { width: 60%; animation-timing-function: step-end; }
+  50% { width: 60%; animation-timing-function: steps(4, end); }
+  83.33% { width: 0; animation-timing-function: step-end; }
+  91.67%, 100% { width: 60%; animation-timing-function: step-end; }
+}
 
 /* 480 per call against a 2048 block (60 % of the bar) */
 @keyframes pump-in {
@@ -474,18 +496,6 @@ html.tanh .reveal section.present .pump-node.model { animation: pump-run 7s var(
 @keyframes pump-run {
   0%, 40%, 50%, 78%, 88%, 100% { background: var(--tint-model); color: var(--ink); }
   42%, 47%, 80%, 85% { background: var(--ink); color: var(--paper); }
-}
-
-@keyframes pump-out {
-  0% { width: 0; }
-  46% { width: 60%; }
-  54% { width: 46%; }
-  62% { width: 32%; }
-  70% { width: 18%; }
-  78% { width: 4%; }
-  84% { width: 64%; }
-  92% { width: 50%; }
-  100% { width: 36%; }
 }
 
 html.tanh .reveal section.present .pump-node.model small { color: inherit; }

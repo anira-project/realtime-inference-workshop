@@ -54,7 +54,7 @@ private:
     std::atomic<float>* m_mix = nullptr;
 
     // ONNX Runtime, not LibTorch: it is the one with a static build, so the
-    // plugin is a single self-contained bundle — step 4, made good on.
+    // plugin is a single self-contained bundle — step 7, made good on.
     // One engine and one processor per channel: the model is mono, and its
     // state belongs to the signal that is running through it.
     std::vector<std::unique_ptr<OnnxEngine>> m_engines;

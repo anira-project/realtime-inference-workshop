@@ -1,6 +1,6 @@
 <h1>Neural networks in<br>real-time environments</h1>
 
-Model types, state, and the model we use today 
+Model types, and the model we use today 
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->

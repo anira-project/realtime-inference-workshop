@@ -1,8 +1,8 @@
-// Step 7 — Latency and the dry/wet mix
+// Step 6 — Latency and the dry/wet mix
 //
 // Goal:   work out how late the processed signal is, report it, and delay the
 //         dry signal by the same amount so the two can be mixed.
-// Given:  the threaded processor from step 6, with a dry path added.
+// Given:  the threaded processor from step 5, with a dry path added.
 // Task:   fill in the three TODO banners.
 // Check:  at 100% dry the output is the input, delayed by exactly the reported
 //         latency — if the number is wrong, the check says so.
@@ -54,7 +54,7 @@ struct ModelBlock {
 #define WORKSHOP_AUDIO_CALLBACK
 #endif
 
-// Step 6's processor, with a dry path and a mix control.
+// Step 5's processor, with a dry path and a mix control.
 class LatencyProcessor {
 public:
     explicit LatencyProcessor(LibTorchEngine& engine) : m_engine(engine) {}

@@ -2,7 +2,7 @@
 workshop_setup_readerwriterqueue()
 
 foreach(variant exercise solution)
-    set(target step06_${variant})
+    set(target step05_${variant})
     add_executable(${target} ${variant}/main.cpp)
     target_include_directories(${target} PRIVATE "${CMAKE_SOURCE_DIR}/steps" "${CMAKE_CURRENT_LIST_DIR}" ${TORCH_INCLUDE_DIRS})
     target_compile_definitions(${target} PRIVATE WORKSHOP_MODEL_PATH="${WORKSHOP_MODEL}")

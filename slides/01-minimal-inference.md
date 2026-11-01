@@ -65,7 +65,7 @@ Note:
 
 **Script:**
 
-"To do this excercise we give you a files you can work with. You'll get the model as a TorchScript file, which holds the graph and the weights. We will aslo give an input signal and a reference output compiled in Python as headers. So we won't have any audio files and no Python to worry about. As a helper you get an engine wrapper. To do the exercise you only need to edit the `main.cpp` under steps/01_minimal_inference."
+"To do this exercise we give you a few files you can work with. You'll get the model as a TorchScript file, which holds the graph and the weights. We will also give you an input signal and a reference output from Python, compiled in as headers. So we won't have any audio files and no Python to worry about. As a helper you get an engine wrapper. To do the exercise you only need to edit the `main.cpp` under steps/01_minimal_inference."
 
 ---
 
@@ -75,18 +75,18 @@ Note:
 
 <div class="signal-pair">
   <div class="signal-label"><code>k_input_signal</code></div>
-  {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=230|from=2|to=4}}
+  {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=230|from=5|to=7}}
   <div class="signal-label"><code>k_target_output_signal</code></div>
-  {{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=230|from=2|to=4}}
+  {{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=230|from=5|to=7}}
 </div>
 
 Note:
-    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 44.1 kHz; shown here: blocks 3 and 4, the dashed line between them is a block boundary.
+    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 44.1 kHz; shown here: blocks 6 and 7, where the output is strongest; the dashed line between them is a block boundary.
     - Target: what the model made of it, in Python. The first block is nearly silent — the model's latency has not filled yet.
 
 **Script:**
 
-"First, let's have a look at the signals. The input is a 220 Hz sine. The reference is what the model made of it in Python. Notice that the first block is almost silent. That's the model's own latency. We will get into that in step 7."
+"First, let's have a look at the signals. The input is a 220 Hz sine. The reference is what the model made of it in Python. It's much quieter than the input and it isn't a sine anymore: this is what a model trained on a piano makes of a sine. The very first block, which we don't show here, is almost silent. That's the model's own latency. We will get into that in step 6."
 
 ---
 
@@ -106,8 +106,8 @@ Note:
 
 **Script:**
 
-"Let's take a deeper look into ur helper file. The engine has three methods: `load_model`, `process`, `reset`. `load_model` loads the model. `process` processes the audio one block at the time. `reset` clears the models state, meaning it wipes it's memory. The model has convolutional layers that "remeber" information from past blocks. Its convolutions look back into the past, so internally it keeps the end of the previous block(s): cached history buffers inside the network. We will get deeper into stateful and stateless models in step 4. Remember those
-three methods, since we will need them throughout the workshop."
+"Let's take a deeper look into our helper file. The engine has three methods: `load_model`, `process`, `reset`. `load_model` loads the model. `process` processes the audio one block at a time. `reset` clears the model's state, meaning it wipes its memory. The model has convolutional layers that "remember" information from past blocks. Its convolutions look back into the past, so internally it keeps the end of the previous block(s): cached history buffers inside the network. We will get deeper into stateful and stateless models in step 7. Remember those
+three methods, since we will need them throughout the workshop. What changes later is who calls `process`, and from which thread."
 
 ---
 
@@ -144,7 +144,7 @@ from_blob takes our sample buffer and wraps a tensor around it, without copying 
 
 Then forward runs the model on that block. It also updates the model’s memory, so the next block picks up right where this one ended.
 
-And finally we copy the result back into our buffer, so it’s processed in place, just like an audio callback.
+And finally we copy the result back into our buffer, so it’s processed in place, just like an audio callback."
 
 ---
 
@@ -152,7 +152,7 @@ And finally we copy the result back into our buffer, so it’s processed in plac
 
 ## The task
 
-<div class="task-timer" data-minutes="5"></div>
+<div class="task-timer" data-minutes="10"></div>
 
 Fill in the TODOs in `steps/01_minimal_inference/exercise/main.cpp`
 
@@ -192,17 +192,17 @@ cmake --build --preset release --target step01_exercise
 Note:
 **Script:**
 
-"So now we get to our first task. There are three TODOs in the exercise file. First create the engine., then pick the block size, and finally run each block.
-The build commands are on the slide. You get 5 minutes to try and solve it. Don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solutions main.cpp too."
+"So now we get to our first task. There are three TODOs in the exercise file. First create the engine, then pick the block size, and finally run each block.
+The build commands are on the slide. You get 10 minutes to try and solve it. Don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solutions main.cpp too."
 
-*Timebox (e.g. 5 min). Walk around. Most problems here are build problems,
+*Timebox (10 min). Walk around. Most problems here are build problems,
 not code problems.*
 
 ---
 
 <div class="tag">Solution</div>
 
-## TODO 1: Create the engine</span>
+## TODO 1: Create the engine
 
 ```cpp
 LibTorchEngine engine;
@@ -221,9 +221,7 @@ Note:
 
 **Script:**
 
-" Okay, let's look at teh solutions together. The common mistake is creating the engine inside the loop. That's slow because
-you load 127 MB every block, and it's also wrong because you throw away the
-model's state every block. The engine lives as long as the stream. So make sure to create the enging outside the loop."
+"Okay, let's look at the solutions together. All you had to fill in is the path, but notice where the engine sits: outside the loop. Inside the loop it would be slow, because you'd load 127 MB every block, and wrong, because you'd throw away the model's state every block. The engine lives as long as the stream."
 
 ---
 
@@ -291,4 +289,4 @@ Note:
 
 **Script:**
 
-"The result show us: we get the same output as Python. It works. But a host doesn't always hand us 2048 samples. Which brings us to step 2."
+"The results show us: we get the same output as Python. It works. But a host doesn't always hand us 2048 samples. Which brings us to step 2."

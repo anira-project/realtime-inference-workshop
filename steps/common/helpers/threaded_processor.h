@@ -1,4 +1,4 @@
-// The processor from steps 6 and 7, given complete — this is what the plugin in
+// The processor from steps 5 and 6, given complete — this is what the plugin in
 // step 8 runs.
 //
 // Goal: inference on a worker thread, lock-free hand-over, a dry path delayed
@@ -30,7 +30,7 @@ struct ModelBlock {
     std::array<float, 2048> m_samples{};
 };
 
-// What an audio callback promises; see step 5. RTSan checks everything below a
+// What an audio callback promises; see step 4. RTSan checks everything below a
 // function marked with it.
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
 #define WORKSHOP_AUDIO_CALLBACK [[clang::nonblocking]]
@@ -38,9 +38,9 @@ struct ModelBlock {
 #define WORKSHOP_AUDIO_CALLBACK
 #endif
 
-// Step 6's processor, with a dry path and a mix control.
+// Step 5's processor, with a dry path and a mix control.
 // @Engine: anything with process(float*, size_t) and reset() — the engines from
-//          step 1 and step 5 both fit, which is the point of that interface.
+//          step 1 and step 4 both fit, which is the point of that interface.
 template <typename Engine>
 class LatencyProcessor {
 public:

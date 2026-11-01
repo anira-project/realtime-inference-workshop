@@ -1,4 +1,4 @@
-# Step 4: Shipping the engine
+# Step 7: Shipping the engine
 
 **No exercise here** — this one is a talk and a decision. The numbers below come from this repository, so you can check them yourself.
 
@@ -19,7 +19,7 @@ ls -lh build/bin/step01_solution
 du -sh build/_deps/workshop_libtorch-src/lib
 ```
 
-## The same model on other engines
+## Engine sizes
 
 Prebuilt for macOS arm64, from the [anira-project/backends](https://github.com/anira-project/backends) v2.4.0 release:
 
@@ -31,7 +31,7 @@ Prebuilt for macOS arm64, from the [anira-project/backends](https://github.com/a
 | LiteRT 2.1 | 3 MB | — |
 | TFLite 2.17 | 2 MB | — |
 
-Same weights, same output to about 1e-6 — step 1 checks exactly that against the Python reference.
+LibTorch and ONNX Runtime run the same weights and match to about 1e-6: `step04_solution verify` checks both against the Python reference. For the other three, the table only compares package sizes.
 
 ## Why LibTorch is the big one
 
@@ -69,8 +69,8 @@ Because the engine sits behind three methods, construct, `process`, `reset`, we 
 
 ## Slides
 
-[`slides/04-shipping-the-engine.md`](../../slides/04-shipping-the-engine.md).
+[`slides/07-shipping-the-engine.md`](../../slides/07-shipping-the-engine.md).
 
 ## What's next
 
-The size of the inference engine is a shipping problem. The next step is a correctness problem that no amount of size tuning fixes: none of these engines is real-time safe.
+The size of the inference engine is a shipping problem, and the model ships with it. Step 4 showed that no engine is real-time safe, which is why it runs on a worker thread whichever you pick. Next: all of it in a plugin.

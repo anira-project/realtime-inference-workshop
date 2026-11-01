@@ -1,8 +1,8 @@
-# Step 7: Latency and the dry/wet mix
+# Step 6: Latency and the dry/wet mix
 
 **Goal:** work out how late the processed signal is, report that number, and delay the dry signal by the same amount so the two can be mixed.
 
-**Problem it solves:** step 6 left the audio thread safe but the output late. A plugin that cannot say how late it is cannot be mixed, and cannot be lined up by the host.
+**Problem it solves:** step 5 left the audio thread safe but the output late. A plugin that cannot say how late it is cannot be mixed, and cannot be lined up by the host.
 
 ## Where the delay comes from
 
@@ -19,16 +19,18 @@ The second block is a choice: it buys the worker a full block of time to answer,
 
 ## What to do
 
-Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO banners.
+Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners.
 
 1. **`latency_samples()`** — the number above. It decides what the host is told and how far the dry signal is delayed. The wet path starts with the two blocks of silence only: the model's own delay is already inside what it returns.
-2. **The mix** in `process_block()` — both paths are equally late now, so it is a plain crossfade between the delayed dry signal and the wet one.
+2. **The dry delay** in `prepare()` — prefill the dry ring buffer with the full latency in silence.
+3. **The mix** in `process_block()` — both paths are equally late now, so it is a plain crossfade between the delayed dry signal and the wet one.
 
 Each TODO says so while it is still open:
 
 ```
 TODO 1: work out the latency the design introduces.
-TODO 2: mix dry and wet, and hand the result to the host.
+TODO 2: the dry signal comes out undelayed, so it cannot line up with the wet one.
+TODO 3: at mix 0 the dry signal has to come through.
 ```
 
 ## Expected output
@@ -57,8 +59,8 @@ In a plugin you report the same number with `setLatencySamples()`, and the host 
 
 ## Slides
 
-[`slides/07-latency.md`](../../slides/07-latency.md).
+[`slides/06-latency.md`](../../slides/06-latency.md).
 
 ## What's next
 
-Everything is in place: correct, safe, late by a known amount. Step 8 puts it into a JUCE plugin, where the host asks for exactly these numbers.
+Everything is in place: correct, safe, late by a known amount. Step 7 decides which engine to ship, and step 8 puts it into a JUCE plugin, where the host asks for exactly these numbers.

@@ -1,8 +1,8 @@
-# Step 6: Inference on a worker thread
+# Step 5: Inference on a worker thread
 
 **Goal:** get the engine off the audio thread, and keep the audio thread free of allocations and locks.
 
-**What it answers:** step 5 showed that neither engine may run in the callback. This is where the inference goes instead.
+**What it answers:** step 4 showed that neither engine may run in the callback. This is where the inference goes instead.
 
 ## The shape
 
@@ -26,7 +26,7 @@ Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners
 
 1. **In `prepare()`**: give both queues their capacity and start the worker thread. Everything that allocates belongs here.
 2. **In `process_block()`**: the audio thread. Samples in, whole model blocks over to the worker, results back, samples out — and nothing that allocates, locks or waits.
-3. **In `worker()`**: take blocks out, run the engine, hand them back, and drain what is left when the loop ends. This side may sleep and allocate.
+3. **In `worker()`**: take blocks out, run the engine, hand them back. This side may sleep and allocate.
 
 Each TODO says so while it is still open:
 
@@ -40,7 +40,7 @@ TODO 3: the worker never picked a block up.
 
 ```
   allocations on the audio thread 0
-  the model produced           6144 of 6144 samples
+  the model produced           16384 of 16384 samples
   max abs diff vs. reference   4.92e-07
 
 OK: inference ran on the worker thread, the audio thread only moved samples.
@@ -48,7 +48,7 @@ OK: inference ran on the worker thread, the audio thread only moved samples.
 
 Two checks, both of which have to hold:
 
-- **Zero allocations in the callback.** The program counts them with its own `operator new`, thread-local, so the worker thread's allocations — tens of thousands per block, see step 5 — do not count.
+- **Zero allocations in the callback.** The program counts them with its own `operator new`, thread-local, so the worker thread's allocations — thousands per block, see step 4 — do not count.
 - **The output still matches the reference**, to 4.92e-07, as in step 1.
 
 Under RTSan the audio thread now reports nothing at all:
@@ -57,8 +57,8 @@ Under RTSan the audio thread now reports nothing at all:
 cmake -S . -B build-rtsan -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_RTSAN=ON \
   -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
   -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)"
-cmake --build build-rtsan -j --target step06_solution
-./build-rtsan/bin/step06_solution      # No report. The engine is on the other thread.
+cmake --build build-rtsan -j --target step05_solution
+./build-rtsan/bin/step05_solution      # No report. The engine is on the other thread.
 ```
 
 ## The host runs in real time now
@@ -87,7 +87,7 @@ are in the solution:
 
 ## Slides
 
-[`slides/06-threading.md`](../../slides/06-threading.md).
+[`slides/05-threading.md`](../../slides/05-threading.md).
 
 ## What's next
 

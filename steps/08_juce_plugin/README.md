@@ -9,8 +9,8 @@
 JUCE is cloned and built, which takes a few minutes, so it is off by default:
 
 ```bash
-cmake -S . -B build-juce -G Ninja -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
-cmake --build build-juce --target step08_plugin_Standalone   # or step08_plugin_VST3
+cmake -S . -B build-juce -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
+cmake --build build-juce --config Release --parallel --target step08_plugin_Standalone   # or step08_plugin_VST3
 open "build-juce/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/Workshop Inference.app"
 ```
 
@@ -18,7 +18,7 @@ The VST3 passes `pluginval --strictness-level 5`.
 
 ## The three places the host talks to us
 
-**`prepareToPlay`** — everything that allocates: load the model, size the ring buffers, start the worker threads. Then the number from step 7:
+**`prepareToPlay`** — everything that allocates: load the model, size the ring buffers, start the worker threads. Then the number from step 6:
 
 ```cpp
 setLatencySamples(static_cast<int>(m_channels.front()->latency_samples()));
@@ -38,12 +38,12 @@ One engine and one processor per channel. The model is mono and stateful, so two
 
 The window has three example slots. Clicking a tile plays its slot in a loop in place of the plugin's input, so the standalone needs no microphone and no DAW; **load** under a tile, or dropping an audio file on it, replaces the slot. The slots start with the files in [`assets/`](assets/), compiled into the plugin — replace `example_1.wav` to `example_3.wav` there to change what they start with. The files play at their own sample rate; the model expects 44.1 kHz.
 
-The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by 6320 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
+The `Dry/Wet` parameter is the mix from step 6. At 0 you hear the input, delayed by 6320 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
 
 ## Which engine, and why it matters here
 
 The plugin runs **ONNX Runtime, linked statically** — not LibTorch, which every
-step before it used. The reason is step 4, now with a bundle around it:
+step before it used. The reason is step 7, now with a bundle around it:
 
 | | what ships |
 |---|---|

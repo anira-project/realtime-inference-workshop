@@ -55,7 +55,7 @@ Note:
   <div class="person">
     <img class="person-photo" src="assets/images/people/lina.jpg" alt="Lina Campanella">
     <div class="person-name">Lina Campanella<span class="person-pronouns">she/her</span></div>
-    <div class="person-role">Research Assistant</div>
+    <div class="person-role">Student Assistant</div>
     <div class="person-affiliation">TU Berlin</div>
   </div>
   <div class="person">

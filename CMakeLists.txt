@@ -30,7 +30,7 @@ set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model_forward.onnx"
 workshop_use_current_model(WORKSHOP_MODEL model.pt)
 workshop_use_current_model(WORKSHOP_ONNX_MODEL model_forward.onnx)
 
-# RealtimeSanitizer for step 5; needs a clang that has it, see that step's README.
+# RealtimeSanitizer for step 4; needs a clang that has it, see that step's README.
 option(WORKSHOP_RTSAN "Build the real-time safety step with -fsanitize=realtime" OFF)
 
 # The plugin step clones and builds JUCE, which takes minutes — off by default.
@@ -42,7 +42,7 @@ option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
 # Build one step (-DWORKSHOP_STEP=01) or all of them.
 set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01, or all")
 
-set(WORKSHOP_STEPS 01_minimal_inference 02_host_buffer_size 03_benchmark 05_realtime_safety 06_threading 07_latency)
+set(WORKSHOP_STEPS 01_minimal_inference 02_host_buffer_size 03_benchmark 04_realtime_safety 05_threading 06_latency)
 
 if(WORKSHOP_JUCE)
     list(APPEND WORKSHOP_STEPS 08_juce_plugin)

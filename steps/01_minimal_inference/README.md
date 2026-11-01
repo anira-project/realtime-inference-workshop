@@ -65,4 +65,4 @@ Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
 ## What broke?
 
-Nothing — the numbers are right. But a forward pass took some amount of time you have not measured, and at 44.1 kHz with 2048-sample blocks you have 46.4 ms per block. Not on average: every single time. That is step 5.
+Nothing — the numbers are right. But a forward pass took some amount of time you have not measured, and at 44.1 kHz with 2048-sample blocks you have 46.4 ms per block. Not on average: every single time. That is step 4.

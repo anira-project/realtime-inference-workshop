@@ -28,7 +28,8 @@ public:
         : m_context(anira::ContextConfig{}) {
         const anira::ModelConfig model = anira::ModelConfig::from_file(step_dir + "/decoder.json");
         m_contract = std::make_unique<anira::ContractHandle>(anira::ContractHandle::from_file(step_dir + "/contract.json"));
-        const anira::Pipeline pipeline{anira::stage::Inference(model)};
+        anira::Pipeline pipeline;
+        pipeline.add_inference(model);
         anira_error error{};
         const anira_status status = anira_handler_create(m_context.native(), pipeline.native(), &m_handler, &error);
         if (status != ANIRA_OK) { throw std::runtime_error(describe("create", status, error)); }
@@ -49,7 +50,7 @@ public:
     void prepareToPlay(int samples_per_block, double) override {
         m_max_block = std::max(samples_per_block, 1);
         // Any block up to the resampler's largest request, at the model's rate
-        m_contract->hard_geometry(1, static_cast<uint32_t>(m_max_block), k_model_sample_rate);
+        m_contract->hard_host_blocks(1, static_cast<uint32_t>(m_max_block), k_model_sample_rate);
         anira_error error{};
         const anira_status status = anira_handler_prepare(m_handler, m_contract->native(), &error);
         if (status != ANIRA_OK) { throw std::runtime_error(describe("prepare", status, error)); }

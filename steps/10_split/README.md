@@ -16,7 +16,7 @@
 
 Open [`exercise/main.cpp`](exercise/main.cpp). Three TODOs, each in two places: the planning on the main thread and the audio callback.
 
-1. **The encoder.** Create it from `encoder.json`, prepare it, keep its latency: it counts in latent frames. In the callback, push the block and pop frames while one is delivered. The first `encoder_latency_frames` frames are its priming, zeros. A zero latent is not silence; it decodes to a sound of its own. Skip those.
+1. **The encoder.** Create it from `encoder.json`, prepare it, keep its latency: it counts in latent frames. In the callback, push the block and pop frames while `anira_handler_get_available_samples` says one is waiting: a pop with nothing waiting is a miss, and the miss policy would fill it. The first `encoder_latency_frames` frames are its priming, zeros. A zero latent is not silence; it decodes to a sound of its own. Skip those.
 2. **Bias and scale.** `frame_data[i] * scale[i] + bias[i]`, with the atomics loaded on the audio thread. With zero bias and unit scale, nothing changes, and the check passes.
 3. **The decoder.** Create and prepare it; its latency counts in samples and assumes a frame is there when its window starts. Ours arrives late by the encoder's latency, so declare the sum on the decoder's output, `contract.hard_latency("audio", …)`, and prepare again. In the callback, push every real frame into the decoder and pop its audio for this callback.
 
@@ -34,14 +34,14 @@ Reported latency: 6320 samples (143.3 ms at 44100 Hz)
 OK: max abs diff 2.79e-07, within 0.0001 of the reference.
 ```
 
-6320 is the encoder's one frame (2048) plus the decoder's 4272, the same figure as step 7's: the chain costs one more frame than the forward model in step 9, because the decoder cannot start before the encoder has delivered.
+6320 is the encoder's one frame (2048) plus the decoder's 4272, the same figure as step 6's: the chain costs one more frame than the forward model in step 9, because the decoder cannot start before the encoder has delivered.
 
 The check is the one from step 9. With the latents untouched, encoder and decoder together are the forward model to 3e-7.
 
 ## If you're stuck
 
 - **`TODO 1: create and prepare the encoder first.`** / **`TODO 3: ...`** — the handlers are still null, or the latency is still 0.
-- **`TODO 1: no latent frame came out of the encoder.`** — nothing was popped: the push, the pop loop, or `delivered` is not checked.
+- **`TODO 1: no latent frame came out of the encoder.`** — nothing was popped: the push, or the pop loop and its `get_available_samples` check.
 - **Late callbacks on every run, and `FAILED`** — the decoder was prepared once, with its own latency: the frame arrives after its window started, every time. Declare the sum and prepare again.
 - **`FAILED: max abs diff 0.0137`**, no late callbacks — the priming frame reached the decoder. Skip the first `encoder_latency_frames` frames.
 - **`FAILED: max abs diff 0.15`** — a state is not carried, or the frame goes into the wrong slot; both handlers' slot 0 is the streamed tensor.

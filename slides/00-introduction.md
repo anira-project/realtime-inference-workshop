@@ -43,7 +43,7 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 </div>
 
 Note:
-    - Version 3 is out as v3.0.0-alpha.1 (September 2026); v2.3.0 is the latest stable release.
+    - Version 3 is out as v3.0.0-alpha.2 (November 2026); v2.3.0 is the latest stable release.
     - Most of what the workshop shows comes from building anira.
 
 ---

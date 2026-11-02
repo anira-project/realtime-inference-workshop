@@ -1,4 +1,4 @@
-# The part 1 model on anira: two JSON files and three calls replace steps 2, 6 and 7.
+# The part 1 model on anira: two JSON files and three calls replace steps 2, 5 and 6.
 workshop_setup_anira()
 
 foreach(variant exercise solution)

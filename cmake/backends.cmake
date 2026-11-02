@@ -9,12 +9,66 @@
 
 include_guard(GLOBAL)
 include(FetchContent)
+include(download)
 
-set(WORKSHOP_BACKENDS_VERSION "v2.4.0" CACHE STRING "anira-project/backends release tag")
-set(WORKSHOP_LIBTORCH_VERSION "2.12.0" CACHE STRING "LibTorch version in that release")
+# The release, its engine versions and the SHA256 of every archive the workshop
+# can ask for, pinned: no GitHub API call at configure, and a broken download
+# never passes. A new release replaces all of them together.
+set(WORKSHOP_BACKENDS_VERSION "v2.4.0")
+set(WORKSHOP_LIBTORCH_VERSION "2.12.0")
+set(WORKSHOP_ONNXRUNTIME_VERSION "1.26.0")
 set(WORKSHOP_LIBTORCH_ROOTDIR "" CACHE PATH "Use this prebuilt LibTorch tree instead of downloading")
-set(WORKSHOP_ONNXRUNTIME_VERSION "1.26.0" CACHE STRING "ONNX Runtime version in that release")
 set(WORKSHOP_ONNXRUNTIME_ROOTDIR "" CACHE PATH "Use this prebuilt ONNX Runtime tree instead of downloading")
+
+set(_workshop_backend_archives
+    "libtorch-2.12.0-Linux-aarch64-shared.zip|2f1631ed9fa94b8053440e9409814c3abbe59e292f47bf56e5b434e23bfab3c3"
+    "libtorch-2.12.0-Linux-x86_64-shared.zip|599e65521e91da1a0e11021020ee233b9bcaf20b87c6d001e6c96bbe267cd674"
+    "libtorch-2.12.0-macOS-arm64-shared.zip|f4b67b83bb078baecaf78dd80487590d848b0abbe0181b4d26730e126f468c86"
+    "libtorch-2.12.0-macOS-x86_64-shared.zip|b5769e39d980db8d6c242c500b284a061e217c8ce55be8e0daad00c6b1949e95"
+    "libtorch-2.12.0-Windows-arm64-shared.zip|18b253fc93af3721f9aaa3c9b927a66d9fcdf6a0769803e3561ebac9a0d06647"
+    "libtorch-2.12.0-Windows-x86_64-shared.zip|776610e52750e59cf879a3d8607466d2511da839dab5156fe2690381a26eccf2"
+    "onnxruntime-1.26.0-Linux-aarch64-shared.zip|d569ceb3b865763bb2ce445176d57989f7bc0454c2d041285a1abfe4b2cd594f"
+    "onnxruntime-1.26.0-Linux-aarch64-static.zip|053517f97c7749c574c8eef4e02ef151e64625b5e17b2e7646a5927c9c177374"
+    "onnxruntime-1.26.0-Linux-x86_64-shared.zip|060a5baa102327aa3d0e0a2c0a23472284569784c8ad3295da6fb19e587d32e7"
+    "onnxruntime-1.26.0-Linux-x86_64-static.zip|26860e47df15e29b8f2d6804973e8c6cef20d8fb9f1f2bf0bde83a7af6d9c72f"
+    "onnxruntime-1.26.0-macOS-arm64-shared.zip|9b797518948185e62dbdd2442934afae21be58e78785d293d57f4e501d835c72"
+    "onnxruntime-1.26.0-macOS-arm64-static.zip|3329d8a85ec54b61a898f84f3c3e6da180868f9dbbba4b6362692ad5df9e4998"
+    "onnxruntime-1.26.0-macOS-x86_64-shared.zip|ca1b7c8b8868d04a254a0c5e860379a6cd8c6e0caaf10ae8935c301504faafcf"
+    "onnxruntime-1.26.0-macOS-x86_64-static.zip|20dfa6796d5f43a6723b7f1e26286429377785babc729bdfb64d7cac55d16f33"
+    "onnxruntime-1.26.0-Windows-arm64-shared.zip|516293a7d87b2cbb82c0b41329195f52d576d133ae9ea97e3918883b95510452"
+    "onnxruntime-1.26.0-Windows-arm64-static.zip|4305337a904597c43ec99803342cab70253413a9cdff5a2a84e0df13a4da699b"
+    "onnxruntime-1.26.0-Windows-arm64-static-debug.zip|9c27aa796a5bbc38e69bc778efa60196dd55775c8ef7f1933661abc452d75881"
+    "onnxruntime-1.26.0-Windows-x86_64-shared.zip|acb07b475836bfa5659f4425bf0eddeef920dd19981a9a9f70c773787722d651"
+    "onnxruntime-1.26.0-Windows-x86_64-static.zip|9abd843c91eb0309d8e21c29a9d775e11025368772b0a32e25d378391fbf9749"
+    "onnxruntime-1.26.0-Windows-x86_64-static-debug.zip|0971d1c3f57edbe2bfe0cc86f70ab2160e59cf01d0176ef79c3f746cc54c8dff")
+
+# Download one engine archive of the release (or take it from downloads/) and
+# unpack it into the build tree as <name>_SOURCE_DIR, returned in <out_var>.
+function(_workshop_fetch_backend name asset out_var)
+    set(sha256 "")
+    foreach(entry IN LISTS _workshop_backend_archives)
+        string(REPLACE "|" ";" parts "${entry}")
+        list(GET parts 0 entry_asset)
+        if(entry_asset STREQUAL asset)
+            list(GET parts 1 sha256)
+        endif()
+    endforeach()
+    if(sha256 STREQUAL "")
+        message(FATAL_ERROR "Workshop: ${asset} is not an archive of the release this workshop pins")
+    endif()
+
+    workshop_download(
+        "https://github.com/anira-project/backends/releases/download/${WORKSHOP_BACKENDS_VERSION}/${asset}"
+        "${sha256}" archive)
+    FetchContent_Declare(${name}
+        URL "${archive}"
+        URL_HASH "SHA256=${sha256}"
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        SOURCE_SUBDIR no-cmake-project  # a binary tree, not a project to add
+    )
+    FetchContent_MakeAvailable(${name})
+    set(${out_var} "${${name}_SOURCE_DIR}" PARENT_SCOPE)
+endfunction()
 
 # <OS>-<arch> part of the asset name, as the release names them.
 function(_workshop_platform out)
@@ -50,17 +104,8 @@ macro(workshop_setup_libtorch)
         set(root "${WORKSHOP_LIBTORCH_ROOTDIR}")
     else()
         _workshop_platform(platform)
-        set(asset "libtorch-${WORKSHOP_LIBTORCH_VERSION}-${platform}-shared.zip")
-        set(url "https://github.com/anira-project/backends/releases/download/${WORKSHOP_BACKENDS_VERSION}/${asset}")
-        message(STATUS "Workshop: fetching ${asset}")
-
-        FetchContent_Declare(workshop_libtorch
-            URL "${url}"
-            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-            SOURCE_SUBDIR no-cmake-project  # it is a binary tree, not a project to add
-        )
-        FetchContent_MakeAvailable(workshop_libtorch)
-        set(root "${workshop_libtorch_SOURCE_DIR}")
+        _workshop_fetch_backend(workshop_libtorch
+            "libtorch-${WORKSHOP_LIBTORCH_VERSION}-${platform}-shared.zip" root)
     endif()
 
     # LibTorch ships its own CMake config; it defines the `torch` target and
@@ -120,16 +165,13 @@ macro(workshop_setup_onnxruntime)
             set(ort_root "${WORKSHOP_ONNXRUNTIME_ROOTDIR}")
         else()
             _workshop_platform(ort_platform)
-            set(ort_asset "onnxruntime-${WORKSHOP_ONNXRUNTIME_VERSION}-${ort_platform}-${ort_linkage}.zip")
-            message(STATUS "Workshop: fetching ${ort_asset}")
-
-            FetchContent_Declare(workshop_onnxruntime_${ort_linkage}
-                URL "https://github.com/anira-project/backends/releases/download/${WORKSHOP_BACKENDS_VERSION}/${ort_asset}"
-                DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-                SOURCE_SUBDIR no-cmake-project
-            )
-            FetchContent_MakeAvailable(workshop_onnxruntime_${ort_linkage})
-            set(ort_root "${workshop_onnxruntime_${ort_linkage}_SOURCE_DIR}")
+            # MSVC's debug runtime needs the static library built against it
+            set(ort_token "${ort_linkage}")
+            if(WIN32 AND ort_linkage STREQUAL "static" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+                set(ort_token "static-debug")
+            endif()
+            _workshop_fetch_backend(workshop_onnxruntime_${ort_linkage}
+                "onnxruntime-${WORKSHOP_ONNXRUNTIME_VERSION}-${ort_platform}-${ort_token}.zip" ort_root)
         endif()
 
         if(ort_linkage STREQUAL "static")
@@ -140,6 +182,8 @@ macro(workshop_setup_onnxruntime)
             set_target_properties(workshop::onnxruntime_static PROPERTIES
                 IMPORTED_LOCATION "${ort_library}"
                 INTERFACE_INCLUDE_DIRECTORIES "${ort_root}/include")
+            # anira links the same tree (anira.cmake): one download, one copy
+            set(WORKSHOP_ONNXRUNTIME_STATIC_DIR "${ort_root}" CACHE INTERNAL "")
         else()
             # The file to load at runtime, and on Windows the import library the
             # linker needs next to it.

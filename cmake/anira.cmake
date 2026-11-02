@@ -4,8 +4,8 @@
 #
 #   workshop_setup_anira()   -> target anira::anira
 #
-# anira downloads its own prebuilt ONNX Runtime; the LibTorch of steps 1 to 7
-# is not involved.
+# anira links the static ONNX Runtime of backends.cmake, the one the plugin
+# links; the LibTorch of steps 1 to 7 is not involved.
 
 include_guard(GLOBAL)
 include(FetchContent)
@@ -19,8 +19,16 @@ macro(workshop_setup_anira)
         # Plain variables, not cache entries: anira reads them as its option()
         # defaults under CMP0077, and they stay out of the workshop's own cache.
         set(BUILD_SHARED_LIBS OFF)
+        # anira links the workshop's static ONNX Runtime (backends.cmake) instead
+        # of downloading its own: one download, retried and checked like every
+        # other, and no GitHub API call at configure, which allows 60 requests an
+        # hour per IP, and a room of participants shares one.
+        workshop_setup_onnxruntime(STATIC)
+        set(ANIRA_ONNXRUNTIME_ROOTDIR "${WORKSHOP_ONNXRUNTIME_STATIC_DIR}")
+        set(ANIRA_BACKENDS_SKIP_REMOTE_CHECK ON)
         set(ANIRA_WITH_LIBTORCH OFF)
         set(ANIRA_WITH_LITERT OFF)
+        set(ANIRA_WITH_TFLITE OFF)
         set(ANIRA_WITH_EXECUTORCH OFF)
         set(ANIRA_WITH_ONNXRUNTIME ON)
         set(ANIRA_WITH_TESTS OFF)

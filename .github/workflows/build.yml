@@ -39,16 +39,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The models come from this repository's release and never change within
-      # a tag, so they are worth caching: 380 MB per run otherwise.
-      - name: Cache models
+      # The archives download.cmake fetches (engines, models, JUCE) never change
+      # for a given hash, so they are worth caching: about 500 MB per run
+      # otherwise. The engines differ per platform.
+      - name: Cache downloads
         uses: actions/cache@v4
         with:
-          path: models
-          key: models-${{ hashFiles('cmake/models.cmake') }}
+          path: downloads
+          key: downloads-${{ matrix.name }}-${{ hashFiles('cmake/backends.cmake', 'cmake/models.cmake', 'cmake/juce.cmake') }}
 
-      # LibTorch alone is 80 MB compressed, JUCE is a full clone, and the
-      # benchmark library is built from source.
+      # The unpacked engines and JUCE, and the benchmark library built from
+      # source.
       - name: Cache dependencies
         uses: actions/cache@v4
         with:

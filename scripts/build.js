@@ -78,7 +78,7 @@ async function generateHTML(isDev = false) {
   const html = renderTemplate(slidesTemplate, {
     SLIDES_CONTENT: slidesContent,
     PRESENTATION_TITLE: 'Real-Time Neural Inference Workshop',
-    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>\n  <script src="js/overflow_check.js"></script>' : ''
+    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js?v={{BUILD_ID}}"></script>\n  <script src="js/overflow_check.js?v={{BUILD_ID}}"></script>' : ''
   });
   
   await fs.writeFile(path.join(distDir, 'workshop.html'), html);
@@ -489,8 +489,9 @@ const THEME_ICONS = `<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stro
 
 function renderTemplate(template, data) {
   let result = template;
-  // Stamped onto every css/ and js/ link, so a new build is never served from a stale cache
-  data = { THEME_ICONS, BUILD_ID: Date.now().toString(36), ...data };
+  // Stamped onto every css/ and js/ link, so a new build is never served from a stale cache.
+  // Replaced last, so it also reaches the links that other values insert (the dev scripts).
+  data = { ...data, THEME_ICONS, BUILD_ID: Date.now().toString(36) };
   
   // Replace all placeholders
   for (const [key, value] of Object.entries(data)) {

@@ -18,11 +18,6 @@ include(anira)
 workshop_setup_libtorch()
 workshop_setup_benchmark()
 
-# The models are downloaded from the repository's own release, unless they are
-# already in models/. The test signal and the expected output are compiled in
-# (steps/common/assets/test_signal.h).
-workshop_fetch_models()
-
 set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model.pt"
     CACHE FILEPATH "TorchScript model to run")
 set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model_forward.onnx"
@@ -38,6 +33,11 @@ option(WORKSHOP_JUCE "Build the JUCE plugin step" OFF)
 
 # Part 2 builds anira from source, which takes a couple of minutes once.
 option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
+
+# The models are downloaded from the repository's own release, unless they are
+# already in models/: only those the enabled steps load. The test signal and the
+# expected output are compiled in (steps/common/assets/test_signal.h).
+workshop_fetch_models()
 
 # Build one step (-DWORKSHOP_STEP=01) or all of them.
 set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01, or all")

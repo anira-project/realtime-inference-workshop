@@ -50,15 +50,16 @@ std::string describe(const char* call, anira_status status, const anira_error& e
 // One model as one handler, created over a pipeline with one inference stage.
 void create(Handler& handler, anira::Context& context, const std::string& model_file) {
     const anira::ModelConfig model = anira::ModelConfig::from_file(model_file);
-    const anira::Pipeline pipeline{anira::stage::Inference(model)};
+    anira::Pipeline pipeline;
+    pipeline.add_inference(model);
     anira_error error{};
     const anira_status status = anira_handler_create(context.native(), pipeline.native(), &handler.m_handle, &error);
     if (status != ANIRA_OK) { throw std::runtime_error(describe("create", status, error)); }
 }
 
-// The contract with the host's geometry, prepared; returns the latency of output slot 0.
+// The contract with the host's blocks, prepared; returns the latency of output slot 0.
 size_t prepare(Handler& handler, anira::ContractHandle& contract) {
-    contract.hard_geometry(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
+    contract.hard_host_blocks(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
     anira_error error{};
     const anira_status status = anira_handler_prepare(handler.m_handle, contract.native(), &error);
     if (status != ANIRA_OK) { throw std::runtime_error(describe("prepare", status, error)); }
@@ -139,11 +140,12 @@ int main() {
             anira_tensor_init_host(&block, samples, ANIRA_DTYPE_F32, 2, block_shape);
 
             // ---- TODO 1: the encoder ---------------------------------------
-            // Push the block (input slot 0). Then pop latent frames (output
-            // slot 0) into `frame` while one is delivered, counting them in
-            // `frames`. The encoder's first encoder_latency_frames frames are
-            // its priming, zeros: a zero latent is a sound, not silence, so
-            // skip those.
+            // Push the block (input slot 0). Then, while
+            // anira_handler_get_available_samples (output slot 0, channel 0)
+            // says a frame is waiting, pop it into `frame`, counting them in
+            // `frames`; a pop with nothing waiting is a miss. The encoder's
+            // first encoder_latency_frames frames are its priming, zeros: a
+            // zero latent is a sound, not silence, so skip those.
             //   For each real frame:
             // ---- TODO 2: bias and scale on z -------------------------------
             //   frame_data[i] = frame_data[i] * scale[i] + bias[i], the atomics
@@ -165,7 +167,7 @@ int main() {
     std::printf("  latent frames                %zu, %zu of them priming\n", frames, encoder_latency_frames);
 
     // The reference carries the model's own delay, which the decoder declared:
-    // it lines up after the rest, as in steps 7 and 9.
+    // it lines up after the rest, as in steps 6 and 9.
     return report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                latency - k_model_latency, late, k_host.m_block_size);
 }

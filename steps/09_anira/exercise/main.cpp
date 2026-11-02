@@ -1,7 +1,7 @@
 // Step 9 — The model with anira
 //
 // Goal:   the part 1 model on anira: the model file and the contract say what
-//         runs and how, the handler does steps 2, 6 and 7.
+//         runs and how, the handler does steps 2, 5 and 6.
 // Given:  contract.json, the fake host, anira.
 // Task:   TODO 1 and 2 in model.json, TODO 3 below.
 // Check:  the output equals the reference, shifted by get_latency().
@@ -57,7 +57,7 @@ int main() {
         // ---- TODO 3 --------------------------------------------------------
         // Plan on the main thread:
         //   - load model.json and contract.json from step_dir
-        //   - give the contract the host's geometry: block size twice, sample rate
+        //   - give the contract the host's blocks: block size twice, sample rate
         //   - build a pipeline with one inference stage over the model
         //   - anira_handler_create, then anira_handler_prepare with the contract
         //   - read the latency of output slot 0 into `latency`
@@ -101,7 +101,7 @@ int main() {
         k_host.m_sample_rate);
 
     // The reference already carries the model's own delay, so it lines up with
-    // the output after the rest of the reported latency, as in step 7.
+    // the output after the rest of the reported latency, as in step 6.
     return report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                latency - k_model_latency, late, k_host.m_block_size);
 }

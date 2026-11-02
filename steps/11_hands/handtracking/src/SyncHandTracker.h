@@ -1,6 +1,6 @@
 #pragma once
 
-#include <anira/anira.h>
+#include <anira/compat/v2.hpp>
 #include <array>
 #include <cassert>
 #include <condition_variable>
@@ -18,26 +18,26 @@ namespace anira::models::handtracking {
 // One anira session driven synchronously: in non-realtime mode pop_data blocks until the result arrives.
 class SyncSession {
 public:
-    explicit SyncSession(anira::InferenceConfig config)
+    explicit SyncSession(anira::v2::InferenceConfig config)
         : m_config(std::move(config)), m_pp(m_config), m_handler(m_pp, m_config, make_context_config()) {}
 
-    anira::InferenceHandler& handler() { return m_handler; }
-    anira::PrePostProcessor& pp() { return m_pp; }  // non-streamable tensors
+    anira::v2::InferenceHandler& handler() { return m_handler; }
+    anira::v2::PrePostProcessor& pp() { return m_pp; }  // non-streamable tensors
 
-    void prepare(anira::InferenceBackend backend,
+    void prepare(anira::v2::InferenceBackend backend,
                  int values_per_push,
                  size_t out0_size,
                  double pushes_per_second) {
         m_config.m_max_inference_time = k_sync_deadline_ms;
         m_handler.set_inference_backend(backend);
-        m_handler.prepare(anira::HostConfig(
+        m_handler.prepare(anira::v2::HostConfig(
             static_cast<float>(values_per_push),
             static_cast<float>(values_per_push) * static_cast<float>(pushes_per_second)));
         m_handler.set_non_realtime(true);
         m_primed_skips = m_handler.get_latency(0) / out0_size;
     }
 
-    void switchBackend(anira::InferenceBackend backend,
+    void switchBackend(anira::v2::InferenceBackend backend,
                        int values_per_push,
                        size_t out0_size,
                        double pushes_per_second) {
@@ -56,9 +56,9 @@ public:
     }
 
 private:
-    anira::InferenceConfig m_config;
-    anira::PrePostProcessor m_pp;
-    anira::InferenceHandler m_handler;
+    anira::v2::InferenceConfig m_config;
+    anira::v2::PrePostProcessor m_pp;
+    anira::v2::InferenceHandler m_handler;
     size_t m_primed_skips = 0;
 };
 
@@ -76,10 +76,10 @@ public:
     void setOptions(const Options& options) override { m_state.setOptions(options); }
     Options getOptions() const override { return m_state.getOptions(); }
 
-    void setBackend(anira::InferenceBackend backend) override {
+    void setBackend(anira::v2::InferenceBackend backend) override {
         m_state.requestBackend(backend);
     }
-    anira::InferenceBackend getBackend() const override {
+    anira::v2::InferenceBackend getBackend() const override {
         return m_state.requestedBackend();
     }
 
@@ -91,7 +91,7 @@ private:
     };
 
     void run();  // worker thread main loop
-    void prepareSessions(anira::InferenceBackend backend, bool switching);
+    void prepareSessions(anira::v2::InferenceBackend backend, bool switching);
     void runDetector(const Frame& frame, const Options& options);
     void processHand(int slot_index, const Frame& frame, const Options& options,
                      Result& result);
@@ -123,7 +123,7 @@ private:
     std::array<float, 8> m_gesture_scores{};
 
     SharedTrackerState m_state;                // options + requested backend
-    anira::InferenceBackend m_active_backend;  // worker thread only
+    anira::v2::InferenceBackend m_active_backend;  // worker thread only
 
     // Latest-frame mailbox (camera thread -> worker).
     std::mutex m_frame_mutex;

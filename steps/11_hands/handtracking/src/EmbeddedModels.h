@@ -1,6 +1,6 @@
 #pragma once
 
-#include <anira/anira.h>
+#include <anira/compat/v2.hpp>
 #include <cstddef>
 #include <vector>
 
@@ -25,7 +25,7 @@ using BinaryData::canned_gesture_classifier_onnxSize;
 #define HT_ADD_LITERT(models, base)                                            \
     (models).emplace_back(const_cast<char*>(base##_tflite),                    \
                           static_cast<size_t>(base##_tfliteSize),              \
-                          anira::InferenceBackend::LITERT);
+                          anira::v2::InferenceBackend::LITERT);
 #else
 #define HT_ADD_LITERT(models, base)
 #endif
@@ -34,7 +34,7 @@ using BinaryData::canned_gesture_classifier_onnxSize;
 #define HT_ADD_TFLITE(models, base)                                            \
     (models).emplace_back(const_cast<char*>(base##_tflite),                    \
                           static_cast<size_t>(base##_tfliteSize),              \
-                          anira::InferenceBackend::TFLITE);
+                          anira::v2::InferenceBackend::TFLITE);
 #else
 #define HT_ADD_TFLITE(models, base)
 #endif
@@ -43,7 +43,7 @@ using BinaryData::canned_gesture_classifier_onnxSize;
 #define HT_ADD_ONNX(models, base)                                              \
     (models).emplace_back(const_cast<char*>(base##_onnx),                      \
                           static_cast<size_t>(base##_onnxSize),                \
-                          anira::InferenceBackend::ONNX);
+                          anira::v2::InferenceBackend::ONNX);
 #else
 #define HT_ADD_ONNX(models, base)
 #endif
@@ -52,14 +52,14 @@ using BinaryData::canned_gesture_classifier_onnxSize;
 #define HT_ADD_LIBTORCH(models, base)                                          \
     (models).emplace_back(const_cast<char*>(base##_pt),                        \
                           static_cast<size_t>(base##_ptSize),                  \
-                          anira::InferenceBackend::LIBTORCH);
+                          anira::v2::InferenceBackend::LIBTORCH);
 #else
 #define HT_ADD_LIBTORCH(models, base)
 #endif
 
 #define HT_EMBEDDED_MODEL_DATA_FN(fn_name, base)                               \
-    inline std::vector<anira::ModelData> fn_name() {                           \
-        std::vector<anira::ModelData> models;                                  \
+    inline std::vector<anira::v2::ModelData> fn_name() {                           \
+        std::vector<anira::v2::ModelData> models;                                  \
         HT_ADD_LITERT(models, base)                                            \
         HT_ADD_TFLITE(models, base)                                            \
         HT_ADD_ONNX(models, base)                                              \

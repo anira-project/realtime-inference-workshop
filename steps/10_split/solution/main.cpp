@@ -46,15 +46,16 @@ std::string describe(const char* call, anira_status status, const anira_error& e
 // One model as one handler, created over a pipeline with one inference stage.
 void create(Handler& handler, anira::Context& context, const std::string& model_file) {
     const anira::ModelConfig model = anira::ModelConfig::from_file(model_file);
-    const anira::Pipeline pipeline{anira::stage::Inference(model)};
+    anira::Pipeline pipeline;
+    pipeline.add_inference(model);
     anira_error error{};
     const anira_status status = anira_handler_create(context.native(), pipeline.native(), &handler.m_handle, &error);
     if (status != ANIRA_OK) { throw std::runtime_error(describe("create", status, error)); }
 }
 
-// The contract with the host's geometry, prepared; returns the latency of output slot 0.
+// The contract with the host's blocks, prepared; returns the latency of output slot 0.
 size_t prepare(Handler& handler, anira::ContractHandle& contract) {
-    contract.hard_geometry(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
+    contract.hard_host_blocks(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
     anira_error error{};
     const anira_status status = anira_handler_prepare(handler.m_handle, contract.native(), &error);
     if (status != ANIRA_OK) { throw std::runtime_error(describe("prepare", status, error)); }
@@ -130,9 +131,12 @@ int main() {
             // ---- TODO 1: the encoder ---------------------------------------
             // Audio in. A latent frame comes out once a whole block has been
             // encoded, about one latency later; usually none in this callback.
+            // Pop only what is there: a pop with no frame waiting is a miss.
             anira_handler_push_data(encoder.m_handle, &block, 0);
-            size_t delivered = 0;
-            while (anira_handler_pop_data(encoder.m_handle, &frame, 0, &delivered) == ANIRA_OK && delivered == 1) {
+            size_t available = 0;
+            while (anira_handler_get_available_samples(encoder.m_handle, 0, 0, &available) == ANIRA_OK
+                   && available > 0) {
+                anira_handler_pop_data(encoder.m_handle, &frame, 0, nullptr);
                 // The encoder's first frames are its latency priming: zeros. A
                 // zero latent is not silence, it is a sound of its own, so
                 // those frames must not reach the decoder.
@@ -147,7 +151,7 @@ int main() {
                 anira_handler_push_data(decoder.m_handle, &frame, 0);
             }
             // The decoder's audio out, for this callback: samples, or the miss policy
-            const anira_status status = anira_handler_pop_data(decoder.m_handle, &block, 0, &delivered);
+            const anira_status status = anira_handler_pop_data(decoder.m_handle, &block, 0, nullptr);
             if (status == ANIRA_MISSED) { late.push_back(position); }
             // ----------------------------------------------------------------
             position += num_samples;
@@ -157,7 +161,7 @@ int main() {
     std::printf("  latent frames                %zu, %zu of them priming\n", frames, encoder_latency_frames);
 
     // The reference carries the model's own delay, which the decoder declared:
-    // it lines up after the rest, as in steps 7 and 9.
+    // it lines up after the rest, as in steps 6 and 9.
     return report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                latency - k_model_latency, late, k_host.m_block_size);
 }

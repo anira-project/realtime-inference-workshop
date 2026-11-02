@@ -33,7 +33,7 @@ SyncHandTracker::~SyncHandTracker() {
     m_worker.join();
 }
 
-void SyncHandTracker::prepareSessions(anira::InferenceBackend backend, bool switching) {
+void SyncHandTracker::prepareSessions(anira::v2::InferenceBackend backend, bool switching) {
     const auto prepare_one = [&](SyncSession& session, int values_per_push,
                                  size_t out0_size, double pushes_per_second) {
         if (switching)

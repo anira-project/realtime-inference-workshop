@@ -1,6 +1,6 @@
 # anira for part 2, fetched and built from source, pinned to one commit of the
-# v3 line. ONNX Runtime only, static: the plugin's choice from step 8, and the
-# engine the model files of steps 9 to 11 name.
+# v3 line, v3.0.0-alpha.2. ONNX Runtime only, static: the plugin's choice from
+# step 8, and the engine the model files of steps 9 to 11 name.
 #
 #   workshop_setup_anira()   -> target anira::anira
 #
@@ -10,7 +10,7 @@
 include_guard(GLOBAL)
 include(FetchContent)
 
-set(WORKSHOP_ANIRA_TAG "994e31dfc4f829a8faf60eed0afd0f19053ed255"
+set(WORKSHOP_ANIRA_TAG "561f0408317f94676aa3d067242367c0ca92a5b8"
     CACHE STRING "anira commit or tag the part 2 steps build against")
 
 macro(workshop_setup_anira)

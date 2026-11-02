@@ -26,7 +26,7 @@ Note:
 
 Note:
     - Two kinds of model in one pool: the tracker's three run once per camera frame, the decoder as a hard stream. The pool does not care which is which.
-    - The tracker is anira-cam's, on anira's 2.x C++ API; the v3 library still carries it. The decoder is step 10's, on the v3 handler, as a generator.
+    - The tracker is anira-cam's, on anira's 2.x C++ API: it runs on v3 through compat/v2.hpp. The decoder is step 10's, on the v3 handler, as a generator.
     - The decoder here has no audio input at all: the audio thread hands it one frame of the current latents per 2048 samples it pulls, two frames ahead. The latents come from the hand, smoothed with a one-pole.
     - Without a hand, the latents glide to rest and the output fades.
 

@@ -81,12 +81,12 @@ public:
         return options;
     }
 
-    void requestBackend(anira::InferenceBackend backend) {
+    void requestBackend(anira::v2::InferenceBackend backend) {
         m_requested_backend.store(static_cast<int>(backend), std::memory_order_relaxed);
     }
 
-    anira::InferenceBackend requestedBackend() const {
-        return static_cast<anira::InferenceBackend>(
+    anira::v2::InferenceBackend requestedBackend() const {
+        return static_cast<anira::v2::InferenceBackend>(
             m_requested_backend.load(std::memory_order_relaxed));
     }
 

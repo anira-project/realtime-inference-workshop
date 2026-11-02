@@ -1,6 +1,6 @@
 #pragma once
 
-#include <anira/anira.h>
+#include <anira/compat/v2.hpp>
 #include <array>
 #include <cstddef>
 #include <memory>
@@ -30,27 +30,27 @@ inline constexpr int k_hand_connections[k_num_hand_connections][2] = {
 // Backends this binary was built with.
 struct BackendChoice {
     const char* name;
-    anira::InferenceBackend backend;
+    anira::v2::InferenceBackend backend;
 };
 
 inline std::vector<BackendChoice> available_backends() {
     std::vector<BackendChoice> backends;
 #ifdef USE_LITERT
-    backends.push_back({"LiteRT", anira::InferenceBackend::LITERT});
+    backends.push_back({"LiteRT", anira::v2::InferenceBackend::LITERT});
 #endif
 #ifdef USE_TFLITE
-    backends.push_back({"TFLite", anira::InferenceBackend::TFLITE});
+    backends.push_back({"TFLite", anira::v2::InferenceBackend::TFLITE});
 #endif
 #ifdef USE_ONNXRUNTIME
-    backends.push_back({"ONNX Runtime", anira::InferenceBackend::ONNX});
+    backends.push_back({"ONNX Runtime", anira::v2::InferenceBackend::ONNX});
 #endif
 #ifdef USE_LIBTORCH
-    backends.push_back({"LibTorch", anira::InferenceBackend::LIBTORCH});
+    backends.push_back({"LibTorch", anira::v2::InferenceBackend::LIBTORCH});
 #endif
     return backends;
 }
 
-inline const char* backend_name(anira::InferenceBackend backend) {
+inline const char* backend_name(anira::v2::InferenceBackend backend) {
     for (const auto& choice : available_backends())
         if (choice.backend == backend)
             return choice.name;
@@ -84,7 +84,7 @@ struct Result {
     double callback_ms = 0.0;   // Streamed: glue time only; Synchronous: full chain
     double camera_fps = 0.0;    // rate of frames entering the tracker
     double tracking_fps = 0.0;  // rate of frames that completed hand results
-    anira::InferenceBackend backend = anira::InferenceBackend::CUSTOM;
+    anira::v2::InferenceBackend backend = anira::v2::InferenceBackend::CUSTOM;
 };
 
 class HandTracker {
@@ -102,8 +102,8 @@ public:
     virtual Options getOptions() const = 0;
 
     // Applied asynchronously between frames (in-flight work drained, tracking resets).
-    virtual void setBackend(anira::InferenceBackend backend) = 0;
-    virtual anira::InferenceBackend getBackend() const = 0;
+    virtual void setBackend(anira::v2::InferenceBackend backend) = 0;
+    virtual anira::v2::InferenceBackend getBackend() const = 0;
 };
 
 enum class Engine { Streamed, Synchronous };

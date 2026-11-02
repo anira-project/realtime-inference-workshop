@@ -17,12 +17,12 @@ Note:
 ## Six things real-time inference needs.<br><span class="then">We solved each one, the simple way.</span>
 
 <div class="needs">
-  <div class="card need">{{ICON:model}}<div class="card-title">Inference</div><div class="card-text">steps 1, 2, 4 · one engine, one block size</div></div>
+  <div class="card need">{{ICON:model}}<div class="card-title">Inference</div><div class="card-text">steps 1, 2, 7 · one engine, one block size</div></div>
   <div class="card need">{{ICON:gauge}}<div class="card-title">Benchmarking</div><div class="card-text">step 3 · one benchmark, on our machine</div></div>
-  <div class="card need">{{ICON:shield}}<div class="card-title">Real-time safety</div><div class="card-text">step 5 · RTSan, run once</div></div>
-  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 6, 8 · a worker per channel</div></div>
-  <div class="card need">{{ICON:clock}}<div class="card-title">Minimal latency</div><div class="card-text">step 7 · a prefill, counted by hand</div></div>
-  <div class="card need">{{ICON:flag}}<div class="card-title">Real-time guarantees</div><div class="card-text">steps 3, 7 · hoping the budget holds</div></div>
+  <div class="card need">{{ICON:shield}}<div class="card-title">Real-time safety</div><div class="card-text">step 4 · RTSan, run once</div></div>
+  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 5, 8 · a worker per channel</div></div>
+  <div class="card need">{{ICON:clock}}<div class="card-title">Minimal latency</div><div class="card-text">step 6 · a prefill, counted by hand</div></div>
+  <div class="card need">{{ICON:flag}}<div class="card-title">Real-time guarantees</div><div class="card-text">steps 3, 6 · hoping the budget holds</div></div>
   <div class="needs-anira fragment"><span>anira</span> covers all six, for one plugin instance or many.</div>
 </div>
 
@@ -83,7 +83,7 @@ Note:
 
 Note:
     - What part 1 built by hand is the inside of anira. You only say what the model is and what the host promises; the rest is the library's.
-    - Audio plugins first, and real-time video since the async contract: step 11 runs hand tracking on camera frames.
+    - Audio plugins first, and real-time video: step 11 runs hand tracking on camera frames through the same library. The Async contract for frames and jobs follows with M3.
     - Since v3 the library is one versioned C ABI. The C++ API and the TypeScript package on npm are generated from it, so every language sees the same library.
     - Click: every engine, or your own. Click: desktop, mobile, the browser, and embedded boards like Bela, on ARMv7 and ARM64. Click: in a plugin or a standalone app, as the anira~ external in Max/MSP, or on camera frames. Solve it once.
 
@@ -326,7 +326,7 @@ Note:
     - The TypeScript package wrapped C++ directly. A library that other languages and hosts load needs one stable, versioned C ABI; the C++ API and the TypeScript package are generated on top of it.
     - Data beyond audio: v2 opened the shapes, but the library still thought in float buffers. v3 types every tensor (DLPack dtypes: float, int, bool and more, so token IDs for text fit), and image data enters as a Frame that a FrameToTensor stage turns into a tensor. That meant rebuilding the core around one typed tensor.
     - Some work is not a stream: a camera frame, an analysis, a generation. Async jobs with a deadline next to the Hard real-time contract.
-    - One passive tensor type that carries memory, ownership and readiness across CPU, GPU and NPU. A planner at prepare compiles what was declared into a fixed pipeline.
+    - One passive tensor type that carries memory, ownership and readiness across CPU, GPU and NPU. A planner at prepare compiles what was declared into a fixed pipeline. In alpha.2 the tensor is built and carries host memory; the GPU domains follow with M4.
     - The real-time audio path is unchanged: the nonblocking entries forward to the v2 code paths and never wait.
 
 ---
@@ -429,7 +429,7 @@ Note:
 <div class="history-note">Apache 2.0 · tanh lab, TU Berlin · funded by BMFTR since 2026</div>
 
 Note:
-    - Everything in this part runs on a v3 pre-release (after v3.0.0-alpha.1); v3.0 ships at the end of November. Check the release before you build on it.
+    - Everything in this part runs on the v3 pre-release v3.0.0-alpha.2; v3.0 ships at the end of November. Check the release before you build on it.
     - Since 2026 funded by the BMFTR through the Prototype Fund; Lina joined the team.
 
 ---

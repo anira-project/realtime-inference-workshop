@@ -1,6 +1,6 @@
 #pragma once
 
-#include <anira/anira.h>
+#include <anira/compat/v2.hpp>
 #include <array>
 #include <memory>
 #include <vector>
@@ -29,10 +29,10 @@ public:
     Options getOptions() const override { return m_state.getOptions(); }
 
     // Applied on the camera thread at the start of the next frame.
-    void setBackend(anira::InferenceBackend backend) override {
+    void setBackend(anira::v2::InferenceBackend backend) override {
         m_state.requestBackend(backend);
     }
-    anira::InferenceBackend getBackend() const override {
+    anira::v2::InferenceBackend getBackend() const override {
         return m_state.requestedBackend();
     }
 
@@ -70,7 +70,7 @@ private:
     };
 
     // Camera thread: drains in-flight work, resets tracking, re-prepares every session.
-    void applyBackend(anira::InferenceBackend backend);
+    void applyBackend(anira::v2::InferenceBackend backend);
 
     // Pop side (non-blocking)
     void popDetector(const Options& options);
@@ -110,7 +110,7 @@ private:
     FpsMeter m_tracking_fps;
 
     SharedTrackerState m_state;                // options + requested backend
-    anira::InferenceBackend m_active_backend;  // camera thread only
+    anira::v2::InferenceBackend m_active_backend;  // camera thread only
 
     // Published results (camera thread writes, GUI thread reads). Lock-free.
     TripleBuffer<Result> m_results;

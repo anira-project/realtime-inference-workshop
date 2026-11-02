@@ -26,9 +26,9 @@ cmake_path(SET WORKSHOP_MODELS_DIR NORMALIZE "${WORKSHOP_MODELS_DIR}")
 # archive with its own sha256.
 # Steps 1 to 9: the forward model, as TorchScript and as ONNX
 set(_workshop_models_forward_archive
-    "workshop-models-forward.zip|94912bab17ce4ea06483e3622b81336f3cdfa54dec3fef09f5e6e3e64bedb1d4")
+    "workshop-models-forward-2.zip|c11134669ddb61340e37b3854715ec108ef7f59746cbd9531c63d3a758fd36fc")
 set(_workshop_models_forward
-    "model.pt|f9d732030a859b56ed5a6417aa18bde7a9d06f17b43379bec2492ef19a21f540"
+    "model.pt|6a762da3534cea87ea8648b82839e42db409776c23d3c4509e9f3bef04a93044"
     "model_forward.onnx|a75d50597aa8d4287ba5de73fd933d2df1c0f07c99539f5c88b1d7f694ad6f26")
 # Steps 10 and 11 (WORKSHOP_ANIRA): the model taken apart
 set(_workshop_models_split_archive

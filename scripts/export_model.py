@@ -8,7 +8,8 @@ Source: the Intelligent Instruments Lab's magnetic resonator piano model,
 mrp_strengjavera_b2048_r44100_z16.ts (huggingface.co/Intelligent-Instruments-Lab/rave-models,
 CC BY-NC 4.0). 44.1 kHz, 2048 samples per block, one channel, 8 latents.
 
-  model.pt              audio[1,1,2048] -> audio[1,1,2048]          state inside, reset_state()
+  model.pt              audio[1,1,2048] -> audio[1,1,2048]          state inside, reset_state(),
+                                                                    any other length refused
   model_forward.onnx    audio[1,1,2048], state_in[1,E+D] -> audio_out[1,1,2048], state_out[1,E+D]
   model_encoder.onnx    audio[1,1,2048], state_in[1,E]   -> latents[1,8,1],      state_out[1,E]
   model_decoder.onnx    latents[1,8,1],  state_in[1,D]   -> audio[1,1,2048],     state_out[1,D]
@@ -317,12 +318,33 @@ def export_onnx(module, args, path, input_names, output_names):
                           opset_version=17, dynamo=False)
 
 
+class OneBlock(torch.nn.Module):
+    """The traced model behind a check: exactly one block per call, as the ONNX exports take.
+    A trace alone runs any multiple of the block, which nothing else in the workshop promises."""
+
+    def __init__(self, traced, block: int):
+        super().__init__()
+        self.model = traced
+        self.block = block
+
+    @torch.jit.export
+    def reset_state(self) -> torch.Tensor:
+        return self.model.reset_state()
+
+    def forward(self, audio: torch.Tensor) -> torch.Tensor:
+        if audio.size(-1) != self.block:
+            raise RuntimeError("the model takes exactly " + str(self.block) + " samples per call, got "
+                               + str(audio.size(-1)))
+        return self.model(audio)
+
+
 def export_torchscript(stateful, block, path):
     with torch.no_grad():
         traced = torch.jit.trace_module(stateful, {"forward": (torch.zeros(1, 1, block),), "reset_state": ()},
                                         check_trace=False)
         traced.state.zero_()  # tracing ran a block; save the state a fresh stream starts from
-    frozen = torch.jit.freeze(traced, preserved_attrs=["reset_state"])
+    scripted = torch.jit.script(OneBlock(traced, block))
+    frozen = torch.jit.freeze(scripted.eval(), preserved_attrs=["reset_state"])
     frozen.save(str(path))
 
 
@@ -387,6 +409,12 @@ def main():
         pt_audio = [pt(torch.from_numpy(b)).numpy() for b in blocks]
         pt.reset_state()
         pt_again = [pt(torch.from_numpy(b)).numpy() for b in blocks]
+        try:
+            pt(torch.zeros(1, 1, 2 * B))
+            raise SystemExit("model.pt took two blocks in one call")
+        except torch.jit.Error as error:
+            print(f"  model.pt refuses {2 * B} samples: {str(error).strip().splitlines()[-1]}")
+        pt.reset_state()
     onnx_audio = stream_onnx(paths["forward"], "audio", blocks, E + D)
     onnx_latents = stream_onnx(paths["encoder"], "audio", blocks, E)
     onnx_chain = stream_onnx(paths["decoder"], "latents", onnx_latents, D)

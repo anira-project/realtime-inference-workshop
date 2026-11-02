@@ -5,7 +5,8 @@ own release at configure time, into this folder:
 
 ```
 model.pt             127 MB   TorchScript, for LibTorch: audio in, audio out,
-                              state kept inside the model, reset_state()
+                              state kept inside the model, reset_state();
+                              any length but 2048 is refused
 model_forward.onnx   126 MB   the same model for ONNX Runtime: audio plus the
                               state in, audio plus the new state out — here the
                               state is the caller's job
@@ -63,7 +64,7 @@ tagged `workshop-model`, one per set of steps, and only those the enabled steps
 need:
 
 ```
-workshop-models-forward.zip   model.pt, model_forward.onnx           steps 1 to 9
+workshop-models-forward-2.zip model.pt, model_forward.onnx           steps 1 to 9
 workshop-models-split.zip     model_encoder.onnx, model_decoder.onnx  steps 10, 11
 workshop-models-hands.zip     the four hand tracking models           step 11 (JUCE)
 ```

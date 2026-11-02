@@ -241,13 +241,12 @@ const size_t process_size = k_model.m_input_size; // <- fill out
 
 Note:
     - The model sets it, fixed at export.
-    - Smaller sizes: the traced model still hands back 2048 samples, and the engine stops with "the model returned 2048 samples for 512 in".
-    - Multiples of 2048 happen to go through and match here; nothing in the export promises that.
+    - Any other size, smaller or a multiple: the model refuses it itself, "the model takes exactly 2048 samples per call, got 512". The export checks the length in front of the traced network.
 
 **Script:**
 
-"The correct blocksize is 2048, which is set by the model at export time. You can try to give the model 512 and the engine will tell you the
-model returned 2048 samples for 512 in."
+"The correct blocksize is 2048, which is set by the model at export time. You can try to give the model 512, or 4096, and the model
+itself will tell you that it takes exactly 2048 samples per call."
 
 ---
 

@@ -68,8 +68,11 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
 
+      # A bare --parallel is an unbounded make -j: on the smaller runners the
+      # compilers of anira and JUCE together run out of memory, and the runner
+      # is shut down.
       - name: Build every step and the plugin
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release --parallel 4
 
       # The solutions carry the claims the workshop makes: the output matches
       # the Python reference, the audio thread allocates nothing, the latency

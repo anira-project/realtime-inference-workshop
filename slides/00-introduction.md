@@ -1,7 +1,7 @@
-<!-- .slide: data-background-image="assets/images/adc26-title.webp" data-background-size="cover" data-state="no-footer" -->
+<!-- .slide: class="title-card" data-background-image="assets/images/adc26-title.webp" data-background-size="contain" data-state="no-chrome" -->
 
 Note:
-    - The ADC title card, while people come in.
+    - When the session starts, go to the next slide.
 
 ---
 
@@ -11,7 +11,17 @@ From an exported neural model to a real-time-safe audio plugin
 
 Lina Campanella · Fares Schulz · Valentin Ackva
 
+<div class="title-logos">
+  <img class="title-logo bmftr" src="assets/images/logos/bmftr-funding.png" alt="With funding from the Federal Ministry of Research, Technology and Space">
+  <img class="title-logo tu-berlin" src="assets/images/logos/tu-berlin.svg" alt="TU Berlin">
+  <img class="title-logo baby-audio" src="assets/images/logos/baby-audio.svg" alt="Baby Audio">
+</div>
+
 <!-- .slide: data-state="no-header" -->
+
+Note:
+    - Today we are talking about real-time inference of neural networks.
+    - How to get from an exported model to an audio plugin that is real-time safe.
 
 ---
 
@@ -43,8 +53,13 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 </div>
 
 Note:
-    - Version 3 is out as v3.0.0-alpha.1 (September 2026); v2.3.0 is the latest stable release.
-    - Most of what the workshop shows comes from building anira.
+    - This workshop is about real-time inference.
+    - That is what anira, our open-source library, was built around.
+    - We introduce it now because it comes up throughout the workshop.
+    - We have been working on real-time inference since 2020.
+    - At ADC24 we talked about the library itself.
+    - At ADC23 we showed how to run real-time inference in a plugin.
+    - Both videos are linked here, if you open the slides on your machine.
 
 ---
 <div class="tag">introduction</div>

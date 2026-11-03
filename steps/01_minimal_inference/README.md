@@ -52,7 +52,7 @@ The first block is nearly silent, because the model's latency has not been fille
 ## If you're stuck
 
 - **`TODO 2: pick a size to process in first.`** — `process_size` is still 0.
-- **`process() failed: the model returned 2048 samples for M in`** — the size you picked is smaller than the model's block. The export fixed that size: `k_model.m_input_size`, 2048 samples, which is what the reference output was produced with. The model emits whole blocks, so it handed back a different number of samples than it was given. Multiples of 2048 happen to go through, but nothing in the export promises that.
+- **`process() failed: builtins.RuntimeError: the model takes exactly 2048 samples per call, got M`** — the size you picked is not the model's block. The export fixed that size: `k_model.m_input_size`, 2048 samples, which is what the reference output was produced with, and the model checks every call against it, multiples of 2048 included.
 - **`FAILED: max abs diff 0.593`** — the engine is never used, so `output` still holds the input.
 - **`cannot load .../model.pt`** — the model is not in the repo, see [models/README.md](../../models/README.md). Point the build at your copy with `-DWORKSHOP_MODEL=/path/to/model.pt`.
 - **It is slow and most blocks are wrong** — the engine is being built inside the loop. Every new model starts from a cleared state, so every block is treated as the first one, and a 127 MB file is loaded each time.

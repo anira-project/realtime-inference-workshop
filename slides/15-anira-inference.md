@@ -4,7 +4,7 @@
 <!-- kind: exercise -->
 
 Note:
-    - Steps 2, 6 and 7, replaced by two files and three calls. Same model, same check.
+    - Steps 2, 5 and 6, replaced by two files and three calls. Same model, same check.
 
 ---
 
@@ -14,7 +14,7 @@ Note:
 
 <div class="state-demo">
   <div class="state-row was">
-    <div class="state-label">step 5</div>
+    <div class="state-label">step 4</div>
     <code>std::copy_n(outputs[1].GetTensorData&lt;float&gt;(), m_state.size(), m_state.begin());</code>
   </div>
   <div class="state-row is">
@@ -69,7 +69,7 @@ Note:
 </div>
 
 Note:
-    - anira is fetched by CMake, pinned to a v3 pre-release commit, with ONNX Runtime built in. support.h gains report_with_latency: the step 7 comparison, shifted by one number. No LibTorch in this step: the plugin's choice from step 8.
+    - anira is fetched by CMake, pinned to the v3 pre-release v3.0.0-alpha.2, with ONNX Runtime built in. support.h gains report_with_latency: the step 6 comparison, shifted by one number. No LibTorch in this step: the plugin's choice from step 8.
     - model.json is given with gaps: the tensors are named, shapes and roles are the task. contract.json is complete.
 
 ---
@@ -92,7 +92,7 @@ Note:
 
 Note:
     - Canonical names are ours; the ONNX names are bound by position here, since the file's order matches. A "tensors" record on the entry would bind by name.
-    - "latency": 2224 is the number from step 7, on the output it belongs to.
+    - "latency": 2224 is the number from step 6, on the output it belongs to.
 
 ---
 
@@ -109,7 +109,7 @@ Three lines. The geometry comes from the host, at `prepare`.
 Note:
     - budget: the number from step 3, the worst case we are willing to promise. "measured" would derive it during warm-up; this pre-release wants it explicit.
     - warmup fixed 3: three runs on the calling thread before prepare returns.
-    - on_miss zeros: what step 7's wet debt did.
+    - on_miss zeros: what step 6's wet debt did.
 
 ---
 
@@ -201,9 +201,10 @@ Note:
 ```cpp
 const auto model = anira::ModelConfig::from_file(step_dir + "/model.json");
 auto contract    = anira::ContractHandle::from_file(step_dir + "/contract.json");
-contract.hard_geometry(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
+contract.hard_host_blocks(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
 
-const anira::Pipeline pipeline{anira::stage::Inference(model)};
+anira::Pipeline pipeline;
+pipeline.add_inference(model);
 anira_handler_create(context.native(), pipeline.native(), &handler.m_handle, &error);
 anira_handler_prepare(handler.m_handle, contract.native(), &error);  // warm-up runs here
 latency = anira_handler_get_latency(handler.m_handle, 0);             // output slot 0
@@ -212,14 +213,14 @@ latency = anira_handler_get_latency(handler.m_handle, 0);             // output 
 Note:
     - Every C call returns a status and fills `error`; the solution throws on anything but ANIRA_OK.
     - The audio callback is given: one tensor over the block, anira_handler_process in place, ANIRA_MISSED counted.
-    - The check is step 7's: shifted by the latency less the model's own 2224, which the reference already carries.
+    - The check is step 6's: shifted by the latency less the model's own 2224, which the reference already carries.
     - Expected: 4272 samples at a host block of 512, max abs diff 3.9e-07. A few late callbacks on a busy machine are listed and left out.
 
 ---
 
 <div class="tag">Done</div>
 
-## Steps 2, 6 and 7,<br><span class="then">in two files.</span>
+## Steps 2, 5 and 6,<br><span class="then">in two files.</span>
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -229,5 +230,5 @@ Note:
 </div>
 
 Note:
-    - No ring buffer, no worker, no queue, no state copy, no latency arithmetic in main.cpp. The check is the one from step 7, and it passes with 2048 samples less latency.
+    - No ring buffer, no worker, no queue, no state copy, no latency arithmetic in main.cpp. The check is the one from step 6, and it passes with 2048 samples less latency.
     - Next: the model taken apart, encoder and decoder as two handlers.

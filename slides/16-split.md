@@ -147,15 +147,16 @@ encoder_latency_frames = prepare(encoder, contract);   // in latent frames
 
 // The callback: audio in, latent frames out, one per 2048 samples
 anira_handler_push_data(encoder.m_handle, &block, 0);
-while (anira_handler_pop_data(encoder.m_handle, &frame, 0, &delivered) == ANIRA_OK
-       && delivered == 1) {
+while (anira_handler_get_available_samples(encoder.m_handle, 0, 0, &available) == ANIRA_OK
+       && available > 0) {
+    anira_handler_pop_data(encoder.m_handle, &frame, 0, nullptr);
     if (frames++ < encoder_latency_frames) { continue; }   // priming: not silence
     …
 }
 ```
 
 Note:
-    - push and pop instead of process: the two sides run at different rates, so the output is collected separately. A frame comes back about one latency later; delivered says whether one came back in this callback.
+    - push and pop instead of process: the two sides run at different rates, so the output is collected separately. A frame comes back about one latency later; get_available_samples says whether one is waiting. Pop only then: a pop with nothing waiting is a miss, and after a miss anira drops the late frame to stay aligned.
     - The first frames are the encoder's latency priming, zeros. Fed to the decoder they are not silence: the diff is 0.014 instead of 3e-7. Skip them.
     - What comes out goes straight into the decoder (TODO 3), in the same callback. No buffer of ours in between.
 
@@ -190,7 +191,7 @@ prepare(decoder, contract);                                  // reports 6320 now
 
 // The callback: every real frame in, then the audio for this callback out
 anira_handler_push_data(decoder.m_handle, &frame, 0);
-anira_handler_pop_data(decoder.m_handle, &block, 0, &delivered);   // or the miss policy
+anira_handler_pop_data(decoder.m_handle, &block, 0, nullptr);   // or the miss policy
 ```
 
 Note:

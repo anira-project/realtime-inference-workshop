@@ -7,9 +7,22 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdlib>
 #include <functional>
 #include <thread>
 #include <vector>
+
+// How many times slower than real time the callbacks are spaced: 1, unless
+// WORKSHOP_HOST_SLOWDOWN says otherwise. CI runners share their cores with
+// other jobs, so CI sets it, and the checks test the design, not the runner.
+inline double host_slowdown() {
+#if defined(_MSC_VER)
+#pragma warning(suppress : 4996)  // getenv: read once, before any thread starts
+#endif
+    const char* value = std::getenv("WORKSHOP_HOST_SLOWDOWN");
+    const double slowdown = value != nullptr ? std::atof(value) : 1.0;
+    return slowdown >= 1.0 ? slowdown : 1.0;
+}
 
 // Calls `callback` with one block at a time until the signal is used up, in
 // place: the callback overwrites what it was given.
@@ -28,7 +41,7 @@ inline std::vector<float> run_host(const float* signal,
 
     const auto block_period = std::chrono::nanoseconds(
         sample_rate > 0.0
-            ? static_cast<long long>(1e9 * static_cast<double>(block_size) / sample_rate)
+            ? static_cast<long long>(1e9 * host_slowdown() * static_cast<double>(block_size) / sample_rate)
             : 0);
     auto deadline = std::chrono::steady_clock::now();
 

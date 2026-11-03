@@ -1995,6 +1995,34 @@ html.tanh .st-caption.left { text-anchor: start; }
 html.tanh .ov g.fragment,
 html.tanh .st g.fragment { transition: opacity 0.4s var(--ease); }
 
+/* The map ({{MAP:…}}): the overview as a skeleton that the chapters fill row by row */
+html.tanh .ov.map .map-row,
+html.tanh .ov.map .map-abi { opacity: 0; transition: opacity 0.4s var(--ease); }
+
+html.tanh .ov.map-show-create .map-row.create,
+html.tanh .ov.map-show-prepare .map-row.prepare,
+html.tanh .ov.map-show-process .map-row.process,
+html.tanh .ov.map-abi .map-abi { opacity: 1; }
+
+html.tanh .ov .map-band { fill: none; stroke: none; }
+
+html.tanh .ov.map-focus-create .map-band.create,
+html.tanh .ov.map-focus-prepare .map-band.prepare,
+html.tanh .ov.map-focus-process .map-band.process {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-dasharray: 12 8;
+}
+
+html.tanh .ov .map-abi-line {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-dasharray: 10 6;
+}
+
+/* What prepare allocates, and the models the context pools */
+html.tanh .ov.map-memory .mem { stroke: var(--mark-latent); stroke-width: 3; }
+
 /*********************************************
  * Part 1 recap and anira answer: a band across the top names each half of
  * a pair, beige for how we did it, green for how anira does it

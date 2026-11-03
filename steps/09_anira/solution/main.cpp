@@ -1,7 +1,7 @@
 // Step 9 — The model with anira, reference implementation
 //
 // Goal:  the part 1 model on anira: the model file and the contract say what
-//        runs and how, the handler does steps 2, 6 and 7.
+//        runs and how, the handler does steps 2, 5 and 6.
 // Given: model.json and contract.json next to this step, the fake host.
 // Check: the output equals the reference, shifted by get_latency().
 
@@ -54,14 +54,15 @@ int main() {
         // ---- TODO 3 --------------------------------------------------------
         const anira::ModelConfig model = anira::ModelConfig::from_file(step_dir + "/model.json");
         anira::ContractHandle contract = anira::ContractHandle::from_file(step_dir + "/contract.json");
-        contract.hard_geometry(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
+        contract.hard_host_blocks(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
 
-        const anira::Pipeline pipeline{anira::stage::Inference(model)};
+        anira::Pipeline pipeline;
+        pipeline.add_inference(model);
         anira_error error{};
         anira_status status = anira_handler_create(context.native(), pipeline.native(), &handler.m_handle, &error);
         if (status != ANIRA_OK) { throw std::runtime_error(describe("create", status, error)); }
 
-        // Warm-up runs here, on this thread: the budget is measured.
+        // Warm-up runs here, on this thread: the contract's fixed count of runs.
         status = anira_handler_prepare(handler.m_handle, contract.native(), &error);
         if (status != ANIRA_OK) { throw std::runtime_error(describe("prepare", status, error)); }
 
@@ -99,7 +100,7 @@ int main() {
         k_host.m_sample_rate);
 
     // The reference already carries the model's own delay, so it lines up with
-    // the output after the rest of the reported latency, as in step 7.
+    // the output after the rest of the reported latency, as in step 6.
     return report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                latency - k_model_latency, late, k_host.m_block_size);
 }

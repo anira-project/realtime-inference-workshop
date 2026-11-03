@@ -1,12 +1,23 @@
-<h1>Threads and latency</h1>
+<h1>Process</h1>
 
-One pool, no waiting, one number
+One block through anira
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->
 
 Note:
-    - First the two kinds of thread, then three concepts, each in a pair of slides: the step in part 1 that built it by hand, then what anira does instead.
+    - The third row of the map: every callback. The two kinds of thread, the path of one block, the stages, the waiting, a miss, and the real-time rules.
+
+---
+
+<div class="tag">The map</div>
+
+## Process runs in every callback,<br><span class="then">on the audio thread.</span>
+
+{{MAP:show=create,prepare|focus=process}}
+
+Note:
+    - The row we fill now: processBlock. One call per callback; everything else in the row is anira's, on the audio thread and in the pool.
 
 ---
 
@@ -36,120 +47,10 @@ Note:
 </div>
 
 Note:
-    - The map for this chapter: which thread does what. The pairs that follow fill it in.
+    - The two halves of the process row: the audio thread on the left, the pool on the right. The slides that follow fill them in.
     - Left: the audio thread. Every callback runs process with the pre- and post-processing around it, and returns long before its deadline; it never allocates, locks or waits. That is part 1's real-time safety, kept.
     - Right: the inference threads, one pool per process. Only what is not real-time safe or too heavy moves here: the model run, inside an engine that may allocate and lock, for as long as it takes. Every instance in the process shares the pool.
     - Configs, prepare and the latency are set up wherever the host calls them, usually its main thread. That is setup before the stream starts, not a thread anira adds.
-
----
-
-<!-- .slide: class="recap" -->
-
-<div class="tag">Part 1 · Step 6</div>
-
-## A worker per channel, per instance.<br><span class="then">It grows with every instance the host adds.</span>
-
-<div class="lanes">
-  <div class="lane-label">audio thread</div>
-  <div class="lane audio"></div>
-  <div class="lane-label"></div>
-  <div class="lane-gap">
-    <div class="lane-queue to"><span>to_worker</span><i></i></div>
-    <div class="lane-queue from"><span>from_worker</span><i></i></div>
-  </div>
-  <div class="lane-label">worker thread</div>
-  <div class="lane worker"><div class="lane-run">model</div></div>
-</div>
-
-Note:
-    - Step 6's picture. One worker, two queues, one engine. Correct, and it does not scale: the worker belongs to the instance, and the host decides how many instances there are.
-
----
-
-<!-- .slide: class="answer" -->
-
-<div class="tag">anira · Threads</div>
-
-## One pool per process.<br><span class="then">Every instance queues into it.</span>
-
-<div class="pool">
-  <div class="pool-instances">
-    <div class="pool-instance" style="--i:0">instance 1</div>
-    <div class="pool-instance" style="--i:1">instance 2</div>
-    <div class="pool-instance" style="--i:2">instance 3</div>
-    <div class="pool-instance" style="--i:3">…</div>
-    <div class="pool-instance" style="--i:4">instance 10</div>
-  </div>
-  <div class="pool-queue"><span>one queue</span><div class="q small"><div class="q-slot"><b></b></div><div class="q-slot"><b></b></div><div class="q-slot"><b></b></div><div class="q-slot"><b></b></div></div></div>
-  <div class="pool-threads">
-    <div class="pool-thread" style="--i:0">thread 1</div>
-    <div class="pool-thread" style="--i:1">thread 2</div>
-    <div class="pool-thread" style="--i:2">thread 3</div>
-    <div class="pool-thread" style="--i:3">thread 4</div>
-  </div>
-</div>
-
-```cpp
-context.threads(4, ANIRA_WAIT_SPIN_BACKOFF);   // once per process; the default: cores / 2
-```
-
-Note:
-    - The Context is process-wide: the first handler creates the pool, the last one releases it. Ten plugins, one pool, four real-time threads.
-    - One lock-free queue (moodycamel) for every handler. The audio thread enqueues a job and leaves; a free thread takes the oldest one. The animation shows it: instances flash when they enqueue, the threads take turns, each busy while its model runs.
-    - A stateful model never has two jobs in flight: its next job is enqueued by the thread that finished the last one, so the order holds without a lock.
-    - Thread count: hardware concurrency / 2 by default. Zero means the host brings its own threads.
-
----
-
-<!-- .slide: class="recap" -->
-
-<div class="tag">Part 1 · Step 6</div>
-
-## The worker polls, the audio thread never waits.<br><span class="then">One fixed way to wait, on both sides.</span>
-
-```cpp
-// the worker
-if (!m_to_worker.try_dequeue(block)) { sleep_for(100us); continue; }
-
-// the audio thread
-if (m_output.available() >= num_samples) { m_output.pop(samples, num_samples); }
-else                                     { std::fill_n(samples, num_samples, 0.0f); }
-```
-
-Note:
-    - Two decisions we made without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
-    - 100 µs sleeps are a compromise: responsive enough, and it burns a little CPU while idle.
-
----
-
-<!-- .slide: class="answer" -->
-
-<div class="tag">anira · Waiting</div>
-
-## The pool waits for work.<br><span class="then">Spin with backoff, or block.</span>
-
-<div class="policies">
-  <div class="policy-head"></div><div class="policy-head"></div><div class="policy-head">audio thread, on enqueue</div><div class="policy-head">pool, while idle</div>
-
-  <div class="policy-name"><code>SPIN_BACKOFF</code></div>
-  <div class="wait-bar spin"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <div class="policy-cell ok">an atomic, nothing else</div>
-  <div class="policy-cell warn">polls: spin, yield, sleep 100 µs</div>
-
-  <div class="policy-name"><code>BLOCKING</code></div>
-  <div class="wait-bar block"><i></i></div>
-  <div class="policy-cell warn">an atomic, plus one wake syscall when a thread sleeps</div>
-  <div class="policy-cell ok">no CPU, woken at once</div>
-</div>
-
-<div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
-
-Note:
-    - An idle pool thread has to wait for the next job somehow. SPIN_BACKOFF (default) tries a few times, then pauses the core, then yields, then sleeps 100 µs: exponential backoff, Timur Doumler's recipe from ADC20. Fast to react, costs a little CPU while idle.
-    - BLOCKING parks the thread on a semaphore and the enqueue wakes it. No CPU while idle, a little more time to wake up.
-    - The choice is the context's, once per process: context.threads(4, ANIRA_WAIT_SPIN_BACKOFF).
-    - The cost lands on different threads. With SPIN_BACKOFF the audio thread only does an atomic enqueue; the idle pool pays by polling. With BLOCKING the idle pool costs nothing, but when a pool thread is asleep the enqueue on the audio thread wakes it: sem_post (futex) on Linux and Android, semaphore_signal (a Mach trap) on Apple, ReleaseSemaphore on Windows. Under load the threads rarely sleep and the wake is rare; on an idle pool it happens for nearly every job.
-    - Click: our recommendation is BLOCKING. The wake is bounded and never waits, unlike a lock. But no platform documents it as real-time safe, and RTSan intercepts pthread_mutex_unlock and pthread_cond_signal, not sem_post or semaphore_signal, so it will not tell you. We have not measured its worst case per platform yet.
 
 ---
 
@@ -183,6 +84,92 @@ Note:
     - Click: the dequeue. The audio thread's path in one callback: push, enqueue (only when the ring holds enough), straight down, dequeue. The inference threads on the right run on their own. With wait_ratio = 0 the dequeue comes right after the enqueue: the slot just handed over cannot be back yet, so the dequeue takes an older one, or nothing.
     - Click: the pop. Once a slot is done, the dequeue moves its result into the output ring buffer, and every pop plays one block out of it. Before that, silence goes out.
     - The silence at the start is the latency. anira computes it at prepare and reports it to the host.
+
+---
+
+<!-- .slide: class="recap" -->
+
+<div class="tag">Part 1 · Steps 2 and 6</div>
+
+## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
+
+```cpp
+m_input.push(samples, num_samples);                     // host block in
+while (m_input.available() >= k_model.m_input_size) {   // model block out
+    … try_enqueue …
+}
+…
+m_output.pop(m_wet_block.data(), num_samples);          // host block out
+```
+
+Note:
+    - Ring in, model block out, model block in, ring out: that is pre- and post-processing, and ours knew only one shape, audio to audio.
+
+---
+
+<!-- .slide: class="answer" -->
+
+<div class="tag">anira · Stages</div>
+
+## Four phases around the engine.<br><span class="then">Two threads, one state loop.</span>
+
+<svg class="st" viewBox="0 0 1600 560" aria-label="the stage phases">
+  <defs>
+    <marker id="st-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10z" class="ov-arrowhead"/>
+    </marker>
+  </defs>
+  <rect class="st-lane audio" x="20" y="40" width="1570" height="200" rx="10"/>
+  <text x="40" y="70" class="st-lane-label">audio thread · driver-thread</text>
+  <rect class="st-lane pool" x="20" y="300" width="1570" height="200" rx="10"/>
+  <text x="40" y="330" class="st-lane-label">inference thread · one of the pool</text>
+  <g class="fragment" data-fragment-index="1">
+    <rect class="ov-pill" x="50" y="112" width="130" height="56" rx="8"/><text x="115" y="146" class="st-text">host block</text>
+    <line class="ov-flow strong" x1="180" y1="140" x2="226" y2="140" marker-end="url(#st-arrow)"/>
+    <circle class="ov-ring" cx="250" cy="140" r="24"/><text x="250" y="194" class="st-caption">input ring</text>
+    <line class="ov-flow strong" x1="274" y1="140" x2="300" y2="140" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill stage" x="300" y="112" width="170" height="56" rx="8"/><text x="385" y="146" class="st-text">pre_process</text>
+    <text x="385" y="194" class="st-caption">a window out of the ring</text>
+    <line class="ov-flow strong" x1="470" y1="140" x2="510" y2="140" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill tensor" x="510" y="112" width="180" height="56" rx="8"/><text x="600" y="146" class="st-text">model tensor in</text>
+    <text x="600" y="194" class="st-caption">a slot, stamped</text>
+  </g>
+  <g class="fragment" data-fragment-index="2">
+    <path class="ov-flow strong" d="M600 168 V380" marker-end="url(#st-arrow)"/>
+    <text x="616" y="262" class="st-caption left">the queue</text>
+    <rect class="ov-pill stage" x="505" y="380" width="190" height="56" rx="8"/><text x="600" y="414" class="st-text">before_inference</text>
+    <line class="ov-flow strong" x1="695" y1="408" x2="745" y2="408" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill engine" x="745" y="372" width="150" height="72" rx="10"/><text x="820" y="414" class="st-text strong">engine</text>
+    <line class="ov-flow strong" x1="895" y1="408" x2="945" y2="408" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill stage" x="945" y="380" width="190" height="56" rx="8"/><text x="1040" y="414" class="st-text">after_inference</text>
+    <path class="ov-flow strong" d="M1040 380 V168" marker-end="url(#st-arrow)"/>
+    <text x="1056" y="262" class="st-caption left">the slot, back</text>
+    <rect class="ov-pill tensor" x="945" y="112" width="190" height="56" rx="8"/><text x="1040" y="146" class="st-text">model tensor out</text>
+    <text x="1040" y="194" class="st-caption">the next stamp</text>
+    <line class="ov-flow strong" x1="1135" y1="140" x2="1180" y2="140" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill stage" x="1180" y="112" width="170" height="56" rx="8"/><text x="1265" y="146" class="st-text">post_process</text>
+    <text x="1265" y="194" class="st-caption">the result into the ring</text>
+    <line class="ov-flow strong" x1="1350" y1="140" x2="1376" y2="140" marker-end="url(#st-arrow)"/>
+    <circle class="ov-ring" cx="1400" cy="140" r="24"/><text x="1400" y="194" class="st-caption">output ring</text>
+    <line class="ov-flow strong" x1="1424" y1="140" x2="1450" y2="140" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill" x="1450" y="112" width="130" height="56" rx="8"/><text x="1515" y="146" class="st-text">host block</text>
+  </g>
+  <g class="fragment" data-fragment-index="3">
+    <path class="ov-flow state" d="M880 444 V482 H760 V444" marker-end="url(#st-arrow)"/>
+    <text x="820" y="470" class="st-caption">state_out → state_in</text>
+    <text x="820" y="530" class="st-caption">the declared pair swaps around the engine, no copy</text>
+  </g>
+</svg>
+
+<div class="cards-note">The default stage is step 2: a window out of the ring, the result back in. <code>before</code> and <code>after</code> are empty. You write a stage for another shape.</div>
+
+Note:
+    - A stage is the 3.x form of the PrePostProcessor: one per pipeline, with up to four phases. The default stage does what step 2 did; a receptive-field model declares window and overlap, and the default stage fills the history.
+    - Top lane, the audio thread: the host block goes into the input ring; pre_process takes one window out of it into the model tensor; the tensor sits in a slot, stamped, and goes into the queue. The callback returns.
+    - Bottom lane, a pool thread: before_inference, the engine, after_inference, on the model tensors in place. Then the slot goes back.
+    - Top lane again, a later callback: the oldest finished stamp is taken, post_process pushes the result into the output ring, and the host block is served from it.
+    - The state loop sits around the engine itself, not around the stage: anira binds the declared pair to two buffers and swaps them per inference. What came out is what goes in next. No copy, and no code of yours.
+    - Four phases, at most one stage per pipeline. pre and post are nonblocking: a stage that allocates there is your bug, and RTSan sees it.
 
 ---
 
@@ -270,9 +257,9 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 7</div>
+<div class="tag">Part 1 · Step 6</div>
 
-## What happens if an inference is too late?<br><span class="then">In step 7 the block went out as zeros.</span>
+## What happens if an inference is too late?<br><span class="then">In step 6 the block went out as zeros.</span>
 
 <div class="click">
   <div class="click-labels"><span style="left:50.00%;width:12.50%">late block: zeros</span></div>
@@ -289,9 +276,9 @@ Note:
 </div>
 
 Note:
-    - Step 7's simple answer to a late inference: the block that is not back in time goes out as zeros.
+    - Step 6's simple answer to a late inference: the block that is not back in time goes out as zeros.
     - Click: the signal jumps to zero at the start of that block and back at its end. Two discontinuities, an audible click, at every miss.
-    - And the late result still arrives afterwards. Step 7 drops it on arrival (m_wet_debt counts the samples that already went out as silence), so the wet path stays exactly latency_samples() late; it took a bug fix to get right.
+    - And the late result still arrives afterwards. Step 6 drops it on arrival (m_wet_debt counts the samples that already went out as silence), so the wet path stays exactly latency_samples() late; it took a bug fix to get right.
     - anira makes this a choice of the contract instead of code in your plugin: next slide.
 
 ---
@@ -303,83 +290,110 @@ Note:
 ## What a missed block delivers<br><span class="then">is the contract's choice.</span>
 
 ```json
-{ "hard": { "budget": { "ms": 8.2 }, "warmup": "until_stable", "on_miss": "zeros" } }
+{ "hard": { "budget": { "ms": 8.2 }, "warmup": { "fixed": 3 }, "on_miss": "bypass" } }
 ```
 
 <div class="statement-points">
-  <div><code>bypass</code>: the input block, as it came in</div>
-  <div><code>hold_last</code>: the last block the model delivered</div>
+  <div><code>bypass</code>, the default: the input block, as it came in</div>
+  <div><code>hold_last</code>: the head of the last block the model delivered</div>
   <div><code>zeros</code>: silence</div>
   <div><code>callback</code>: your function, on the audio thread, for that block</div>
 </div>
 
+<div class="cards-note">The stream stays aligned: a late result that arrives afterwards is dropped, never played shifted.</div>
+
 Note:
-    - process() returns ANIRA_MISSED for such a block, a success with a delivered count: the buffers hold what the policy chose. The stream stays aligned, as in step 7.
-    - The budget is the worst-case inference time the contract promises. Measured during warm-up by default, or explicit: the number from step 3.
+    - process() returns ANIRA_MISSED for such a block, a success: the buffers hold what the policy chose. The stream stays aligned, as in step 6, without the bug fix.
+    - Catch-up is strict: after a miss every late sample that arrives is discarded, so a delivered block is the stream at exactly its latency, or the policy's fill.
+    - Overload is the same event one level down: when a callback has a window ready and no slot is free, that window is dropped and filled by the policy; rt_error records ANIRA_ERROR_CAPACITY.
+    - The same rule bites a pop that asks for more than is there: it is a miss. Step 10 checks get_available_samples before it pops.
     - A miss is not the end: the pool catches up, and the next block is on time again.
+
+---
+
+<div class="tag">anira · Next</div>
+
+## Inline execution.<br><span class="then">No inference term in the latency.</span>
+
+<div class="statement-points">
+  <div><code>execution</code> in the contract: <code>worker</code>, <code>inline</code> or <code>auto</code>, per plan, fixed at <code>prepare</code></div>
+  <div><code>inline</code> runs the model inside <code>process</code>, on the audio thread</div>
+  <div><code>auto</code> picks inline only for an engine that declares itself real-time safe, and only if the measured budget fits</div>
+</div>
+
+<div class="cards-note">With alpha.3 (M2b). Until then every inference runs on the pool.</div>
+
+Note:
+    - For a model that is small enough, handing it to the pool costs more latency than it saves: the inference term of the formula is at least one host block.
+    - Inline removes that term: the model runs in the callback, and inline_ratio bounds the share of the block period it may take. An infeasible inline is ANIRA_ERROR_BUDGET at prepare.
+    - It is only safe for an engine without allocations and locks in its run, which is why auto asks the engine's flag. A hand-written network is the typical case.
 
 ---
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 7</div>
+<div class="tag">Part 1 · Step 4</div>
 
-## One latency for every block size.<br><span class="then">The same number, whatever block size the host uses.</span>
+## We checked real-time safety by hand.<br><span class="then">Once, on our machine.</span>
 
-<div class="lat-sum">
-  <div class="lat-part">collect a block<strong>2048</strong></div>
-  <div class="lat-plus">+</div>
-  <div class="lat-part">hand it over<strong>2048</strong></div>
-  <div class="lat-plus">+</div>
-  <div class="lat-part">the model itself<strong>2224</strong></div>
-  <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>6320</strong></div>
-</div>
+```cpp
+void audio_callback(Engine& engine, float* samples, size_t num_samples)
+    [[clang::nonblocking]] { … }
+```
+
+<div class="cards-note">RTSan on both engines, one run: what it caught, and what it could not see.</div>
 
 Note:
-    - Step 7's number: a full block to collect, a full block for the worker, the model's own delay. Safe at any host block size, and generous: at 512 samples per callback, most of the first 2048 is waiting for nothing.
+    - Step 4: the callback tagged nonblocking, the build with -fsanitize=realtime, one run per engine. It has to be repeated for every change, every model, every engine.
 
 ---
 
 <!-- .slide: class="answer" -->
 
-<div class="tag">anira · Latency</div>
+<div class="tag">anira · Safety</div>
 
-## Computed at <code>prepare</code>,<br><span class="then">for the block size the host uses.</span>
+## Every entry names its thread.<br><span class="then">The audio-thread entries are nonblocking.</span>
 
-{{STREAM:host=512|model=2048|length=4096|seconds=5}}
-
-<div class="lat-sum">
-  <div class="lat-part">block adaptation<small>P − gcd(b, P)</small><strong>1536</strong></div>
-  <div class="lat-plus">+</div>
-  <div class="lat-part">inference<small>⌈budget ÷ host block⌉ host blocks</small><strong>512</strong></div>
-  <div class="lat-plus">+</div>
-  <div class="lat-part">the model itself<strong>2224</strong></div>
-  <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>4272</strong></div>
+<div class="threads">
+  <div class="threads-label">main</div>
+  <div class="threads-lane"><span>from_file</span><span>create</span><span>prepare</span><span>get_latency</span><span>destroy</span></div>
+  <div class="threads-label">audio</div>
+  <div class="threads-lane audio"><span>process</span><span class="stage">pre_process</span><span class="stage">post_process</span></div>
+  <div class="threads-label">pool</div>
+  <div class="threads-lane pool"><span class="stage">before_inference</span><span class="engine">engine</span><span class="stage">after_inference</span></div>
 </div>
 
-<div class="lat-why">6320 by hand: we gave the worker a whole model block. anira gives it ⌈budget⌉ host blocks: 8.2 ms fit in one of 11.6 ms.</div>
+<div class="cards-note">Every audio-thread entry carries <code>ANIRA_NONBLOCKING</code>; the whole test suite runs under RTSan in CI.</div>
 
 Note:
-    - Host block b = 512, model block P = 2048, budget 8.2 ms, 44.1 kHz.
-    - Adaptation: P − gcd(b, P) = 1536 samples. The minimum any block-size adapter needs (Rath and Geier, LAC 2026): the model cannot run before its block is complete, and the last host block that completes it is the one that waits least.
-    - Inference: 8.2 ms is 0.18 model blocks of audio, 0.7 host blocks. One host block of waiting is enough: 512 samples. With wait_ratio β the callback may absorb part of it.
-    - Plus the model's own 2224, declared in the model file as "latency": 2224 on the output.
-    - 4272 against our 6320: the same guarantee, 2048 samples less. At b = 441: gcd is 1, adaptation 2047, inference 441, total 4712.
-    - The formula also says when it cannot work: if the budget exceeds the audio per hop times the threads, the queue grows without bound, and prepare warns.
+    - The thread tags are part of the API, the way CLAP does it: main-thread for the control path, driver-thread for the host's real-time callback, inference-thread for the pool. Every entry in the headers says which one may call it.
+    - ANIRA_NONBLOCKING is clang's nonblocking attribute on every driver-thread entry: the compiler checks what it calls (-Werror=function-effects), and the library's CI runs every test under RTSan.
+    - The library logs from the audio thread without a lock: anira_log_rt writes a fixed record into a queue, and a drain thread prints it. A failed audio-thread call says why in rt_error.
+    - A custom stage's pre_process and post_process run on the audio thread too: allocating there is your bug, and RTSan sees it.
+
+---
+
+<div class="tag">The map</div>
+
+## After process:<br><span class="then">the whole path of one block.</span>
+
+{{MAP:show=create,prepare,process}}
+
+Note:
+    - The third row, filled: input tensor, ring, pre_process, a stamped slot, a pool thread, the engine with the state pair around it, post_process, ring, output tensor.
+    - Every row filled. The last chapter looks at the map as one piece.
 
 ---
 
 <div class="tag">Take away</div>
 
-## The pool is shared.<br><span class="then">The policies are yours.</span>
+## The callback never waits.<br><span class="then">The policies are yours.</span>
 
 <div class="statement-points">
-  <div>Threads: one pool per process, the count set once</div>
   <div>Waiting: a strategy for the pool, a ratio for the callback, a policy for a miss</div>
-  <div>Latency: computed from block size, budget and the model, at <code>prepare</code></div>
+  <div>Stages: four phases around the engine, two of them on the audio thread</div>
+  <div>Safety: every entry names its thread; the audio-thread ones are checked</div>
 </div>
 
 Note:
-    - Next: the models and the engines, the pre- and post-processing, and where the state lives.
+    - Next: the whole picture, the C ABI underneath, and the three places in a plugin.

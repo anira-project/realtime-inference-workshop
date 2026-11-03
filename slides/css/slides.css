@@ -371,9 +371,11 @@
 }
 
 
-/* Hide footer for specific slides; the header (theme switch) is always visible */
+/* Hide the footer for specific slides; no-chrome also hides the header buttons
+   (chapter overview, theme switch), for the ADC title card */
 .no-footer .slide-footer,
-.no-chrome .slide-footer {
+.no-chrome .slide-footer,
+.no-chrome .slide-header {
   display: none;
 }
 
@@ -880,6 +882,41 @@
   display: block;
   color: var(--fs-text-subtle-color);
 }
+
+/* The ADC title card fills the screen at any aspect ratio: the image whole at
+   its own 16:9 (contain, never cropped), over a gradient of its top and bottom
+   edge colours where the screen is taller. Reveal gives the slide's background
+   the slide's class. */
+.reveal .backgrounds .slide-background.title-card {
+  background: linear-gradient(#49296f, #1a61a9);
+}
+
+/* Our title slide: the funder and the partners in a column on the right, top
+   to bottom, beside the title block */
+.reveal .slides section .title-logos {
+  position: absolute;
+  right: 40px;
+  top: 540px;  /* the middle of the 1080-pixel slide, where the title block sits */
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 70px;
+}
+
+.reveal .slides section .title-logos .title-logo {
+  margin: 0;
+  max-width: none;
+  max-height: none;
+}
+
+.reveal .slides section .title-logos .title-logo.bmftr { height: 190px; }
+.reveal .slides section .title-logos .title-logo.tu-berlin { height: 110px; filter: brightness(0); }
+.reveal .slides section .title-logos .title-logo.baby-audio { height: 90px; }
+
+/* The partners in black on light, in white on dark */
+[data-theme="dark"] .reveal .slides section .title-logos .title-logo.tu-berlin { filter: brightness(0) invert(1); }
+[data-theme="dark"] .reveal .slides section .title-logos .title-logo.baby-audio { filter: invert(1); }
 
 /* Statement slides: full colour, one sentence, three points */
 .reveal .slides section.statement {

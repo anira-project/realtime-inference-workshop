@@ -42,7 +42,7 @@ StreamedHandTracker::StreamedHandTracker()
     }
 }
 
-void StreamedHandTracker::applyBackend(anira::InferenceBackend backend) {
+void StreamedHandTracker::applyBackend(anira::v2::InferenceBackend backend) {
     m_detector.switchBackend(backend, detector_deadline_ms(backend),
                              k_detector_input_size * k_detector_input_size * 3,
                              k_num_anchors * k_num_detection_values, k_camera_frame_rate);
@@ -135,6 +135,9 @@ void StreamedHandTracker::processFrame(const Frame& frame) {
 
 void StreamedHandTracker::popDetector(const Options& options) {
     const auto try_pop = [this] {
+        // Pop only a whole result: a pop with nothing waiting is a miss, and anira drops the late result.
+        if (m_detector.handler().get_available_samples(0) < m_detector_boxes.size())
+            return false;
         float* box_channels[1] = {m_detector_boxes.data()};
         float* score_channels[1] = {m_detector_scores.data()};
         float* const* output_tensors[2] = {box_channels, score_channels};
@@ -180,6 +183,8 @@ void StreamedHandTracker::popLandmarks(int slot_index, const Options& options, R
     const auto input_side = static_cast<float>(k_landmark_input_size);
 
     const auto try_pop = [&slot] {
+        if (slot.session.handler().get_available_samples(0) < 63)
+            return false;
         float* landmark_channels[1] = {slot.out_landmarks.data()};
         float* unused_channels[1] = {nullptr};
         float* world_channels[1] = {slot.out_world_landmarks.data()};
@@ -260,6 +265,8 @@ void StreamedHandTracker::popLandmarks(int slot_index, const Options& options, R
 void StreamedHandTracker::popGestureStages() {
     // Classifier first, so a fresh embedding can be handed straight to it below.
     const auto try_pop_classifier = [this] {
+        if (m_classifier.handler().get_available_samples(0) < 8)
+            return false;
         float* score_channels[1] = {m_gesture_scores.data()};
         float* const* outputs[1] = {score_channels};
         size_t num_samples[1] = {8};
@@ -277,6 +284,8 @@ void StreamedHandTracker::popGestureStages() {
     });
 
     const auto try_pop_embedder = [this] {
+        if (m_embedder.handler().get_available_samples(0) < 128)
+            return false;
         float* embedding_channels[1] = {m_embedding.data()};
         float* const* outputs[1] = {embedding_channels};
         size_t num_samples[1] = {128};

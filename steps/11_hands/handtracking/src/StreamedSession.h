@@ -1,6 +1,6 @@
 #pragma once
 
-#include <anira/anira.h>
+#include <anira/compat/v2.hpp>
 #include <array>
 #include <cstddef>
 #include <utility>
@@ -12,23 +12,23 @@ namespace anira::models::handtracking {
 template <typename Context, size_t Capacity>
 class StreamedSession {
 public:
-    // anira requires the wait strategy to match across every CoreConfig in the process — pass the same config to every session.
-    StreamedSession(anira::InferenceConfig config, const anira::CoreConfig& context_config)
+    // anira requires the wait strategy to match across every ContextConfig in the process — pass the same config to every session.
+    StreamedSession(anira::v2::InferenceConfig config, const anira::v2::ContextConfig& context_config)
         : m_config(std::move(config)), m_pp(m_config), m_handler(m_pp, m_config, context_config) {}
 
-    anira::InferenceHandler& handler() { return m_handler; }
-    anira::PrePostProcessor& pp() { return m_pp; }  // non-streamable tensors
+    anira::v2::InferenceHandler& handler() { return m_handler; }
+    anira::v2::PrePostProcessor& pp() { return m_pp; }  // non-streamable tensors
 
     // deadline_ms must cover thread-pool queueing behind other models, not just execution time: too small -> silently dropped pushes, permanently desynced session.
     // pushes_per_second is the worst-case push rate; anira sizes its buffers from it.
-    void prepare(anira::InferenceBackend backend,
+    void prepare(anira::v2::InferenceBackend backend,
                  float deadline_ms,
                  int values_per_push,
                  size_t out0_size,
                  double pushes_per_second) {
         m_config.m_max_inference_time = deadline_ms;
         m_handler.set_inference_backend(backend);
-        m_handler.prepare(anira::HostConfig(
+        m_handler.prepare(anira::v2::HostConfig(
             static_cast<float>(values_per_push),
             static_cast<float>(values_per_push) * static_cast<float>(pushes_per_second)));
         m_primed_skips = m_handler.get_latency(0) / out0_size;
@@ -37,7 +37,7 @@ public:
     }
 
     // Not realtime-safe: reset() waits for pending inferences.
-    void switchBackend(anira::InferenceBackend backend,
+    void switchBackend(anira::v2::InferenceBackend backend,
                        float deadline_ms,
                        int values_per_push,
                        size_t out0_size,
@@ -54,7 +54,7 @@ public:
         ++m_pending_pops;
     }
 
-    // try_pop returns false on underrun (the pop stays scheduled, retried next frame); handle_result gets the paired context for every real result.
+    // try_pop returns false while the result is not there yet (it checks the available samples first, since a pop with nothing waiting is a miss; the pop stays scheduled, retried next frame); handle_result gets the paired context for every real result.
     template <typename TryPopFn, typename HandleResultFn>
     void drainResults(TryPopFn&& try_pop, HandleResultFn&& handle_result) {
         while (m_pending_pops > 0) {
@@ -103,9 +103,9 @@ private:
         }
     };
 
-    anira::InferenceConfig m_config;
-    anira::PrePostProcessor m_pp;
-    anira::InferenceHandler m_handler;
+    anira::v2::InferenceConfig m_config;
+    anira::v2::PrePostProcessor m_pp;
+    anira::v2::InferenceHandler m_handler;
 
     ContextQueue m_in_flight;
     size_t m_pending_pops = 0;

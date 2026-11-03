@@ -37,14 +37,14 @@ Model types, and the model we use today
   </div>
   <div class="nn-type">
     <div class="nn-io">
-      <div class="nn-end">{{ICON:sliders}}<span>parameters</span></div>
+      <div class="nn-end">{{ICON:sliders}}<span>controls</span></div>
       <div class="nn-arrow">→</div>
       <div class="nn-end model">{{ICON:model}}<span>model</span></div>
       <div class="nn-arrow">→</div>
       <div class="nn-end">{{ICON:wave}}<span>audio</span></div>
     </div>
-    <div class="card-title">Parameters to audio</div>
-    <div class="nn-examples"><span>Examples:</span> DDSP, text-to-speech</div>
+    <div class="card-title">Controls to audio</div>
+    <div class="nn-examples"><span>Examples:</span> DDSP, DDX7</div>
   </div>
   <div class="nn-type">
     <div class="nn-io">
@@ -52,17 +52,17 @@ Model types, and the model we use today
       <div class="nn-arrow">→</div>
       <div class="nn-end model">{{ICON:model}}<span>model</span></div>
       <div class="nn-arrow">→</div>
-      <div class="nn-end">{{ICON:sliders}}<span>parameters</span></div>
+      <div class="nn-end">{{ICON:sliders}}<span>features</span></div>
     </div>
-    <div class="card-title">Audio to parameters</div>
-    <div class="nn-examples"><span>Examples:</span> PESTO, CREPE, speech-to-text</div>
+    <div class="card-title">Audio to features</div>
+    <div class="nn-examples"><span>Examples:</span> PESTO, CREPE</div>
   </div>
 </div>
 
 Note:
-    - Audio → audio: runs every block at audio rate, the model is the effect; its latency is the plugin's latency.
-    - Parameters → audio: control rate in, audio out, the model is the sound generator; has to deliver every block.
-    - Audio → parameters: the model listens; the result often leaves the audio thread (UI, MIDI, file).
+    - Audio → audio, an effect: runs every block at audio rate, the model is the effect; its latency is the plugin's latency.
+    - Controls → audio, synthesis: control signals in, audio out. The model is conditioned on them: f0 and loudness in DDSP, at a frame rate far below the audio rate. It is the sound generator and has to deliver every block.
+    - Audio → features, analysis: the model estimates something about the signal, here the pitch with a confidence. The result often leaves the audio thread (UI, MIDI, file).
 
 <!-- ---
 

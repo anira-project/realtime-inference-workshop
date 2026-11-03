@@ -5,7 +5,8 @@ own release at configure time, into this folder:
 
 ```
 model.pt             127 MB   TorchScript, for LibTorch: audio in, audio out,
-                              state kept inside the model, reset_state()
+                              state kept inside the model, reset_state();
+                              any length but 2048 is refused
 model_forward.onnx   126 MB   the same model for ONNX Runtime: audio plus the
                               state in, audio plus the new state out — here the
                               state is the caller's job
@@ -58,16 +59,28 @@ hour. Release assets have neither problem.
 
 ## How the download works
 
-`cmake/models.cmake` fetches each file from the release tagged
-`workshop-model` and checks its SHA-256. Files that are already here and intact are
-left alone, so a second configure run needs no network.
+`cmake/models.cmake` fetches the files as three archives from the release
+tagged `workshop-model`, one per set of steps, and only those the enabled steps
+need:
+
+```
+workshop-models-forward-2.zip model.pt, model_forward.onnx           steps 1 to 9
+workshop-models-split.zip     model_encoder.onnx, model_decoder.onnx  steps 10, 11
+workshop-models-hands.zip     the four hand tracking models           step 11 (JUCE)
+```
+
+Each archive and each file in it is checked against its SHA-256. A failed
+download is retried a few times (`cmake/download.cmake`); the archives are kept
+in `downloads/`, and files that are already here and intact are left alone, so
+a second configure run needs no network.
 
 A build directory configured against an older release still has the old file
 names cached; on its next configure (which `cmake --build` triggers by itself
 after a pull) it downloads the new files and switches to them.
 
-If the download fails, CMake says which file and where to get it. To use copies
-from somewhere else:
+If the download still fails, take the archives from a mirror
+(`-DWORKSHOP_MIRROR_URL`, see the main README). To use model files from
+somewhere else:
 
 ```bash
 cmake -S . -B build -DWORKSHOP_MODEL=/path/to/model.pt \

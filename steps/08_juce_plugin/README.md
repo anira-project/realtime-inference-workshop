@@ -26,7 +26,7 @@ setLatencySamples(static_cast<int>(m_channels.front()->latency_samples()));
 
 That one line is what lets the host line our track up with every other track.
 
-**`processBlock`** — the audio callback from step 6, unchanged: ring buffer in, `try_enqueue`, `try_dequeue`, mix, out. No engine, no allocation, no lock.
+**`processBlock`** — the audio callback from step 6, unchanged: ring buffer in, ring buffer out, mix, out. No engine, no allocation, no lock.
 
 **`releaseResources`** — stop the worker threads.
 
@@ -65,6 +65,6 @@ type name in `PluginProcessor.h` — the processor itself is templated on it.
 
 ## What's next
 
-This is the end of the first block: a correct, real-time safe, latency-reporting plugin, built from scratch. Count what it took — ring buffers, a worker thread, two queues, a prefill rule, a latency calculation, a dry path, one engine per channel.
+This is the end of the first block: a correct, real-time safe, latency-reporting plugin, built from scratch. Count what it took — ring buffers, a worker thread, a prefill rule, a latency calculation, a dry path, one engine per channel.
 
 After the break: what anira does with all of this, and what it does better.

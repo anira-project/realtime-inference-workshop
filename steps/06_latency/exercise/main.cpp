@@ -9,8 +9,6 @@
 //
 // It builds and runs as it is, and says which TODO is still open.
 
-#include <readerwriterqueue.h>
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -26,6 +24,7 @@
 #include "common/helpers/host.h"
 #include "common/helpers/libtorch_engine.h"
 #include "common/helpers/ring_buffer.h"
+#include "common/helpers/threadsafe_ring_buffer.h"
 #include "common/helpers/support.h"
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
@@ -40,13 +39,9 @@ constexpr struct {
 
 constexpr size_t k_host_block_size = 512;  // What the host hands over per callback
 constexpr size_t k_late_capacity = 1024;   // Late callbacks remembered for the report
-constexpr size_t k_queue_capacity = 8;     // Model blocks in flight between the threads
+constexpr size_t k_blocks_in_flight = 8;   // Model blocks waiting between the threads
 
 namespace {
-
-struct ModelBlock {
-    std::array<float, 2048> m_samples{};
-};
 
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
 #define WORKSHOP_AUDIO_CALLBACK [[clang::nonblocking]]
@@ -79,15 +74,16 @@ public:
     }
 
 
-    // Allocate and initialize all processing buffers, queue capacity, 
-    // the thread before audio processing begins.
+    // Allocate and initialize all processing buffers and the thread
+    // before audio processing begins.
     // @max_block_size: the largest block process_block() can be given
     void prepare(size_t max_block_size) {
         stop();
 
-        m_input = RingBuffer(max_block_size + k_model.m_input_size);
-        m_output = RingBuffer(max_block_size + k_queue_capacity * k_model.m_input_size);
+        m_input = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
+        m_output = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
         m_dry = RingBuffer(max_block_size + latency_samples());
+        m_model_block.assign(k_model.m_input_size, 0.0f);
         m_engine.reset();
         m_dry_block.assign(max_block_size, 0.0f);
         m_wet_block.assign(max_block_size, 0.0f);
@@ -110,10 +106,6 @@ public:
         // the dry signal have to start, so it lines up with the wet one?
         // ---------------------------------------------------------------------
         m_dry.push(m_silence.data(), 0); // <- fill out
-     
-
-        m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
-        m_from_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
 
         m_running.store(true, std::memory_order_release);
         m_worker = std::thread([this] { worker(); });
@@ -130,25 +122,14 @@ public:
 
     // The audio thread: samples in, samples out, nothing that can block.
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
-        m_input.push(samples, num_samples);
+        // No room means the worker is behind. The block is dropped — a glitch,
+        // but a bounded one. Waiting for room would be a missed deadline.
+        if (m_input.space() >= num_samples) {
+            m_input.push(samples, num_samples);
+        } else {
+            m_dropped.fetch_add(1, std::memory_order_relaxed);
+        }
         m_dry.push(samples, num_samples);
-
-        while (m_input.available() >= k_model.m_input_size) {
-            ModelBlock block;
-            m_input.pop(block.m_samples.data(), k_model.m_input_size);
-
-            // Queue full means the worker is behind. The block is already out
-            // of the ring buffer, so it is dropped — a glitch, but a bounded
-            // one. Keeping it would let the backlog grow without end.
-            if (!m_to_worker.try_enqueue(block)) {
-                m_dropped.fetch_add(1, std::memory_order_relaxed);
-            }
-        }
-
-        ModelBlock done;
-        while (m_output.space() >= k_model.m_input_size && m_from_worker.try_dequeue(done)) {
-            m_output.push(done.m_samples.data(), k_model.m_input_size);
-        }
 
         // A block that came too late already went out as silence. Drop it when
         // it arrives, so the wet path stays exactly latency_samples() late: a
@@ -195,37 +176,41 @@ public:
 
 private:
     void worker() {
-        ModelBlock block;
         while (m_running.load(std::memory_order_acquire)) {
-            if (!m_to_worker.try_dequeue(block)) {
+            if (m_input.available() < k_model.m_input_size) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
                 continue;
             }
-            m_engine.process(block.m_samples.data(), k_model.m_input_size);
-            m_produced.insert(m_produced.end(), block.m_samples.begin(), block.m_samples.end());
+            m_input.pop(m_model_block.data(), k_model.m_input_size);
+            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
             // Wait for room, but keep watching the stop flag: the audio thread
             // may have stopped calling us, and then this would never return —
-            // a lock-free queue does not save you from a deadlock at shutdown.
-            while (!m_from_worker.try_enqueue(block)) {
-                if (!m_running.load(std::memory_order_acquire)) { break; }
+            // a lock-free ring buffer does not save you from a deadlock at shutdown.
+            while (m_running.load(std::memory_order_acquire) &&
+                   m_output.space() < k_model.m_input_size) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
+            if (m_output.space() >= k_model.m_input_size) {
+                m_output.push(m_model_block.data(), k_model.m_input_size);
+            }
         }
-        while (m_to_worker.try_dequeue(block)) {
-            m_engine.process(block.m_samples.data(), k_model.m_input_size);
-            m_produced.insert(m_produced.end(), block.m_samples.begin(), block.m_samples.end());
+        // Drain what the host pushed just before the end.
+        while (m_input.available() >= k_model.m_input_size) {
+            m_input.pop(m_model_block.data(), k_model.m_input_size);
+            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
         }
     }
 
     LibTorchEngine& m_engine;
-    RingBuffer m_input{0};
-    RingBuffer m_output{0};
-    RingBuffer m_dry{0};
-    moodycamel::ReaderWriterQueue<ModelBlock> m_to_worker{0};
-    moodycamel::ReaderWriterQueue<ModelBlock> m_from_worker{0};
+    ThreadSafeRingBuffer m_input{0};   // Written by the audio thread, read by the worker
+    ThreadSafeRingBuffer m_output{0};  // Written by the worker, read by the audio thread
+    RingBuffer m_dry{0};               // The audio thread's own
+    std::vector<float> m_model_block;  // The worker's block, sized in prepare()
     std::thread m_worker;
     std::atomic<bool> m_running{false};
-    std::atomic<long> m_dropped{0};  // Blocks the worker could not take in time
+    std::atomic<long> m_dropped{0};  // Host blocks the worker had no room for
     std::vector<float> m_produced;
     std::vector<float> m_silence;
     std::vector<float> m_dry_block;  // Scratch, sized in prepare()

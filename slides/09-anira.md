@@ -31,7 +31,6 @@ Note:
 - Here is part 1 in one picture: six things real-time inference needs.
 - Inference, benchmarking, real-time safety, threading, minimal latency, and real-time guarantees.
 - We solved each one the simple way: one engine, one machine, one plugin instance.
-- Remember the end of step 8: two of everything, a worker per channel.
 - That is fine for one instance, not for a session full of them.
 - [click] anira covers all six, for one instance or for many.
 - First, what anira is and where it comes from.

@@ -124,7 +124,7 @@ Note:
     {{FILE:libtorch_engine.h}}
     {{FILE:ring_buffer.h}}
     {{FILE:host.h}}
-    {{FILE:readerwriterqueue.h}}
+    {{FILE:threadsafe_ring_buffer.h}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>

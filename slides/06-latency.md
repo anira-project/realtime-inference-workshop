@@ -158,7 +158,7 @@ cmake --build --preset release --target step06_exercise
 ./build/bin/step06_exercise
 ```
 
-<div class="run">
+<div class="run" style="grid-template-columns: 1fr 1fr">
   <div class="run-step" data-seconds="2.6">
     <div class="run-title"><span>1</span>Work out the latency</div>
     <div class="run-visual run-latency">
@@ -173,14 +173,6 @@ cmake --build --preset release --target step06_exercise
     <div class="run-visual run-wave run-delay">
       <div class="mix-wave dry">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
       <div class="mix-wave wet">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
-    </div>
-  </div>
-  <div class="run-step" data-seconds="3.6">
-    <div class="run-title"><span>3</span>Mix dry and wet</div>
-    <div class="run-visual run-wave run-mix">
-      <div class="mix-wave dry">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
-      <div class="mix-wave wet">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
-      <div class="mix-fader"><i></i></div>
       <div class="run-ok">✓ dry and wet line up</div>
     </div>
   </div>
@@ -190,12 +182,11 @@ Note:
 - `main.cpp` in steps/06_latency/exercise
 - TODO 1: where does the delay come from? Collecting, handing over, the model
 - TODO 2: delay the dry signal by that number
-- TODO 3: the mix
 - 5 minutes, don't worry if you don't finish, we solve it together
 
 **Script:**
 
-"Your turn. You'll find the `main.cpp` in `steps/06_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: collecting a block, handing it over to the worker, and the model itself. In the second TODO you delay the dry signal by that number, and the third is the mix. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
+"Your turn. You'll find the `main.cpp` in `steps/06_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: collecting a block, handing it over to the worker, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
 
 *Timebox.*
 
@@ -263,41 +254,9 @@ Note:
 
 ---
 
-<div class="tag">Solution</div>
-
-## TODO 3: Mix dry and wet
-
-```cpp
-const float dry_gain = 1.0f - m_mix;   // <- fill out
-const float wet_gain = m_mix;          // <- fill out
-
-if (m_dry.available() >= num_samples) {
-    m_dry.pop(m_dry_block.data(), num_samples);
-    for (size_t i = 0; i < num_samples; ++i) { samples[i] += dry_gain * m_dry_block[i]; }
-}
-
-if (m_output.available() >= num_samples) {
-    m_output.pop(m_wet_block.data(), num_samples);
-    for (size_t i = 0; i < num_samples; ++i) { samples[i] += wet_gain * m_wet_block[i]; }
-}
-```
-
-Note:
-- Both equally late: the mix is just a crossfade
-- Dry × (1 − mix) + wet × mix
-- Wet not ready: dry still comes through
-- The check: 100 % dry must be exactly the input, only later
-- One sample off fails: a wrong latency cannot pass
-
-**Script:**
-
-"Now that both sides are equally late, the mix is just a crossfade. We take the dry block times one minus the mix, plus the wet block times the mix. And if the wet side has nothing ready yet, the dry side still comes through. The program checks you here: at 100 percent dry the output has to be exactly the input, only later. One sample off and it fails, so a wrong latency cannot pass."
-
----
-
 <div class="tag">Done</div>
 
-## A fixed latency<br><span class="then">The host can line it up, and we can crossfade.</span>
+## A fixed latency<br><span class="then">The host can line it up and we can crossfade.</span>
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

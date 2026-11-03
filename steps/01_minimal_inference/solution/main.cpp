@@ -70,9 +70,7 @@ int main() {
         std::fprintf(stderr, "TODO 2: pick a size to process in first.\n");
         return 2;
     }
-    // The ternary is not for safety — the guard above already returned. MSVC
-    // rejects a division by a constant zero at compile time, so the expression
-    // has to stay valid while process_size is still 0.
+    // How many blocks of process_size fit into the test signal (0 until it is set).
     const size_t num_blocks = process_size > 0 ? k_test_signal_length / process_size : 0;
 
     // The whole signal in one buffer, processed in place block by block.

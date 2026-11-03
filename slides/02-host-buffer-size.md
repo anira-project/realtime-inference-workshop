@@ -196,7 +196,7 @@ Because the block size is just a parameter, we can test lots of sizes in one run
 
 ## The task
 
-<div class="task-timer" data-minutes="5"></div>
+<div class="task-timer" data-minutes="10"></div>
 
 Fill in the TODOs in `steps/02_host_buffer_size/exercise/main.cpp`
 

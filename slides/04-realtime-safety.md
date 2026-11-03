@@ -74,39 +74,9 @@ If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Cl
 
 ---
 
-<div class="tag">Verify first</div>
-
-## Both engines are correct<br><span class="then">Are they safe?</span>
-
-```bash
-./build/bin/step04_solution verify           # Both engines produce the reference output 
-
-  libtorch                 max abs diff 4.92e-07   OK
-  onnx                     max abs diff 3.87e-07   OK
-```
-
-Same model, same output as the Python reference.
-
-Note:
-- Run `step04_solution verify` live if possible
-- First: is it correct?
-- Two engines: LibTorch and ONNX Runtime, a much smaller engine
-- ONNX: an open file format, same model exported to it, ONNX Runtime runs that file
-- Compare them properly in step 7
-- Both match the Python reference, so both correct. Are they safe?
-
-**Script:**
-
-*Run `step04_solution verify` live if possible.*
-"Before we check whether it's safe, let's make sure it's correct. For this demo we use two engines. One is LibTorch, which we've used so far. The other is ONNX Runtime, a much smaller engine. ONNX is an open file format for models, so we exported the same model to it, and ONNX Runtime is the engine that runs that file. We'll compare the two properly in step 7. Both give us the same output as the Python reference, the difference is tiny. So both are correct. The question is: are they safe?"
-
----
-
 <div class="tag">RealtimeSanitizer</div>
 
 ## Wrapping our buffer allocates<br><span class="then">The model hasn't run yet.</span>
-
-<!-- `from_blob` copies nothing, but it still allocates the tensor object around our buffer. -->
 
 ```
 ERROR: RealtimeSanitizer: unsafe-library-call
@@ -119,48 +89,60 @@ Intercepted call to real-time unsafe function `malloc`
     audio_callback(...)
 ```
 
-No copy, but a new tensor object: that's the `malloc`.
+`from_blob`: No copy, but a new tensor object: that's the **malloc**.
+
+ <!-- copies nothing, but it still allocates the tensor object around our buffer. -->
 
 Note:
 - Run the sanitizer live
 - LibTorch: stops immediately, before the model has run
 - Stack from the bottom: callback → `process` → `from_blob` → `malloc`
-- `from_blob` only wraps our buffer, but needs a new tensor object
-- No copy, still an allocation
+- `from_blob` doesn't copy our samples
+- But it creates a new tensor object that describes them, for example their shape
+- That object needs memory: that's the `malloc`
+- Even a small `malloc` can take too long on the audio thread
 
 **Script:**
 
 *Run the sanitizer live.*
 "If we run the LibTorch engine with the sanitizer, it stops immediately, before the model has even run. If we read the stack from the bottom up: our audio callback calls `process`, `process` calls `from_blob`, and `from_blob` calls `malloc`.
-Remember step 1? `from_blob` only wraps our buffer, it doesn't copy anything. That's true. But it still creates a new tensor object around our buffer, and that object needs memory. So there is no copy, but still an allocation."
+Remember step 1? `from_blob` doesn't copy our samples. That's true. But it does create a new tensor object that describes them, for example their shape, and that object needs memory. So there is no copy, but there is still an allocation. It's only a small one, but even a small `malloc` can take too long on the audio thread."
 
 ---
 
 <div class="tag">ONNX Runtime</div>
 
-## ONNX Runtime <br><span class="then">Same story, other library.</span>
+## ONNX Runtime <br><span class="then">Different engine, same story.</span>
 
+Same model, exported to an open file format, run by a much smaller engine.
+
+```bash
+./build/bin/step04_solution verify           # Matches the Python reference
+  onnx                     max abs diff 3.87e-07   OK
 ```
-ERROR: RealtimeSanitizer: unsafe-library-call
+
+```text
 Intercepted call to real-time unsafe function `malloc`
     OrtApis::CreateTensorWithDataAsOrtValue(...)   ← also only wraps
     OnnxEngine::process(...)
     audio_callback(...)
 ```
 
-One thread. Our buffers preallocated.<br>
-**Still allocates.**
-
+One thread. Our buffers preallocated. **Still allocates.**
 
 Note:
-- Same story, different library
-- Creating the tensor that wraps our buffer allocates too
+- Run `step04_solution verify` and the sanitizer live if possible
+- ONNX: an open file format, same model exported to it; ONNX Runtime is a much smaller engine that runs it
+- Compare them properly in step 7
+- Correct: matches the Python reference
+- Same story: creating the tensor that wraps our buffer allocates too
 - Even with one thread and our own buffers preallocated
 - Both correct, neither real-time safe
 
 **Script:**
 
-"So maybe ONNX Runtime is better? Not really. We have the same story, but a different library. Creating the tensor that wraps our buffer allocates too. And this is with ONNX Runtime on one thread and our own buffers preallocated. It still allocates. So both engines are correct, but neither of them is real-time safe."
+*Run `step04_solution verify` and the sanitizer live if possible.*
+"So maybe another engine is better? ONNX is an open file format for models, so we exported the same model to it. ONNX Runtime is a much smaller engine that runs that file, and we'll compare the two properly in step 7. First, is it correct? Yes, it gives us the same output as the Python reference. But is it safe? Not really. It's the same story: creating the tensor that wraps our buffer allocates too. And this is on one thread, with our own buffers preallocated. So both engines are correct, but neither of them is real-time safe."
 
 ---
 

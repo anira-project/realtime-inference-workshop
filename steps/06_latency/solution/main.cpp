@@ -160,12 +160,10 @@ public:
 
         std::fill_n(samples, num_samples, 0.0f);
 
-        // ---- TODO 3 ---------------------------------------------------------
+        
         // Crossfade the dry and wet paths according to m_mix.
-        // Both sides are equally late now. m_mix = 0 is fully dry, 1 is fully wet.
-        // ---------------------------------------------------------------------
-        const float dry_gain = 1.0f - m_mix; // <- solution
-        const float wet_gain = m_mix; // <- solution
+        const float dry_gain = 1.0f - m_mix; 
+        const float wet_gain = m_mix; 
 
         if (m_dry.available() >= num_samples) {
             m_dry.pop(m_dry_block.data(), num_samples);

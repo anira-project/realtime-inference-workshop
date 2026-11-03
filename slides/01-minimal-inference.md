@@ -162,7 +162,7 @@ And finally we copy the result back into our buffer, so it’s processed in plac
 
 ## The task
 
-<div class="task-timer" data-minutes="10"></div>
+<div class="task-timer" data-minutes="8"></div>
 
 Fill in the TODOs in `steps/01_minimal_inference/exercise/main.cpp`
 

@@ -249,6 +249,8 @@ Note:
 
 ---
 
+<!-- ---
+
 <div class="tag">Deep dive</div>
 
 ## Stateless vs. stateful<br><span class="then">Some models remember, others read the past at every call.</span>
@@ -331,24 +333,5 @@ A stateless model has no memory, so the past has to be handed in again at every 
 That memory has consequences: the calls have to be in order, you need one state per stream, and you have to reset it when a new stream starts. That's the reset() from step 1.
 
 And this is where the two engines differ. In the LibTorch file, the state is hidden inside the model. ONNX can't do that, so when we export we have to move the state out of the model. In the ONNX export, it's an explicit input and output: we hand it in with every block and get the updated state back. But the rest of our code doesn't see any of this: both engines sit behind the same thin interface, `process` and `reset`, so we can switch between them."
+ -->
 
----
-
-<div class="tag">Take away</div>
-
-## The choice of engine is important<br><span class="then">Affects performance and distribution.</span>
-
-1. Measure the size early
-2. Correct first, small second
-3. If you keep the engine behind a thin interface, the choice stays open
-
-
-Note:
-- Measure size early: hard to walk back after a release
-- Export correctly first, then small, then fast if you can
-- Keep the engine behind a thin interface, so you can switch
-- Now we have everything for the plugin
-
-**Script:**
-
-"So the take-away is: measure size early, because it's hard to walk back after a release. Make sure your model is exported correctly first, then make it small, and if you can make it fast, do so. And when implementing, keep the engine behind a thin interface so the choice stays open and you can switch between them if needed. And now we have everything we need for the plugin."

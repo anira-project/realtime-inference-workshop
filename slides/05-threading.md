@@ -29,6 +29,11 @@ Note:
   <div class="lane worker"><div class="lane-run">model</div></div>
 </div>
 
+<div class="statement-points two fragment">
+  <div><strong>Real-time capable</strong><br>Factor 5.4 in a callback, 0.17 on the worker (step 3)</div>
+  <div><strong>Real-time safe</strong><br>Allocations and locks leave the audio thread (step 4)</div>
+</div>
+
 Note:
 - Two threads
 - Audio thread keeps its pace, only moves samples
@@ -36,13 +41,18 @@ Note:
 - Worker runs the model, sends it back through `from_worker`
 - Worker may allocate and sleep. No per-callback deadline, but a budget (step 6)
 - The audio thread never waits for it
-- Answers step 3: the 510 % no longer runs inside any callback
+- Click: this solves two problems
+- Real-time safe, step 4: the engine's allocations and locks leave the audio thread
+- Real-time capable, step 3: the factor of 5.4 was against one 1.45 ms callback; the worker has a whole model block, so 0.17
 
 **Script:**
 
 "Here's the idea. We now have two threads. The audio thread keeps its pace: in every callback it only moves samples around, nothing else. Once it has collected a full block of 2048 samples, it sends that block down to the worker thread through a queue, `to_worker`. The worker runs the model and sends the result back up through a second queue, `from_worker`.
 The worker is allowed to allocate and even to sleep. It doesn't have a per-callback deadline. It does have a budget, and we'll come back to that in step 6. The audio thread never waits for it.
-And this also answers step 3: the forward pass that was 510 percent of one callback no longer runs inside any callback."
+
+*Click: the two problems.*
+
+So with the worker thread we solve two problems at once. First, real-time safety from step 4: the engine's allocations and locks are no longer on the audio thread. And second, real-time capability from step 3: our forward pass had a factor of 5.4 when it had to fit into one 64-sample callback. Now it no longer runs inside any callback, it has the time of a whole model block, so the factor is 0.17."
 
 ---
 
@@ -54,7 +64,7 @@ And this also answers step 3: the forward pass that was 510 percent of one callb
 <div class="statement-points">
   <div><small>1</small>Set up the queues and start the worker</div>
   <div><small>2</small>Hand blocks over on the audio thread</div>
-  <div><small>3</small>Run the model on the worker thread</div>
+  <div><small>3</small>Run the model on the worker thread and return the results</div>
 </div>
 
 Note:
@@ -157,7 +167,7 @@ Note:
 
 ## The task
 
-<div class="task-timer" data-minutes="5"></div>
+<div class="task-timer" data-minutes="10"></div>
 
 Fill in the TODOs in `steps/05_threading/exercise/main.cpp`
 

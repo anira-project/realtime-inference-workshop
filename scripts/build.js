@@ -169,18 +169,22 @@ function renderStreams(content) {
     const o = Object.fromEntries(args.split('|').map(a => a.split('=')));
     const host = Number(o.host);
     const model = Number(o.model || 0);
-    // Whole callbacks only, so the playhead steps land on callback boundaries
-    const count = Math.ceil(Number(o.length || 4096) / host);
-    const length = count * host;
+    // The row spans length samples, whatever the host size, so model blocks match across rows
+    const length = Number(o.length || 4096);
+    // Whole callbacks only, so the playhead steps land on callback boundaries; the one that
+    // passes the end of the row is cut off there
+    const count = Math.ceil(length / host);
+    const drawn = count * host;
     const cycle = Number(o.seconds || 6);
     const cells = lit => Array.from({ length: count }, (_, i) => {
       const start = i * host;
-      const end = Math.min(start + host, length);
+      const end = start + host;
       // A model block is complete inside this callback
       const fires = model && Math.floor(end / model) > Math.floor(start / model);
-      return `<i class="${lit && fires ? 'fires' : ''}" style="left:${(start / length * 100).toFixed(3)}%;` +
-        `width:${((end - start) / length * 100).toFixed(3)}%"></i>`;
+      return `<i class="${lit && fires ? 'fires' : ''}" style="left:${(start / drawn * 100).toFixed(3)}%;` +
+        `width:${(host / drawn * 100).toFixed(3)}%"></i>`;
     }).join('');
+    const cellsWidth = `width:${(drawn / length * 100).toFixed(3)}%`;
     let blocks = '';
     for (let b = 0; model && b < Math.floor(length / model); b++) {
       const done = (b + 1) * model;
@@ -191,8 +195,8 @@ function renderStreams(content) {
     }
     return `<div class="stream" style="--cells:${count};--cycle:${cycle}s">` +
       `<div class="stream-label">host<br><strong>${host}</strong></div>` +
-      `<div class="stream-host"><div class="stream-cells">${cells(false)}</div>` +
-      `<div class="stream-cells stream-lit">${cells(true)}</div></div>` +
+      `<div class="stream-host"><div class="stream-cells" style="${cellsWidth}">${cells(false)}</div>` +
+      `<div class="stream-cells stream-lit" style="${cellsWidth}">${cells(true)}</div></div>` +
       (model ? `<div class="stream-label">model</div><div class="stream-model">${blocks}</div>` : '') +
       `</div>`;
   });

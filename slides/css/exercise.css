@@ -311,6 +311,10 @@ html.tanh .stream-model {
   height: 100%;
 }
 
+html.tanh .stream-host {
+  overflow: hidden;
+}
+
 html.tanh .stream-cells {
   position: absolute;
   inset: 0;
@@ -780,6 +784,8 @@ html.tanh .run-step.is-on .run-latency .run-size { animation: run-appear 0.3s va
 }
 
 /* Task card 2: the dry wave slides back until it lines up with the wet one */
+/* Room on the right for the 18 % shift */
+html.tanh .run-delay .mix-wave { width: 82%; }
 html.tanh .run-delay .mix-wave.wet { transform: translateX(18%); }
 html.tanh .run-step.is-on .run-delay .mix-wave.dry { animation: delay-dry 2s var(--ease) 0.3s both; }
 html.tanh .run-step.is-on .run-delay .mix-wave.wet { animation: none; }
@@ -853,6 +859,10 @@ html.tanh .run-step.is-on .mix-fader i { animation: mix-knob 4.4s var(--ease) bo
  * Step 6 · two threads: the audio lane ticks at its own steady pace, a block
  * goes down to the worker, the model runs there, the result comes back up
  *********************************************/
+
+html.tanh .lanes + .statement-points {
+  margin-top: var(--space-9);
+}
 
 html.tanh .lanes {
   display: grid;
@@ -1121,8 +1131,8 @@ html.tanh .run-step.is-on .run-worker .q.out .q-slot b { animation: run-appear 0
 
 html.tanh .deadline {
   position: relative;
-  height: 320px;
-  margin-top: var(--space-6);
+  height: 285px;
+  margin-top: var(--space-10);
 }
 
 html.tanh .deadline-bars {
@@ -1144,7 +1154,7 @@ html.tanh .deadline-bars i {
   transform-origin: bottom;
 }
 
-/* Budget at 18 % of the height, so the forward pass, 510 %, reaches the top */
+/* Threshold at 17.4 % of the height, so the forward pass, factor 5.4, reaches the top */
 html.tanh .deadline-bars i.runs {
   height: 94%;
   background: var(--ink);
@@ -1161,7 +1171,7 @@ html.tanh .deadline-bars i.runs span {
   white-space: nowrap;
 }
 
-html.tanh .reveal section.present .deadline-bars i {
+html.tanh .reveal section.present .deadline.visible .deadline-bars i {
   animation: deadline-bar 6s var(--ease) infinite;
   animation-delay: calc(var(--i) * 0.08s);
 }
@@ -1176,8 +1186,7 @@ html.tanh .deadline-budget {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(40px + (100% - 40px) * 0.18);
-  z-index: 1;
+  bottom: calc(40px + (100% - 40px) * 0.174);
   border-top: 2px dashed var(--ink);
 }
 
@@ -1266,63 +1275,77 @@ html.tanh .meter-label strong {
  * Step 3 · the deadline, worked out: block size ÷ sample rate
  *********************************************/
 
-html.tanh .budget-calc {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-5);
+html.tanh .budget-tables {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  column-gap: var(--space-10);
+}
+
+html.tanh .budget-question {
+  margin-bottom: var(--space-3);
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .budget-question strong {
+  display: block;
   font-family: var(--fs-heading-font);
-  font-size: 0.75em;
+  font-size: 1.4em;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+html.tanh .reveal table.budget-table {
+  margin: 0;
+  border-collapse: collapse;
+  font-family: var(--fs-heading-font);
+  font-size: 0.8em;
   font-weight: 600;
 }
 
-html.tanh .budget-calc small {
-  display: block;
-  font-size: 0.5em;
+html.tanh .reveal table.budget-table th,
+html.tanh .reveal table.budget-table td {
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--wash);
+  text-align: left;
+  white-space: nowrap;
+}
+
+html.tanh .reveal table.budget-table th {
+  border-bottom: 2px solid var(--ink);
+  background: none;
+  font-size: 0.7em;
   font-weight: 400;
   color: var(--fs-text-muted-color);
 }
 
-html.tanh .budget-calc b {
+html.tanh .reveal table.budget-table small {
+  font-size: 0.7em;
   font-weight: 400;
   color: var(--fs-text-muted-color);
 }
 
-html.tanh .budget-calc .result {
-  padding: var(--space-1) var(--space-4);
-  border-radius: var(--radius-small);
+html.tanh .reveal table.budget-table td.result {
   background: var(--tint-exercise);
 }
 
-html.tanh .reveal section.present .budget-calc > * {
-  animation: budget-in 0.5s var(--ease) both;
-}
-html.tanh .reveal section.present .budget-calc > :nth-child(2) { animation-delay: 0.15s; }
-html.tanh .reveal section.present .budget-calc > :nth-child(3) { animation-delay: 0.3s; }
-html.tanh .reveal section.present .budget-calc > :nth-child(4) { animation-delay: 0.45s; }
-html.tanh .reveal section.present .budget-calc > :nth-child(5) { animation-delay: 0.6s; }
-
-/* Step 3 · the forward pass against the average and against its own callback */
-html.tanh .budget-calcs {
-  display: grid;
-  grid-template-columns: repeat(5, auto);
-  justify-content: start;
-  column-gap: var(--space-5);
-  row-gap: var(--space-3);
-}
-
-/* Rows share the grid's columns, so the four divisions line up */
-html.tanh .budget-calcs .budget-calc { display: contents; }
-html.tanh .budget-calcs .budget-calc > * { align-self: end; }
-
-html.tanh .budget-calc.over .result {
-  background: var(--ink);
+html.tanh .reveal table.budget-table td.result.over {
+  background: var(--mark-over);
   color: var(--paper);
 }
 
-html.tanh .budget-calc.over .result small { color: inherit; opacity: 0.7; }
+html.tanh .reveal table.budget-table.factor th:nth-child(3),
+html.tanh .reveal table.budget-table.factor td.result {
+  text-align: center;
+}
 
-html.tanh .reveal section.present .budget-calc.load > * { animation-delay: 1.2s; }
-html.tanh .reveal section.present .budget-calc.over > * { animation-delay: 2s; }
+html.tanh .reveal table.budget-table td.meaning {
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--fs-text-muted-color);
+}
 
 @keyframes budget-in { from { opacity: 0; transform: translateY(8px); } }
 
@@ -1376,110 +1399,104 @@ html.tanh .reveal section.present .meter-late { animation: meter-late 0.5s var(-
 @keyframes meter-late { to { opacity: 1; } }
 
 /*********************************************
- * Step 3 Task cards
+ * Step 3 · the warm-up: one bar per call against the two thresholds
  *********************************************/
 
-/* TODO 1: a stopwatch around the call */
-html.tanh .stopwatch {
+html.tanh .warmup {
   position: relative;
-  width: 70px;
-  height: 70px;
-  border: 4px solid var(--ink);
-  border-radius: 50%;
+  height: 500px;
+  --axis: 50px;
+  --margin: 230px;
 }
 
-html.tanh .stopwatch i {
+html.tanh .warmup-bars {
   position: absolute;
-  left: 50%;
-  bottom: 50%;
-  width: 4px;
-  height: 26px;
-  margin-left: -2px;
-  border-radius: 2px;
-  background: var(--ink);
-  transform-origin: bottom;
-}
-
-html.tanh .run-step.is-on .stopwatch i { animation: stopwatch 2s linear 0.2s both; }
-html.tanh .run-step.is-on .run-timed .mini-model { animation: pump-run 2s var(--ease) 0.2s both; }
-
-@keyframes stopwatch { to { transform: rotate(720deg); } }
-
-/* TODO 2: the times as they came, the fastest and the slowest picked out */
-html.tanh .times-bars {
+  inset: 0 var(--margin) var(--axis) 0;
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  width: 80%;
-  height: 100px;
+  gap: var(--space-5);
   border-bottom: 2px solid var(--ink);
 }
 
-html.tanh .times-bars i {
+html.tanh .warmup-bars i {
   position: relative;
   flex: 1;
   height: var(--h);
   border-radius: 3px 3px 0 0;
   background: var(--mark-exercise);
+  font-style: normal;
 }
 
-html.tanh .times-bars span {
+html.tanh .warmup-bars i.warm {
+  background: var(--ink);
+}
+
+html.tanh .warmup-bars span,
+html.tanh .warmup-bars em {
   position: absolute;
-  bottom: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-small);
-  background: var(--ink);
-  color: var(--paper);
-  font-family: var(--fs-code-font);
-  font-size: 0.4em;
-  opacity: 0;
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  font-style: normal;
+  white-space: nowrap;
 }
 
-html.tanh .run-step.is-on .times-bars i.max { animation: times-pick 0.3s var(--ease) 0.6s both; }
-html.tanh .run-step.is-on .times-bars i.max span { animation: run-appear 0.3s var(--ease) 0.6s both; }
-
-@keyframes times-pick { to { background: var(--ink); } }
-
-/* TODO 3: 200 single calls make a distribution, with a tail */
-html.tanh .hist-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  width: 80%;
-  height: 100px;
-  border-bottom: 2px solid var(--ink);
+html.tanh .warmup-bars span {
+  bottom: calc(100% + var(--space-1));
+  font-weight: 600;
 }
 
-html.tanh .hist-bars i {
-  flex: 1;
-  height: var(--h);
-  border-radius: 3px 3px 0 0;
-  background: var(--mark-exercise);
-  transform: scaleY(0);
-  transform-origin: bottom;
+html.tanh .warmup-bars em {
+  top: calc(100% + var(--space-2));
+  color: var(--fs-text-muted-color);
 }
 
-html.tanh .hist-bars i:last-child { background: var(--ink); }
-
-html.tanh .run-step.is-on .hist-bars i {
-  animation: meter-fill-y 0.5s var(--ease) both;
-  animation-delay: calc(0.2s + var(--i) * 0.18s);
+html.tanh .reveal section.present .warmup-bars i {
+  animation: warmup-bar 0.5s var(--ease) both;
+  animation-delay: calc(var(--i) * 0.08s);
 }
 
-@keyframes meter-fill-y { to { transform: scaleY(1); } }
+@keyframes warmup-bar { from { opacity: 0; transform: translateY(8px); } }
 
-html.tanh .hist-max {
+/* Behind the bars; the label sits in the margin to the right of them */
+html.tanh .warmup-line {
   position: absolute;
-  right: 6%;
-  top: 6px;
-  font-family: var(--fs-code-font);
-  font-size: 0.4em;
-  opacity: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--axis) + (100% - var(--axis)) * var(--at));
+  border-top: 2px dashed var(--ink);
 }
 
-html.tanh .run-step.is-on .hist-max { animation: run-appear 0.3s var(--ease) 2.2s both; }
+html.tanh .warmup-line span {
+  position: absolute;
+  right: 0;
+  bottom: var(--space-1);
+  width: calc(var(--margin) - var(--space-4));
+  font-size: 0.45em;
+  line-height: 1.2;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .warmup-note {
+  position: absolute;
+  left: 30%;
+  right: var(--margin);
+  bottom: calc(var(--axis) + (100% - var(--axis)) * 0.2);
+  text-align: center;
+  font-family: var(--fs-heading-font);
+  font-size: 0.6em;
+  font-weight: 600;
+}
+
+html.tanh .warmup-axis {
+  position: absolute;
+  bottom: 0;
+  right: var(--margin);
+  font-size: 0.45em;
+  color: var(--fs-text-muted-color);
+  transform: translateX(calc(100% + var(--space-3)));
+}
 
 /*********************************************
  * Done: a check mark draws itself, then confetti from congrats.js
@@ -1538,6 +1555,7 @@ html.tanh .congrats .confetti {
   html.tanh .reveal section.present .align *,
   html.tanh .reveal section.present .lanes *,
   html.tanh .reveal section.present .deadline *,
+  html.tanh .reveal section.present .warmup *,
   html.tanh .reveal section.present .meters *,
   html.tanh .reveal section.present .queue-demo *,
   html.tanh .reveal section.present .congrats * {
@@ -1605,14 +1623,30 @@ html.tanh .per-channel i {
 
 /* Step 8 · the break: a mug, its steam rising while the slide is up */
 html.tanh .break-mug {
-  margin-top: var(--space-7);
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--space-5);
 }
 
 html.tanh .break-mug .card-icon {
-  width: 280px;
-  height: 280px;
+  display: block;
+  width: 240px;
+  height: 240px;
   stroke-width: 1.2;
+  color: var(--ink);
+  transform: translateX(5px);  /* The drawing sits left of its box */
+}
+
+html.tanh .break-back {
+  margin-top: var(--space-8);
+  padding: var(--space-3) var(--space-7);
+  border-radius: var(--radius-main);
+  background: var(--tint-exercise);
+  font-family: var(--fs-heading-font);
+  font-size: 2.2em;
+  font-weight: 600;
+  line-height: 1.1;
   color: var(--ink);
 }
 

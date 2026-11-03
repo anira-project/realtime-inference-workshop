@@ -196,8 +196,8 @@ Note:
   <div class="lane audio"></div>
   <div class="lane-label"></div>
   <div class="lane-gap">
-    <div class="lane-queue to"><span>to_worker</span><i></i></div>
-    <div class="lane-queue from"><span>from_worker</span><i></i></div>
+    <div class="lane-queue to"><span>m_input</span><i></i></div>
+    <div class="lane-queue from"><span>m_output</span><i></i></div>
   </div>
   <div class="lane-label">worker thread</div>
   <div class="lane worker"><div class="lane-run">model</div></div>
@@ -205,7 +205,7 @@ Note:
 
 Note:
 - Threads: in step 5 we had a worker per channel, per instance.
-- One worker, two queues, one engine: correct, but it does not scale.
+- One worker, two ring buffers, one engine: correct, but it does not scale.
 - The worker belongs to the instance, and the host decides how many instances there are, so the threads grow with every instance it adds.
 
 ---
@@ -257,7 +257,7 @@ Note:
 
 ```cpp
 // the worker
-if (!m_to_worker.try_dequeue(block)) { sleep_for(100us); continue; }
+if (m_input.available() < k_model.m_input_size) { sleep_for(100us); continue; }
 
 // the audio thread
 if (m_output.available() >= num_samples) { m_output.pop(samples, num_samples); }

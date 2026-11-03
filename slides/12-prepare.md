@@ -127,14 +127,13 @@ Note:
 ## Every buffer sized by hand.<br><span class="then">From the worst moment we could think of.</span>
 
 ```cpp
-m_input  = RingBuffer(max_block_size + k_model.m_input_size);
-m_output = RingBuffer(max_block_size + k_queue_capacity * k_model.m_input_size);
-m_to_worker = moodycamel::ReaderWriterQueue<ModelBlock>(k_queue_capacity);
+m_input  = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
+m_output = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
 ```
 
 Note:
 - In step 2 we sized the ring buffers by hand, by thinking through the worst moment.
-- Step 5 added the queues, with a capacity of eight model blocks in flight: a guess.
+- Step 5 sized them for eight model blocks in flight: a guess.
 - All of it was allocated in prepare, none of it in the callback.
 - That rule was ours to keep, and every size was ours to get right.
 

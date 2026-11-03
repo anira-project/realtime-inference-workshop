@@ -82,7 +82,7 @@ Note:
 ring buffers           step 2
 a benchmark            step 3
 RTSan                  step 4
-a worker, two queues   step 5
+a worker, lock-free ring buffers   step 5
 a prefill rule         step 6
 a latency calculation  step 6
 a dry path to match    step 6
@@ -96,7 +96,7 @@ Note:
 - Step 2: buffer sizes, ring buffers
 - Step 3: benchmark
 - Step 4: real-time safety, the sanitizer. Basically impossible with the model on the audio thread
-- Step 5: worker thread, two queues
+- Step 5: worker thread, lock-free ring buffers
 - Step 6: latency, align dry and wet
 - Step 7: engine options
 - Step 8: first neural inference plugin/standalone
@@ -104,7 +104,7 @@ Note:
 
 **Script:**
 
-"So let's look back at what we built. In step 1 we managed to do a first implementation of our model in C++. In step 2 we had the problem of a potential issue with the buffer size. The solution was to use Ring buffers. In step 3 we benchmarked our signal processing. In step 4 we talked about realtime safety and how to check it using a sanitizer. We noticed that it was basically impossible to be realtime safe with the model on our audio thread, so we introduced a worker thread with two queues in step 5. Then we talked about latency and how to calculate it. We need to know the latency to align the dry and wet signals properly. Then we looked at different engine options in step 7. And finally, we made our first neural inference plugin/standalone app with one engine in step 8.
+"So let's look back at what we built. In step 1 we managed to do a first implementation of our model in C++. In step 2 we had the problem of a potential issue with the buffer size. The solution was to use Ring buffers. In step 3 we benchmarked our signal processing. In step 4 we talked about realtime safety and how to check it using a sanitizer. We noticed that it was basically impossible to be realtime safe with the model on our audio thread, so we introduced a worker thread with lock-free ring buffers in step 5. Then we talked about latency and how to calculate it. We need to know the latency to align the dry and wet signals properly. Then we looked at different engine options in step 7. And finally, we made our first neural inference plugin/standalone app with one engine in step 8.
 All of this is infrastructure and to get a grasp of what is needed for a real-time neural inference plugin. And we haven't done any work on the sound itself yet."
 
 --- 

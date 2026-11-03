@@ -106,12 +106,11 @@ Note:
 ## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
 
 ```cpp
-m_input.push(samples, num_samples);                     // host block in
-while (m_input.available() >= k_model.m_input_size) {   // model block out
-    … try_enqueue …
-}
+m_input.push(samples, num_samples);                         // host block in
 …
-m_output.pop(m_wet_block.data(), num_samples);          // host block out
+m_input.pop(m_model_block.data(), k_model.m_input_size);    // model block out, on the worker
+…
+m_output.pop(m_wet_block.data(), num_samples);              // host block out
 ```
 
 Note:

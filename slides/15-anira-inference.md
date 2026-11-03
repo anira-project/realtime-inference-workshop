@@ -4,7 +4,9 @@
 <!-- kind: exercise -->
 
 Note:
-    - Steps 2, 5 and 6, replaced by two files and three calls. Same model, same check.
+- Back to coding.
+- In Step 9 we take the model from part 1 and run it through anira.
+- We use the same model and the same check, but this time Steps 2, 5 and 6 are not written by hand.
 
 ---
 
@@ -24,7 +26,9 @@ Note:
 </div>
 
 Note:
-    - Everything OnnxEngine did by hand is one line in the model file. The ring buffers, the worker and the latency go the same way.
+- Remember the line in Step 4 where we copied the state back by hand?
+- In anira it is one line in the model file: this input is a state, and its source is that output.
+- The ring buffers, the worker and the latency go the same way.
 
 ---
 
@@ -37,6 +41,12 @@ Note:
   <div><small>2</small>The contract: budget, warm-up, on a miss</div>
   <div><small>3</small><code>prepare</code>, <code>process</code>, and the reference shifted by <code>get_latency()</code></div>
 </div>
+
+Note:
+- The goal: the same output and the same check as in part 1, now with two files and three calls.
+- First, the model file: which tensors the model has, what role each one plays, and which output feeds which state.
+- Second, the contract: the time budget, the warm-up, and what happens on a miss.
+- Third, the calls in main.cpp, and the check against the reference, shifted by the latency anira reports.
 
 ---
 
@@ -69,8 +79,10 @@ Note:
 </div>
 
 Note:
-    - anira is fetched by CMake, pinned to the v3 pre-release v3.0.0-alpha.2, with ONNX Runtime built in. support.h gains report_with_latency: the step 6 comparison, shifted by one number. No LibTorch in this step: the plugin's choice from step 8.
-    - model.json is given with gaps: the tensors are named, shapes and roles are the task. contract.json is complete.
+- CMake fetches anira, pinned to a v3 pre-release with ONNX Runtime built in.
+- The contract is complete.
+- The model file is given with gaps: the tensors are named, and their shapes and roles are your task.
+- Your other file is main.cpp.
 
 ---
 
@@ -91,8 +103,10 @@ Note:
 ```
 
 Note:
-    - Canonical names are ours; the ONNX names are bound by position here, since the file's order matches. A "tensors" record on the entry would bind by name.
-    - "latency": 2224 is the number from step 6, on the output it belongs to.
+- This is the model file: one engine, one path, and the tensors.
+- A streamed tensor is cut along time into windows; here the audio, with a window of 2048.
+- A state tensor is carried from one call to the next; here state_in and state_out.
+- And there is a number you know from Step 6: the model's own latency of 2224 samples, declared on the output it belongs to.
 
 ---
 
@@ -107,9 +121,10 @@ Note:
 Three lines. The geometry comes from the host, at `prepare`.
 
 Note:
-    - budget: the number from step 3, the worst case we are willing to promise. "measured" would derive it during warm-up; this pre-release wants it explicit.
-    - warmup fixed 3: three runs on the calling thread before prepare returns.
-    - on_miss zeros: what step 6's wet debt did.
+- The contract is three lines.
+- The budget is 8.2 milliseconds, the worst case from Step 3.
+- Then three warm-up runs before prepare returns, and zeros on a miss, just like Step 6.
+- The host's blocks come in at prepare.
 
 ---
 
@@ -117,9 +132,9 @@ Note:
 
 ## Task
 
-<div class="task-timer" data-minutes="15"></div>
+<div class="task-timer" data-minutes="10"></div>
 
-Fill in the TODOs in `steps/09_anira/model.json` and `exercise/main.cpp`
+Fill in the TODOs in `steps/09_anira/exercise/model.json` and `main.cpp`
 
 ```bash
 cmake --build --preset release --target step09_exercise
@@ -151,6 +166,11 @@ cmake --build --preset release --target step09_exercise
   </div>
 </div>
 
+Note:
+- You have ten minutes.
+- Fill in the TODOs in model.json and main.cpp, then build step09_exercise and run it.
+- You are done when it says it matches the reference.
+
 ---
 
 <div class="tag">Solution</div>
@@ -175,7 +195,10 @@ cmake --build --preset release --target step09_exercise
 ```
 
 Note:
-    - A state spec has no time axis and no window. Its shape is checked against the file at prepare: a wrong extent is refused by name.
+- Here are the four tensors.
+- Audio in and out have a time axis and a window of 2048.
+- The state has no time axis: it is one flat block of 63,488 floats, the same state we copied by hand in Step 4.
+- If a size is wrong, prepare refuses the file and names the tensor.
 
 ---
 
@@ -189,8 +212,10 @@ Note:
 ```
 
 Note:
-    - Without the source, the input is a state nobody feeds: prepare refuses it. With it, the model is stateful: one inference in flight, in order.
-    - Leave it out on purpose once and run: block 0 matches, block 1 does not. The same failure as a fresh engine per block in step 1.
+- The pairing is one field, state_source.
+- Try leaving it out once: create refuses the file, because nothing feeds that state.
+- With the pair in place, anira knows each call depends on the one before.
+- So it never runs two blocks of this model at the same time, and it keeps them in order.
 
 ---
 
@@ -211,10 +236,10 @@ latency = anira_handler_get_latency(handler.m_handle, 0);             // output 
 ```
 
 Note:
-    - Every C call returns a status and fills `error`; the solution throws on anything but ANIRA_OK.
-    - The audio callback is given: one tensor over the block, anira_handler_process in place, ANIRA_MISSED counted.
-    - The check is step 6's: shifted by the latency less the model's own 2224, which the reference already carries.
-    - Expected: 4272 samples at a host block of 512, max abs diff 3.9e-07. A few late callbacks on a busy machine are listed and left out.
+- Read the model, read the contract, and give the contract the host's block size and sample rate.
+- Then create the handler and prepare it; the three warm-up runs happen inside prepare.
+- Ask for the latency of output 0: 4272 samples, 2048 fewer than the 6320 we built by hand.
+- The audio callback was given: one tensor over the block, processed in place.
 
 ---
 
@@ -230,5 +255,6 @@ Note:
 </div>
 
 Note:
-    - No ring buffer, no worker, no queue, no state copy, no latency arithmetic in main.cpp. The check is the one from step 6, and it passes with 2048 samples less latency.
-    - Next: the model taken apart, encoder and decoder as two handlers.
+- That is Steps 2, 5 and 6 in two files.
+- There is no ring buffer, no worker, no queue, no state copy and no latency arithmetic in main.cpp, and the check from Step 6 passes.
+- Next we take the model apart.

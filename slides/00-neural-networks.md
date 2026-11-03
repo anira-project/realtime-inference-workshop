@@ -5,6 +5,10 @@ Model types, and the model we use today
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->
 <!-- part: Real-time inference -->
+
+Note:
+- Before we write code, a quick look at the models themselves.
+
 ---
 
 <div class="tag">Overview</div>
@@ -14,6 +18,12 @@ Model types, and the model we use today
 {{INTEGRATION:train}}
 
 <span class="fragment integration-focus"></span>
+
+Note:
+- Getting a neural network into a product has three stages: train, export and implement.
+- This workshop is about the last one: implementing the model in C++.
+- But before we can do that, let us first talk about the model we will integrate.
+- We start with the fundamentals, and with the model we chose for this workshop.
 
 ---
 
@@ -60,9 +70,10 @@ Model types, and the model we use today
 </div>
 
 Note:
-    - Audio → audio, an effect: runs every block at audio rate, the model is the effect; its latency is the plugin's latency.
-    - Controls → audio, synthesis: control signals in, audio out. The model is conditioned on them: f0 and loudness in DDSP, at a frame rate far below the audio rate. It is the sound generator and has to deliver every block.
-    - Audio → features, analysis: the model estimates something about the signal, here the pitch with a confidence. The result often leaves the audio thread (UI, MIDI, file).
+- What a model takes in and gives out decides how it behaves in real time.
+- Audio to audio is an effect: it runs every block, and its latency is the plugin's latency.
+- Controls to audio is synthesis: control signals go in, and it has to deliver audio every block.
+- Audio to features is analysis: the result often leaves the audio thread, to a UI, MIDI or a file.
 
 <!-- ---
 
@@ -138,10 +149,13 @@ Note:
 </div>
 
 Note:
-    - Real activations: a 220 Hz sine, block 6, run through the ONNX export (scripts/render_model_figure.py). Ink = positive, lilac = negative, each map scaled to its own maximum.
-    - PQMF splits the block into 16 bands of 128 steps. Each strided convolution then trades time for channels: 192 x 32, 384 x 8, 768 x 2, 1536 x 1. The values do not shrink until the last step: 1536 numbers become the latent.
-    - The latent is 128-dimensional, PCA-rotated; the export keeps the first 8 (fidelity 0.9). The file name says z16, the model card says 16 latent dimensions; encode() returns 8.
-    - The decoder mirrors it with transposed convolutions, then the inverse PQMF merges the 16 bands back into 2048 samples.
+- Today we use a Realtime Audio Variational autoEncoder.
+- The figure shows what happens inside it, for a real 220 Hz sine.
+- First, a filter bank splits each block of 2048 samples into 16 frequency bands.
+- Then each layer of the encoder trades time for channels, until a single step is left.
+- That step becomes the latent: 128 numbers, of which our export keeps the first 8.
+- The decoder mirrors this, and an inverse filter bank merges the bands back into 2048 samples.
+- The model is stateful: each block depends on the blocks before it.
 
 ---
 
@@ -159,10 +173,9 @@ Note:
 <div class="mrp-caption">Recorded for <em>Strengjavera</em> (Jack Armitage, AIMC 2023), where artificial life plays the piano · model: Intelligent Instruments Lab, CC BY-NC 4.0 · photos: Aurelien Guichard, CC BY-SA 2.0</div>
 
 Note:
-    - The magnetic resonator piano (Andrew McPherson, 2009): an electromagnet above each string, so a grand piano can sustain endlessly, swell from silence and bend pitch, without loudspeakers.
-    - Strengjavera ("string being"): an installation in which artificial life programs (Tölvera) drive the MRP. The model was trained on its sound; the model card does not give the length of the recordings.
-    - Model: huggingface.co/Intelligent-Instruments-Lab/rave-models, mrp_strengjavera_b2048_r44100_z16.ts. Paper: aimc2023.pubpub.org/pub/83k6upv8 (CC BY 4.0).
-    - Photos: commons.wikimedia.org, "Magnetic Resonator Piano" and "... details 1", Aurelien Guichard, CC BY-SA 2.0, resized.
+- It was trained on a magnetic resonator piano.
+- Electromagnets above the strings let the piano sustain, swell and bend, without loudspeakers.
+- The recordings come from Strengjavera, an installation where artificial life plays the piano.
 
 ---
 
@@ -173,10 +186,10 @@ Note:
 <div class="spectro-player" data-a="assets/audio/demo_input.wav" data-b="assets/audio/demo_output.wav"
      data-label-a="In" data-label-b="Out — through encoder and decoder"></div>
 
-
 Note:
-    - Rendered with scripts/render_demo.py, block by block, 2048 samples at a time — exactly what we do in C++. The input is synthesized there.
-    - The fader crossfades what you hear; the spectrogram you hear is the brighter one.
+- Here is what the model makes of a synthesized chord.
+- The fader crossfades between what goes in and what comes out.
+- It runs block by block, 2048 samples at a time, exactly as we will in C++.
 
 ---
 
@@ -188,6 +201,7 @@ Note:
 
 <span class="fragment integration-focus"></span>
 
-
 Note:
-    - From the ADC 2024 talk (Real-Time Inference of Neural Networks, Part II).
+- Where are we in the process?
+- Training and export are done, and we start from the exported file.
+- From here on, everything is implementation.

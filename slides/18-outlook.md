@@ -6,7 +6,9 @@ v3: GPU, NPU, zero copy
 <!-- kind: talk -->
 
 Note:
-    - What the v3 release adds to what you used today. Same API, other memory.
+- Outlook: GPU, NPU and zero copy in v3.
+- Today you ran the v3 pre-release on the CPU.
+- What follows is the rest of v3: the same API, with the memory somewhere else.
 
 ---
 
@@ -25,8 +27,11 @@ Note:
 <div class="cards-note">The provider is the engine's twin: one plan per engine and provider, picked at prepare.</div>
 
 Note:
-    - The v3 tensor is a C struct that describes host, device and pinned memory, with a sync token for the device's queue. The engines take the provider of the plan: an ONNX Runtime execution provider, a LiteRT accelerator, an ExecuTorch delegate.
-    - The platform bindings are drafts on the v3 branch; the CPU path is what shipped to you today.
+- Today every tensor lives in host memory, on every engine.
+- In v3 a tensor also says where it lives: on the CPU, the GPU or an NPU.
+- On the GPU through CUDA, Metal, Vulkan or GL, on an NPU through the hardware back ends of LiteRT and ExecuTorch.
+- The provider is chosen with the engine: one plan per engine and provider, picked at prepare.
+- The platform bindings are still drafts on the v3 branch; the CPU path is what you ran today.
 
 ---
 
@@ -45,8 +50,11 @@ Note:
 </div>
 
 Note:
-    - Step 11 copies every frame camera → CPU → engine. With a GPU plan the texture is the tensor: the engine reads it in place, and only the latents cross to the CPU.
-    - Same model file, same contract, same three calls. What changes is the plan the handler picks.
+- Take Step 11: today every camera frame is copied from the camera to the CPU and then to the engine.
+- [click] With a GPU plan the texture is the tensor, and the engine reads it in place.
+- Only the eight latents, 32 bytes, cross over to the CPU.
+- The decoder stays on the CPU, next to the audio thread, as today.
+- Same model file, same contract, same calls: only the plan changes.
 
 ---
 
@@ -59,6 +67,13 @@ Note:
   <div>A plan gains a provider; the tensor gains a location</div>
   <div>The real-time rules do not change: the pool runs it, the audio thread moves samples</div>
 </div>
+
+Note:
+- Same API, another memory.
+- The configs and the three calls stay as you wrote them today.
+- A plan gains a provider, and a tensor gains a location.
+- In part 1 you built every piece by hand; in part 2 they became two files and three calls.
+- The real-time rules do not change on any device: the pool runs the model, and the audio thread only moves samples.
 
 ---
 
@@ -78,4 +93,9 @@ Note:
 </div>
 
 Note:
-    - Questions, and the jam.
+- Thank you.
+- Both repositories are on the slide: the workshop, with every solution, and anira itself.
+- v3.0 ships at the end of November.
+- If you measure one of the engine and provider combinations, or you have a model that behaves differently, come and talk to us.
+- That is how anira got to where it is.
+- Questions?

@@ -6,7 +6,8 @@ Three configs, then the design
 <!-- kind: talk -->
 
 Note:
-    - From what anira is to how it works: what you declare, then an overview of the next three chapters.
+- From what anira is to how it works.
+- First the three configs you declare, then the design, over the next three chapters.
 
 ---
 
@@ -24,17 +25,20 @@ Note:
   <div class="card accent">{{ICON:shield}}<div class="card-title">Handler</div><div class="card-text">three calls</div><div class="card-file">create · prepare · process</div></div>
 </div>
 
-<div class="cards-note">Three JSON files, the context one optional, and three calls. For most models that is all.</div>
+<div class="cards-note">A model file and a contract file, plus an optional context file, and three calls. For most models that is all.</div>
 
 <div class="cards-note fragment">Some models need their own pre- and post-processing: a stage, in code. That comes later.</div>
 
 Note:
-    - ModelConfig: which files, which engines may run them, every tensor with a name and a role (streamed, static, state).
-    - Contract: what the host promises and what it gets. Hard: a block size range, a time budget, what happens on a miss; the latency follows from it. Async: a job with a deadline, for things like a camera frame; designed, and built with M3, so alpha.2 refuses it. Everything in the hands-on is Hard, step 11 included.
-    - Version: the workshop pins the v3 pre-release v3.0.0-alpha.2; CMake fetches it with ONNX Runtime built in. The proper v3.0 release follows at the end of November; details may still move until then.
-    - ContextConfig: the process-wide part, threads and enabled engines. One per process, like the pool. It can be a JSON file like the other two; its defaults fit most hosts, so the exercises create it in code.
-    - Handler: create once, prepare when the host announces its block size (get_latency then gives the number for setLatencySamples), process in every callback. The places from step 8.
-    - Click: the default stage takes a window out of the ring and writes the result back. A model that needs another shape, or its own pre- and post-processing, gets a stage in code; that is in Process.
+- Three configs say what, how and with what, and the handler runs it.
+- ModelConfig is the what: the model files and every tensor, each with a name and a role.
+- The contract is the how: what the host promises, and what it gets back.
+- Hard is the contract for a stream, and it is the one we use all day; Async, for jobs, comes later.
+- ContextConfig is the with what: threads, engines and the log, one per process, and the defaults fit most hosts.
+- So that is a model file and a contract file, plus an optional context file.
+- The handler takes three calls, in the three places from step 8: create in the constructor, prepare in prepareToPlay, process in processBlock.
+- For most models, that is all you write.
+- [click] A model that needs its own pre- and post-processing gets a stage in code, and that comes in the process chapter.
 
 ---
 
@@ -45,6 +49,10 @@ Note:
 {{MAP}}
 
 Note:
-    - The map of the next chapters, empty: your app, the handler, the session behind it, the context with the pool. The rows are the three places in a plugin from step 8: the constructor, prepareToPlay, processBlock.
-    - Each chapter fills one row. Every concept in it starts from the step in part 1 that built it by hand.
-    - At the end the map is full, and the last chapter looks at it as one piece.
+- One map, three rows, and a chapter per row.
+- The map is still empty: your app, the handler, the session behind it, and the context with the pool.
+- The columns run from your code on the left, through the handler, which is the public C ABI, to anira's private session and context on the right; we come back to the ABI at the end.
+- The top band is the main and the audio thread, the bottom one the inference threads.
+- The rows are the three places in a plugin from step 8: the constructor, prepareToPlay and processBlock.
+- Each chapter fills one row, and every concept in it starts from the step in part 1 where we built it by hand.
+- At the end the map is full, and the last chapter looks at it as one piece.

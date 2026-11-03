@@ -6,7 +6,8 @@ One map, one C ABI, three places
 <!-- kind: talk -->
 
 Note:
-    - The map with every row filled, the C ABI it sits on, and the three places in a plugin where all of it is called.
+- The whole picture.
+- One map with every row filled, the C ABI it sits on, and the three places in a plugin where all of it is called.
 
 ---
 
@@ -17,12 +18,13 @@ Note:
 {{MAP:show=create,prepare,process|abi}}
 
 Note:
-    - Your app, left: the files and three calls, from part 1's three places. The output tensor is the same memory as the input, in place.
-    - The dashed line is the C ABI: everything right of it is the library, and the handler is its public surface. Every entry is a C function with a thread tag.
-    - The session, private: at create the plans (one per engine and provider) and the state pairs; at prepare the latency, the rings and slots, the warm-up.
-    - The context, right: one per process. The pool, the queue, and the loaded models, shared by every handler that runs them.
-    - In process: ring in, the stage's pre_process forms the model tensor, a stamp orders it, a slot carries it to a pool thread. Back the same way: next stamp, post_process, ring out.
-    - Nothing on the audio side allocates, locks or waits. That was steps 4 to 6.
+- This is the path from your callback to the engine and back, in one picture.
+- On the left your app: the three files and the three calls.
+- The dashed line is the C ABI: right of it is the library, and the handler is all you touch.
+- The session is private to each handler: plans and state pairs from create, latency, rings and slots from prepare.
+- On the right the context, one per process: the pool, the queue and the loaded models, shared by every handler.
+- A block crosses it in process and comes back the same way, in place, in the same buffer.
+- Nothing on the audio side allocates or locks: the rules from steps 4 to 6, kept by the library.
 
 ---
 
@@ -38,10 +40,14 @@ Note:
 </div>
 
 Note:
-    - Every entry point is an exported anira_* function. The library's own C++, tanh-lib and the queue are private: a plugin that links anira statically exports nothing of it.
-    - Errors: every call returns a status, and a failed main-thread call fills an anira_error with a message naming the field. The audio-thread entries carry no error struct; rt_error says why one failed.
-    - Through the pre-releases the major is 0 and the check demands an exact match: rebuild against each alpha. From v3.0 the promise holds inside major 3.
-    - The hand tracker in step 11 is v2 code; it runs through compat/v2.hpp.
+- One C ABI, and every language sits on top of it.
+- Why C: it is the one binary interface every compiler, platform and WebAssembly agree on.
+- Only the anira_ functions are exported, so two plugins with anira inside do not clash in one host.
+- A plugin that links anira statically has its own copy and its own pool; the instances of one plugin share it.
+- anira.hpp, header-only C++20, and the TypeScript package sit on top of it.
+- Main-thread calls return a status and an error message naming the field; audio-thread calls return a status, and rt_error says why.
+- The ABI is append-only inside a major version and stable from v3.0; until then, rebuild against each pre-release.
+- compat/v2.hpp runs v2 code unchanged, and the hand tracker in step 11 is exactly that.
 
 ---
 
@@ -68,12 +74,18 @@ anira_tensor_init_host_planar(&block, buffer.getArrayOfWritePointers(),
 anira_handler_process(handler, &block, 0, &block, 0, nullptr);
 ```
 
-**`releaseResources`** — nothing: the handler's destructor does it
+**`releaseResources`** — nothing: our wrapper's destructor calls `anira_handler_destroy`
 
 Note:
-    - Same three places as step 8. The threads are not ours to stop any more: the context keeps the pool while any handler exists.
-    - A contract from a file carries no host blocks; the plugin patches it from the host and prepares again when the host changes it.
-    - The tensor is built once: planar float32 over the channel pointers JUCE hands out; the sample count is its shape.
+- Three places, three calls: the same three places as step 8.
+- In prepareToPlay the host's blocks go into the contract, we prepare the handler, and we report its latency to the host.
+- Prepare runs again whenever the host changes its blocks.
+- The configs use the C++ handles of anira.hpp, and the handler calls are the C functions themselves, as in steps 9 and 10, so you see exactly what crosses the ABI.
+- anira.hpp's InferenceHandler wraps the same three calls, if you prefer C++ all the way.
+- In processBlock we put one tensor over the channel pointers JUCE hands out: planar float32, with the sample count as its shape.
+- anira_handler_process then runs it in place.
+- releaseResources does nothing: our small wrapper destroys the handler when it goes.
+- The threads are not ours to stop any more: the context keeps the pool while any handler exists.
 
 ---
 
@@ -82,10 +94,14 @@ Note:
 ## The main thread plans,<br><span class="then">the audio thread moves samples, the pool runs models.</span>
 
 <div class="statement-points">
-  <div>Two JSON files describe the model and the run</div>
+  <div>A model file and a contract file, plus an optional context file</div>
   <div>Three calls connect them to the host</div>
   <div>Everything we built in part 1 is in the boxes between</div>
 </div>
 
 Note:
-    - Hands-on from here: the part 1 model on anira, then the model taken apart.
+- The main thread plans, the audio thread moves samples, the pool runs models.
+- A model file and a contract file describe the model and the run, and a third, optional one the context.
+- Three calls connect them to the host.
+- Everything we built in part 1 is in the boxes between.
+- Hands-on from here: the part 1 model on anira, then the model taken apart.

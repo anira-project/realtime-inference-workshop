@@ -6,7 +6,9 @@ Two models, one pool
 <!-- kind: demo, exercise -->
 
 Note:
-    - Demo first: the webcam, the hand, the piano. Then one TODO, the mapping.
+- Step 11: hands on the latents, two models in one pool.
+- This is the decoder from Step 10, and a hand moves its eight numbers.
+- We play it now; the exercise needs a JUCE build, so its slides are for at home.
 
 ---
 
@@ -17,7 +19,7 @@ Note:
 <div class="cards">
   <div class="card">{{ICON:people}}<div class="card-title">camera</div><div class="card-text">30 frames per second</div></div>
   <div class="card-arrow">→</div>
-  <div class="card">{{ICON:model}}<div class="card-title">hand tracking</div><div class="card-text">palm → landmarks → gesture<br>three models, ONNX Runtime</div></div>
+  <div class="card">{{ICON:model}}<div class="card-title">hand tracking</div><div class="card-text">palm → landmarks → gesture<br>four models, ONNX Runtime</div></div>
   <div class="card-arrow">→</div>
   <div class="card accent">{{ICON:sliders}}<div class="card-title">8 latents</div><div class="card-text">height, pinch, tilt, …</div></div>
   <div class="card-arrow">→</div>
@@ -25,16 +27,22 @@ Note:
 </div>
 
 Note:
-    - Two kinds of model in one pool: the tracker's three run once per camera frame, the decoder as a hard stream. The pool does not care which is which.
-    - The tracker is anira-cam's, on anira's 2.x C++ API: it runs on v3 through compat/v2.hpp. The decoder is step 10's, on the v3 handler, as a generator.
-    - The decoder here has no audio input at all: the audio thread hands it one frame of the current latents per 2048 samples it pulls, two frames ahead. The latents come from the hand, smoothed with a one-pole.
-    - Without a hand, the latents glide to rest and the output fades.
+- Two kinds of model share one pool: one runs per camera frame, the other per audio block.
+- The hand tracker is MediaPipe's chain of four small ONNX models, run once per camera frame, 30 times a second.
+- The decoder runs as a hard real-time audio stream, as a generator, with no audio input at all.
+- The hand becomes eight latents, smoothed on the main thread, and the audio thread reads them as atomics.
+- [Start the demo. Speak little, play more.]
+- When I open my hand, it gets louder; that is z0.
+- When I raise it, the register goes up; that is z2.
+- Pinch, left and right, and tilt change body, colour and tilt.
+- The second hand sets the texture: swell, dark and bright, resonance.
+- When I take my hands away, the latents glide to rest and the sound fades.
 
 ---
 
 <div class="tag">Given</div>
 
-## The demo, with one gap.<br><span class="then">Camera on macOS; an XY pad everywhere else.</span>
+## The demo, with one gap.<br><span class="then">Camera on macOS and Windows; an XY pad on Linux.</span>
 
 <div class="given">
   <div class="given-column">
@@ -60,9 +68,10 @@ Note:
 </div>
 
 Note:
-    - The camera is platform code: AVFoundation on macOS, juce::CameraDevice on Windows. Linux has no camera in JUCE: the video area is a pad, the mouse is the lead hand, same features, same mapping, same TODO.
-    - Build: -DWORKSHOP_JUCE=ON, target step11_exercise; JUCE is cloned once.
-    - If time is short this step is the one to cut: run the demo, skip the TODO.
+- The mapping you just heard is the one TODO, in HandControls.cpp.
+- It is main-thread code: the hand arrives 30 times a second, and the audio thread only reads.
+- On Linux there is an XY pad instead of the camera, with the same TODO.
+- The app needs the JUCE build, which takes a few minutes, so try it at home.
 
 ---
 
@@ -75,8 +84,9 @@ Note:
 Fill in the TODO in `steps/11_hands/exercise/HandControls.cpp`
 
 ```bash
+cmake --preset release -DWORKSHOP_JUCE=ON      # once, with JUCE
 cmake --build --preset release --target step11_exercise
-./build/bin/step11_exercise
+open build/steps/11_hands/step11_exercise_artefacts/Release/*.app
 ```
 
 <div class="run">
@@ -88,6 +98,12 @@ cmake --build --preset release --target step11_exercise
     </div>
   </div>
 </div>
+
+Note:
+- This is the task for at home, sized at ten minutes.
+- Configure with WORKSHOP_JUCE on, build step11_exercise, and open the app; the README has the commands.
+- Openness goes to z0, height to z2, and the rest you set by ear.
+- It works when the piano follows the hand.
 
 ---
 
@@ -110,8 +126,12 @@ constexpr std::array<LatentMapping, k_num_latents> k_mappings{{
 ```
 
 Note:
-    - The ranges come from the latent analysis of the model: about ±2 is the natural range per dimension, z0 is monotonic in loudness, z2 correlates with pitch at 0.96. Rest for z0 is −3: close to silent.
-    - Everything here is main-thread code: the hand arrives at 30 Hz, the audio thread only reads the smoothed atomics.
+- Each row takes one feature of one hand to one latent.
+- A feature runs from 0 to 1, for example fist to open hand.
+- The row gives the latent's value at 0, at 1, and when no hand is there.
+- About plus or minus 2 is the natural range of each latent in this model.
+- z0 follows loudness, and z2 follows pitch closely.
+- z0 rests at minus 3, which is close to silence, so no hand means no sound.
 
 ---
 
@@ -127,4 +147,6 @@ Note:
 </div>
 
 Note:
-    - Every frame still goes camera → CPU → engine as a copy. That is the last slide.
+- Two models, two rates, one library.
+- One thing is still a copy: every camera frame goes to the CPU and then to the engine.
+- That is where the outlook starts.

@@ -6,7 +6,9 @@ Plans, tensors, the pool
 <!-- kind: talk -->
 
 Note:
-    - The first row of the map: what exists once the plugin is constructed. Four pairs, each from the step in part 1 that built it by hand to what anira does instead.
+- Create: plans, tensors and the pool.
+- This is the first row of the map: what exists once the plugin is constructed.
+- We go pair by pair: first what we built by hand in part 1, then what anira does instead.
 
 ---
 
@@ -17,8 +19,10 @@ Note:
 {{MAP:focus=create}}
 
 Note:
-    - The row we fill now: the plugin's constructor. The files go in, the handler comes out. Behind it the session holds the plans and the state pairs, the context the pool and the loaded models.
-    - Nothing in this row runs on the audio thread, so all of it may load files and allocate.
+- Create runs once, on the main thread: the plugin's constructor.
+- The files go in, the handler comes out.
+- Behind the handler, the session will hold the plans and the state pairs, and the context the pool and the loaded models; this chapter builds each of them.
+- Nothing in this row runs on the audio thread, so all of it may load files and allocate.
 
 ---
 
@@ -43,7 +47,10 @@ class OnnxEngine     { … Ort::Session … m_session.Run(…) … };
 ```
 
 Note:
-    - Two engines, two classes, and the state handled differently in each: LibTorch from step 1, ONNX Runtime from step 4. Step 7 weighed what they cost to ship; the plugin picked one at compile time.
+- First the engines: in part 1 every engine has its own API, and we wrote one class per engine by hand.
+- LibTorch came in step 1, ONNX Runtime in step 4, and each handled the state differently.
+- In step 7 we weighed what they cost to ship: LibTorch 318 MB, ONNX Runtime 24 MB, LiteRT about 3 MB.
+- The plugin picked one of them at compile time.
 
 ---
 
@@ -68,10 +75,12 @@ Note:
 </div>
 
 Note:
-    - Entries for engines the build does not have are skipped, so one file serves every build.
-    - A plan is one model entry on one engine and provider. Prepare returns the plan report: which plans exist and which one runs, the first by default.
-    - In alpha.2 one budget covers every plan. Per-plan warm-up and budgets follow with alpha.3; then the reported latency covers the slowest enabled plan.
-    - Custom engine: a descriptor with load, prepare, process; the hand-written option from step 7 fits here.
+- In anira one model file names every export, and the handler keeps a plan per engine.
+- LibTorch, ONNX Runtime, LiteRT and ExecuTorch come prebuilt and are compiled in at build time.
+- An entry for an engine the build does not have is skipped, so one file serves every build.
+- A plan is one entry on one engine and execution provider, and set_plan switches between them.
+- default_engine says which plan runs first.
+- A custom engine is your own code behind the same interface, load, prepare and process, so a class like ours from part 1 fits there.
 
 ---
 
@@ -88,8 +97,10 @@ engine.process(m_model_block.data(), m_model_input_size);
 ```
 
 Note:
-    - Every buffer in part 1 is a float vector with one shape the code assumes: one channel, one model block. torch::Tensor and Ort::Value exist only inside the engine classes.
-    - A model with an int input, a second channel or an image does not fit through that call.
+- Next, tensors: in part 1 every buffer is a float vector with one shape the code assumes, one channel and one model block.
+- That is step 1's output vector and step 2's model block.
+- torch::Tensor and Ort::Value exist only inside the engine classes.
+- A model with an int input, a second channel or an image does not fit through that call.
 
 ---
 
@@ -112,15 +123,17 @@ Note:
 </div>
 
 Note:
-    - One passive struct for every input and output, the same 216 bytes on every platform. It carries the memory, its owner and whether it is ready; anira never guesses a layout.
-    - The domain says where the memory lives. In alpha.2 that is host memory; the GPU domains follow with M4.
-    - The spec is the model's truth per slot: the named axes tell anira which one is time and which one is channels, so it can adapt the host's blocks to the window.
+- In anira there is one tensor type on every slot, and the model file says what each one is.
+- anira_tensor is a plain C struct: a data pointer, a dtype, a shape and strides.
+- The dtype codes are DLPack's, the standard that PyTorch and the other frameworks share, so int and bool fit, and so do token IDs.
+- The spec in the model file names each slot, its dtype, its axes and its role.
+- The axes have names, so anira knows which one is time and which one is channels, and adapts the host's blocks without guessing a layout.
 
 ---
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · ONNX</div>
+<div class="tag">Part 1 · Step 4</div>
 
 ## 63,488 floats of state,<br><span class="then">carried by hand.</span>
 
@@ -130,7 +143,10 @@ std::copy_n(outputs[1].GetTensorData<float>(), m_state.size(), m_state.begin());
 ```
 
 Note:
-    - OnnxEngine from step 4: the state tensor out, copied into the state tensor in, every call. 63,488 floats, one copy per block, and the ordering of calls is ours to guarantee.
+- Then state: 63,488 floats of state, carried by hand.
+- In the OnnxEngine from step 4 the state tensor comes out and we copy it into the state tensor going in, every call.
+- In LibTorch the state is hidden, here it is ours.
+- That is one copy of 63,488 floats per block, and the ordering of the calls is ours to guarantee.
 
 ---
 
@@ -159,9 +175,13 @@ Note:
 </div>
 
 Note:
-    - The state pair is declared once. anira binds two buffers to it and swaps them around every inference: what came out is what goes in next. No copy, no code on your side.
-    - A model with a state pair is stateful whatever else it says: one job in flight, in order.
-    - The LibTorch export keeps its state inside the file; its model entry says nothing about it, and the same model file carries both.
+- In anira every tensor has a role, and state is one of them.
+- Streamed has a time axis and is consumed window by window.
+- Static is one value per run, like a gain or a conditioning vector.
+- State is a pair, declared once: state_out feeds state_in.
+- anira binds two buffers to the pair and swaps them around every inference: what came out goes in next, with no copy and no code on your side.
+- Because the next run needs this run's state, a stateful model never has two runs in flight: anira runs its jobs one after another, in order.
+- The LibTorch export keeps its state inside the file, so its entry declares none, and the same model file carries both.
 
 ---
 
@@ -184,7 +204,9 @@ Note:
 </div>
 
 Note:
-    - Step 5's picture. One worker, two queues, one engine. Correct, and it does not scale: the worker belongs to the instance, and the host decides how many instances there are.
+- Threads: in step 5 we had a worker per channel, per instance.
+- One worker, two queues, one engine: correct, but it does not scale.
+- The worker belongs to the instance, and the host decides how many instances there are, so the threads grow with every instance it adds.
 
 ---
 
@@ -212,14 +234,18 @@ Note:
 </div>
 
 ```cpp
-context.threads(4, ANIRA_WAIT_SPIN_BACKOFF);   // once per process; the default: cores / 2
+// once per process; the defaults: cores / 2, SPIN_BACKOFF
+context.threads(4, ANIRA_WAIT_BLOCKING);
 ```
 
 Note:
-    - The pool belongs to anira's core, one per process: the first context sizes it, every later one shares it. Ten plugins, one pool, four real-time threads.
-    - One lock-free queue (moodycamel) for every handler. The audio thread enqueues a job and leaves; a free thread takes the oldest one. The animation shows it: instances flash when they enqueue, the threads take turns, each busy while its model runs.
-    - A stateful model never has two jobs in flight: its next job is enqueued by the thread that finished the last one, so the order holds without a lock.
-    - Thread count: hardware concurrency / 2 by default. Zero means the host brings its own threads.
+- In anira there is one pool per process, and every instance queues into it.
+- The first context sizes the pool, and every later one shares it.
+- Strictly, it is one pool per copy of anira: every instance of your plugin shares it, and another plugin that links its own anira has its own.
+- Here, ten instances, one pool, four threads.
+- All handlers share one lock-free queue: the audio thread enqueues a job and leaves, and a free thread takes the oldest.
+- In the animation, an instance flashes when it enqueues, and a thread is lit while its model runs.
+- The default is half the cores; the second argument is how the pool waits, which is the next slide.
 
 ---
 
@@ -239,8 +265,10 @@ else                                     { std::fill_n(samples, num_samples, 0.0
 ```
 
 Note:
-    - Two decisions we made without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
-    - 100 µs sleeps are a compromise: responsive enough, and it burns a little CPU while idle.
+- Waiting: the worker polls, and the audio thread never waits.
+- These are two decisions we made in step 5 without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
+- If the output is not ready, the audio thread writes silence.
+- The 100 µs sleep is a compromise: responsive enough, and it burns a little CPU while idle.
 
 ---
 
@@ -267,11 +295,15 @@ Note:
 <div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
 
 Note:
-    - An idle pool thread has to wait for the next job somehow. SPIN_BACKOFF (default) tries a few times, then pauses the core, then yields, then sleeps 100 µs: exponential backoff, Timur Doumler's recipe from ADC20. Fast to react, costs a little CPU while idle.
-    - BLOCKING parks the thread on a semaphore and the enqueue wakes it. No CPU while idle, a little more time to wake up.
-    - The choice is the context's, once per process: context.threads(4, ANIRA_WAIT_SPIN_BACKOFF).
-    - The cost lands on different threads. With SPIN_BACKOFF the audio thread only does an atomic enqueue; the idle pool pays by polling. With BLOCKING the idle pool costs nothing, but when a pool thread is asleep the enqueue on the audio thread wakes it: sem_post (futex) on Linux and Android, semaphore_signal (a Mach trap) on Apple, ReleaseSemaphore on Windows. Under load the threads rarely sleep and the wake is rare; on an idle pool it happens for nearly every job.
-    - Click: our recommendation is BLOCKING. The wake is bounded and never waits, unlike a lock. But no platform documents it as real-time safe, and RTSan intercepts pthread_mutex_unlock and pthread_cond_signal, not sem_post or semaphore_signal, so it will not tell you. We have not measured its worst case per platform yet.
+- In anira the pool waits for work, either spinning with backoff or blocking.
+- SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool pays by polling.
+- BLOCKING parks idle threads on a semaphore: no CPU while idle.
+- The price is on the audio thread: if a pool thread is asleep, the enqueue makes one wake syscall.
+- Under load the threads rarely sleep, so that is rare; on an idle pool it is nearly every job.
+- The choice is made once per process, in context.threads.
+- [click] We recommend BLOCKING: one bounded wake instead of threads polling while idle.
+- It takes no lock and never waits, but no OS documents the wake as real-time safe, RTSan does not check it, and we have not yet measured its worst case per platform.
+- SPIN_BACKOFF stays the default because the OS clocks a sleeping core down, and whatever runs next on it starts slow; spinning keeps the core warm.
 
 ---
 
@@ -289,8 +321,10 @@ while (m_engines.size() < channels) {
 ```
 
 Note:
-    - Step 8's plugin loads one ONNX session per channel, because the state belongs to the signal running through it. Ten stereo instances hold twenty copies of the same model.
-    - Memory grows with the instances the host adds, like the threads did.
+- Memory: step 8's plugin has an engine per channel, per instance, and every one loads the model again.
+- It loads one ONNX session per channel, because the state belongs to the signal running through it.
+- Ten stereo instances hold twenty copies of the same model.
+- Memory grows with the instances the host adds, like the threads did.
 
 ---
 
@@ -312,9 +346,13 @@ Note:
 </div>
 
 Note:
-    - The declared state pairs live in each handler's session, not in the engine, so one loaded model can serve every instance. Ten stereo plugins, one model file: as many engine instances as there are pool threads, not twenty.
-    - max_instances is a ceiling on memory: the planner fits the engine instances under it. More instances than threads would never run at once.
-    - The cost to know: prepare loads the model of every enabled plan, and all of them stay resident until the handler goes.
+- In anira loaded models are pooled, and the state stays with the instance.
+- The model is loaded once per model and provider, and every handler that runs it shares that load.
+- Each handler then runs it through its own engine instances, and max_instances caps how many.
+- The default is one per pool thread, since more could never run at once.
+- A model with a state pair, like ours, gets exactly one instance per handler, because its runs must stay in order.
+- The declared state lives in the handler, not in the engine.
+- The cost to know: prepare loads the model of every enabled plan, so a file with two engines holds both until the handler goes.
 
 ---
 
@@ -325,8 +363,10 @@ Note:
 {{MAP:show=create|memory}}
 
 Note:
-    - The create row, filled. Marked: what holds memory from here on, the state pairs in the session and the models the context pools.
-    - Nothing streams yet: the handler does not know the host's blocks. That is the next row.
+- After create we have plans, state pairs, a pool and the loaded models.
+- Marked is what holds memory from here on: the state pairs in the session and the models the context pools.
+- Nothing streams yet, because the handler does not know the host's blocks.
+- That is the next row.
 
 ---
 
@@ -341,4 +381,8 @@ Note:
 </div>
 
 Note:
-    - Next: prepare, when the host says which blocks it will deliver.
+- Declare once, and share what can be shared.
+- Engines are entries in a file, with a plan per engine and provider.
+- Every slot is a typed tensor, and state is a role.
+- One pool and one copy of each model serve every instance in the process.
+- Next: prepare, when the host says which blocks it will deliver.

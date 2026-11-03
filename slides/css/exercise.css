@@ -972,8 +972,8 @@ html.tanh .reveal section.present .lane-queue.from i { animation: lane-up 5s var
 }
 
 /*********************************************
- * readerwriterqueue.h: four blocks fit; the fifth try_enqueue fails and the
- * block goes back; the queue drains front first
+ * ring_buffer.h: four blocks fit; the fifth does not and is dropped; the
+ * buffer drains front first
  *********************************************/
 
 html.tanh .queue-demo {

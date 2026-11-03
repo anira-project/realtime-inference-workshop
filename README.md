@@ -68,7 +68,7 @@ The steps so far:
 2. [Model input size vs. host buffer size](steps/02_host_buffer_size/README.md) — ring buffers between the host's block size and the model's
 3. [Benchmarking and the real-time budget](steps/03_benchmark/README.md) — how long a forward pass takes, and how long in the worst case
 4. [Real-time safety](steps/04_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
-5. [Inference on a worker thread](steps/05_threading/README.md) — lock-free queues, and an audio thread that allocates nothing
+5. [Inference on a worker thread](steps/05_threading/README.md) — lock-free ring buffers, and an audio thread that allocates nothing
 6. [Latency and the dry/wet mix](steps/06_latency/README.md) — what to report to the host, and how to prove it
 7. [Shipping the engine](steps/07_shipping_the_engine/README.md) — LibTorch vs. ONNX Runtime vs. your own code; talk only, no exercise
 8. [The plugin](steps/08_juce_plugin/README.md) — all of it inside JUCE; solution only, built with `-DWORKSHOP_JUCE=ON`

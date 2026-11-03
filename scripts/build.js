@@ -70,7 +70,8 @@ async function generateHTML(isDev = false) {
     content = await renderQrCodes(content);
     // data-part lets the chapter overview (Esc) group the chapters by part
     const partAttribute = chapter.part ? ` data-part="${chapter.part}"` : '';
-    slidesContent += `<section id="${chapter.id}"${partAttribute}>
+    // data-file: the source of the chapter, for the notes editor of the dev server
+    slidesContent += `<section id="${chapter.id}" data-file="${chapter.filename}"${partAttribute}>
       ${await buildSlidesContent([{ ...chapter, content }])}</section>
       `;
   }
@@ -78,7 +79,7 @@ async function generateHTML(isDev = false) {
   const html = renderTemplate(slidesTemplate, {
     SLIDES_CONTENT: slidesContent,
     PRESENTATION_TITLE: 'Real-Time Neural Inference Workshop',
-    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js?v={{BUILD_ID}}"></script>\n  <script src="js/overflow_check.js?v={{BUILD_ID}}"></script>' : ''
+    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js?v={{BUILD_ID}}"></script>\n  <script src="js/overflow_check.js?v={{BUILD_ID}}"></script>\n  <script src="js/notes_editor.js?v={{BUILD_ID}}"></script>' : ''
   });
   
   await fs.writeFile(path.join(distDir, 'workshop.html'), html);

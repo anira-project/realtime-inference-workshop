@@ -1,7 +1,7 @@
 <!-- .slide: class="title-card" data-background-image="assets/images/adc26-title.webp" data-background-size="contain" data-state="no-chrome" -->
 
 Note:
-    - When the session starts, go to the next slide.
+- When the session starts, go to the next slide.
 
 ---
 
@@ -20,8 +20,9 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 <!-- .slide: data-state="no-header" -->
 
 Note:
-    - Today we are talking about real-time inference of neural networks.
-    - How to get from an exported model to an audio plugin that is real-time safe.
+- Welcome to our workshop on real-time inference of neural networks.
+- A neural network in a plugin has to deliver every block, on time, on every machine.
+- Today we take an exported model all the way to an audio plugin that does exactly that.
 
 ---
 
@@ -53,13 +54,13 @@ Note:
 </div>
 
 Note:
-    - This workshop is about real-time inference.
-    - That is what anira, our open-source library, was built around.
-    - We introduce it now because it comes up throughout the workshop.
-    - We have been working on real-time inference since 2020.
-    - At ADC24 we talked about the library itself.
-    - At ADC23 we showed how to run real-time inference in a plugin.
-    - Both videos are linked here, if you open the slides on your machine.
+- This is anira, our open-source library for real-time inference.
+- You give it a model for LibTorch, ONNX Runtime, LiteRT or ExecuTorch, and it takes care of the threads, the buffering and the latency.
+- We have been working on real-time inference since 2020, and anira is what came out of it.
+- It comes up throughout the workshop, so here is the short version.
+- At ADC23 we showed how to run real-time inference in a plugin.
+- At ADC24 we presented anira itself.
+- We share these slides, so you can click through to both talks later.
 
 ---
 <div class="tag">introduction</div>
@@ -87,6 +88,12 @@ Note:
   </div>
 </div>
 
+Note:
+- So who are we?
+- Lina is a student assistant at TU Berlin.
+- I am a research associate at TU Berlin, and together with Valentin I run tanh lab.
+- Valentin runs tanh lab with me and works as an audio software developer at Baby Audio.
+
 ---
 
 <div class="tag">introduction</div>
@@ -104,6 +111,13 @@ Note:
     <div class="cards-note">tanh-lab.com · we develop and maintain anira</div>
   </div>
 </div>
+
+Note:
+- Who builds and maintains anira?
+- That is us, tanh lab, an audio software studio.
+- We take ideas from research all the way to a product.
+- On the research side, we design custom AI models that run in real time, for audio and video.
+- On the product side, we build the plugins and mobile apps they run in, full stack.
 
 ---
 
@@ -125,6 +139,15 @@ Note:
 
 <div class="cards-note">Not today: training, exporting, ML fundamentals, Python.</div>
 
+Note:
+- Today's path: from an exported model to real-time safe inference in a plugin.
+- We start from a model that is already trained and exported.
+- We run it in C++, and see what the engine, the block size and the worst case mean for us.
+- We make it real-time safe, with a worker thread and an honest latency.
+- And we put all of it into a plugin that runs in your host.
+- anira solves these three steps, and today you build them by hand first.
+- Not today: training, exporting, machine learning basics or Python.
+
 ---
 
 
@@ -141,6 +164,12 @@ Note:
   </div>
 </div>
 
+Note:
+- Who is this for?
+- We assume you write real-time audio code in C++.
+- You know the rules of the audio thread: no allocations, no locks, no waiting.
+- Neural network basics help, but you do not need them.
+
 ---
 
 ## Follow along
@@ -153,11 +182,23 @@ Note:
   </div>
 </div>
 
+Note:
+- Follow along: everything we show is in this repository.
+- Please scan the code now, or type the address.
+- The slides are linked there too, top right on the GitHub page.
+- If you cannot read the screen well, click through them on your own machine.
+- If you have not built the code yet, clone it and start the configure step now, so it runs while we talk.
+
 ---
 
 ## Agenda
 
 {{AGENDA}}
+
+Note:
+- The workshop has two parts.
+- In the first part we build real-time inference by hand, step by step, up to a plugin.
+- In the second part we replace the hand-built parts with anira.
 
 ---
 
@@ -174,4 +215,12 @@ Note:
   <div class="card-arrow">→</div>
   <div class="card">{{ICON:folder}}<div class="card-title"><code>solution/</code></div><div class="card-text">To compare, or to catch up</div></div>
 </div>
+
+Note:
+- How do the exercises work?
+- Every step follows the same pattern.
+- On the slides we show the problem and the idea for fixing it.
+- Then you fill in the TODOs in exercise/.
+- Each exercise tells you which TODO is still open when you run it.
+- If you get stuck, or want to compare, the solution is in solution/.
 

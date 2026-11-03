@@ -7,8 +7,9 @@ Replacing the hand-built parts
 <!-- part: anira -->
 
 Note:
-    - Part 2. Everything in part 1 was built so that this part can name it.
-    - This chapter: what anira is, who uses it, how it evolved, and what we look at next. How it works is the next chapter.
+- Welcome back, this is part 2.
+- In part 1 you built every piece by hand, for one plugin on one track.
+- In part 2 we look at anira, the library that replaces those hand-built parts.
 
 ---
 
@@ -27,9 +28,13 @@ Note:
 </div>
 
 Note:
-    - What we did in part 1, as six needs. Every one works, and every one is the simple version: one engine, one machine, one instance.
-    - Click once: anira covers all six, from years of plugins in production. Not how yet; the next two chapters open them one by one.
-    - The dry path is the one thing that stays in your code: anira reports the number, the mix is the plugin's.
+- Here is part 1 in one picture: six things real-time inference needs.
+- Inference, benchmarking, real-time safety, threading, minimal latency, and real-time guarantees.
+- We solved each one the simple way: one engine, one machine, one plugin instance.
+- Remember the end of step 8: two of everything, a worker per channel.
+- That is fine for one instance, not for a session full of them.
+- [click] anira covers all six, for one instance or for many.
+- First, what anira is and where it comes from.
 
 ---
 
@@ -82,10 +87,14 @@ Note:
 </div>
 
 Note:
-    - What part 1 built by hand is the inside of anira. You only say what the model is and what the host promises; the rest is the library's.
-    - Audio plugins first, and real-time video: step 11 runs hand tracking on camera frames through the same library. The Async contract for frames and jobs follows with M3.
-    - Since v3 the library is one versioned C ABI. The C++ API and the TypeScript package on npm are generated from it, so every language sees the same library.
-    - Click: every engine, or your own. Click: desktop, mobile, the browser, and embedded boards like Bela, on ARMv7 and ARM64. Click: in a plugin or a standalone app, as the anira~ external in Max/MSP, or on camera frames. Solve it once.
+- anira is a C++ library.
+- You describe the model in a model file and what the host promises in a contract file.
+- An optional third file, the context file, comes later in Fares's part.
+- Threads, buffers, latency and safety are then the library's job.
+- In v3, the version you run today, the core is one C ABI, and the C++ API and the TypeScript package are generated from it.
+- [click] It runs LibTorch, ONNX Runtime, LiteRT, ExecuTorch, or your own engine.
+- [click] It runs on desktop, mobile, in the browser, and on embedded boards like Bela.
+- [click] And it runs in plugins, standalone apps, as anira~ in Max/MSP, and on real-time video.
 
 ---
 
@@ -100,11 +109,11 @@ Note:
 </div>
 
 Note:
-    - Sonnox Oxford Drum Gate 2 (February 2026): the gate classifies drum hits by timbre, not level. Its models run through anira.
-    - Baby Audio SubCulture (July 2026): pitch-tracking bass enhancer; its models run through anira.
-    - Project LYDIA by Neutone: Neutone's Morpho on a Raspberry Pi 5, the embedded case from the slide before. A hardware project, not a product on sale yet.
-    - Three of more: plugins on every desktop host and a pedal on ARM, the same library in all of them. More products use anira than we can show here.
-    - Images: the Sonnox hero shot and the Baby Audio screenshot from their product pages, the pedal from Neutone.
+- anira in products, a selection.
+- [click] Sonnox Oxford Drum Gate 2, which classifies drum hits by timbre.
+- [click] Baby Audio SubCulture, a pitch-tracking bass enhancer.
+- [click] And Project LYDIA by Neutone, a pedal on a Raspberry Pi 5.
+- These are three of several, on desktop hosts and on ARM boards.
 
 ---
 
@@ -127,9 +136,12 @@ Note:
 <div class="history-note lesson fragment">Good solutions come from iteration and exchange, not from a single attempt.</div>
 
 Note:
-    - ADC23 (London): the nn-inference-template, one inference thread per plugin. It worked, for one plugin.
-    - After the talk, the team from sonible, an Austrian plugin company, asked what happens with many instances. Every instance opening its own real-time thread was the part we had not thought through.
-    - The point: a design like this is not found in one attempt. It came from iterating, and from talking to people who ship plugins; don't hold an idea back for fear someone takes it. The next slide shows the question in detail.
+- How did we get here? Not in one go.
+- At ADC23 we showed a template with one inference thread per plugin: the design you built in part 1.
+- It worked, for one plugin.
+- [click] After the talk the sonible team asked us: have you thought about many instances?
+- Every plugin opens its own real-time thread.
+- [click] That is the lesson of this whole history: good solutions come from iteration and exchange, not from a single attempt.
 
 ---
 
@@ -164,9 +176,12 @@ Note:
 </div>
 
 Note:
-    - The question from sonible, drawn. Step 8 ended here: one engine and one worker per channel, per instance. The host does not know, and keeps adding instances.
-    - Real-time threads that outnumber cores take turns. A worker that is not scheduled misses its block, and the miss lands in someone else's plugin.
-    - Click: a plugin cannot fix this from inside, because one instance does not see the others. The fix is a static design in a shared library: one pool per process that every instance uses, and ideally every product that loads the same library. That was the idea behind anira v1. The details follow in the next chapter.
+- This is their question, drawn out: our step 8 plugin, ten times.
+- Ten instances with two workers each make twenty real-time threads on eight cores.
+- A thread that is not scheduled in time misses its block, and the miss lands in someone else's plugin.
+- [click] A plugin cannot fix this, because one instance cannot see the others.
+- A library can: one thread pool shared by the whole process, sized to the machine, and every instance queues into it.
+- That was anira v1.
 
 ---
 
@@ -185,7 +200,7 @@ Note:
 </div>
 
 Note:
-    - IS² 2024: the static thread pool from the last slide, presented scientifically as a paper; it won the Industry Award.
+- In 2024 we published that design as a paper at IS², the IEEE International Symposium on the Internet of Sounds, and it won the Industry Award.
 
 ---
 
@@ -204,7 +219,7 @@ Note:
 </div>
 
 Note:
-    - ADC24 in Bristol: anira on stage, for the developers who asked the question in the first place.
+- The same year we brought anira to ADC24 in Bristol, back to the people who had asked the question.
 
 ---
 
@@ -226,9 +241,10 @@ Note:
 <div class="cards-note">v2: every input and output is a tensor with its own shape and rate, not only an audio buffer.</div>
 
 Note:
-    - Models started to take control data: pitch and loudness estimated from the input, driving the model alongside or instead of the audio.
-    - Those values come once per analysis frame, far below the audio rate. A buffer that assumes one sample in, one sample out cannot carry them.
-    - v2 made every input and output a tensor with its own shape and rate, so the block-to-model adaptation is done per tensor. Getting the rates right across host block sizes was the work.
+- Then the models changed.
+- They started taking control data such as pitch and loudness, one value per frame instead of one per sample.
+- v1 was built around one audio buffer in and one out, at the same rate.
+- In v2, every input and output became a tensor with its own shape and its own rate.
 
 ---
 
@@ -247,7 +263,7 @@ Note:
 </div>
 
 Note:
-    - v2 (07/2025): arbitrary tensors, non-audio inputs and outputs, different rates in and out.
+- That was v2, in July 2025.
 
 ---
 
@@ -263,14 +279,15 @@ Note:
   </div>
   <div class="qr">
     {{QR:HTTPS://GITHUB.COM/ANIRA-PROJECT/ANIRA}}
-    <div class="qr-label">Paper</div>
-    <div class="qr-url">link follows</div>
+    <div class="qr-label">anira on GitHub</div>
+    <div class="qr-url">the paper is linked there once it is out</div>
   </div>
 </div>
 
 Note:
-    - TODO: dummy slide. Replace the QR target with the paper's URL and the title with the paper's title once it is out.
-    - For anyone interested in how the thread pool and the real-time path work in a browser: the details are in the paper.
+- In 2026 we took anira off the desktop, and one target was the browser.
+- The hard part there is threads: shared memory, and an audio worklet that must never block.
+- The paper on how we solved that comes out next week; the link will be on GitHub.
 
 ---
 
@@ -289,8 +306,8 @@ Note:
 </div>
 
 Note:
-    - 2026, mobile: iOS and Android, the browser through WASM, LiteRT and ExecuTorch, generators and analysers, a closed-form latency (v2.1 to v2.3).
-    - Each of these added a special case to a design built for audio plugins on the desktop.
+- Next to the browser, 2026 also brought iOS and Android.
+- Every one of these added a special case to a design built for desktop plugins.
 
 ---
 
@@ -322,12 +339,11 @@ Note:
 </div>
 
 Note:
-    - From the v3 architecture document in the anira repo (docs/anira-v3-architecture.md).
-    - The TypeScript package wrapped C++ directly. A library that other languages and hosts load needs one stable, versioned C ABI; the C++ API and the TypeScript package are generated on top of it.
-    - Data beyond audio: v2 opened the shapes, but the library still thought in float buffers. v3 types every tensor (DLPack dtypes: float, int, bool and more, so token IDs for text fit), and image data enters as a Frame that a FrameToTensor stage turns into a tensor. That meant rebuilding the core around one typed tensor.
-    - Some work is not a stream: a camera frame, an analysis, a generation. Async jobs with a deadline next to the Hard real-time contract.
-    - One passive tensor type that carries memory, ownership and readiness across CPU, GPU and NPU. A planner at prepare compiles what was declared into a fixed pipeline. In alpha.2 the tensor is built and carries host memory; the GPU domains follow with M4.
-    - The real-time audio path is unchanged: the nonblocking entries forward to the v2 code paths and never wait.
+- Four places, then, where v2 reached its limits.
+- [click] Data: from float audio buffers to typed tensors, with images and text too.
+- [click] Bindings: from TypeScript wrapping C++ to one versioned C ABI.
+- [click] Timing: next to the hard audio stream, async jobs with a deadline.
+- [click] Memory: one tensor type for CPU, GPU and NPU.
 
 ---
 
@@ -407,8 +423,11 @@ Note:
 <div class="cards-note">Prebuilt in anira-project/backends; which one is available depends on the platform. Any other engine can be registered by name.</div>
 
 Note:
-    - the engines anira wraps, each with the accelerators of the prebuilt packages in anira-project/backends: CPU by default, GPU in the -gpu and -cuda variants. ONNX Runtime with CUDA, CoreML, DirectML and WebGPU; LibTorch with CUDA and MPS; LiteRT with Metal, WebGPU and OpenCL/GL; TFLite with Metal, CoreML and OpenCL delegates; ExecuTorch with CoreML, MPS, MLX and Vulkan. Which one is available depends on the platform (see the matrix in the backends README).
-    - Which combination reaches real-time for audio is an open question: on the CPU it is measured, on the GPU barely. That is the outlook.
+- This is what that opens up: five engines, each with its own set of accelerators.
+- TFLite is the same runtime as LiteRT through its older API, which is why the earlier slide showed four.
+- No engine covers every accelerator, so choosing an engine also means choosing which accelerators you can use.
+- CPU is the default; the GPU paths come in the -gpu and -cuda packages.
+- They are prebuilt in the backends repository, as far as each platform allows, and any other engine can be registered by name.
 
 ---
 
@@ -429,8 +448,8 @@ Note:
 <div class="history-note">Apache 2.0 · tanh lab, TU Berlin · funded by BMFTR since 2026</div>
 
 Note:
-    - Everything in this part runs on the v3 pre-release v3.0.0-alpha.2; v3.0 ships at the end of November. Check the release before you build on it.
-    - Since 2026 funded by the BMFTR through the Prototype Fund; Lina joined the team.
+- Today you run a v3 pre-release, and v3.0 ships at the end of November.
+- anira is Apache 2.0, from tanh lab at TU Berlin, and since this year it is funded by the German Federal Ministry of Research, Technology and Space, the BMFTR.
 
 ---
 
@@ -452,8 +471,12 @@ Note:
 <div class="combos-invite fragment">Measured some of these already? We would like to compare notes.</div>
 
 Note:
-    - Every engine runs on several providers, every provider on several kinds of hardware. Which path is fastest for a given model is not known in advance; kernel quality differs per engine, model class and driver.
-    - Click: a few of the candidate paths. Each one is a question, not an answer.
-    - Click: for audio, the CPU paths are measured and meet real-time. The GPU paths are barely studied for real-time audio, where the transfer and the launch cost count against a block of a few milliseconds.
-    - After the v3.0 release at the end of November we benchmark these combinations systematically; anira's benchmark tools and the plan candidates of v3 are built for exactly that sweep.
-    - Click: anyone who has numbers for one of these paths, or a model that behaves differently, please talk to us. Same lesson as with the thread pool.
+- That leaves an open question.
+- Hardware, execution provider, engine: which path is fastest for a given model?
+- [click] Here are a few of the candidate paths; each one is a question, not an answer.
+- [click] For audio, the CPU paths are measured and they meet real time.
+- On the GPU it has barely been studied.
+- After v3.0 we will benchmark these combinations systematically.
+- [click] If you have numbers for any of these, come and talk to us.
+- The thread pool came out of one conversation after a talk, and we would like the next idea to come the same way.
+- Now Fares shows you how anira works inside.

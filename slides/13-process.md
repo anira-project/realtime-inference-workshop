@@ -6,7 +6,9 @@ One block through anira
 <!-- kind: talk -->
 
 Note:
-    - The third row of the map: every callback. The two kinds of thread, the path of one block, the stages, the waiting, a miss, and the real-time rules.
+- Process: one block through anira.
+- This is the third row of the map, the part that runs in every callback.
+- We go through the two kinds of thread, the path of one block, the stages, the waiting, a miss, and the real-time rules.
 
 ---
 
@@ -17,7 +19,9 @@ Note:
 {{MAP:show=create,prepare|focus=process}}
 
 Note:
-    - The row we fill now: processBlock. One call per callback; everything else in the row is anira's, on the audio thread and in the pool.
+- Process runs in every callback, on the audio thread.
+- The row we fill now is processBlock: one call per callback.
+- Everything else in this row is anira's, on the audio thread and in the pool.
 
 ---
 
@@ -31,7 +35,7 @@ Note:
     <div class="kind-role"><code>process</code>, with pre- and post-processing</div>
     <div class="kind-track"><div class="kind-row callbacks"></div></div>
     <div class="kind-axis"><span>one callback</span><span>time →</span></div>
-    <div class="kind-rules"><b>no allocation</b><b>no lock</b><b>never waits</b></div>
+    <div class="kind-rules"><b>no allocation</b><b>no lock</b><b>waits only if asked</b></div>
   </div>
   <div class="kind inference">
     <div class="kind-name">Inference threads</div>
@@ -47,10 +51,13 @@ Note:
 </div>
 
 Note:
-    - The two halves of the process row: the audio thread on the left, the pool on the right. The slides that follow fill them in.
-    - Left: the audio thread. Every callback runs process with the pre- and post-processing around it, and returns long before its deadline; it never allocates, locks or waits. That is part 1's real-time safety, kept.
-    - Right: the inference threads, one pool per process. Only what is not real-time safe or too heavy moves here: the model run, inside an engine that may allocate and lock, for as long as it takes. Every instance in the process shares the pool.
-    - Configs, prepare and the latency are set up wherever the host calls them, usually its main thread. That is setup before the stream starts, not a thread anira adds.
+- There are two kinds of thread, and each has its own rules.
+- They are the two halves of the process row, and the next slides fill them in.
+- On the left, the audio thread: every callback runs process, with the pre- and post-processing around it.
+- It returns long before its deadline, and it never allocates or locks; it waits only if you ask it to, and we will see how.
+- On the right, the inference threads: one pool per process, shared by every instance.
+- Only the heavy work that is not real-time safe moves there: the model run, inside an engine that may allocate and lock, for as long as it takes.
+- Configs, prepare and the latency run wherever the host calls them, usually its main thread: that is setup before the stream starts, not a thread anira adds.
 
 ---
 
@@ -76,14 +83,19 @@ Note:
 <div class="cards-note fragment" data-fragment-index="5">At the start, silence goes out until the first result is back: that is the latency.</div>
 
 Note:
-    - Built up click by click while it runs. Simplified, not to scale.
-    - First only the audio coming in: a block per callback, at a steady rate.
-    - Click: the push. The audio thread writes every block into the ring buffer, and with nothing taking it out, the ring fills up.
-    - Click: the enqueue. Whenever the ring holds enough for one model run, that part goes into a free slot: at a different rate than the blocks. With no one running them, the slots fill up.
-    - Click: the inference threads. A free thread takes the oldest waiting slot, runs the model and writes the result back. One run takes longer than the time between two windows here, so the two threads take turns.
-    - Click: the dequeue. The audio thread's path in one callback: push, enqueue (only when the ring holds enough), straight down, dequeue. The inference threads on the right run on their own. With wait_ratio = 0 the dequeue comes right after the enqueue: the slot just handed over cannot be back yet, so the dequeue takes an older one, or nothing.
-    - Click: the pop. Once a slot is done, the dequeue moves its result into the output ring buffer, and every pop plays one block out of it. Before that, silence goes out.
-    - The silence at the start is the latency. anira computes it at prepare and reports it to the host.
+- Audio in, through the pool, audio out: push, then pop, every callback.
+- We build it up click by click while it runs; it is simplified, not to scale.
+- First only the audio coming in: a block per callback, at a steady rate.
+- [click] The push: the audio thread writes every block into the ring buffer, and with nothing taking it out, the ring fills up.
+- [click] The enqueue: whenever the ring holds enough for one model run, that part goes into a free slot, at a different rate than the blocks.
+- With no one running them, the slots fill up.
+- [click] The inference threads: a free thread takes the oldest waiting slot, runs the model and writes the result back.
+- One run takes longer than the time between two windows here, so the two threads take turns.
+- [click] The dequeue: the audio thread's path in one callback is push, enqueue when the ring holds enough, straight down, dequeue.
+- The inference threads on the right run on their own.
+- The slot just handed over is still running, so the dequeue takes an older result, or none yet.
+- [click] The pop: once a slot is done, the dequeue moves its result into the output ring buffer, and every pop plays one block out of it.
+- Until the first result is back, silence goes out: that silence is the latency, which anira computes at prepare and reports to the host.
 
 ---
 
@@ -103,7 +115,10 @@ m_output.pop(m_wet_block.data(), num_samples);          // host block out
 ```
 
 Note:
-    - Ring in, model block out, model block in, ring out: that is pre- and post-processing, and ours knew only one shape, audio to audio.
+- In part 1 we did the pre- and post-processing inside the processor, by hand.
+- The host block into the ring, model blocks out of it, the results back, and the host block out of the output ring.
+- That is pre- and post-processing, and ours knew only one shape: audio to audio.
+- anira turns this into stages.
 
 ---
 
@@ -164,12 +179,14 @@ Note:
 <div class="cards-note">The default stage is step 2: a window out of the ring, the result back in. <code>before</code> and <code>after</code> are empty. You write a stage for another shape.</div>
 
 Note:
-    - A stage is the 3.x form of the PrePostProcessor: one per pipeline, with up to four phases. The default stage does what step 2 did; a receptive-field model declares window and overlap, and the default stage fills the history.
-    - Top lane, the audio thread: the host block goes into the input ring; pre_process takes one window out of it into the model tensor; the tensor sits in a slot, stamped, and goes into the queue. The callback returns.
-    - Bottom lane, a pool thread: before_inference, the engine, after_inference, on the model tensors in place. Then the slot goes back.
-    - Top lane again, a later callback: the oldest finished stamp is taken, post_process pushes the result into the output ring, and the host block is served from it.
-    - The state loop sits around the engine itself, not around the stage: anira binds the declared pair to two buffers and swaps them per inference. What came out is what goes in next. No copy, and no code of yours.
-    - Four phases, at most one stage per pipeline. pre and post are nonblocking: a stage that allocates there is your bug, and RTSan sees it.
+- anira puts four phases around the engine: pre_process and post_process on the audio thread, before_inference and after_inference on the pool.
+- [click] Top lane: the host block goes into the input ring, and pre_process takes one window out of it as the model tensor.
+- The tensor goes into a slot with a stamp, a running number that keeps the results in order, and the callback returns.
+- [click] Bottom lane: a pool thread runs before_inference, the engine and after_inference on the tensor, and hands the slot back.
+- In a later callback the audio thread takes the next stamp in line, and post_process writes the result into the output ring.
+- [click] The state pair from the create chapter swaps around the engine itself, not around the stage.
+- The default stage is what step 2 did by hand, with before and after empty.
+- You write your own stage only when the model needs another shape than audio in, audio out.
 
 ---
 
@@ -195,8 +212,13 @@ Note:
 </div>
 
 Note:
-    - The same pipeline with a fast model: a window of two blocks, one run takes about a third of a block. Simplified, not to scale.
-    - wait_ratio = 0, the default: the audio thread goes straight from the enqueue to the dequeue. The window it just handed over is still running, so its result comes out one callback later. That callback is latency.
+- Between enqueue and dequeue, the audio thread may wait: wait_ratio says how long.
+- process itself never waits; only its waiting twin, anira_handler_process_wait, does, and only up to wait_ratio of a block.
+- Why wait at all: if the model is fast, a short wait gets the result out in the same callback, one block earlier.
+- This is the same pipeline with a fast model: a window of two blocks, and one run takes about a third of a block; simplified, not to scale.
+- With wait_ratio 0, the default, the audio thread goes straight from the enqueue to the dequeue.
+- The window it just handed over is still running, so its result comes out one callback later.
+- That callback is latency.
 
 ---
 
@@ -222,8 +244,11 @@ Note:
 </div>
 
 Note:
-    - wait_ratio = 0.25: between enqueue and dequeue the audio thread blocks for up to a quarter of the block period. The arrow down stands for one block period; the dashed box beside it is the share the ratio allows. The model needs a third of a block, so the wait runs out first.
-    - The dequeue finds nothing new, the result comes out one callback later as before, and the quarter block of waiting is gone from the callback for nothing.
+- With wait_ratio 0.25, process_wait blocks the audio thread for up to a quarter of the block period between enqueue and dequeue.
+- The arrow down stands for one block period, and the dashed box beside it is the share the ratio allows.
+- The model needs a third of a block, so the wait runs out first.
+- The dequeue finds nothing new, and the result comes out one callback later, as before.
+- The quarter block of waiting is gone from the callback for nothing.
 
 ---
 
@@ -249,9 +274,10 @@ Note:
 </div>
 
 Note:
-    - wait_ratio = 0.5: the audio thread blocks for up to half a block. The model is done after a third, the audio thread wakes up, and the dequeue takes this window's result right away.
-    - The result goes out in the same callback: the silence at the start is shorter, the latency is one block lower.
-    - It buys latency with callback time: fine for one instance on a quiet machine, dangerous for ten. Only the _wait entries wait; process itself never does.
+- With wait_ratio 0.5, process_wait blocks it for up to half a block.
+- The model is done after a third, the audio thread wakes up, and the dequeue takes this window's result right away.
+- The result goes out in the same callback: the silence at the start is shorter, and the latency is one block lower.
+- It buys latency with callback time: fine for one instance on a quiet machine, dangerous for ten.
 
 ---
 
@@ -276,10 +302,13 @@ Note:
 </div>
 
 Note:
-    - Step 6's simple answer to a late inference: the block that is not back in time goes out as zeros.
-    - Click: the signal jumps to zero at the start of that block and back at its end. Two discontinuities, an audible click, at every miss.
-    - And the late result still arrives afterwards. Step 6 drops it on arrival (m_wet_debt counts the samples that already went out as silence), so the wet path stays exactly latency_samples() late; it took a bug fix to get right.
-    - anira makes this a choice of the contract instead of code in your plugin: next slide.
+- What happens if an inference is too late?
+- In step 6 the answer was simple: the block that is not back in time goes out as zeros.
+- [click] The signal jumps to zero at the start of that block and back at its end.
+- Two discontinuities: an audible click, at every miss.
+- And the late result still arrives afterwards, so step 6 drops it on arrival to keep the wet path exactly at its latency.
+- That took us a bug fix to get right.
+- anira makes this a choice in the contract instead of code in your plugin.
 
 ---
 
@@ -295,7 +324,7 @@ Note:
 
 <div class="statement-points">
   <div><code>bypass</code>, the default: the input block, as it came in</div>
-  <div><code>hold_last</code>: the head of the last block the model delivered</div>
+  <div><code>hold_last</code>: the last block the model delivered, repeated</div>
   <div><code>zeros</code>: silence</div>
   <div><code>callback</code>: your function, on the audio thread, for that block</div>
 </div>
@@ -303,11 +332,14 @@ Note:
 <div class="cards-note">The stream stays aligned: a late result that arrives afterwards is dropped, never played shifted.</div>
 
 Note:
-    - process() returns ANIRA_MISSED for such a block, a success: the buffers hold what the policy chose. The stream stays aligned, as in step 6, without the bug fix.
-    - Catch-up is strict: after a miss every late sample that arrives is discarded, so a delivered block is the stream at exactly its latency, or the policy's fill.
-    - Overload is the same event one level down: when a callback has a window ready and no slot is free, that window is dropped and filled by the policy; rt_error records ANIRA_ERROR_CAPACITY.
-    - The same rule bites a pop that asks for more than is there: it is a miss. Step 10 checks get_available_samples before it pops.
-    - A miss is not the end: the pool catches up, and the next block is on time again.
+- What a missed block delivers is the contract's choice: on_miss.
+- bypass, the default, passes the input through unchanged.
+- hold_last repeats the last block the model delivered.
+- zeros is silence, as in step 6, and callback calls your own function on the audio thread.
+- process reports the block as missed, and that is not an error: the buffer holds what the policy chose.
+- A late result that arrives after a miss is dropped, so the stream stays aligned, without step 6's bug fix.
+- If every slot is busy, the window is dropped and filled the same way: that is overload, and rt_error tells you so.
+- After a miss the pool catches up, and the next block is on time again.
 
 ---
 
@@ -321,12 +353,13 @@ Note:
   <div><code>auto</code> picks inline only for an engine that declares itself real-time safe, and only if the measured budget fits</div>
 </div>
 
-<div class="cards-note">With alpha.3 (M2b). Until then every inference runs on the pool.</div>
+<div class="cards-note">Coming in a later release. Until then every inference runs on the pool.</div>
 
 Note:
-    - For a model that is small enough, handing it to the pool costs more latency than it saves: the inference term of the formula is at least one host block.
-    - Inline removes that term: the model runs in the callback, and inline_ratio bounds the share of the block period it may take. An infeasible inline is ANIRA_ERROR_BUDGET at prepare.
-    - It is only safe for an engine without allocations and locks in its run, which is why auto asks the engine's flag. A hand-written network is the typical case.
+- Next: inline execution, with no inference term in the latency.
+- For a tiny model, the trip to the pool costs at least one host block of latency, more than the model itself.
+- A later release can run such a model inside process, on the audio thread, but only for an engine that declares itself real-time safe and only if the budget fits.
+- Until then every inference runs on the pool.
 
 ---
 
@@ -344,7 +377,10 @@ void audio_callback(Engine& engine, float* samples, size_t num_samples)
 <div class="cards-note">RTSan on both engines, one run: what it caught, and what it could not see.</div>
 
 Note:
-    - Step 4: the callback tagged nonblocking, the build with -fsanitize=realtime, one run per engine. It has to be repeated for every change, every model, every engine.
+- In step 4 we checked real-time safety by hand, once, on our machine.
+- We tagged the callback nonblocking, built with -fsanitize=realtime, and ran RTSan once per engine.
+- That showed us what it caught, and what it could not see.
+- And it has to be repeated for every change, every model, every engine.
 
 ---
 
@@ -366,10 +402,15 @@ Note:
 <div class="cards-note">Every audio-thread entry carries <code>ANIRA_NONBLOCKING</code>; the whole test suite runs under RTSan in CI.</div>
 
 Note:
-    - The thread tags are part of the API, the way CLAP does it: main-thread for the control path, driver-thread for the host's real-time callback, inference-thread for the pool. Every entry in the headers says which one may call it.
-    - ANIRA_NONBLOCKING is clang's nonblocking attribute on every driver-thread entry: the compiler checks what it calls (-Werror=function-effects), and the library's CI runs every test under RTSan.
-    - The library logs from the audio thread without a lock: anira_log_rt writes a fixed record into a queue, and a drain thread prints it. A failed audio-thread call says why in rt_error.
-    - A custom stage's pre_process and post_process run on the audio thread too: allocating there is your bug, and RTSan sees it.
+- In anira every entry names its thread, and the audio-thread entries are nonblocking.
+- The thread tags are part of the API, as in CLAP: main for setup, audio for the host's callback, pool for inference.
+- from_file, create, prepare, get_latency and destroy are main; process, pre_process and post_process are audio; before_inference, the engine and after_inference are pool.
+- ANIRA_NONBLOCKING is clang's nonblocking attribute on every audio-thread entry, so the compiler checks what each one calls.
+- The exceptions are the waiting twins like process_wait: they are tagged blocking, and calling one in the callback is your decision.
+- And the whole test suite runs under RTSan in CI.
+- That includes your own stage: allocate in pre_process and RTSan reports it.
+- Logging from the audio thread needs no lock: a fixed record goes into a queue, and a drain thread prints it.
+- A failed audio-thread call says why in rt_error.
 
 ---
 
@@ -380,14 +421,14 @@ Note:
 {{MAP:show=create,prepare,process}}
 
 Note:
-    - The third row, filled: input tensor, ring, pre_process, a stamped slot, a pool thread, the engine with the state pair around it, post_process, ring, output tensor.
-    - Every row filled. The last chapter looks at the map as one piece.
+- After process, every row is filled.
+- The next chapter walks the whole map once, from your callback to the engine and back.
 
 ---
 
 <div class="tag">Take away</div>
 
-## The callback never waits.<br><span class="then">The policies are yours.</span>
+## The callback waits only if you ask.<br><span class="then">The policies are yours.</span>
 
 <div class="statement-points">
   <div>Waiting: a strategy for the pool, a ratio for the callback, a policy for a miss</div>
@@ -396,4 +437,8 @@ Note:
 </div>
 
 Note:
-    - Next: the whole picture, the C ABI underneath, and the three places in a plugin.
+- The callback waits only if you ask, and the policies are yours.
+- Waiting: a strategy for the pool, a ratio for the callback, a policy for a miss.
+- Stages: four phases around the engine, two of them on the audio thread.
+- Safety: every entry names its thread, and the audio-thread ones are checked.
+- Next: the whole picture, the C ABI underneath, and the three places in a plugin.

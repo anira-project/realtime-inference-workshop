@@ -4,7 +4,8 @@
 <!-- kind: exercise -->
 
 Note:
-    - The model from the slides, cut in the middle: eight numbers per block, and a hand on them.
+- Step 10: encoder, latents, decoder.
+- Now we cut the model in the middle.
 
 ---
 
@@ -21,8 +22,11 @@ Note:
 </div>
 
 Note:
-    - The VAE figure from the first chapter, now as two files. The encoder emits one latent frame per 2048 samples; the decoder turns one frame back into 2048 samples.
-    - What the dimensions do (from the latent analysis): z0 loudness, z2 register, z4 swell. Moving them is the instrument.
+- This is the variational autoencoder from the introduction, now as two files.
+- The encoder turns 2048 samples into one latent frame of eight numbers; we call them z.
+- The decoder turns that frame back into 2048 samples.
+- In the middle you can reach in, with a bias and a scale on each of the eight numbers.
+- Two of them you will hear in a moment: z0 is loudness, z2 is register.
 
 ---
 
@@ -35,6 +39,12 @@ Note:
   <div><small>2</small>Bias and scale on z, on the audio thread</div>
   <div><small>3</small>The decoder: a latent frame in, audio out; it declares the sum, frames × 2048 + samples</div>
 </div>
+
+Note:
+- We use two handlers in one context, which means one pool, and your code sits between them.
+- First, the encoder: audio in, a frame out, at 1/2048 of the rate.
+- Second, bias and scale on z, on the audio thread.
+- Third, the decoder: a frame in, audio out, and it declares the total latency.
 
 ---
 
@@ -65,10 +75,10 @@ Note:
 </div>
 
 Note:
-    - Both model files carry their own state pair, as in step 9: the encoder's 34,304 floats, the decoder's 29,184.
-    - Nobody buffers between the two handlers but anira: a frame popped from the encoder is pushed into the decoder in the same callback; the decoder's latent ring holds it. Its computed latency assumes the frame is there when the window starts; ours is late by the encoder's latency, so the sum is declared on the decoder (TODO 3).
-    - The encoder's first frame is its priming, zeros, and a zero latent is a sound: skip it (TODO 1).
-    - The decoder anchors on its audio output: its clock is the audio it produces, and the latent input follows at one frame per 2048 samples.
+- Both models carry their own state pair, as in Step 9.
+- Their configs, encoder.json and decoder.json, are given, and the contract is the one from Step 9.
+- Between the two handlers you write no buffer: anira's queues are the only ones.
+- You edit only main.cpp.
 
 ---
 
@@ -92,8 +102,10 @@ Note:
 ```
 
 Note:
-    - "anchor": the streamed tensor the host geometry refers to. For the decoder that is the audio output; the latent input's rate follows from the two windows, 1 per 2048.
-    - The model's own delay, 2224, is declared once, on the decoder's output: latent frames carry no timing below a frame, so the chain's delay sits where the audio comes out.
+- The decoder has no audio input: it generates audio from latent frames.
+- So its anchor, the tensor whose time the host's blocks count in, is the audio output.
+- The latent input follows at one frame per 2048 samples.
+- The model's own delay, 2224, is declared once, where the audio comes out.
 
 ---
 
@@ -101,7 +113,7 @@ Note:
 
 ## Task
 
-<div class="task-timer" data-minutes="20"></div>
+<div class="task-timer" data-minutes="10"></div>
 
 Fill in the TODOs in `steps/10_split/exercise/main.cpp`
 
@@ -135,6 +147,12 @@ cmake --build --preset release --target step10_exercise
   </div>
 </div>
 
+Note:
+- You have ten minutes.
+- Fill in the TODOs in main.cpp, then build step10_exercise and run it.
+- With zero bias and unit scale, the output has to match the forward model from Step 9.
+- The check also needs the right latency: encoder and decoder together.
+
 ---
 
 <div class="tag">Solution</div>
@@ -156,9 +174,12 @@ while (anira_handler_get_available_samples(encoder.m_handle, 0, 0, &available) =
 ```
 
 Note:
-    - push and pop instead of process: the two sides run at different rates, so the output is collected separately. A frame comes back about one latency later; get_available_samples says whether one is waiting. Pop only then: a pop with nothing waiting is a miss, and after a miss anira drops the late frame to stay aligned.
-    - The first frames are the encoder's latency priming, zeros. Fed to the decoder they are not silence: the diff is 0.014 instead of 3e-7. Skip them.
-    - What comes out goes straight into the decoder (TODO 3), in the same callback. No buffer of ours in between.
+- TODO 1 is the encoder.
+- We use push and pop instead of process, because audio goes in at one rate and frames come out at another.
+- get_available_samples tells us whether a frame is waiting, and we pop only then.
+- A pop with nothing waiting counts as a miss.
+- The first frame is the encoder's priming, its latency: a frame of zeros.
+- A zero latent frame is not silence, the decoder turns it into sound, so we skip it.
 
 ---
 
@@ -173,8 +194,8 @@ for (size_t i = 0; i < 8; ++i) {
 ```
 
 Note:
-    - Atomics, so the sliders may move while the audio thread reads. Nothing else: no allocation, no lock.
-    - All zero bias and unit scale: the output is the forward model's, to 1e-6. That is the check.
+- TODO 2 is bias and scale on z: one loop over eight numbers, on the audio thread.
+- Scale and bias are atomics, so a slider on the main thread can move them while audio runs, with no lock and no allocation.
 
 ---
 
@@ -195,9 +216,11 @@ anira_handler_pop_data(decoder.m_handle, &block, 0, nullptr);   // or the miss p
 ```
 
 Note:
-    - The decoder's own latency assumes a frame is there when its window starts. Ours arrives one encoder latency late; without the declaration a quarter of the callbacks miss. Declaring the sum primes its ring for the frame to arrive, and is the number the host is told.
-    - The encoder's latency is in frames, so times 2048. The decoder's is in samples.
-    - Both handlers share the context: one pool, two stateful streams, each in order.
+- TODO 3 is the decoder.
+- Prepared on its own, it reports 4272, the same as the forward model in Step 9: 2224 of model plus the block handling.
+- That assumes a frame is there when its window starts, but ours arrives one encoder frame late.
+- So we declare the sum in the contract, 2048 plus 4272, and prepare again.
+- That gives 6320, the number the host is told, and the same number we built by hand in Step 6.
 
 ---
 
@@ -213,4 +236,6 @@ Note:
 </div>
 
 Note:
-    - Bias on z0 and z2, played live: louder, higher. Then the hand that moves them.
+- [Play it: bias on z0 and z2 live, louder, then higher.]
+- That is the model taken apart, with eight numbers in your hand.
+- Next: a hand that moves them.

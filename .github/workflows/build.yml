@@ -26,7 +26,7 @@ jobs:
           - name: macOS-arm64
             os: macos-latest
           - name: macOS-x86_64
-            os: macos-13
+            os: macos-15-intel
           - name: Linux-x86_64
             os: ubuntu-latest
           - name: Linux-arm64
@@ -39,16 +39,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The models come from this repository's release and never change within
-      # a tag, so they are worth caching: 380 MB per run otherwise.
-      - name: Cache models
+      # The archives download.cmake fetches (engines, models, JUCE) never change
+      # for a given hash, so they are worth caching: about 500 MB per run
+      # otherwise. The engines differ per platform.
+      - name: Cache downloads
         uses: actions/cache@v4
         with:
-          path: models
-          key: models-${{ hashFiles('cmake/models.cmake') }}
+          path: downloads
+          key: downloads-${{ matrix.name }}-${{ hashFiles('cmake/backends.cmake', 'cmake/models.cmake', 'cmake/juce.cmake') }}
 
-      # LibTorch alone is 80 MB compressed, JUCE is a full clone, and the
-      # benchmark library is built from source.
+      # The unpacked engines and JUCE, and the benchmark library built from
+      # source.
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -67,14 +68,21 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
 
+      # A bare --parallel is an unbounded make -j: on the smaller runners the
+      # compilers of anira and JUCE together run out of memory, and the runner
+      # is shut down.
       - name: Build every step and the plugin
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release --parallel 4
 
       # The solutions carry the claims the workshop makes: the output matches
       # the Python reference, the audio thread allocates nothing, the latency
       # is what we say it is. A non-zero exit fails the run.
       - name: Run the solutions
         shell: bash
+        # A shared runner does not keep up with real time; four times slower
+        # still checks every alignment and latency claim (host.h)
+        env:
+          WORKSHOP_HOST_SLOWDOWN: 4
         run: |
           for binary in step01_solution step02_solution step05_solution step06_solution step09_solution step10_solution; do
             path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)

@@ -59,10 +59,13 @@ async function generateHTML(isDev = false) {
   const agenda = buildAgenda(chapters);
   const integrationTemplate = await fs.readFile(
     path.join(__dirname, '../slides/templates/integration.html'), 'utf-8');
+  const mapTemplate = await fs.readFile(
+    path.join(__dirname, '../slides/templates/map.svg'), 'utf-8');
   let slidesContent = '';
   for (const chapter of chapters) {
     let content = chapter.content.replace(/\{\{AGENDA\}\}/g, agenda);
     content = renderIntegration(content, integrationTemplate);
+    content = renderMaps(content, mapTemplate);
     content = renderStreams(renderIcons(await renderWaveforms(content)));
     content = await renderQrCodes(content);
     // data-part lets the chapter overview (Esc) group the chapters by part
@@ -75,7 +78,7 @@ async function generateHTML(isDev = false) {
   const html = renderTemplate(slidesTemplate, {
     SLIDES_CONTENT: slidesContent,
     PRESENTATION_TITLE: 'Real-Time Neural Inference Workshop',
-    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js"></script>\n  <script src="js/overflow_check.js"></script>' : ''
+    HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js?v={{BUILD_ID}}"></script>\n  <script src="js/overflow_check.js?v={{BUILD_ID}}"></script>' : ''
   });
   
   await fs.writeFile(path.join(distDir, 'workshop.html'), html);
@@ -93,6 +96,26 @@ function renderIntegration(content, template) {
   return content.replace(/\{\{INTEGRATION:(\w+)\}\}/g, (match, step) =>
     template.replace(/\{\{(TRAIN|EXPORT|IMPLEMENT)\}\}/g, (m, name) =>
       name.toLowerCase() === step ? 'highlight-step' : ''));
+}
+
+// {{MAP:show=create,prepare|focus=process|abi|memory}} → the architecture map: the rows in
+// show filled in, the focus row outlined, the C ABI line drawn, the preallocated memory marked.
+// {{MAP}} alone is the skeleton.
+function renderMaps(content, template) {
+  return content.replace(/\{\{MAP(?::([^}]*))?\}\}/g, (match, args) => {
+    const classes = ['map'];
+    for (const option of (args || '').split('|').filter(Boolean)) {
+      const [key, value] = option.split('=');
+      if (value === undefined) {
+        classes.push(`map-${key}`);
+        continue;
+      }
+      for (const row of value.split(',')) {
+        classes.push(`map-${key}-${row}`);
+      }
+    }
+    return template.replace('{{MAP_CLASSES}}', classes.join(' '));
+  });
 }
 
 // {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=200|from=2|to=4}} → an SVG of the
@@ -466,8 +489,9 @@ const THEME_ICONS = `<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stro
 
 function renderTemplate(template, data) {
   let result = template;
-  // Stamped onto every css/ and js/ link, so a new build is never served from a stale cache
-  data = { THEME_ICONS, BUILD_ID: Date.now().toString(36), ...data };
+  // Stamped onto every css/ and js/ link, so a new build is never served from a stale cache.
+  // Replaced last, so it also reaches the links that other values insert (the dev scripts).
+  data = { ...data, THEME_ICONS, BUILD_ID: Date.now().toString(36) };
   
   // Replace all placeholders
   for (const [key, value] of Object.entries(data)) {

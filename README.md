@@ -17,7 +17,10 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 ## Setup
 
 CMake ≥ 3.22 and a C++17 compiler. The models and the inference engines are
-downloaded at configure time; nothing else to install.
+downloaded at configure time; nothing else to install. **Configure once before
+the workshop**, at home: about 500 MB, and the room's network is shared by
+everyone. The archives are kept in `downloads/`, so every later build
+directory configures without the network.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -47,6 +50,17 @@ build.
 
 Build a single step with `-DWORKSHOP_STEP=01`. See
 [models/README.md](models/README.md) for the model.
+
+If a download fails in the room, it is retried a few times. If it still fails,
+take the archives from the room's mirror or the USB stick instead of GitHub:
+
+```bash
+cmake --preset release -DWORKSHOP_MIRROR_URL=file:///Volumes/<stick>/downloads
+```
+
+A mirror is any `downloads/` folder of a machine that has configured once, with
+`-DWORKSHOP_JUCE=ON` so it holds JUCE and the hand tracking models too, served
+as files or over HTTP (`python3 -m http.server` inside it).
 
 The steps so far:
 

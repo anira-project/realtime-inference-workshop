@@ -263,8 +263,8 @@ Note:
 
 **Script:**
 
-"The correct blocksize is 2048, which is set by the model at export time. You can try to give the model 512 and the engine will tell you the
-model returned 2048 samples for 512 in."
+"The correct blocksize is 2048, which is set by the model at export time. You can try to give the model 512, or 4096, and the model
+itself will tell you that it takes exactly 2048 samples per call."
 
 ---
 

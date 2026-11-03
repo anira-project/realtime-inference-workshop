@@ -4,9 +4,8 @@
 <!-- kind: exercise -->
 
 Note:
-    - First hands-on block. Everyone builds and runs before we talk about speed.
-    - The first step will be to have a minimal C++ script that implements the model and runs it. 
-    -We will ignore real-time concerns for now
+- First step: a minimal C++ program that runs the model
+- Ignore real-time for now
 
 **Script:**
 
@@ -25,6 +24,10 @@ Note:
 </div>
 
 Note:
+- Goal: run the model in C++
+- Load it with LibTorch
+- Run a test signal through, block by block
+- Compare with the Python output
 
 **Script:**
 
@@ -58,10 +61,10 @@ Note:
 </div>
 
 Note:
-    - model.pt: the model, TorchScript, graph + weights, 127 MB; stateful, the state lives inside it.
-    - WORKSHOP_MODEL_PATH: set by CMake (-DWORKSHOP_MODEL=...), read in main.cpp as k_model.m_path.
-    - support.h (report_line, k_tolerance) is plumbing for the checks and stays off the slides.
-    - test_signal.h / target_signal.h: compiled in, no audio files, no Python.
+- Model: TorchScript file, graph + weights
+- Input signal + Python reference, compiled in as headers: no audio files, no Python
+- Helper: the engine wrapper
+- Only edit `main.cpp` in steps/01_minimal_inference
 
 **Script:**
 
@@ -81,8 +84,10 @@ Note:
 </div>
 
 Note:
-    - Input: 220 Hz sine at half scale, 8 blocks of 2048 samples at 44.1 kHz; shown here: blocks 6 and 7, where the output is strongest; the dashed line between them is a block boundary.
-    - Target: what the model made of it, in Python. The first block is nearly silent — the model's latency has not filled yet.
+- Input: 220 Hz sine
+- Reference: what the model makes of it in Python
+- Much quieter, not a sine anymore: a piano model's take on a sine
+- First block almost silent: the model's own latency (step 6)
 
 **Script:**
 
@@ -102,7 +107,10 @@ engine.reset();                       // Clears the model's state
 ```
 
 Note:
-    - What changes later is who calls process(), and from which thread.
+- Three methods: `load_model`, `process`, `reset`
+- `reset` wipes the model's memory: its convolutions keep history from past blocks (more in step 7)
+- Remember these three
+- Later, what changes: who calls `process`, and from which thread
 
 **Script:**
 
@@ -128,11 +136,13 @@ std::copy_n(output.data_ptr<float>(), num_samples, samples);
 ```
 
 Note:
-    - load: a TorchScript file carries graph and weights; no model class in C++. eval(): inference mode.
-    - NoGradGuard: no autograd graph, no allocations for it.
-    - from_blob wraps your buffer, no copy — the buffer must outlive the tensor. Shape {batch, channels, samples}.
-    - forward also advances the model's state; contiguous() guarantees a flat layout to read from.
-    - copy_n writes back in place.
+- `load_model`: `torch::jit::load`, structure + weights, no rebuilding in C++
+- 127 MB, so load once and keep the engine
+- `eval()`: not training anymore
+- Every block: `NoGradGuard` skips the learning bookkeeping
+- `from_blob`: wraps our buffer, no copy. Shape: 1 batch, 1 channel, N samples
+- `forward`: runs the block, updates the memory
+- Copy the result back: in place, like an audio callback
 
 **Script:**
 
@@ -190,6 +200,12 @@ cmake --build --preset release --target step01_exercise
 </div>
 
 Note:
+- Three TODOs: create the engine, pick the block size, run each block
+- Build commands are on the slide
+- 10 minutes, don't worry if you don't finish
+- We solve it together, solutions are in the solution's main.cpp
+- Walk around: most problems are build problems, not code problems
+
 **Script:**
 
 "So now we get to our first task. There are three TODOs in the exercise file. First create the engine, then pick the block size, and finally run each block.
@@ -216,8 +232,10 @@ engine.load_model(model_path);
 ```
 
 Note:
-    - Outside the loop. Created inside, block 1 is already wrong: the state was thrown away.
-    - Slow, too: 127 MB read per block. The engine lives as long as the stream.
+- Only the path to fill in, but look where the engine sits: outside the loop
+- Inside the loop: slow, loads 127 MB every block
+- Inside the loop: wrong, throws away the state every block
+- The engine lives as long as the stream
 
 **Script:**
 
@@ -240,9 +258,8 @@ const size_t process_size = k_model.m_input_size; // <- fill out
 ```
 
 Note:
-    - The model sets it, fixed at export.
-    - Smaller sizes: the traced model still hands back 2048 samples, and the engine stops with "the model returned 2048 samples for 512 in".
-    - Multiples of 2048 happen to go through and match here; nothing in the export promises that.
+- 2048, set by the model at export
+- Try 512: the engine says the model returned 2048 samples for 512 in
 
 **Script:**
 
@@ -264,7 +281,9 @@ for (size_t i = 0; i < num_blocks; ++i) {
 ```
 
 Note:
-    - In place: afterwards output holds what the model made of the signal.
+- A plain loop, runs the model in place
+- `output` starts as a copy of the input
+- `process()` reads the samples and overwrites them with the result
 
 **Script:**
 
@@ -284,8 +303,8 @@ Note:
 </div>
 
 Note:
-    - Same output as in Python. Whether it is fast enough is still open.
-    - Straight into step 2: the host's block size.
+- Same output as Python: it works
+- But a host doesn't always hand us 2048 samples: step 2
 
 **Script:**
 

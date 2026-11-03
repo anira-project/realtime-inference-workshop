@@ -4,8 +4,9 @@
 <!-- kind: exercise -->
 
 Note:
-    - The output is late. By how much, exactly?
-    - Ask first: who reports latency in their plugins today, and where did the number come from?
+- Ask: who reports latency in their plugins? Where does the number come from?
+- Our output is late: by how much, and what do we do about it?
+- Also the dry/wet mix: common use case, has implications for latency
 
 **Script:**
 
@@ -36,10 +37,13 @@ Note:
 </div>
 
 Note:
-    - The picture is stylised: the same sine in two colours. The real wet signal is much quieter.
-    - A latency that changes with CPU load is not a latency, it is a guess.
-    - The host gets one number, once, and lines the track up with it. Everything else in the session is aligned to it.
-    - If it changes mid-stream, you get a click at best. So: pick the number the design can always hold, and pad to it.
+- What kind of latency do we want? Not the smallest, a **fixed** one
+- Picture is stylised: same sine in two colours, real wet is much quieter
+- Top: changes with CPU load. Bottom: always the same
+- Host asks once, aligns the whole session to that number
+- If it changes: track out of time, at best a click
+- A latency that changes with load is a guess
+- Pick the number the design can always hold, pad up to it
 
 **Script:**
 
@@ -68,10 +72,10 @@ The host asks our plugin for its latency once, and then aligns the whole session
 </div>
 
 Note:
-    - Stylised again: the same sine in two colours.
-    - The wet path is late by the design: collect a block, hand it to the worker, pick the result up later. And the model itself answers late.
-    - Mix an undelayed dry with a late wet and you do not get a blend: you get a slap-back, and comb filtering on the way there.
-    - So the dry path is delayed by exactly the same amount.
+- Wet is late by design: collect a block, hand to worker, pick up later, and the model answers late
+- Undelayed dry + late wet: no blend, a slap-back echo and comb filtering
+- Delay dry by exactly the same amount
+- Then they line up and we can crossfade
 
 **Script:**
 
@@ -91,6 +95,11 @@ If we mix a dry signal that isn't delayed with a wet signal that is, we don't ge
 </div>
 
 Note:
+- Goal: a fixed latency number, wet and dry aligned
+- Define the latency
+- Tell the host, use it to delay the dry path
+- Write the mix: easy once both sides are equally late
+
 **Script:**
 
 "So our goal is: work out a fixed latency number, so that we have a predictable delay and wet and dry are aligned. First we define the latency. We tell it to the host, and we use it to delay the dry path. And then we write the mix, which is easy once both sides are equally late."
@@ -125,8 +134,10 @@ Note:
 </div>
 
 Note:
-    - LatencyProcessor is step 5's processor plus a dry path: a third ring buffer and set_mix(). How much silence the dry ring buffer starts with is TODO 2.
-    - The host runs in real time, 512 samples per call.
+- No new files
+- Step 5's processor plus a dry path
+- Third ring buffer, filled with silence in `prepare`: as many samples as our latency
+- Host still real time, 512 samples per call
 
 **Script:**
 
@@ -176,6 +187,12 @@ cmake --build --preset release --target step06_exercise
 </div>
 
 Note:
+- `main.cpp` in steps/06_latency/exercise
+- TODO 1: where does the delay come from? Collecting, handing over, the model
+- TODO 2: delay the dry signal by that number
+- TODO 3: the mix
+- 5 minutes, don't worry if you don't finish, we solve it together
+
 **Script:**
 
 "Your turn. You'll find the `main.cpp` in `steps/06_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: collecting a block, handing it over to the worker, and the model itself. In the second TODO you delay the dry signal by that number, and the third is the mix. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
@@ -209,13 +226,13 @@ size_t latency_samples() const {
 <!-- </div> -->
 
 Note:
-    - 6320 samples = 143.3 ms at 44.1 kHz.
-    - The model's 2224 samples (50.4 ms) are its own: causal convolutions and transposed convolutions (1696) plus the filter bank (528). scripts/export_model.py computes it from the export; it is not visible from C++.
-    - The wet path is primed with the two blocks only; the model's delay is already inside what it returns. The dry path is delayed by all 6320.
-    - The second block is a choice: it buys the worker a full block of time, and in exchange the latency is a fixed number.
-    - The budget from step 3, closed: that block is 46.4 ms, the warmed-up worst case is about 10-12 ms on this laptop. It fits, with room to spare.
-    - 143 ms is fine for mixing, not for playing live. Part 2 comes back to how low it can go.
-    - In a plugin: setLatencySamples(processor.latency_samples()) once in prepareToPlay; the host compensates every other track. Step 8.
+- Collect a full block: 2048
+- Hand-over: a full block of time for the worker: 2048. A choice
+- Smaller: the worker might not be done, latency no longer fixed
+- That block gives 46 ms, we measured 10 to 12 at worst once warmed up: fits
+- The model itself: 2224, convolutions and filter bank, from the export script, not visible from C++
+- Total: 6320 samples, about 143 ms at 44.1 kHz. We report this to the host
+- Honest: fine for mixing, can't play through it live. Safe choice, part 2 comes back to it
 
 **Script:**
 
@@ -235,8 +252,10 @@ m_dry.push(m_silence.data(), latency_samples());              // <- fill out
 ```
 
 Note:
-    - The dry path starts with latency_samples() of silence, so every input sample comes out exactly that much later.
-    - The wet path is only primed with the two blocks: the model's own 2224 samples are already inside what it returns.
+- Host aligns everything to the number we report
+- Prefill the dry ring buffer with `latency_samples()` of silence before the first callback
+- Every sample comes out 6320 samples later, like the wet one
+- Wet only gets the two blocks of silence: the model's 2224 are already in what it returns
 
 **Script:**
 
@@ -264,8 +283,11 @@ if (m_output.available() >= num_samples) {
 ```
 
 Note:
-    - If the wet side has nothing ready, the dry side still has to come through.
-    - The check: 100 % dry has to come out at exactly 0.0, it is the input, only later. One sample off and this jumps. A wrong latency cannot pass.
+- Both equally late: the mix is just a crossfade
+- Dry × (1 − mix) + wet × mix
+- Wet not ready: dry still comes through
+- The check: 100 % dry must be exactly the input, only later
+- One sample off fails: a wrong latency cannot pass
 
 **Script:**
 
@@ -285,8 +307,9 @@ Note:
 </div>
 
 Note:
-    - Correct, real-time safe, late by a known amount: ring buffers, a worker thread, two queues, a prefill rule, a latency, a dry path to match.
-    - Next: which engine do we ship? Then the plugin.
+- Correct, real-time safe, late by a known, fixed amount
+- Host can line it up, dry and wet crossfade cleanly
+- One decision left before the plugin: which engine do we ship?
 
 **Script:**
 

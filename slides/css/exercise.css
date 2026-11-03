@@ -1573,10 +1573,10 @@ html.tanh .reveal .tradeoff.ships + pre {
   margin-top: calc(var(--space-9) * 2);
 }
 
-/* Step 8: one state, one engine, one worker per channel */
+/* Step 8: one engine, one worker per channel */
 html.tanh .per-channel {
   display: grid;
-  grid-template-columns: 200px 1fr auto 1fr auto 1fr;
+  grid-template-columns: 200px 1fr auto 1fr;
   align-items: center;
   column-gap: var(--space-4);
   row-gap: var(--space-5);

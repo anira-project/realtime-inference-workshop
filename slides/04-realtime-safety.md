@@ -6,7 +6,9 @@ Even if it were fast enough, it wouldn't be safe
 <!-- kind: demo -->
 
 Note:
-    - Demonstration, no exercise. Run it live if the Homebrew clang is there; the output is the slide.
+- Step 3: doesn't fit one small callback, and even if it did, it wouldn't be safe
+- No code this step: a demo
+- What actually happens on the audio thread when we call our engine?
 
 **Script:**
 
@@ -27,7 +29,13 @@ Inside the callback, never:
 The average doesn't matter. **The worst case does.**
 
 Note:
-    - Not "slow", unbounded. The 99.9th percentile is where it bites: one stall is an audible dropout.
+- You probably know these rules
+- Never allocate: the allocator might lock or need a page from the OS
+- Never lock: whoever holds it might be paused by the scheduler
+- No OS calls: no files, no logging
+- No loops without a bound
+- Not necessarily slow, but **unbounded**
+- The average doesn't matter, the worst case does: one stall is an audible dropout
 
 **Script:**
 
@@ -53,6 +61,12 @@ void audio_callback(Engine& engine, float* samples, size_t n)
 Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang.
 
 Note:
+- Since Clang 20 there's a tool for this
+- `[[clang::nonblocking]]`: a promise in the type system
+- Build with RealtimeSanitizer: checks every call underneath at runtime, also in libraries
+- Reports the first thing that breaks the promise
+- On a Mac: LLVM from Homebrew, not Apple's Clang
+
 **Script:**
 
 "So how do we find out whether our code breaks these rules? Since Clang 20 there's a tool for it. We mark our callback with `[[clang::nonblocking]]`, which is a promise in the type system: nothing in here blocks. Then we build with the RealtimeSanitizer. At runtime it checks every call underneath that function, also inside libraries, and reports the first thing that breaks the promise.
@@ -74,6 +88,13 @@ If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Cl
 Same model, same output as the Python reference.
 
 Note:
+- Run `step04_solution verify` live if possible
+- First: is it correct?
+- Two engines: LibTorch and ONNX Runtime, a much smaller engine
+- ONNX: an open file format, same model exported to it, ONNX Runtime runs that file
+- Compare them properly in step 7
+- Both match the Python reference, so both correct. Are they safe?
+
 **Script:**
 
 *Run `step04_solution verify` live if possible.*
@@ -101,6 +122,12 @@ Intercepted call to real-time unsafe function `malloc`
 No copy, but a new tensor object: that's the `malloc`.
 
 Note:
+- Run the sanitizer live
+- LibTorch: stops immediately, before the model has run
+- Stack from the bottom: callback → `process` → `from_blob` → `malloc`
+- `from_blob` only wraps our buffer, but needs a new tensor object
+- No copy, still an allocation
+
 **Script:**
 
 *Run the sanitizer live.*
@@ -126,7 +153,10 @@ One thread. Our buffers preallocated.<br>
 
 
 Note:
-    - Both engines were verified against the reference first: 4.92e-07 and 3.87e-07. They are correct, and they are unsafe.
+- Same story, different library
+- Creating the tensor that wraps our buffer allocates too
+- Even with one thread and our own buffers preallocated
+- Both correct, neither real-time safe
 
 **Script:**
 
@@ -147,8 +177,11 @@ Note:
 Not a slip. The engines are built this way.
 
 Note:
-    - Counting mode: our own operator new, ten blocks through the callback. Works without RTSan.
-    -The first LibTorch block costs about 67 times a normal one, even after warm-up. TorchScript recompiles while it runs.
+- Not just once: allocations and frees counted over ten callbacks
+- LibTorch: about nine thousand per block
+- First block: more than half a million, even after a warm-up block, TorchScript still optimising
+- ONNX Runtime: much better, still about two thousand per block
+- Not a small mistake: built for throughput, not for real-time
 
 **Script:**
 
@@ -173,7 +206,9 @@ A slow allocation is bad. <br>
 A lock is worse: it can wait on another thread.
 
 Note:
-    - RTSAN_OPTIONS=halt_on_error=false, one block only: symbolizing every report takes ~20 s for LibTorch.
+- Not only allocations: one block as the sanitizer reports it
+- Mutex locks: 11 for ONNX Runtime, 180 for LibTorch
+- A lock is worse: our thread can wait for a completely different thread
 
 **Script:**
 
@@ -193,11 +228,12 @@ Note:
 </div>
 
 Note:
-    - The allocation happens inside the engine, in a shared library we don't control.
-    - A custom allocator changes where memory comes from, not whether a lock is taken.
-    - One thread removes the engine's thread pool, not its allocations.
-    - Preallocating on our side moves our allocations, not theirs.
-    - Shipping this on the audio thread means hoping the allocator stays fast.
+- Can we fix it? Not really
+- Allocations are inside the engine, a library we don't control
+- Custom allocator: where the memory comes from, not whether a lock is taken
+- One thread: no thread pool, allocations stay
+- Preallocating: moves our allocations, not theirs
+- On the audio thread we're hoping the allocator stays fast. Hoping is not a strategy
 
 **Script:**
 
@@ -214,9 +250,10 @@ So if we ship this on the audio thread, we're basically hoping the allocator sta
 
 
 Note:
-    - So the model runs somewhere else: on its own thread.
-    - The two threads pass audio without locking, without allocating, and without waiting.
-    - Next step: a worker thread plus lock-free hand-over, and the latency that comes with it.
+- Can't make the engine safe: the model has to leave the audio thread
+- The audio thread keeps moving samples
+- Where does the model go? How does the audio get there and back, within the rules?
+- Next step
 
 **Script:**
 

@@ -4,8 +4,10 @@
 <!-- kind: exercise -->
 
 Note:
-    - How long does it take, and how long in the worst case?
-    - Ask the room: who measures worst case rather than average? What do you measure with?
+- Ask: who measures worst case rather than average? What do you measure with?
+- Measure how long a forward pass takes
+- Google Benchmark: gives the average, but also the worst case
+- The worst case is what we care about
 
 **Script:**
 
@@ -56,10 +58,15 @@ Note:
 </div>
 
 Note:
-    - budget = host block size / sample rate: 64 samples at 44.1 kHz are 1.45 ms; 512 are 11.6 ms; 2048 are 46.4 ms.
-    - 31 callbacks only fill the ring buffer from step 2. The 32nd has a full block of 2048 samples and runs the whole forward pass: about 7.4 ms on this laptop, in a 1.45 ms budget.
-    - Spread over all 32 callbacks, 46.4 ms of audio, that is 16 %: what a CPU meter shows. In the callback that runs it, 510 %: a click every 46.4 ms.
-    - This is the slide to linger on: the audio duration of the model block and the deadline of a callback are unrelated numbers.
+- Every callback has a deadline
+- 64 samples at 44.1 kHz: 1.45 ms per callback
+- Model: 2048 samples = 46 ms of audio
+- Forward pass on my Mac: 7.4 ms: one sixth of the model's budget, 5× a callback's
+- 31 callbacks just copy samples, the 32nd runs the whole network in 1.45 ms
+- Spread over 32 callbacks: 16 %, what a CPU meter shows
+- In the callback that runs it: 510 %, what you hear: a click every 46 ms
+- Measure the forward pass, compare it to the host's budget
+- Linger here: key insight of the first half
 
 **Script:**
 
@@ -81,6 +88,9 @@ The actual forward pass on my mac takes 7.4 ms, which is only about one sixth of
 </div>
 
 Note:
+- Run the model in a timed loop, one call at a time
+- Read the slowest time for a block
+
 **Script:**
 
 "So let's measure it properly. To do that we will have to run the model inside a loop that we time, one call at a time, and then read the slowest time the model takes for a block."
@@ -112,9 +122,8 @@ Note:
 </div>
 
 Note:
-    - Google Benchmark is fetched and built by CMake, the same library anira benchmarks with.
-    - The input is the first 2048 samples of test_signal.h. The model is loaded once, before anything is timed: loading is not what we measure.
-    - main.cpp: two TODOs, k_repetitions = 200.
+- Google Benchmark, fetched by CMake, anira benchmarks with it too
+- Model is loaded before timing: loading isn't what we measure
 
 **Script:**
 
@@ -138,7 +147,9 @@ BENCHMARK(forward_pass)
 ```
 
 Note:
-    - Mean, median and standard deviation come for free. p95, p99 and max we add.
+- Only the loop body is timed
+- Default: runs it as often as it likes, gives the average
+- We want the opposite: one call per repetition, many repetitions, our own maximum
 
 **Script:**
 
@@ -180,6 +191,10 @@ cmake --build --preset release --target step03_exercise
 </div>
 
 Note:
+- Two TODOs: time a loop that processes one block, one call per repetition
+- Then read the slowest call in the results
+- 3 minutes
+
 **Script:**
 
 *Timebox.*
@@ -199,7 +214,8 @@ for (auto _ : state) {
 ```
 
 Note:
-    - Only the call itself: copying, allocating or printing in here is measured too.
+- Only time the call, anything else gets measured too
+- `DoNotOptimize`: stops the compiler deleting our work
 
 **Script:**
 
@@ -219,13 +235,19 @@ BENCHMARK(forward_pass)
 ```
 
 Note:
-    - slowest() and percentile() are given: the largest entry, and the entry a fraction of the way through a sorted copy.
-    - Left alone, Google Benchmark runs the body as often as it likes and reports the average: the one number that cannot show a worst case.
+- `Iterations(1)`: otherwise an average, which can't show a worst case
+- Slowest call and percentiles are given
+- 65 ms is only the first call: warm up before the audio starts
+- After that about 12 ms at worst
+- Fits the 46 ms of a model block: the computer is fast enough
+- Doesn't fit a 1.45 ms callback: the model can't run in the callback
+- That's what the next steps solve
 
 **Script:**
 
 "We need `Iterations(1)`. Otherwise we'll get an average, and an average can't show you
-a worst case. Finding the slowest call and the percentiles is given."
+a worst case. Finding the slowest call and the percentiles is given.
+So what does this number tell us? The 65 ms is only the first call, so we warm up before the audio starts. After that our worst case is about 12 ms. That fits easily into the 46 ms of a model block, so our computer is fast enough. But it doesn’t fit into a 1.45 ms callback, so the model can’t run in the callback. That’s what the next steps solve."
 
 ---
 
@@ -241,11 +263,16 @@ a worst case. Finding the slowest call and the percentiles is given."
 </div>
 
 Note:
-    - Run it three times. The max is far above the mean, and it is not random: it is the very first call, about 60 ms on this laptop. The second is about 40 ms; after that about 7.5 ms, with a worst case of about 10-12 ms.
-    - mean / median: what a CPU meter shows. p95 / p99: what most users hit sometimes. max: what decides whether you shipped a broken plugin.
-    - The first calls are warm-up: TorchScript optimises the model while it runs it (step 4 counts the allocations). They do not fit the 46.4 ms of a model block, so make them before the audio starts.
-    - After that: page faults, the allocator, a thermal step, the scheduler. The worst case has to fit the budget, with room to spare: everything else in the host is fighting for that deadline too.
-    - Measured on an ordinary thread, with nothing competing. In a callback, allocations, locks and page faults are not slow but fatal: step 4.
+- Have people run it three times
+- Max far above the mean: around 60 ms against 8
+- Not random: always the first call, TorchScript optimises while it runs
+- First call about 60 ms, second about 40, then about 7.5, worst 10 to 12
+- First calls don't fit 46 ms: a plugin makes them before the audio starts
+- The worst case has to fit the budget, with room to spare
+- Mean: your CPU meter
+- p99: one call in a hundred is slower, here about every 4.6 s
+- Measured on a quiet thread, nothing competing
+- On the audio thread, allocations and locks are fatal: next step
 
 **Script:**
 

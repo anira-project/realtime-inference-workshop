@@ -4,7 +4,9 @@
 <!-- kind: exercise -->
 
 Note:
-    - Ask the room what buffer sizes they ship with. Collect the spread.
+- Ask: what buffer sizes do you ship with? Collect a few
+- Wide range of host block sizes, the model always takes 2048
+- Goal: make it work with any host block size
 
 **Script:**
 
@@ -24,10 +26,12 @@ numbers: 64, 128, 256, 441...*
 </div>
 
 Note:
-    - The model's block comes from the export: 2048 samples, fixed at trace time.
-    - The host's block comes from the device and the user's settings: 64, 128, 441, 512, … and it can change while running.
-    - 64: 31 callbacks wait, the 32nd runs the whole model (dark). 441 does not divide 2048 at all: the model runs mid-callback, at a different place every time.
-    - They can match by coincidence, but they are not the same thing.
+- Two owners, two block sizes
+- Model: fixed at export
+- Host: device and user, can change while running
+- 64: 31 callbacks nothing, the 32nd runs the whole model
+- 441: doesn't divide 2048, the model runs at a different place each time
+- They can match by coincidence, we can't count on it
 
 **Script:**
 
@@ -55,8 +59,11 @@ Sometimes the block sizes will match by coincidence, but we cannot count on that
 </div>
 
 Note:
-    - Input side: the host writes whatever it has; the model runs only once a whole block (the dashed line) is in.
-    - Output side: the model writes 2048 at once; the host takes its 512 per call.
+- The model always gets 2048, the host always gets what it needs back in time
+- A ring buffer on each side of the model
+- Host pushes whatever it has into the first
+- Full block in: the model runs, writes 2048 to the output ring buffer
+- Host takes its block size each call, 512 in this picture
 
 **Script:**
 
@@ -77,6 +84,11 @@ ring buffer. From there the host takes as many samples as its block size asks fo
 </div>
 
 Note:
+- Goal: works with any host block size
+- Size the ring buffers
+- Pump whole blocks through the model
+- Hand the samples back to the host
+
 **Script:**
 
 "So, the goal is to make sure the system works with any host block size. For that we need to give the ring buffers a size, pump whole blocks through the model and then hand the samples back to the host."
@@ -110,8 +122,9 @@ Note:
 </div>
 
 Note:
-    - Model, engine and signals are the ones from step 1.
-    - main.cpp holds ProcessorExample with three TODOs; the host runs it at every block size in {64, 128, 441, 512, 1024, 2048}.
+- Same model, signals and engine helper
+- New: a ring buffer and a fake host
+- The exercise isn't writing a ring buffer, it's sizing and using it
 
 **Script:**
 
@@ -139,7 +152,10 @@ buffer.pop(samples, num_samples);      // Take from the front — throws if too 
 </div>
 
 Note:
-    - One writer, one reader, fixed capacity. Writing it is not the exercise; sizing and using it is.
+- A queue for samples with a fixed size
+- Allocates once, when created, never again
+- `push` at the back, `pop` from the front: first in, first out
+- Wrong size: it throws, so we notice right away
 
 **Script:**
 
@@ -163,9 +179,10 @@ std::vector<float> out = run_host(signal, num_samples, block_size,
 </div>
 
 Note:
-    - Calls you block by block, in place, like a DAW's audio callback.
-    - The block size is a parameter instead of a driver setting, so it runs in CI.
-    - An optional sample rate spaces the calls out in real time; needed from step 5.
+- A DAW without the DAW: signal + block size in, calls your callback block by block
+- Overwrite the samples in place, like an audio callback
+- Block size is just a parameter: many sizes in one run (64, 512, 2048 here)
+- Goal: works at all block sizes, output matches the reference
 
 **Script:**
 
@@ -217,6 +234,11 @@ cmake --build --preset release --target step02_exercise
 </div>
 
 Note:
+- Three things: size the ring buffers, pump a whole block, hand the samples back
+- `main.cpp` in steps/02_host_buffer_size/exercise, build commands on the slide
+- 5 minutes, don't worry if you don't finish, we solve it together
+- The interesting TODO is the sizing: let people argue about it
+
 **Script:**
 
 "Now it's your turn again. We will now give the ring buffers the proper size. Then we will pump a whole block though our model and finally hand the samples back to the host. You'll find the main.cpp in steps/02_host_buffer_size/exercise. The build commands are on the slide. You get 5 minutes to try and solve it. Again, don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solutions main.cpp too."
@@ -233,8 +255,10 @@ const size_t capacity = max_block_size + 2 * m_model_input_size; // <- fill out
 ```
 
 Note:
-    - Size for the worst moment: the host has just written a block, the model has just produced one, and what it produced before is not drained yet.
-    - That happens whenever the host block does not divide the model block.
+- Big enough for the worst case
+- Worst case: host just wrote a block, model just produced one, previous one not drained yet
+- Happens whenever the sizes don't divide
+- `max_block_size + 2 * model_size`
 
 **Script:**
 
@@ -260,8 +284,12 @@ for (size_t b = 0; b < num_model_blocks; ++b) {
 ```
 
 Note:
-    - A count, not one: one big host block can complete more than one model block.
-    - The rest, less than one model block, waits in m_input for the next callback.
+- Only pump with at least 2048 samples
+- Push the host's samples into the input ring buffer
+- Count whole model blocks waiting: available / 2048
+- Can be more than one, if the host block is bigger than the model block
+- For each: pop, process, push to the output ring buffer
+- The rest waits for the next callback
 
 **Script:**
 
@@ -282,7 +310,9 @@ if (m_output.available() >= num_samples) { // <- fill out
 ```
 
 Note:
-    - At the start nothing is ready, so the host gets silence. Leaving the buffer alone would hand the host its own input back.
+- Hand the samples back to the host
+- At the start nothing is ready: write silence
+- Leave the buffer alone and the host hears its own input
 
 **Script:**
 
@@ -303,9 +333,10 @@ hears its own input."
 </div>
 
 Note:
-    - The check compares what the model produced, not what the host received: the same stream as in step 1, at every block size.
-    - Open: the output starts with silence. That is latency, and it gets its own step.
-    - Every callback does nothing, or a whole forward pass. How long does that take, and how long may it take? Straight into step 3.
+- Runs at any host block size
+- Open: the output starts with silence, that's latency
+- Open: each callback does nothing or a full forward pass
+- How long does it take? Can we run it in time? Let's measure
 
 **Script:**
 

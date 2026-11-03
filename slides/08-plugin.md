@@ -6,7 +6,9 @@ Everything from steps 1 to 7, where the host can reach it
 <!-- kind: demo -->
 
 Note:
-    - Run the standalone here. Click one of the three example tiles, move the dry/wet. Dropping an audio file on a tile replaces it.
+- Run the standalone: click an example tile, move dry/wet, drop in an audio file
+- Everything from steps 1 to 7, in a plugin
+- Listen first: switch examples, dry/wet, your own audio files
 
 **Script:**
 
@@ -32,6 +34,13 @@ setLatencySamples(static_cast<int>(processor.latency_samples()));
 Everything else in the plugin is JUCE boilerplate.
 
 Note:
+- What did we add? Not much: the host talks to us in three places
+- `prepareToPlay`: load the model, size buffers, start worker threads, report latency
+- `processBlock`: callback from step 6, unchanged
+- `releaseResources`: stop the threads
+- Everything else: JUCE boilerplate
+- One change: ONNX Runtime instead of LibTorch, statically linked: 28 MB + 126 MB model
+
 **Script:**
 
 "So what did we have to add to turn our processor into a plugin? Not much, actually. The host talks to us in three places. In `prepareToPlay` we load the model, size the buffers, start the worker threads, and tell the host our latency. `processBlock` is our callback from step 6, unchanged. And in `releaseResources` we stop the threads again. Everything else in the plugin is JUCE boilerplate.
@@ -42,29 +51,26 @@ One change: every step so far used LibTorch, but the plugin uses ONNX Runtime, l
 
 <div class="tag">Engine</div>
 
-## A mono, stateful model<br><span class="then">Two of everything, for one plugin on one track.</span>
-
-
-<div class="per-channel">
-Mono:
-  <b>mono</b><span>state</span><i>→</i><span>engine</span><i>→</i><span>worker thread</span>
-</div>
+## One plugin, stereo.<br><span class="then">Two of everything, and the host keeps adding more.</span>
 
 <div class="per-channel">
-Stereo:
-  <b>Left</b><span>state</span><i>→</i><span>engine</span><i>→</i><span>worker thread</span>
-  <b>Right</b><span>state</span><i>→</i><span>engine</span><i>→</i><span>worker thread</span>
+  <b>Left</b><span>engine</span><i>→</i><span>worker thread</span>
+  <b>Right</b><span>engine</span><i>→</i><span>worker thread</span>
 </div>
+
+<p style="margin-top: var(--space-9);"><strong>10 stereo tracks = 20 engines, 20 worker threads</strong></p>
 
 Note:
-    - The model is mono and stateful: each channel needs its own state, so each channel needs its own engine.
-    - Here, each engine also gets its own worker thread.
-    - Two channels → two states → two engines → two worker threads. Keep it in mind: part 2 starts here.
+- Model is mono and remembers the past
+- Left and right are different signals: each needs its own memory
+- Two engines, and in our design two worker threads
+- That's one plugin on one track
+- Ten tracks: twenty engines, twenty worker threads, and the host can add more
+- Keep that in mind: part 2 starts there
 
 **Script:**
 
-"One more thing we have to handle in the plugin: our model is mono, and it's stateful. Remember, a stateful model has one memory per stream. So with two channels we need two states, which means two engines. And in our design, each engine also gets its own worker thread.
-So that's two of everything, for one plugin on one track. Keep that in mind, because that's where part 2 starts."
+"One more thing we have to handle in the plugin. Our model is mono, and as we saw, it remembers the past. Left and right are different signals, so each needs its own memory. That means two engines, and in our design, two worker threads. And that's for one plugin on one track. Put it on ten tracks and you have twenty engines and twenty worker threads, and the host can keep adding more. Keep that in mind, because that's where part 2 starts."
 
 ---
 
@@ -85,6 +91,17 @@ one engine per channel step 8
 ```
 
 Note:
+- Look back at what we built
+- Step 1: first C++ implementation
+- Step 2: buffer sizes, ring buffers
+- Step 3: benchmark
+- Step 4: real-time safety, the sanitizer. Basically impossible with the model on the audio thread
+- Step 5: worker thread, two queues
+- Step 6: latency, align dry and wet
+- Step 7: engine options
+- Step 8: first neural inference plugin/standalone
+- All infrastructure, no work on the sound itself yet
+
 **Script:**
 
 "So let's look back at what we built. In step 1 we managed to do a first implementation of our model in C++. In step 2 we had the problem of a potential issue with the buffer size. The solution was to use Ring buffers. In step 3 we benchmarked our signal processing. In step 4 we talked about realtime safety and how to check it using a sanitizer. We noticed that it was basically impossible to be realtime safe with the model on our audio thread, so we introduced a worker thread with two queues in step 5. Then we talked about latency and how to calculate it. We need to know the latency to align the dry and wet signals properly. Then we looked at different engine options in step 7. And finally, we made our first neural inference plugin/standalone app with one engine in step 8.
@@ -108,7 +125,11 @@ cmake --build build-juce --config Release --parallel --target step08_plugin_Stan
 Or `step08_plugin_VST3`. The result is in `build-juce/steps/08_juce_plugin/step08_plugin_artefacts/Release/`.
 
 Note:
-    - The model expects 44.1 kHz. At another rate the plugin shows a warning: it still runs, but it sounds different.
+- Commands are on the slide: standalone or VST3
+- Start the build now, ready during the break
+- Play with dry/wet, try your own sounds, headphones please
+- Sample rate warning: model expects 44.1 kHz
+- At 48 kHz it runs but sounds different: set your device to 44.1
 
 **Script:**
 
@@ -145,7 +166,10 @@ At zero, the plugin outputs only the delayed dry signal. If the latency we repor
 <div class="break-mug">{{ICON:coffee}}</div>
 
 Note:
-    - 15 minutes. Then the architecture talk.
+- Every piece is a place where things can go wrong
+- You'd write all of it again for every new model
+- After the break: how anira does this for you
+- 15 minute break
 
 **Script:**
 

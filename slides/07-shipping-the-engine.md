@@ -6,7 +6,9 @@ LibTorch, ONNX Runtime, or writing it yourself
 <!-- kind: talk -->
 
 Note:
-    - No exercise here. Talk, numbers, and a decision the room has to make for their own product.
+- We ship the engine too: model 127 MB, engine can be bigger
+- Which engine? How much work? How much control? How much size can we afford?
+- No code in this step: a decision for your own product
 
 **Script:**
 
@@ -24,11 +26,15 @@ Your own code is almost nothing:
 your code     step01_solution        262 KB
 the model     model.pt               127 MB
 the engine    libtorch runtime       318 MB
-                libtorch_cpu.dylib   206 MB   ← one file
 ```
 
 Note:
-    - Measured on this machine, macOS arm64, from the anira-project/backends v2.4.0 release.
+- What do we actually ship?
+- Our own code is tiny: step 1 program, 262 KB
+- Model file: 127 MB
+- Engine, LibTorch: 318 MB, one file in it is already 206 MB
+- Almost everything isn't our code
+- All of it goes out with every install and every update
 
 **Script:**
 
@@ -51,7 +57,10 @@ macOS arm64, prebuilt, from `anira-project/backends` v2.4.0:
 | TFLite 2.17 | 2 MB | — |
 
 Note:
-    - Same weights, same output to 1e-6. 13× smaller for the ONNX path.
+- A model can often run on different engines, if they support its operators
+- LibTorch and ONNX Runtime: same weights, match within 1e-6
+- LibTorch 318 MB, ONNX Runtime 24 MB: 13× smaller
+- LiteRT, ExecuTorch: a few MB to download, not measured unpacked
 
 **Script:**
 
@@ -83,10 +92,11 @@ Note:
 </div>
 
 Note:
-    - Weight on a log scale: unpacked runtime, macOS arm64, anira-project/backends v2.4.0. LiteRT's runtime was not measured unpacked; its download is 3 MB.
-    - More high-level: less work. Export, load, call. The graph decides.
-    - More low-level: smaller, more control. You carry the op coverage problem.
-    - Hand-written: smallest and potentially fastest, and the only option where you own every bug.
+- High-level: less work and maintenance: export, load, call
+- Lower: smaller, more work, more control
+- Balance size, work and control
+- Top: LibTorch, PyTorch without Python, that's why it's big
+- Bottom: by hand, small and potentially fast, but vectorisation, denormals and new architectures are your job
 
 **Script:**
 
@@ -125,9 +135,11 @@ Note:
 </div>
 
 Note:
-    - It is not an inference engine. It is PyTorch, minus Python: autograd, the whole operator set, JIT, quantisation, sparse tensors, every kernel for every dtype.
-    - libtorch_cpu.dylib is one 206 MB object, so the linker has nothing to strip.
-    - The bar on top is the LibTorch row from the trade-off slide: the top end.
+- Not really an inference engine: PyTorch without Python
+- Benefits: the traced model is what runs, every operator and dtype, export-load-call
+- Very large: autograd, JIT, quantisation, sparse tensors
+- libtorch_cpu.dylib: one finished 206 MB file, loaded at start
+- The linker only records "load this file": it can't strip what it can't see
 
 **Script:**
 
@@ -168,9 +180,11 @@ Note:
 <div class="cards-note fragment">Fast code is not the default — <b>it is a project</b>.</div>
 
 Note:
-    - A GRU with 32 units, a small TCN, a biquad-shaped network: a few hundred lines of plain C++.
-    - The bar on top is the "your own code" row from the trade-off slide: the bottom end.
-    - RTNeural as the known example. Ask who in the room has done it, and what it cost them.
+- Ask: who here has hand-written inference? What did it cost you?
+- Custom implementation in C++ or similar: smallest, potentially fastest, a lot of work
+- Potentially 0 MB, complete control, optimise for your use case
+- Small networks (32-unit GRU, small TCN): a few hundred lines of C++
+- But vectorisation, cache layout, denormals are yours: a project in itself
 
 **Script:**
 
@@ -197,8 +211,10 @@ For small networks, like a 32-unit GRU or a small TCN, a few hundred lines of C+
 
 <p class="ships-note">Plus the model. Every user downloads that, on every install and every update.</p>
 
-Note: Users download that. Installers, notarisation, CDN bills, and the first
-impression of your product.
+Note:
+- Your users download this with your plugin
+- Universal-binary VST3: LibTorch over 600 MB, model on top, every install and update
+- Installers, notarisation, CDN bills, first impression of your product
 
 **Script:**
 
@@ -216,15 +232,16 @@ impression of your product.
 For this workshop:
 
 ```
-model.pt                LibTorch, state inside the model
-model_forward.onnx      ONNX, state in and out
+model.pt                LibTorch
+model_forward.onnx      ONNX
 ```
 
 Different engine class, but the same `process()` and `reset()`.
 
 Note:
-    - LibTorch runs exactly what you traced, so it is a good place to start. Correctness first, then size.
-    - In this workshop both engines are checked against the same reference: model_forward.onnx in ONNX Runtime, from Python (scripts/make_test_data.py).
+- Advice: start with LibTorch, it runs exactly what you traced, then optimise against it
+- Here: exported both `.pt` and `.onnx`, checked against the same Python reference
+- Different engine classes, same `process` and `reset`: the code around them doesn't change
 
 **Script:**
 
@@ -234,7 +251,7 @@ Note:
 
 <div class="tag">Deep dive</div>
 
-## Stateless vs. stateful<br><span class="then">Some models remember others read the past at every call.</span>
+## Stateless vs. stateful<br><span class="then">Some models remember, others read the past at every call.</span>
 
 <div class="state-compare">
   <div class="state-panel">
@@ -291,19 +308,29 @@ Note:
   </div>
 </div>
 
+Our model is stateful in both exports:
+
+- `model.pt`: LibTorch, state hidden inside the model
+- `model_forward.onnx`: ONNX, state in and out
+
 Note:
-    - Stateless: output depends only on this call's input; context has to come with the input (overlapping windows); calls are independent.
-    - Stateful: memory from one call to the next (RNN hidden states, cached convolution history); calls in order, one state per stream, reset when the stream restarts.
+- One more concept: it explains why the two exports look different
+- Stateless: no memory, the past is handed in at every call
+- Stateful: only the new block, carries the past along (the dashed line). Our model
+- Consequences: calls in order, one state per stream, reset on a new stream (`reset()` from step 1)
+- LibTorch: state hidden in the model
+- ONNX can't hide state: the export moves it out, so it's an explicit input and output, handed in and back every block
+- Rest of our code doesn't see this: same thin interface, `process` and `reset`, so we can switch
 
 **Script:**
 
-"One more concept before we move on to the plugin, because it explains the difference between the two exports.
+"One more concept before we move on to the plugin, because it explains why our two exports look different.
 
 A stateless model has no memory, so the past has to be handed in again at every call. A stateful model only gets the new block, and it carries the past along itself from one call to the next. That's the dashed line, and it's what our model does.
 
 That memory has consequences: the calls have to be in order, you need one state per stream, and you have to reset it when a new stream starts. That's the reset() from step 1.
 
-And this is where the two engines differ. In the LibTorch file, the state is hidden inside the model. In the ONNX export, it's an explicit input and output: we hand it in with every block and get the updated state back."
+And this is where the two engines differ. In the LibTorch file, the state is hidden inside the model. ONNX can't do that, so when we export we have to move the state out of the model. In the ONNX export, it's an explicit input and output: we hand it in with every block and get the updated state back. But the rest of our code doesn't see any of this: both engines sit behind the same thin interface, `process` and `reset`, so we can switch between them."
 
 ---
 
@@ -312,12 +339,15 @@ And this is where the two engines differ. In the LibTorch file, the state is hid
 ## The choice of engine is important<br><span class="then">Affects performance and distribution.</span>
 
 1. Measure the size early
-2. Correct first, small second, fast third
+2. Correct first, small second
 3. If you keep the engine behind a thin interface, the choice stays open
 
 
 Note:
-    - Next: the plugin, with all of it in one place.
+- Measure size early: hard to walk back after a release
+- Export correctly first, then small, then fast if you can
+- Keep the engine behind a thin interface, so you can switch
+- Now we have everything for the plugin
 
 **Script:**
 

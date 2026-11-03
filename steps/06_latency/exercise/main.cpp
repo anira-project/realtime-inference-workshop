@@ -70,6 +70,8 @@ public:
     //   - the model itself answers late: k_model.m_latency, from the export
     // What the host is told has to be what the host gets, so this number also
     // decides how far the dry signal is delayed in prepare().
+    //
+    // Hint: the model's own latency is defined in the struct above.
     // --------------------------------------------------------------------------
     size_t latency_samples() const { 
         size_t latency = 0; // <- fill out

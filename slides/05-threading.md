@@ -4,8 +4,8 @@
 <!-- kind: exercise -->
 
 Note:
-    - The engine has to go somewhere, just not on the audio thread.
-    - Step 4 ended with "not on the audio thread". This is the answer.
+- Step 4: the engine can't run on the audio thread
+- So it gets its own thread: the worker thread
 
 **Script:**
 
@@ -30,10 +30,13 @@ Note:
 </div>
 
 Note:
-    - The audio thread keeps its pace: every callback moves samples, nothing else (the even ticks).
-    - A whole block goes down to the worker through one queue, the result comes back up through the other.
-    - The worker may allocate and sleep. The audio thread never waits for it.
-    - This also answers step 3: the forward pass that was 510 % of one callback no longer runs inside a callback.
+- Two threads
+- Audio thread keeps its pace, only moves samples
+- Full block of 2048: down to the worker through `to_worker`
+- Worker runs the model, sends it back through `from_worker`
+- Worker may allocate and sleep. No per-callback deadline, but a budget (step 6)
+- The audio thread never waits for it
+- Answers step 3: the 510 % no longer runs inside any callback
 
 **Script:**
 
@@ -55,6 +58,11 @@ And this also answers step 3: the forward pass that was 510 percent of one callb
 </div>
 
 Note:
+- Goal: set up the two threads
+- `prepare`: create the queues, start the worker
+- Audio thread: samples in, full blocks out, finished blocks back
+- Worker: take a block, run the model, hand it back
+
 **Script:**
 
 "So our goal is to set up these two threads. First we create the queues and start the worker in `prepare`. Then we write the audio thread's side: samples in, full blocks out to the worker, finished blocks back. And then the worker's side: take a block, run the model, hand it back."
@@ -91,9 +99,10 @@ Note:
 </div>
 
 Note:
-    - readerwriterqueue.h: moodycamel's lock-free queue, fetched by CMake.
-    - host.h now runs in real time: 512 samples per call.
-    - Also in main.cpp: ModelBlock, a counting operator new, and WORKSHOP_AUDIO_CALLBACK ([[clang::nonblocking]] where the compiler has it).
+- Still the model, signals, engine, ring buffer and host
+- New: `ReaderWriterQueue` from moodycamel, lock-free, fetched by CMake
+- Host now runs in real time: waits between callbacks, 512 samples per call
+- `main.cpp` counts allocations: check the audio thread doesn't allocate anymore
 
 **Script:**
 
@@ -131,12 +140,11 @@ m_to_worker.try_dequeue(block);       // copy out — false if empty
 </div>
 
 Note:
-    - Single producer, single consumer: the cheapest lock-free case there is.
-    - try_enqueue never grows the queue. It fails, and failing is a decision you can make in 1 µs: the block is dropped, and the host gets silence if nothing came back. Both are glitches; waiting for the worker would be a missed deadline for the entire host, including every other plugin.
-    - By value, so nobody has to agree on who frees what.
-      - Only the try_ versions. enqueue() without "try" grows the queue when it is full, and growing allocates.
-    - Each queue has one writer and one reader: to_worker is written by the audio thread, from_worker by the worker.
-    - The audio thread never retries, because there is no time to. The worker may, because it has no per-callback deadline. It still checks the stop flag while it retries.
+- One thread writing, one reading: the simplest lock-free case
+- Whole blocks by value: nobody has to agree who frees the memory
+- Only the `try_` functions: plain `enqueue` grows when full, growing allocates
+- Queue full: audio thread drops the block
+- A glitch, but waiting would be a missed deadline for the whole host
 
 **Script:**
 
@@ -188,6 +196,12 @@ cmake --build --preset release --target step05_exercise
 </div>
 
 Note:
+- Three TODOs: `prepare` (queues + worker), the audio thread, the worker thread
+- `main.cpp` in steps/05_threading/exercise, build commands on the slide
+- Biggest task so far, but one line at a time: 5 minutes
+- When it works: 0 allocations on the audio thread
+- Solution is in the `solution` folder
+
 **Script:**
 
 "Now it's your turn. There are three TODOs: first prepare the queues and the worker in `prepare`, the audio thread, and the worker thread. You'll find the `main.cpp` in `steps/05_threading/exercise`, and the build commands are on the slide. This is the biggest task so far, but it's one line at a time, so you get 5 minutes. When it works, the program should report 0 allocations on the audio thread. And as always, the solution is in the `solution` folder."
@@ -211,7 +225,8 @@ m_worker = std::thread([this] { worker(); }); // <- fill out
 ```
 
 Note:
-    - All in prepare(): the queues allocate their blocks up front, so the callback never has to.
+- `prepare`: both queues with a fixed capacity, running flag, start the worker
+- All in `prepare`: the queues allocate here, once, so the callback never has to
 
 **Script:**
 
@@ -239,8 +254,13 @@ while (m_output.space() >= k_model.m_input_size) {
 ```
 
 Note:
-    - No new, no mutex, no engine.
-    - If the queue is full, drop the block. The audio thread does not wait.
+- Starts like step 2: push the host's samples into the input ring buffer
+- Full block: take it out, try to put it in the queue to the worker
+- Queue full: count it as dropped, move on, don't wait
+- Pick up every finished block while the output ring buffer has space
+- Like step 2: hand back samples, or silence if nothing is ready
+- `m_dropped`: how many blocks the worker couldn't keep up with
+- Not in here: no `new`, no mutex, no engine
 
 **Script:**
 
@@ -270,9 +290,12 @@ while (m_running.load(std::memory_order_acquire)) {
 ```
 
 Note:
-    - The inner loop retries until the block is handed back, and gives up when m_running goes false.
-    - After the loop (given): drain m_to_worker and process what is left.
-    - Why the given inner loop checks m_running: without it, the audio thread has stopped calling, and stop() waits forever.
+- Loops while the running flag is set
+- Takes a block. Nothing there: sleep, try again
+- Got one: run the model, send it back
+- Worker may retry and sleep: no hard per-callback deadline
+- Given loop also checks the running flag while waiting for queue space
+- Without it, `stop()` waits forever
 
 **Script:**
 
@@ -293,9 +316,11 @@ Notice one thing in the loop we gave you: when the worker waits for space in the
 </div>
 
 Note:
-    - Counted with our own operator new, thread-local: the worker's allocations per block do not count, and should not. Same output as step 1. Under RTSan: no report at all.
-    - Worth running live next to step 4, which stops at the first line of the engine.
-    - Open: the first blocks came back as silence. How many samples late, exactly, and how do you tell the host? Step 6.
+- Zero allocations on the audio thread, same output as step 1, no sanitizer reports
+- Audio thread is real-time safe, the model runs beside it
+- If possible, run it next to step 4 live
+- But the first blocks are silence again
+- How many samples late? How do we tell the host? Next step: latency
 
 **Script:**
 

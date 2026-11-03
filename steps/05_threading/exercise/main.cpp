@@ -117,6 +117,8 @@ public:
         //      what the audio thread needs.
         //   1. Give both queues the capacity they need.
         //   2. Start the worker thread. Which function does it run?
+        //
+        // Hint: look at the constructor of ReaderWriterQueue, and the member function worker().
         // --------------------------------------------------------------------
         const size_t queue_capacity = 0; // <- 1. fill out
 

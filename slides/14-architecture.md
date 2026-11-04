@@ -24,7 +24,7 @@ Note:
 - The session is private to each handler: plans and state pairs from create, latency, rings and slots from prepare.
 - On the right the context, one per process: the pool, the queue and the loaded models, shared by every handler.
 - A block crosses it in process and comes back the same way, in place, in the same buffer.
-- Nothing on the audio side allocates or locks: the rules from steps 4 to 6, kept by the library.
+- Nothing on the audio side allocates or locks: the rules from steps 5 to 7, kept by the library.
 
 ---
 

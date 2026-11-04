@@ -28,7 +28,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Steps 4 and 7</div>
+<div class="tag">Part 1 · Steps 1 and 5</div>
 
 ## Every engine has its own API.<br><span class="then">One class per engine, written by hand.</span>
 
@@ -48,8 +48,8 @@ class OnnxEngine     { … Ort::Session … m_session.Run(…) … };
 
 Note:
 - First the engines: in part 1 every engine has its own API, and we wrote one class per engine by hand.
-- LibTorch came in step 1, ONNX Runtime in step 4, and each handled the state differently.
-- In step 7 we weighed what they cost to ship: LibTorch 318 MB, ONNX Runtime 24 MB, LiteRT about 3 MB.
+- ONNX Runtime came in step 1, LibTorch next to it in the real-time safety demo of step 5, and each handled the state differently.
+- They also cost very different amounts to ship: LibTorch 318 MB, ONNX Runtime 24 MB, LiteRT about 3 MB.
 - The plugin picked one of them at compile time.
 
 ---
@@ -86,19 +86,19 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Steps 1 and 2</div>
+<div class="tag">Part 1 · Steps 1 and 3</div>
 
 ## Float buffers, one shape.<br><span class="then">The engine's tensor stays inside its class.</span>
 
 ```cpp
 std::vector<float> output(input.begin(), input.end());   // step 1
-m_model_block.assign(m_model_input_size, 0.0f);         // step 2
+m_model_block.assign(m_model_input_size, 0.0f);         // step 3
 engine.process(m_model_block.data(), m_model_input_size);
 ```
 
 Note:
 - Next, tensors: in part 1 every buffer is a float vector with one shape the code assumes, one channel and one model block.
-- That is step 1's output vector and step 2's model block.
+- That is step 1's output vector and step 3's model block.
 - torch::Tensor and Ort::Value exist only inside the engine classes.
 - A model with an int input, a second channel or an image does not fit through that call.
 
@@ -133,7 +133,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 4</div>
+<div class="tag">Part 1 · Step 2</div>
 
 ## 63,488 floats of state,<br><span class="then">carried by hand.</span>
 
@@ -144,7 +144,7 @@ std::copy_n(outputs[1].GetTensorData<float>(), m_state.size(), m_state.begin());
 
 Note:
 - Then state: 63,488 floats of state, carried by hand.
-- In the OnnxEngine from step 4 the state tensor comes out and we copy it into the state tensor going in, every call.
+- In the OnnxEngine from step 2 the state tensor comes out and we copy it into the state tensor going in, every call.
 - In LibTorch the state is hidden, here it is ours.
 - That is one copy of 63,488 floats per block, and the ordering of the calls is ours to guarantee.
 
@@ -187,7 +187,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 5</div>
+<div class="tag">Part 1 · Step 6</div>
 
 ## A worker per instance.<br><span class="then">It grows with every instance the host adds.</span>
 
@@ -204,7 +204,7 @@ Note:
 </div>
 
 Note:
-- Threads: in step 5 we had a worker per instance; the plugin mixes down to mono, so one is enough.
+- Threads: in step 6 we had a worker per instance; the plugin mixes down to mono, so one is enough.
 - One worker, two ring buffers, one engine: correct, but it does not scale.
 - The worker belongs to the instance, and the host decides how many instances there are, so the threads grow with every instance it adds.
 
@@ -251,7 +251,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 5</div>
+<div class="tag">Part 1 · Step 6</div>
 
 ## The worker polls, the audio thread never waits.<br><span class="then">One fixed way to wait, on both sides.</span>
 
@@ -266,7 +266,7 @@ else                                     { std::fill_n(samples, num_samples, 0.0
 
 Note:
 - Waiting: the worker polls, and the audio thread never waits.
-- These are two decisions we made in step 5 without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
+- These are two decisions we made in step 6 without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
 - If the output is not ready, the audio thread writes silence.
 - The 100 µs sleep is a compromise: responsive enough, and it burns a little CPU while idle.
 

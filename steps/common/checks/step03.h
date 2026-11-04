@@ -1,4 +1,4 @@
-// Step 2's checks, given complete. Not part of the exercise.
+// Step 3's checks, given complete. Not part of the exercise.
 //
 // Goal: say which TODO is still missing, from what the two ring buffers hold
 //       after a callback.

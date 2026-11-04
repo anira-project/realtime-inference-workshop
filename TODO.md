@@ -5,9 +5,6 @@
 - Change the audio example
 - The integration process: Rectangle over Train and Export
 - After QR-code -> slide how to clone and configure, also tell the audience to do it now!
-
-- Onnxruntime minimal example first
-- Then next process in an audio callback
 - Shipping the engine, leave it out...
 
 - Benchmark -> convert to samples
@@ -33,3 +30,12 @@
 
 - Blocking is also unsing exponential backoff at the beginning...
 - An engine per channel?? in anira recap part 1 step 8
+
+- Plans are not outputted at create but at prepare, check this again
+- same with loaded models
+- Have a look into the ctors and into prepare and please find out what the steps are really doing!!!!!!!
+- Better handling of ... in   { "name": "audio_out", "role": "streamed", …, "latency": 2224 },
+- We do not use the sleep anymore in the part 1 step 5 example..
+- Add latency to blocking ratio plots
+- Inline execution is next to come with gpu and npu accelerators
+- Ab after process überarbeiten

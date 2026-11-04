@@ -103,10 +103,15 @@ Note:
 ```
 
 Note:
-- This is the model file: one engine, one path, and the tensors.
-- A streamed tensor is cut along time into windows; here the audio, with a window of 2048.
-- A state tensor is carried from one call to the next; here state_in and state_out.
-- And there is a number you know from Step 6: the model's own latency of 2224 samples, declared on the output it belongs to.
+- We provide this model.json; it describes the model to anira.
+- Under models: the engine, ONNX Runtime, and the path to our ONNX file.
+- Under inputs: the model's input tensors. The first is audio, and it is streamed: audio comes in continuously, and anira cuts it into blocks for the model.
+- Its axes are its shape, each with a name: batch 1, channel 1, time 2048, so a tensor of 1 by 1 by 2048.
+- The window is the same number as our input size, 2048: how many samples one inference takes.
+- If the model needed overlapping windows or a receptive field, the extra past samples would be added here.
+- The second input is state_in, with the role state: no time axis, it is carried from one call to the next.
+- The outputs mirror the inputs: audio_out, streamed, with the same shape and window, and state_out, the new state.
+- On audio_out sits a number you know from Step 6: the model's own latency of 2224 samples, declared on the output it belongs to.
 
 ---
 
@@ -115,15 +120,17 @@ Note:
 ## How it runs.
 
 ```json
-{ "hard": { "budget": { "ms": 8.2 }, "warmup": { "fixed": 3 }, "on_miss": "zeros" } }
+{ "hard": { "budget": "measured", "warmup": "until_stable", "on_miss": "bypass" } }
 ```
 
 Three lines. The geometry comes from the host, at `prepare`.
 
 Note:
 - The contract is three lines.
-- The budget is 8.2 milliseconds, the worst case from Step 3.
-- Then three warm-up runs before prepare returns, and zeros on a miss, just like Step 6.
+- We have a hard contract because this is a real-time stream: the host calls us with fixed blocks, every block has a deadline, and nothing may wait. For jobs without a stream, like images, there is an async contract.
+- The budget is measured: anira benchmarks the model at prepare, on this machine, with this engine. That is Step 3, done by the library.
+- The warm-up runs until the times are stable, before prepare returns. We saw why in Step 3: the first calls took much longer, about 60 and 40 ms instead of 7.5, so we make them before the audio starts.
+- And bypass on a miss: a block whose result is late goes out as the input block, not as zeros like in Step 6.
 - The host's blocks come in at prepare.
 
 ---
@@ -197,7 +204,7 @@ Note:
 Note:
 - Here are the four tensors.
 - Audio in and out have a time axis and a window of 2048.
-- The state has no time axis: it is one flat block of 63,488 floats, the same state we copied by hand in Step 4.
+- The state has no time axis: it is one flat block of 63,488 floats, the same state we copied by hand in Step 4. Its size was given.
 - If a size is wrong, prepare refuses the file and names the tensor.
 
 ---
@@ -230,16 +237,20 @@ contract.hard_host_blocks(k_host.m_block_size, k_host.m_block_size, k_host.m_sam
 
 anira::Pipeline pipeline;
 pipeline.add_inference(model);
-anira_handler_create(context.native(), pipeline.native(), &handler.m_handle, &error);
-anira_handler_prepare(handler.m_handle, contract.native(), &error);  // warm-up runs here
-latency = anira_handler_get_latency(handler.m_handle, 0);             // output slot 0
+anira::InferenceHandler handler(context, pipeline);
+handler.prepare(contract);                          // warm-up runs here
+const size_t latency = handler.get_latency(0);      // output slot 0
+
+// In the audio callback: one call, in place
+status = handler.process(block, 0, block, 0);
 ```
 
 Note:
-- Read the model, read the contract, and give the contract the host's block size and sample rate.
-- Then create the handler and prepare it; the three warm-up runs happen inside prepare.
-- Ask for the latency of output 0: 4272 samples, 2048 fewer than the 6320 we built by hand.
-- The audio callback was given: one tensor over the block, processed in place.
+- Loading, the pipeline, the handler and prepare were given, all from anira.hpp; the warm-up runs inside prepare.
+- First blank: give the contract the host's block size, twice, and its sample rate.
+- Second: ask for the latency of output 0. Here it is 6320, the same as by hand in Step 6: on this machine the inference takes longer than one host block of 11.6 ms.
+- Where it fits in one host block, anira reports 4272, 2048 fewer.
+- Third: in the audio callback, one call over the block, in place: the same block is input and output.
 
 ---
 

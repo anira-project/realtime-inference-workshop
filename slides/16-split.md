@@ -160,15 +160,16 @@ Note:
 ## TODO 1 · The encoder
 
 ```cpp
-create(encoder, context, step_dir + "/encoder.json");
-encoder_latency_frames = prepare(encoder, contract);   // in latent frames
+anira::InferenceHandler encoder = create(context, step_dir + "/encoder.json");
+const size_t encoder_latency_frames = prepare(encoder, contract);   // in latent frames
 
 // The callback: audio in, latent frames out, one per 2048 samples
-anira_handler_push_data(encoder.m_handle, &block, 0);
-while (anira_handler_get_available_samples(encoder.m_handle, 0, 0, &available) == ANIRA_OK
-       && available > 0) {
-    anira_handler_pop_data(encoder.m_handle, &frame, 0, nullptr);
-    if (frames++ < encoder_latency_frames) { continue; }   // priming: not silence
+encoder.push_data(block, 0);
+while (encoder.get_available_samples(0, 0, &available) == ANIRA_OK && available > 0) {
+    encoder.pop_data(frame, 0);
+    const bool is_priming = frames < encoder_latency_frames;    // priming: not silence
+    ++frames;
+    if (is_priming) { continue; }
     …
 }
 ```
@@ -189,7 +190,7 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < 8; ++i) {
-    frame[i] = frame[i] * m_scale[i].load() + m_bias[i].load();
+    frame_data[i] = frame_data[i] * scale[i].load() + bias[i].load();
 }
 ```
 
@@ -204,23 +205,23 @@ Note:
 ## TODO 3 · The decoder
 
 ```cpp
-create(decoder, context, step_dir + "/decoder.json");
+anira::InferenceHandler decoder = create(context, step_dir + "/decoder.json");
 const size_t decoder_latency = prepare(decoder, contract);   // in samples, on its own
-latency = encoder_latency_frames * 2048 + decoder_latency;   // 2048 + 4272
+const size_t latency = encoder_latency_frames * 2048 + decoder_latency;   // 2048 + 6320
 contract.hard_latency("audio", latency);                     // the frame arrives late
-prepare(decoder, contract);                                  // reports 6320 now
+prepare(decoder, contract);                                  // reports 8368 now
 
 // The callback: every real frame in, then the audio for this callback out
-anira_handler_push_data(decoder.m_handle, &frame, 0);
-anira_handler_pop_data(decoder.m_handle, &block, 0, nullptr);   // or the miss policy
+decoder.push_data(frame, 0);
+status = decoder.pop_data(block, 0);   // or the miss policy
 ```
 
 Note:
 - TODO 3 is the decoder.
-- Prepared on its own, it reports 4272, the same as the forward model in Step 9: 2224 of model plus the block handling.
+- Prepared on its own, it reports 6320, the same as the forward model in Step 9: 2224 of model plus the block handling.
 - That assumes a frame is there when its window starts, but ours arrives one encoder frame late.
-- So we declare the sum in the contract, 2048 plus 4272, and prepare again.
-- That gives 6320, the number the host is told, and the same number we built by hand in Step 6.
+- So we declare the sum in the contract, 2048 plus 6320, and prepare again.
+- That gives 8368, the number the host is told: one encoder frame more than the forward model.
 
 ---
 

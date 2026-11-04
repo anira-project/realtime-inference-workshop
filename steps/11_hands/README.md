@@ -41,7 +41,7 @@ Start with z0 (dynamics: fist quiet, open loud: `-2.5` to `2.0`, rest `-3`) and 
 
 ## Slides
 
-[`slides/16-hands.md`](../../slides/16-hands.md).
+[`slides/17-hands.md`](../../slides/17-hands.md).
 
 ## What's next
 

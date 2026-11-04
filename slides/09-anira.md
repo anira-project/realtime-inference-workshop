@@ -21,7 +21,7 @@ Note:
   <div class="card need">{{ICON:model}}<div class="card-title">Inference</div><div class="card-text">steps 1, 2, 7 · one engine, one block size</div></div>
   <div class="card need">{{ICON:gauge}}<div class="card-title">Benchmarking</div><div class="card-text">step 3 · one benchmark, on our machine</div></div>
   <div class="card need">{{ICON:shield}}<div class="card-title">Real-time safety</div><div class="card-text">step 4 · RTSan, run once</div></div>
-  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 5, 8 · a worker per channel</div></div>
+  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 5, 8 · a worker per instance</div></div>
   <div class="card need">{{ICON:clock}}<div class="card-title">Minimal latency</div><div class="card-text">step 6 · a prefill, counted by hand</div></div>
   <div class="card need">{{ICON:flag}}<div class="card-title">Real-time guarantees</div><div class="card-text">steps 3, 6 · hoping the budget holds</div></div>
   <div class="needs-anira fragment"><span>anira</span> covers all six, for one plugin instance or many.</div>
@@ -31,8 +31,7 @@ Note:
 - Here is part 1 in one picture: six things real-time inference needs.
 - Inference, benchmarking, real-time safety, threading, minimal latency, and real-time guarantees.
 - We solved each one the simple way: one engine, one machine, one plugin instance.
-- That is fine for one instance, not for a session full of them.
-- [click] anira covers all six, for one instance or for many.
+- [click] anira covers all six and provides often improvements over our simple implementations, which we will show soon.
 - First, what anira is and where it comes from.
 
 ---
@@ -86,14 +85,10 @@ Note:
 </div>
 
 Note:
-- anira is a C++ library.
-- You describe the model in a model file and what the host promises in a contract file.
-- An optional third file, the context file, comes later in Fares's part.
-- Threads, buffers, latency and safety are then the library's job.
-- In v3, the version you run today, the core is one C ABI, and the C++ API and the TypeScript package are generated from it.
+- anira is a C++ library: you describe the model and what the host promises, and anira takes care of threads, buffers and latency.
 - [click] It runs LibTorch, ONNX Runtime, LiteRT, ExecuTorch, or your own engine.
-- [click] It runs on desktop, mobile, in the browser, and on embedded boards like Bela.
-- [click] And it runs in plugins, standalone apps, as anira~ in Max/MSP, and on real-time video.
+- [click] On desktop, mobile, in the browser, and on boards like Bela.
+- [click] In plugins, standalone apps, Max/MSP, and on real-time video.
 
 ---
 
@@ -108,11 +103,11 @@ Note:
 </div>
 
 Note:
-- anira in products, a selection.
+- anira was a research project, but is not established in released products
+- here is a selection:
 - [click] Sonnox Oxford Drum Gate 2, which classifies drum hits by timbre.
 - [click] Baby Audio SubCulture, a pitch-tracking bass enhancer.
 - [click] And Project LYDIA by Neutone, a pedal on a Raspberry Pi 5.
-- These are three of several, on desktop hosts and on ARM boards.
 
 ---
 
@@ -132,54 +127,46 @@ Note:
 
 <div class="history-ask fragment">Have you thought about many instances?<br>Every plugin opens its own real-time thread.<span>the sonible team, after the talk</span></div>
 
-<div class="history-note lesson fragment">Good solutions come from iteration and exchange, not from a single attempt.</div>
-
 Note:
 - How did we get here? Not in one go.
 - At ADC23 we showed a template with one inference thread per plugin: the design you built in part 1.
 - It worked, for one plugin.
 - [click] After the talk the sonible team asked us: have you thought about many instances?
 - Every plugin opens its own real-time thread.
-- [click] That is the lesson of this whole history: good solutions come from iteration and exchange, not from a single attempt.
 
 ---
 
 <div class="tag">anira v1</div>
 
-## A library has to solve this, not a plugin.<br><span class="then">Ten instances, twenty real-time threads, eight cores.</span>
+## A library has to solve this, not a plugin.<br><span class="then">Eight instances, eight real-time threads, four cores.</span>
 
 <div class="crowd">
   <div class="crowd-plugins">
-    <div class="crowd-plugin" style="--i:0"><span>instance 1</span><i></i><i></i></div>
-    <div class="crowd-plugin" style="--i:1"><span>instance 2</span><i></i><i></i></div>
-    <div class="crowd-plugin" style="--i:2"><span>instance 3</span><i></i><i></i></div>
-    <div class="crowd-plugin" style="--i:3"><span>instance 4</span><i></i><i></i></div>
-    <div class="crowd-plugin over" style="--i:4"><span>instance 5</span><i></i><i></i></div>
-    <div class="crowd-plugin over" style="--i:5"><span>instance 6</span><i></i><i></i></div>
-    <div class="crowd-plugin over" style="--i:6"><span>instance 7</span><i></i><i></i></div>
-    <div class="crowd-plugin over" style="--i:7"><span>instance 8</span><i></i><i></i></div>
-    <div class="crowd-plugin over" style="--i:8"><span>instance 9</span><i></i><i></i></div>
-    <div class="crowd-plugin over" style="--i:9"><span>instance 10</span><i></i><i></i></div>
+    <div class="crowd-plugin" style="--i:0"><span>instance 1</span><i></i></div>
+    <div class="crowd-plugin" style="--i:1"><span>instance 2</span><i></i></div>
+    <div class="crowd-plugin" style="--i:2"><span>instance 3</span><i></i></div>
+    <div class="crowd-plugin" style="--i:3"><span>instance 4</span><i></i></div>
+    <div class="crowd-plugin over" style="--i:4"><span>instance 5</span><i></i></div>
+    <div class="crowd-plugin over" style="--i:5"><span>instance 6</span><i></i></div>
+    <div class="crowd-plugin over" style="--i:6"><span>instance 7</span><i></i></div>
+    <div class="crowd-plugin over" style="--i:7"><span>instance 8</span><i></i></div>
   </div>
   <div class="crowd-cores">
-    <span>8 cores</span>
+    <span>4 cores</span>
     <b style="--i:0"></b><b style="--i:1"></b><b style="--i:2"></b><b style="--i:3"></b>
-    <b style="--i:4"></b><b style="--i:5"></b><b style="--i:6"></b><b style="--i:7"></b>
   </div>
-  <div class="crowd-count"><strong>20</strong> real-time threads on <strong>8</strong> cores</div>
+  <div class="crowd-count"><strong>8</strong> real-time threads on <strong>4</strong> cores</div>
 </div>
 
 <div class="solutions fragment">
-  <div class="solution"><span>In a plugin</span>each instance starts and sizes its own threads; it cannot see the other instances</div>
-  <div class="solution library"><span>In a library, static</span>one thread pool per process, sized to the machine; every instance queues into it, ideally across products</div>
+  <div class="solution"><span>In a plugin</span>each instance starts its own thread and cannot see the others</div>
+  <div class="solution library"><span>In a library</span>one thread pool per process, shared by every instance</div>
 </div>
 
 Note:
-- This is their question, drawn out: our step 8 plugin, ten times.
-- Ten instances with two workers each make twenty real-time threads on eight cores.
-- A thread that is not scheduled in time misses its block, and the miss lands in someone else's plugin.
-- [click] A plugin cannot fix this, because one instance cannot see the others.
-- A library can: one thread pool shared by the whole process, sized to the machine, and every instance queues into it.
+- One plugin, one thread: eight instances on four cores make eight real-time threads.
+- Four of them have to wait, and their blocks come too late.
+- [click] A plugin cannot fix this, a library can: one thread pool for the whole process.
 - That was anira v1.
 
 ---
@@ -191,25 +178,6 @@ Note:
 <div class="history">
   <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
   <div class="history-item current"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
-  <div class="history-item later"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
-  <div class="history-item later"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
-  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
-  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
-  <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
-</div>
-
-Note:
-- In 2024 we published that design as a paper at IS², the IEEE International Symposium on the Internet of Sounds, and it won the Industry Award.
-
----
-
-<div class="tag">History</div>
-
-## How anira evolved.<br><span class="then">From one thread per plugin to one C ABI.</span>
-
-<div class="history">
-  <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
-  <div class="history-item"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
   <div class="history-item current"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
   <div class="history-item later"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
   <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
@@ -218,32 +186,7 @@ Note:
 </div>
 
 Note:
-- The same year we brought anira to ADC24 in Bristol, back to the people who had asked the question.
-
----
-
-<div class="tag">anira v2</div>
-
-## Control data next to audio.<br><span class="then">Inputs at different rates, in one model.</span>
-
-<div class="rates">
-  <div class="rates-label">audio</div>
-  <div class="rates-track audio"></div>
-  <div class="rates-rate">every sample</div>
-  <div class="rates-label">pitch · loudness</div>
-  <div class="rates-track control"></div>
-  <div class="rates-rate">one value per frame</div>
-  <div class="rates-model">{{ICON:model}}model</div>
-  <div class="rates-out">→ audio</div>
-</div>
-
-<div class="cards-note">v2: every input and output is a tensor with its own shape and rate, not only an audio buffer.</div>
-
-Note:
-- Then the models changed.
-- They started taking control data such as pitch and loudness, one value per frame instead of one per sample.
-- v1 was built around one audio buffer in and one out, at the same rate.
-- In v2, every input and output became a tensor with its own shape and its own rate.
+- That is what we presented at ADC24, and published as a paper at IS², where it won the Industry Award.
 
 ---
 
@@ -262,31 +205,9 @@ Note:
 </div>
 
 Note:
-- That was v2, in July 2025.
-
----
-
-<div class="tag">anira on the web</div>
-
-## A multithreaded library in the browser.<br><span class="then">How we ported anira to WebAssembly.</span>
-
-<div class="paper">
-  <div class="paper-text">
-    <div class="paper-kind">Paper · published next week</div>
-    <div class="paper-title">Porting a multithreaded real-time inference library to the web</div>
-    <div class="paper-points">Threads, shared memory and the audio worklet in the browser, and what that means for the pool.</div>
-  </div>
-  <div class="qr">
-    {{QR:HTTPS://GITHUB.COM/ANIRA-PROJECT/ANIRA}}
-    <div class="qr-label">anira on GitHub</div>
-    <div class="qr-url">the paper is linked there once it is out</div>
-  </div>
-</div>
-
-Note:
-- In 2026 we took anira off the desktop, and one target was the browser.
-- The hard part there is threads: shared memory, and an audio worklet that must never block.
-- The paper on how we solved that comes out next week; the link will be on GitHub.
+- In July 2025, with v2, we expanded anira from an audio-to-audio solution to any kind of data.
+- Models started taking control data next to audio, like pitch and loudness, one value per frame instead of one per sample.
+- So in v2, every input and output became a tensor with its own shape and its own rate.
 
 ---
 
@@ -304,9 +225,14 @@ Note:
   <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
 </div>
 
+<div class="history-note">funded by the BMFTR since 2026</div>
+
 Note:
-- Next to the browser, 2026 also brought iOS and Android.
-- Every one of these added a special case to a design built for desktop plugins.
+- In 2026 we added webassembly support for the browser
+- And we got public funding from the BMFTR to develop anira further.
+- from an audio only solution to video, image and text
+- With it came iOS, Android
+- And a new design: v3.
 
 ---
 
@@ -338,95 +264,11 @@ Note:
 </div>
 
 Note:
-- Four places, then, where v2 reached its limits.
-- [click] Data: from float audio buffers to typed tensors, with images and text too.
-- [click] Bindings: from TypeScript wrapping C++ to one versioned C ABI.
-- [click] Timing: next to the hard audio stream, async jobs with a deadline.
-- [click] Memory: one tensor type for CPU, GPU and NPU.
-
----
-
-<div class="tag">anira v3</div>
-
-## Engines and accelerators.<br><span class="then">CPU by default, GPU in the -gpu and -cuda packages.</span>
-
-<div class="engine-matrix">
-  <div class="mx-corner"></div>
-  <div class="mx-col">CPU</div>
-  <div class="mx-col">CUDA</div>
-  <div class="mx-col">CoreML</div>
-  <div class="mx-col">MPS</div>
-  <div class="mx-col">MLX</div>
-  <div class="mx-col">Metal</div>
-  <div class="mx-col">DirectML</div>
-  <div class="mx-col">Vulkan</div>
-  <div class="mx-col">WebGPU</div>
-  <div class="mx-col">OpenCL</div>
-  <div class="mx-engine">ONNX Runtime</div>
-  <div class="mx-yes"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-engine">LibTorch</div>
-  <div class="mx-yes"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-engine">LiteRT</div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-engine">TFLite</div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-engine">ExecuTorch</div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-  <div class="mx-yes"></div>
-  <div class="mx-no"></div>
-  <div class="mx-no"></div>
-</div>
-
-<div class="cards-note">Prebuilt in anira-project/backends; which one is available depends on the platform. Any other engine can be registered by name.</div>
-
-Note:
-- This is what that opens up: five engines, each with its own set of accelerators.
-- TFLite is the same runtime as LiteRT through its older API, which is why the earlier slide showed four.
-- No engine covers every accelerator, so choosing an engine also means choosing which accelerators you can use.
-- CPU is the default; the GPU paths come in the -gpu and -cuda packages.
-- They are prebuilt in the backends repository, as far as each platform allows, and any other engine can be registered by name.
+- v2 was built for audio plugins on the desktop, and that is where it reached its limits.
+- [click] v3 takes any data: audio, images and text.
+- [click] One C ABI at the core, and C++ and TypeScript are generated from it.
+- [click] Two contracts: Hard for a stream, Async for jobs.
+- [click] And one tensor type for CPU, GPU and NPU.
 
 ---
 
@@ -444,38 +286,12 @@ Note:
   <div class="history-item current upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
 </div>
 
-<div class="history-note">Apache 2.0 · tanh lab, TU Berlin · funded by BMFTR since 2026</div>
+<div class="history-note">Apache 2.0 · tanh lab, TU Berlin</div>
 
 Note:
 - Today you run a v3 pre-release, and v3.0 ships at the end of November.
-- anira is Apache 2.0, from tanh lab at TU Berlin, and since this year it is funded by the German Federal Ministry of Research, Technology and Space, the BMFTR.
-
----
-
-<div class="tag">Outlook</div>
-
-## Which combination is fastest?<br><span class="then">After v3.0, we benchmark them systematically.</span>
-
-<div class="combos" data-chains="0,2,0;0,3,2;1,1,1;4,5,3;2,6,0">
-  <svg class="combos-svg" aria-hidden="true"><g class="combos-base"></g><g class="combos-hot fragment"></g></svg>
-  <div class="combos-col"><div class="combos-head">Hardware</div><div class="combos-node">Apple Silicon</div><div class="combos-node">NVIDIA</div><div class="combos-node">AMD</div><div class="combos-node">Intel</div><div class="combos-node">Qualcomm</div></div>
-  <div class="combos-col"><div class="combos-head">Execution provider</div><div class="combos-node">CPU</div><div class="combos-node">CUDA</div><div class="combos-node">CoreML</div><div class="combos-node">Metal</div><div class="combos-node">DirectML</div><div class="combos-node">Vulkan</div><div class="combos-node">WebGPU</div></div>
-  <div class="combos-col"><div class="combos-head">Engine</div><div class="combos-node">ONNX Runtime</div><div class="combos-node">LibTorch</div><div class="combos-node">LiteRT</div><div class="combos-node">ExecuTorch</div><div class="combos-node">TFLite</div></div>
-</div>
-
-<div class="combos-row fragment">
-  <div class="combos-audio"><span>Audio</span><b class="ok">CPU ✓</b><b class="open">GPU ?</b><em>barely studied</em></div>
-</div>
-
-<div class="combos-invite fragment">Measured some of these already? We would like to compare notes.</div>
-
-Note:
-- That leaves an open question.
-- Hardware, execution provider, engine: which path is fastest for a given model?
-- [click] Here are a few of the candidate paths; each one is a question, not an answer.
-- [click] For audio, the CPU paths are measured and they meet real time.
-- On the GPU it has barely been studied.
-- After v3.0 we will benchmark these combinations systematically.
-- [click] If you have numbers for any of these, come and talk to us.
-- The thread pool came out of one conversation after a talk, and we would like the next idea to come the same way.
+- After the release we want to go back to research: for real-time audio and video, is the CPU, the GPU or the NPU faster?
+- GPU and NPU inference is a whole talk of its own, so we cannot cover it here.
+- If you have already worked on this, come and talk to us, we would love to hear about your experience.
 - Now Fares shows you how anira works inside.
+

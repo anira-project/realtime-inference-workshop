@@ -4,15 +4,18 @@
 
 #include <algorithm>
 #include <cmath>
-#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace hands {
 
 namespace {
 
-std::string describe(const char* call, anira_status status, const anira_error& error) {
-    return std::string(call) + ": " + anira_status_string(status) + ": " + error.message;
+// The decoder as one handler, over a pipeline with one inference stage.
+anira::InferenceHandler create(anira::Context& context, const std::string& model_file) {
+    anira::Pipeline pipeline;
+    pipeline.add_inference(anira::ModelConfig::from_file(model_file));
+    return anira::InferenceHandler(context, pipeline);
 }
 
 // How many frames the audio thread keeps ahead of what it has pulled: one for
@@ -25,21 +28,11 @@ constexpr int k_frames_ahead = 2;
 class LatentDecoder::Source : public juce::AudioSource {
 public:
     explicit Source(const std::string& step_dir)
-        : m_context(anira::ContextConfig{}) {
-        const anira::ModelConfig model = anira::ModelConfig::from_file(step_dir + "/decoder.json");
-        m_contract = std::make_unique<anira::ContractHandle>(anira::ContractHandle::from_file(step_dir + "/contract.json"));
-        anira::Pipeline pipeline;
-        pipeline.add_inference(model);
-        anira_error error{};
-        const anira_status status = anira_handler_create(m_context.native(), pipeline.native(), &m_handler, &error);
-        if (status != ANIRA_OK) { throw std::runtime_error(describe("create", status, error)); }
-
-        const int64_t shape[2] = {k_num_latents, 1};
-        anira_tensor_init_host(&m_frame, m_frame_data.data(), ANIRA_DTYPE_F32, 2, shape);
+        : m_context(anira::ContextConfig{})
+        , m_contract(anira::ContractHandle::from_file(step_dir + "/contract.json"))
+        , m_handler(create(m_context, step_dir + "/decoder.json")) {
         for (size_t i = 0; i < k_num_latents; ++i) { m_latents[i].store(0.0F); }
     }
-
-    ~Source() override { anira_handler_destroy(m_handler); }
 
     void setLatents(const Latents& latents) {
         for (size_t i = 0; i < latents.size(); ++i) { m_latents[i].store(latents[i], std::memory_order_relaxed); }
@@ -50,11 +43,9 @@ public:
     void prepareToPlay(int samples_per_block, double) override {
         m_max_block = std::max(samples_per_block, 1);
         // Any block up to the resampler's largest request, at the model's rate
-        m_contract->hard_host_blocks(1, static_cast<uint32_t>(m_max_block), k_model_sample_rate);
-        anira_error error{};
-        const anira_status status = anira_handler_prepare(m_handler, m_contract->native(), &error);
-        if (status != ANIRA_OK) { throw std::runtime_error(describe("prepare", status, error)); }
-        m_latency = anira_handler_get_latency(m_handler, 0);
+        m_contract.hard_host_blocks(1, static_cast<uint32_t>(m_max_block), k_model_sample_rate);
+        m_handler.prepare(m_contract);  // Throws with anira's reason
+        m_latency = m_handler.get_latency(0);
 
         m_pulled = 0;
         m_pushed = 0;
@@ -65,14 +56,11 @@ public:
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& info) override {
         float* out = info.buffer->getWritePointer(0, info.startSample);
-        int64_t shape[2] = {1, 0};
         for (int done = 0; done < info.numSamples;) {
             const int n = std::min(info.numSamples - done, m_max_block);
-            shape[1] = n;
-            anira_tensor block{};
-            anira_tensor_init_host(&block, out + done, ANIRA_DTYPE_F32, 2, shape);
-            size_t delivered = 0;
-            anira_handler_pop_data(m_handler, &block, 0, &delivered);  // ANIRA_MISSED: the policy's zeros
+            const int64_t shape[2] = {1, n};
+            const anira::Tensor block = anira::Tensor::from_host(out + done, ANIRA_DTYPE_F32, shape);
+            m_handler.pop_data(block, 0);  // ANIRA_MISSED: the policy's zeros
             m_pulled += static_cast<size_t>(n);
             done += n;
         }
@@ -84,20 +72,22 @@ private:
     void feed() {
         while (m_pushed * k_model_block_size < m_pulled + k_frames_ahead * k_model_block_size) {
             for (size_t i = 0; i < k_num_latents; ++i) { m_frame_data[i] = m_latents[i].load(std::memory_order_relaxed); }
-            anira_handler_push_data(m_handler, &m_frame, 0);
+            m_handler.push_data(m_frame, 0);
             ++m_pushed;
         }
     }
 
+    // In this order: the handler is created on the context, and destroyed before it
     anira::Context m_context;
-    std::unique_ptr<anira::ContractHandle> m_contract;
-    anira_handler* m_handler = nullptr;
+    anira::ContractHandle m_contract;
+    anira::InferenceHandler m_handler;
     unsigned int m_latency = 0;
     int m_max_block = 512;
 
     std::array<std::atomic<float>, k_num_latents> m_latents;
     std::array<float, k_num_latents> m_frame_data{};
-    anira_tensor m_frame{};
+    const int64_t m_frame_shape[2] = {k_num_latents, 1};
+    const anira::Tensor m_frame = anira::Tensor::from_host(m_frame_data.data(), ANIRA_DTYPE_F32, m_frame_shape);
     size_t m_pulled = 0;  // Samples pulled out, audio thread
     size_t m_pushed = 0;  // Frames pushed in, audio thread
 };

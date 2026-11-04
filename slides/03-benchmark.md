@@ -28,7 +28,7 @@ Note:
       <thead><tr><th>Block</th><th>÷ Sample rate</th><th>= Threshold</th></tr></thead>
       <tbody>
         <tr><td>Model: 2048 samples</td><td>44.1 kHz</td><td class="result">46.4 ms</td></tr>
-        <tr><td>Host: 64 samples</td><td>44.1 kHz</td><td class="result">1.45 ms</td></tr>
+        <tr><td>Host: 512 samples</td><td>44.1 kHz</td><td class="result">11.6 ms</td></tr>
       </tbody>
     </table>
   </div>
@@ -38,41 +38,43 @@ Note:
       <thead><tr><th>Forward pass</th><th>÷ Threshold</th><th>= Factor</th><th></th></tr></thead>
       <tbody>
         <tr><td>7.8 ms</td><td>46.4 ms <small>model block</small></td><td class="result">0.17</td><td class="meaning">What a CPU meter shows</td></tr>
-        <tr><td>7.8 ms</td><td>1.45 ms <small>host callback</small></td><td class="result over">5.4</td><td class="meaning">What you hear</td></tr>
+        <tr><td>7.8 ms</td><td>11.6 ms <small>host callback</small></td><td class="result">0.67</td><td class="meaning">Fits, on average</td></tr>
+        <tr><td>43 ms <small>a slow call</small></td><td>11.6 ms <small>host callback</small></td><td class="result over">3.7</td><td class="meaning">What you hear</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="deadline fragment" data-fragment-index="2">
-  <div class="deadline-budget"><span>real-time threshold · 1.45 ms</span></div>
-  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i><i style="--i:30"></i><i class="runs" style="--i:31"><span>forward pass<br>7.8 ms</span></i></div>
-  <div class="deadline-axis"><span>callbacks 1–31 · only copies samples, ≈ 0 ms</span><span>callback 32 · 2048 collected, run the model</span></div>
+  <div class="deadline-budget"><span>real-time threshold · 11.6 ms</span></div>
+  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i class="runs" style="--i:3"><span>a slow call<br>43 ms</span></i></div>
+  <div class="deadline-axis"><span>callbacks 1–3 · only copy samples, ≈ 0 ms</span><span>callback 4 · 2048 collected, run the model</span></div>
 </div>
 
 Note:
 - Every callback has a deadline: the real-time threshold, how much time we have
-- 64 samples at 44.1 kHz: threshold of 1.45 ms per callback
+- 512 samples at 44.1 kHz: threshold of 11.6 ms per callback
 - Model: 2048 samples = threshold of 46 ms
 - Click: real-time factor, how much of that time we use; has to stay below 1
 - Forward pass on my Mac: 7.8 ms
 - Against the model's threshold: 0.17, what a CPU meter shows
-- Against the callback's threshold: 5.4, what you hear: a click every 46 ms
-- Click: 31 callbacks just copy samples, the 32nd runs the whole network in 1.45 ms
-- Measure the forward pass, compare it to the host's threshold
+- Against the callback's threshold: 0.67. Fits, on average, but uses two thirds of the callback
+- A slow call, 43 ms: 3.7, what you hear: a dropout
+- Click: 3 callbacks just copy samples, the 4th runs the whole network in 11.6 ms
+- The average doesn't decide, the worst case does: measure it
 - Linger here: key insight of the first half
 
 **Script:**
 
-"Every callback has a deadline that we should not exceed. We call that the real-time threshold: how much time we have. It's the block size divided by the sample rate. A host block of 64 samples at 44.1 kHz gives us 1.45 milliseconds per callback. The model takes 2048 samples, which is 46 milliseconds of audio.
+"Every callback has a deadline that we should not exceed. We call that the real-time threshold: how much time we have. It's the block size divided by the sample rate. Our host block of 512 samples at 44.1 kHz gives us 11.6 milliseconds per callback. The model takes 2048 samples, which is 46 milliseconds of audio.
 
 *Click: the real-time factor.*
 
-The real-time factor is how much of that time we use: the processing time divided by the threshold. It has to stay below 1, because above 1 we're too late. The forward pass on my Mac takes 7.8 milliseconds. Against the model's threshold that's a factor of 0.17, which is what a CPU meter shows. But against the callback's threshold it's 5.4, and that's what you hear: a click every 46 milliseconds.
+The real-time factor is how much of that time we use: the processing time divided by the threshold. It has to stay below 1, because above 1 we're too late. The forward pass on my Mac takes 7.8 milliseconds. Against the model's threshold that's a factor of 0.17, which is what a CPU meter shows. Against the callback's threshold it's 0.67: that fits, on average, but it takes two thirds of the callback. And not every call takes 7.8 milliseconds: a slow one of 43 milliseconds is a factor of 3.7, and that's what you hear, a dropout.
 
 *Click: the bars.*
 
-Why does the callback count? The first 31 callbacks of the host just copy samples, which costs virtually no time. The 32nd has to run the whole network, and it still only has 1.45 milliseconds. So same forward pass, two factors, and only the 5.4 matters for the audio. That's why we need to measure the forward pass and compare it to the threshold of the host."
+Why does the callback count? The first three callbacks of the host just copy samples, which costs virtually no time. The fourth has to run the whole network, and it still only has 11.6 milliseconds. So the average doesn't decide whether we make it, the worst case does. That's why we need to measure the forward pass, every single call, and compare it to the threshold of the host."
 
 *Linger here. This is the key insight of the first half.*
 
@@ -179,13 +181,14 @@ cmake --build --preset release --target step03_solution
 Note:
 - Nothing to edit: build it and run it
 - Look at the first calls, then at the list of the 5 slowest
+- The last lines: your worst case after the warm-up. Write it down, steps 5 and 6 need it
 - Run it three times
 - 2 minutes
 
 **Script:**
 
 *Timebox.*
-"So, there's nothing to edit here. Please build it and run it. Have a look at which calls are slow, and at the list of the 5 slowest calls: what is your worst call after the warm-up? Then run it three times and see what changes. You have 2 minutes."
+"So, there's nothing to edit here. Please build it and run it. Have a look at which calls are slow, and at the list of the 5 slowest calls. The last lines print your worst call after the warm-up: please write that number down, you'll need it in steps 5 and 6. Then run it three times and see what changes. You have 2 minutes."
 
 ---
 
@@ -227,7 +230,7 @@ Note:
 
 <div class="warmup">
   <div class="warmup-line model fragment" data-fragment-index="1" style="--at:0.663"><span>model block<br>46.4 ms</span></div>
-  <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.021"><span>64-sample callback<br>1.45 ms</span></div>
+  <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.166"><span>512-sample callback<br>11.6 ms</span></div>
   <div class="warmup-bars"><i class="warm" style="--h:85.8%;--i:0"><span>60.1 ms</span><em>1</em></i><i class="warm" style="--h:53.4%;--i:1"><span>37.4 ms</span><em>2</em></i><i class="" style="--h:11.1%;--i:2"><span>7.8 ms</span><em>3</em></i><i class="" style="--h:11.1%;--i:3"><span>7.8 ms</span><em>4</em></i><i class="" style="--h:11.1%;--i:4"><span>7.8 ms</span><em>5</em></i><i class="" style="--h:11.2%;--i:5"><span>7.8 ms</span><em>6</em></i><i class="" style="--h:11.1%;--i:6"><span>7.8 ms</span><em>7</em></i><i class="" style="--h:11.1%;--i:7"><span>7.7 ms</span><em>8</em></i><i class="" style="--h:11.1%;--i:8"><span>7.8 ms</span><em>9</em></i><i class="" style="--h:11.2%;--i:9"><span>7.8 ms</span><em>10</em></i></div>
   <div class="warmup-note fragment" data-fragment-index="0">worst after warm-up: 8.5 ms</div>
   <div class="warmup-axis">call</div>
@@ -238,11 +241,12 @@ Note:
 - First call 60 ms, second 37 ms: TorchScript optimises the model while it runs it
 - It's the first calls every time, not random
 - Click: from the third call on it's flat, about 7.8 ms
-- Worst after warm-up, over all the calls: 8.5 ms, factor 0.18 against a model block, 5.9 against a callback
-- In your list of 5: the first call that isn't part of the warm-up
+- Worst after warm-up, over all the calls: 8.5 ms, factor 0.18 against a model block, 0.73 against a callback
+- The last lines of your output: the worst call after the warm-up
 - Click: the two thresholds
 - First call doesn't fit the 46 ms of a model block; second just about does
-- Warmed up: well below 46 ms, but well above 1.45 ms
+- Both are far above the 11.6 ms of a callback
+- Warmed up: below 11.6 ms, but with little room
 - Linger here
 
 **Script:**
@@ -251,11 +255,50 @@ Note:
 
 *Click: warmed up.*
 
-From the third call on it's flat, at about 7.8 milliseconds. Now look at the list of the 5 slowest calls in your terminal. The first calls in that list are the warm-up, and the next one is your worst case after the warm-up. In this run, over all the calls, mine was 8.5 milliseconds. That's a factor of 0.18 against a model block and, in the worst case, 5.9 against a 64-sample callback.
+From the third call on it's flat, at about 7.8 milliseconds. Now look at the last lines in your terminal: that's your worst case after the warm-up. In this run, over all the calls, mine was 8.5 milliseconds. That's a factor of 0.18 against a model block and 0.73 against a 512-sample callback.
 
 *Click: the thresholds.*
 
-Now let's add our two thresholds. The very first call doesn't even fit the 46 milliseconds of a model block. Once it's warmed up, it fits easily. But it's still way above the 1.45 milliseconds of a 64-sample callback."
+Now let's add our two thresholds. The very first call doesn't even fit the 46 milliseconds of a model block, and both warm-up calls are far above the 11.6 milliseconds of a callback. Once it's warmed up, it fits below the callback's threshold, but with not much room to spare."
+
+---
+
+<div class="tag">Budget</div>
+
+## Your worst case<br><span class="then">In samples, in whole callbacks.</span>
+
+<div class="lat-sum" style="margin-bottom: 4rem">
+  <div class="lat-part">max inference time<small>after the warm-up</small><strong>8.5 ms</strong></div>
+  <div class="lat-plus">=</div>
+  <div class="lat-part fragment" data-fragment-index="1">in samples<small>× 44.1 kHz</small><strong>375</strong></div>
+  <div class="lat-plus fragment" data-fragment-index="2">→</div>
+  <div class="lat-part total fragment" data-fragment-index="2">rounded_max_inference_time<small>whole 512-sample callbacks</small><strong>512</strong></div>
+</div>
+
+```cpp
+constexpr double k_max_inference_ms = 8.5;  // steps 5 and 6: your number from here
+```
+
+Note:
+- Your worst call after the warm-up, from the last lines of the output
+- Click: in samples, at 44.1 kHz: 8.5 ms are 375 samples
+- Click: rounded up to whole 512-sample callbacks: 512
+- Whole callbacks, because the audio thread only picks results up once per callback
+- That's how much time the worker gets in step 5, and part of the latency in step 6
+- Everyone has their own number: write it down
+- Measured warmed up, so the plugin has to warm up before the audio starts
+
+**Script:**
+
+"Let's turn your worst case into the number we'll need. Mine was 8.5 milliseconds after the warm-up.
+
+*Click.*
+
+In samples that's 8.5 milliseconds times 44.1 kilohertz: 375 samples.
+
+*Click.*
+
+And we round that up to whole callbacks of 512 samples, so 512. Whole callbacks, because the audio thread only picks results up once per callback. We call that the rounded max inference time. In step 5 it's the time the worker gets, and in step 6 it becomes part of our latency. Everyone has their own number here, so please write yours down. And because we measured after the warm-up, our plugin will have to warm up before the audio starts."
 
 ---
 
@@ -272,10 +315,10 @@ Now let's add our two thresholds. The very first call doesn't even fit the 46 mi
 
 Note:
 - A plugin makes the first calls before the audio starts
-- Warmed up: about 8 ms, the machine is fast enough for a 46 ms block
-- But not for a 1.45 ms callback: the model can't run in the callback, the next steps solve that
-- Run it again: sometimes a call after the warm-up is slow too, one of my runs had 43 ms, factor 0.93
+- Warmed up: about 8 ms, it fits a 46 ms block easily, and a 11.6 ms callback just about
+- Run it again: sometimes a call after the warm-up is slow too, one of my runs had 43 ms, factor 0.93 against a block, 3.7 against a callback
 - That one isn't warm-up: the worst case has to fit with room to spare
+- In the callback it doesn't: the next steps take the model out of it
 - Mean: your CPU meter
 - p99: one call in a hundred is slower, here about every 4.6 s
 - Measured on a quiet thread, nothing competing
@@ -283,5 +326,5 @@ Note:
 
 **Script:**
 
-"So what does this tell us? A plugin has to make those first calls before the audio starts. Once it's warmed up, our computer is fast enough for a model block. But the model can't run in a 64-sample callback, and that's what the next steps solve.
-If you ran it a few times, you may have seen something else: sometimes a call after the warm-up is slow too. One of my runs had 43 milliseconds, which is nearly the whole model block. That isn't warm-up, it's the rest of the system getting in the way, so the worst case has to fit with room to spare. The mean is your CPU meter. p99 means one call in a hundred is slower than this, and at this block size that is about every 4.6 seconds. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in the next step."
+"So what does this tell us? A plugin has to make those first calls before the audio starts. Once it's warmed up, our computer is fast enough for a model block, and just about for a 512-sample callback.
+If you ran it a few times, you may have seen something else: sometimes a call after the warm-up is slow too. One of my runs had 43 milliseconds, which is nearly the whole model block, and almost four callbacks. That isn't warm-up, it's the rest of the system getting in the way, so the worst case has to fit with room to spare. Inside the callback it doesn't, and that's what the next steps solve. The mean is your CPU meter. p99 means one call in a hundred is slower than this, and at this block size that is about every 4.6 seconds. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in the next step."

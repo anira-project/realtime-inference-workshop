@@ -1,17 +1,17 @@
 # Step 2: Model input size vs. host buffer size
 
-**Goal:** feed a model that only accepts 2048 samples from a host that hands you whatever it likes.
+**Goal:** feed a model that only accepts 2048 samples from a host that hands you 512 at a time.
 
-**Problem it reveals:** the two sizes have nothing to do with each other, and they never will. Something has to sit in between.
+**Problem it reveals:** the two sizes have nothing to do with each other. Something has to sit in between.
 
 ## Why this is not a corner case
 
-The model's block size comes from the export. The host's comes from the audio device, the user's settings, and the sample rate — 64, 128, 441, 512, and it can change while you are running. They match by accident, once.
+The model's block size comes from the export. The host's comes from the audio device, the user's settings, and the sample rate. They match by accident, once. In this part of the workshop the host always hands over 512 samples: not the model's 2048, but a divisor of it, so four callbacks make one model block. Arbitrary host block sizes need more than this, and part 2 shows how.
 
 ## What you have
 
 - [`common/helpers/ring_buffer.h`](../common/helpers/ring_buffer.h) — a ring buffer, written for you: `push`, `pop`, `available`, `space`. It throws on overflow and underflow, which is how you find out your capacity was wrong.
-- [`common/helpers/host.h`](../common/helpers/host.h) — a fake host: it calls your `process(samples, num_samples)` with one block at a time, at a size you choose. No audio device, so it runs anywhere.
+- [`common/helpers/host.h`](../common/helpers/host.h) — a fake host: it calls your `process(samples, num_samples)` with one block at a time, 512 samples each. No audio device, so it runs anywhere.
 - `common/helpers/libtorch_engine.h` — the engine from step 1, unchanged.
 - `common/helpers/support.h`, `common/assets/test_signal.h`, `common/assets/target_signal.h` — as before.
 
@@ -24,8 +24,8 @@ processor.prepare(max_block_size);            // Before the audio starts: alloca
 processor.process_block(samples, num_samples) // Per callback, in place
 ```
 
-1. **Size the two ring buffers**, in `prepare()`. How much can be in flight at once, given a host block of N and a model block of 2048? Everything that allocates belongs here, not in the callback.
-2. **The pump**, in `process_block()`. Push the host's samples into the input ring buffer, count the whole model blocks waiting there, and for each one pop it into `m_model_block`, run the model (given) and push the result into the output ring buffer. What is left over waits for the next call.
+1. **Size the two ring buffers**, in `prepare()`. How much can be in flight at once, with a host block of 512 and a model block of 2048? Everything that allocates belongs here, not in the callback.
+2. **The pump**, in `process_block()`. Push the host's samples into the input ring buffer, check whether a whole model block is waiting there, and if so pop it into `m_model_block`, run the model (given) and push the result into the output ring buffer. What is left over waits for the next call.
 3. **Give the host its samples back**, in place: pop them from the output ring buffer, if enough are there. At the start the model has produced nothing, and the host gets silence (given).
 
 Build and run from the repository root:
@@ -39,35 +39,28 @@ cmake --build build -j
 ## Expected output
 
 ```
-  host block 64            max abs diff 4.92e-07   OK
-  host block 128           max abs diff 4.92e-07   OK
-  host block 441           max abs diff 4.25e-07   OK
-  host block 512           max abs diff 4.92e-07   OK
-  host block 1024          max abs diff 4.92e-07   OK
-  host block 2048          max abs diff 4.92e-07   OK
+  host block 512           max abs diff 3.28e-07   OK
 
-OK: the model saw the same stream at every host block size.
+OK: the host got the model's stream back, after a stretch of silence.
 ```
 
-The check is on **what the model produced**, not on what the host received: the same stream as in step 1, regardless of how the host chopped up the input. 441 does not divide the signal, so that run simply stops a bit earlier.
+The check listens like the host: what came back has to be silence first, then the model's stream from step 1, sample for sample, however the host chopped up the input.
 
 ## If you're stuck
 
 Each TODO says so when it is still missing:
 
-- **`TODO 1: give the ring buffers a capacity in prepare()`** — `capacity` is still 0. Think about the worst moment: the host has just written a full block and the model has not taken anything out yet.
-- **`TODO 2: the model never ran`** — nothing was pushed into the input ring buffer, or `num_model_blocks` is still 0.
-- **`TODO 2: nothing was pushed into m_output`** — the model ran, but its results never reached the output ring buffer.
-- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: the block is not popped from `m_input`, or only one model block is counted per callback rather than as many as are waiting.
+- **`TODO 1: give the ring buffers a capacity in prepare()`** — `capacity` is still 0. Think about the worst moment on each side: the input just before a model block is taken out, the output just after one was put in.
+- **`TODO 2: nothing came back from the model`** — nothing was pushed into the input ring buffer, `has_block` is still false, or the model's results never reached the output ring buffer.
+- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but it is not popped from `m_input`.
 - **`TODO 3: give the host its samples back`** — the output is piling up instead of going out.
 - **`TODO 3: the host got its own input back`** — the host buffer was never written to.
+- **`TODO 3: the host did not get silence first, then the model's stream`** — samples reach the host, but not the right ones, or not in the right place.
 
 The ring buffer complains too:
 
-- **`ring buffer overflow: 64 samples pushed, room for 0`** — the capacity from TODO 1 is too small.
+- **`ring buffer overflow: 512 samples pushed, room for …`** — the capacity from TODO 1 is too small.
 - **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; TODO 3 decides what the host gets instead.
-- **`produced 4096 samples, expected 6144`** — samples are being dropped. Everything the host gives you has to go in, and only whole model blocks come out.
-- **It passes at 2048 and fails everywhere else** — the pump only works when the sizes happen to match: `num_model_blocks` has to count every whole block that is waiting, not just one.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
@@ -77,4 +70,4 @@ Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
 ## What broke?
 
-Nothing, but two things are now true that were not before. The host gets silence at the start, because the model needs 2048 samples before it can say anything — that is latency, and it is a later step. And every callback now either does nothing or runs a whole forward pass. How long does that take, and what is the budget? That is step 3.
+Nothing, but two things are now true that were not before. The host gets silence at the start: how long, and where it comes from, is the question after the solution. And every fourth callback now runs a whole forward pass. How long does that take, and what is the budget? That is step 3.

@@ -3,9 +3,9 @@
 // Goal:   the model cut in the middle: two handlers on one context, and the
 //         eight latents per block in between, where a bias and a scale per
 //         dimension are the instrument.
-// Given:  encoder.json, decoder.json, contract.json, the fake host, anira.
-// Task:   fill in the three TODO banners, each in two places: the planning
-//         on the main thread, and the callback.
+// Given:  encoder.json, decoder.json, contract.json, the fake host, anira (anira.hpp).
+// Task:   the blanks marked "fill out" under the three TODO banners, each in
+//         two places: the planning on the main thread, and the callback.
 // Check:  with zero bias and unit scale the output equals the forward model's
 //         reference, shifted by the latency the decoder reports.
 //
@@ -14,6 +14,7 @@
 #include <anira/anira.hpp>
 
 #include <array>
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdio>
@@ -38,37 +39,23 @@ constexpr size_t k_model_latency = 2224;  // Declared on the decoder's output
 
 namespace {
 
-struct Handler {
-    anira_handler* m_handle = nullptr;
-    ~Handler() { anira_handler_destroy(m_handle); }
-};
-
-std::string describe(const char* call, anira_status status, const anira_error& error) {
-    return std::string(call) + ": " + anira_status_string(status) + ": " + error.message;
-}
-
-// One model as one handler, created over a pipeline with one inference stage.
-void create(Handler& handler, anira::Context& context, const std::string& model_file) {
-    const anira::ModelConfig model = anira::ModelConfig::from_file(model_file);
+// One model as one handler, over a pipeline with one inference stage.
+anira::InferenceHandler create(anira::Context& context, const std::string& model_file) {
     anira::Pipeline pipeline;
-    pipeline.add_inference(model);
-    anira_error error{};
-    const anira_status status = anira_handler_create(context.native(), pipeline.native(), &handler.m_handle, &error);
-    if (status != ANIRA_OK) { throw std::runtime_error(describe("create", status, error)); }
+    pipeline.add_inference(anira::ModelConfig::from_file(model_file));
+    return anira::InferenceHandler(context, pipeline);
 }
 
 // The contract with the host's blocks, prepared; returns the latency of output slot 0.
-size_t prepare(Handler& handler, anira::ContractHandle& contract) {
+size_t prepare(anira::InferenceHandler& handler, anira::ContractHandle& contract) {
     contract.hard_host_blocks(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
-    anira_error error{};
-    const anira_status status = anira_handler_prepare(handler.m_handle, contract.native(), &error);
-    if (status != ANIRA_OK) { throw std::runtime_error(describe("prepare", status, error)); }
-    return anira_handler_get_latency(handler.m_handle, 0);
+    handler.prepare(contract);
+    return handler.get_latency(0);
 }
 
 }  // namespace
 
-int main() {
+int main() try {
     const std::string step_dir = WORKSHOP_STEP_DIR;
 
     // The controls: set from anywhere, read on the audio thread.
@@ -80,37 +67,37 @@ int main() {
     }
 
     anira::Context context{anira::ContextConfig{}};
-    Handler encoder;
-    Handler decoder;
-    size_t encoder_latency_frames = 0;
-    size_t latency = 0;
-    try {
-        anira::ContractHandle contract = anira::ContractHandle::from_file(step_dir + "/contract.json");
+    anira::ContractHandle contract = anira::ContractHandle::from_file(step_dir + "/contract.json");
 
-        // ---- TODO 1: the encoder -------------------------------------------
-        // create() it from encoder.json and prepare() it with the contract.
-        // Its latency comes back in latent frames: keep it in
-        // encoder_latency_frames, the callback needs it.
-        // --------------------------------------------------------------------
+    // ---- TODO 1: the encoder -----------------------------------------------
+    // Created from encoder.json; prepare() it with the contract. Its latency
+    // comes back in latent frames: the callback needs it.
+    anira::InferenceHandler encoder = create(context, step_dir + "/encoder.json");
+    const size_t encoder_latency_frames = 0; // <- 1. fill out
 
-        // ---- TODO 3: the decoder -------------------------------------------
-        // create() it from decoder.json and prepare() it: that latency is in
-        // samples, and it assumes a frame is there when its window starts.
-        // Ours arrives late by the encoder's latency, so declare the sum on
-        // the decoder's output (contract.hard_latency("audio", …)) and prepare
-        // again. What it reports then is the latency the host is told.
-        // --------------------------------------------------------------------
-    } catch (const std::exception& error) {
-        std::fprintf(stderr, "%s\n", error.what());
+    // ---- TODO 3: the decoder -----------------------------------------------
+    anira::InferenceHandler decoder = create(context, step_dir + "/decoder.json");
+    const size_t decoder_latency = prepare(decoder, contract);  // In samples, on its own
+
+    // The decoder's latency assumes a frame is there when its window starts.
+    // Ours arrives late by the encoder's latency: the sum, in samples (one
+    // latent frame is k_frame_size samples), is what the host is told. Declare
+    // it on the decoder's output and prepare the decoder again.
+    const size_t latency = 0; // <- 1. fill out
+    // contract.hard_latency("audio", static_cast<uint32_t>(?)); // <- 2. fill out
+    // prepare(?, contract); // <- 3. fill out
+    // ------------------------------------------------------------------------
+
+    if (encoder_latency_frames == 0) {
+        std::fprintf(stderr, "TODO 1: prepare the encoder and keep its latency.\n");
         return 2;
     }
-
-    if (encoder.m_handle == nullptr) {
-        std::fprintf(stderr, "TODO 1: create and prepare the encoder first.\n");
+    if (latency == 0) {
+        std::fprintf(stderr, "TODO 3: the latency the host is told: the encoder's, in samples, plus the decoder's.\n");
         return 2;
     }
-    if (decoder.m_handle == nullptr || latency == 0) {
-        std::fprintf(stderr, "TODO 3: create and prepare the decoder, and declare the summed latency.\n");
+    if (decoder.get_latency(0) != latency) {
+        std::fprintf(stderr, "TODO 3: declare the sum on the decoder's output and prepare the decoder again.\n");
         return 2;
     }
 
@@ -119,13 +106,10 @@ int main() {
                 1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,
                 k_host.m_sample_rate);
 
-    // Two tensors, built once: the host's block [1, samples] and one latent frame [8, 1]
-    int64_t block_shape[2] = {1, 0};
-    anira_tensor block{};
+    // One latent frame [8, 1], its tensor built once
     std::array<float, k_num_latents> frame_data{};
     const int64_t frame_shape[2] = {k_num_latents, 1};
-    anira_tensor frame{};
-    anira_tensor_init_host(&frame, frame_data.data(), ANIRA_DTYPE_F32, 2, frame_shape);
+    const anira::Tensor frame = anira::Tensor::from_host(frame_data.data(), ANIRA_DTYPE_F32, frame_shape);
 
     std::vector<size_t> late;
     size_t position = 0;
@@ -136,25 +120,38 @@ int main() {
         k_input_signal.size(),
         k_host.m_block_size,
         [&](float* samples, size_t num_samples) {
-            block_shape[1] = static_cast<int64_t>(num_samples);
-            anira_tensor_init_host(&block, samples, ANIRA_DTYPE_F32, 2, block_shape);
+            // One tensor over the host's block, [channels, samples]: no copy, no allocation
+            const int64_t block_shape[2] = {1, static_cast<int64_t>(num_samples)};
+            const anira::Tensor block = anira::Tensor::from_host(samples, ANIRA_DTYPE_F32, block_shape);
 
             // ---- TODO 1: the encoder ---------------------------------------
-            // Push the block (input slot 0). Then, while
-            // anira_handler_get_available_samples (output slot 0, channel 0)
-            // says a frame is waiting, pop it into `frame`, counting them in
-            // `frames`; a pop with nothing waiting is a miss. The encoder's
-            // first encoder_latency_frames frames are its priming, zeros: a
-            // zero latent is a sound, not silence, so skip those.
-            //   For each real frame:
-            // ---- TODO 2: bias and scale on z -------------------------------
-            //   frame_data[i] = frame_data[i] * scale[i] + bias[i], the atomics
-            //   loaded on this thread.
-            // ---- TODO 3: the decoder ---------------------------------------
-            //   Push the frame into the decoder (input slot 0). After the loop,
-            //   pop the decoder's audio for this callback into `block` (output
-            //   slot 0); ANIRA_MISSED means the miss policy filled it, record
-            //   `position` in `late` then.
+            // Audio in. A latent frame comes out once a whole block has been
+            // encoded, about one latency later; usually none in this callback.
+            // Pop only what is there: a pop with no frame waiting is a miss.
+            // encoder.push_data(?, 0); // <- 2. fill out
+            size_t available = 0;
+            while (encoder.get_available_samples(0, 0, &available) == ANIRA_OK && available > 0) {
+                encoder.pop_data(frame, 0);
+                // The encoder's first frames are its latency priming: zeros. A
+                // zero latent is not silence, it is a sound of its own, so
+                // those frames must not reach the decoder.
+                const bool is_priming = false; // <- 3. fill out
+                ++frames;
+                if (is_priming) { continue; }
+
+                // ---- TODO 2: bias and scale on z ---------------------------
+                // z * scale + bias, per dimension, the atomics loaded here.
+                for (size_t i = 0; i < k_num_latents; ++i) {
+                    // frame_data[i] = ?; // <- 1. fill out
+                }
+
+                // ---- TODO 3: the decoder -----------------------------------
+                // decoder.push_data(?, 0); // <- 4. fill out
+            }
+            // The decoder's audio out, for this callback: samples, or the miss policy
+            anira_status status = ANIRA_OK;
+            // status = decoder.pop_data(?, 0); // <- 5. fill out
+            if (status == ANIRA_MISSED) { late.push_back(position); }
             // ----------------------------------------------------------------
             position += num_samples;
         },
@@ -164,10 +161,20 @@ int main() {
         std::fprintf(stderr, "TODO 1: no latent frame came out of the encoder.\n");
         return 2;
     }
+    // The block is the decoder's output: unpopped, it goes out as it came in.
+    if (std::equal(output.begin(), output.end(), k_input_signal.begin())) {
+        std::fprintf(stderr, "TODO 3: the output is the input: pop the decoder's audio into the block.\n");
+        return 2;
+    }
+
     std::printf("  latent frames                %zu, %zu of them priming\n", frames, encoder_latency_frames);
 
     // The reference carries the model's own delay, which the decoder declared:
     // it lines up after the rest, as in steps 6 and 9.
     return report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                latency - k_model_latency, late, k_host.m_block_size);
+} catch (const std::exception& error) {
+    // Every refusal of anira's, from the files to prepare, names what it refused
+    std::fprintf(stderr, "%s\n", error.what());
+    return 2;
 }

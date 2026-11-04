@@ -3,31 +3,28 @@
 // Goal:   work out how late the processed signal is, report it, and delay the
 //         dry signal by the same amount so the two can be mixed.
 // Given:  the threaded processor from step 5, with a dry path added.
-// Task:   fill in the three TODO banners.
+// Task:   fill in the two TODO banners.
 // Check:  at 100% dry the output is the input, delayed by exactly the reported
 //         latency — if the number is wrong, the check says so.
 //
 // It builds and runs as it is, and says which TODO is still open.
 
 #include <algorithm>
-#include <array>
 #include <atomic>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
-#include <cstdlib>
 #include <stdexcept>
 #include <thread>
 #include <vector>
 
+#include "common/assets/target_signal.h"
+#include "common/assets/test_signal.h"
 #include "common/helpers/host.h"
 #include "common/helpers/libtorch_engine.h"
 #include "common/helpers/ring_buffer.h"
-#include "common/helpers/threadsafe_ring_buffer.h"
 #include "common/helpers/support.h"
-#include "common/assets/target_signal.h"
-#include "common/assets/test_signal.h"
+#include "common/helpers/threadsafe_ring_buffer.h"
 
 // Model settings taken from the export metadata.
 constexpr struct {
@@ -38,8 +35,12 @@ constexpr struct {
 } k_model{};
 
 constexpr size_t k_host_block_size = 512;  // What the host hands over per callback
-constexpr size_t k_late_capacity = 1024;   // Late callbacks remembered for the report
-constexpr size_t k_blocks_in_flight = 8;   // Model blocks waiting between the threads
+
+// Your worst case after the warm-up, from the last lines of step 3, in ms.
+constexpr double k_max_inference_ms = 0.0;  // <- fill out: your number from step 3
+
+// The first calls are slow (step 3): made before the audio starts.
+constexpr size_t k_warm_up_calls = 2;
 
 namespace {
 
@@ -49,30 +50,40 @@ namespace {
 #define WORKSHOP_AUDIO_CALLBACK
 #endif
 
+// Step 5: your worst case in samples, rounded up to whole callbacks.
+size_t rounded_max_inference_time() {
+    const double max_inference_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+    return static_cast<size_t>(
+               std::ceil(max_inference_samples / static_cast<double>(k_host_block_size))) *
+           k_host_block_size;
+}
+
 // Step 5's processor, with a dry path and a mix control.
 class LatencyProcessor {
 public:
     explicit LatencyProcessor(LibTorchEngine& engine) : m_engine(engine) {}
 
     ~LatencyProcessor() { stop(); }
-    
+
+    // Step 5's prefill: how late the wet path comes out of m_output.
+    size_t prefill_samples() const {
+        return (k_model.m_input_size - k_host_block_size) + rounded_max_inference_time();
+    }
+
     // ---- TODO 1 -------------------------------------------------------------
     // How late is the wet signal?
     // Three things delay it, and all are fixed:
-    //   - the model cannot run before a whole block has arrived
-    //   - the result is only picked up in a later callback, so the output side
-    //     starts out primed with a block of silence
+    //   - the buffer adaptation: the model cannot run before a whole block has
+    //     arrived, the host brings 512 samples at a time (step 2)
+    //   - the time the worker is given: rounded_max_inference_time() (step 5)
     //   - the model itself answers late: k_model.m_latency, from the export
     // What the host is told has to be what the host gets, so this number also
     // decides how far the dry signal is delayed in prepare().
-    //
-    // Hint: the model's own latency is defined in the struct above.
     // --------------------------------------------------------------------------
-    size_t latency_samples() const { 
-        size_t latency = 0; // <- fill out
-        return latency; 
+    size_t latency_samples() const {
+        size_t latency = 0;  // <- fill out
+        return latency;
     }
-
 
     // Allocate and initialize all processing buffers and the thread
     // before audio processing begins.
@@ -80,32 +91,35 @@ public:
     void prepare(size_t max_block_size) {
         stop();
 
-        m_input = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
-        m_output = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
+        // Step 5: the input holds one model block, the output starts with the prefill.
+        m_input = ThreadSafeRingBuffer(k_model.m_input_size);
+        m_output = ThreadSafeRingBuffer(rounded_max_inference_time() + k_model.m_input_size);
+        const std::vector<float> silence(std::max(latency_samples(), prefill_samples()), 0.0f);
+        m_output.push(silence.data(), prefill_samples());
+
+        // The dry path: the audio thread's own ring buffer, and scratch blocks.
         m_dry = RingBuffer(max_block_size + latency_samples());
-        m_model_block.assign(k_model.m_input_size, 0.0f);
-        m_engine.reset();
         m_dry_block.assign(max_block_size, 0.0f);
         m_wet_block.assign(max_block_size, 0.0f);
-        m_wet_debt = 0;
-        m_position = 0;
-        m_late.clear();
-        m_late.reserve(k_late_capacity);
-
-        // Prime the wet path with one block of silence while the input is still
-        // being collected, and one more so the worker has a full block of time
-        // to answer. That is what makes the latency a fixed number instead of
-        // whatever the worker happened to manage. The model's own delay is
-        // already inside what it returns; the dry path gets all of it.
-        m_silence.assign(std::max(latency_samples(), 2 * k_model.m_input_size), 0.0f);
-        m_output.push(m_silence.data(), 2 * k_model.m_input_size);
 
         // ---- TODO 2 --------------------------------------------------------
         // Delay the dry signal.
         // The host aligns everything to latency_samples(). How far behind does
         // the dry signal have to start, so it lines up with the wet one?
+        // The model's own delay is already inside what it returns; the dry
+        // path has nothing like that, so it gets all of it.
         // ---------------------------------------------------------------------
-        m_dry.push(m_silence.data(), 0); // <- fill out
+        m_dry.push(silence.data(), 0);  // <- fill out
+
+        // Step 5: the warm-up, before the audio starts.
+        m_model_block.assign(k_model.m_input_size, 0.0f);
+        for (size_t i = 0; i < k_warm_up_calls; ++i) {
+            m_engine.process(m_model_block.data(), k_model.m_input_size);
+        }
+        m_engine.reset();
+
+        m_unpushed = 0;
+        m_debt = 0;
 
         m_running.store(true, std::memory_order_release);
         m_worker = std::thread([this] { worker(); });
@@ -122,84 +136,53 @@ public:
 
     // The audio thread: samples in, samples out, nothing that can block.
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
-        // No room means the worker is behind. The block is dropped — a glitch,
-        // but a bounded one. Waiting for room would be a missed deadline.
-        if (m_input.space() >= num_samples) {
-            m_input.push(samples, num_samples);
-        } else {
-            m_dropped.fetch_add(1, std::memory_order_relaxed);
+        // Step 5's audio thread, into m_wet_block instead of the host's buffer.
+        for (size_t i = 0; i < num_samples; ++i) {
+            if (!m_input.try_push(samples[i])) {
+                m_unpushed += num_samples - i;
+                break;
+            }
         }
-        m_dry.push(samples, num_samples);
+        const size_t zeros = std::min(m_unpushed, num_samples);
+        std::fill_n(m_wet_block.data(), zeros, 0.0f);
+        m_unpushed -= zeros;
 
-        // A block that came too late already went out as silence. Drop it when
-        // it arrives, so the wet path stays exactly latency_samples() late: a
-        // late block is a glitch, not a shift for the rest of the stream.
-        while (m_wet_debt > 0 && m_output.available() > 0) {
-            const size_t n = std::min({m_wet_debt, m_output.available(), m_wet_block.size()});
-            m_output.pop(m_wet_block.data(), n);
-            m_wet_debt -= n;
-        }
-        const bool wet_ready = m_output.available() >= num_samples;
+        float late = 0.0f;
+        while (m_debt > 0 && m_output.try_pop(late)) { --m_debt; }
 
-        std::fill_n(samples, num_samples, 0.0f);
-
-    
-        // Crossfade the dry and wet paths according to m_mix.
-        const float dry_gain = 1.0f - m_mix; 
-        const float wet_gain = m_mix;
-
-        if (m_dry.available() >= num_samples) {
-            m_dry.pop(m_dry_block.data(), num_samples);
-            for (size_t i = 0; i < num_samples; ++i) {
-                samples[i] += dry_gain * m_dry_block[i];
+        for (size_t i = zeros; i < num_samples; ++i) {
+            if (!m_output.try_pop(m_wet_block[i])) {
+                m_wet_block[i] = 0.0f;
+                m_debt += 1;
             }
         }
 
-        if (m_output.available() >= num_samples) {
-            m_output.pop(m_wet_block.data(), num_samples);
-            for (size_t i = 0; i < num_samples; ++i) { samples[i] += wet_gain * m_wet_block[i]; }
-        }
+        // The dry path: every sample goes in, and comes out as late as m_dry
+        // was prefilled.
+        m_dry.push(samples, num_samples);
+        m_dry.pop(m_dry_block.data(), num_samples);
 
-
-        // The wet side had nothing for this callback: its share is owed.
-        if (!wet_ready) {
-            m_wet_debt += num_samples;
-            if (m_late.size() < m_late.capacity()) { m_late.push_back(m_position); }
+        // Both sides are equally late now, so this is a plain crossfade.
+        const float dry_gain = 1.0f - m_mix;
+        const float wet_gain = m_mix;
+        for (size_t i = 0; i < num_samples; ++i) {
+            samples[i] = dry_gain * m_dry_block[i] + wet_gain * m_wet_block[i];
         }
-        m_position += num_samples;
     }
 
-    const std::vector<float>& produced() const { return m_produced; }
-
-    // Where a late wet block went out as silence, in samples from the start.
-    const std::vector<size_t>& late() const { return m_late; }
-
 private:
+    // Step 5's worker thread.
     void worker() {
         while (m_running.load(std::memory_order_acquire)) {
-            if (m_input.available() < k_model.m_input_size) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
-                continue;
-            }
+            if (m_input.available() < k_model.m_input_size) { continue; }
+
             m_input.pop(m_model_block.data(), k_model.m_input_size);
             m_engine.process(m_model_block.data(), k_model.m_input_size);
-            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
-            // Wait for room, but keep watching the stop flag: the audio thread
-            // may have stopped calling us, and then this would never return —
-            // a lock-free ring buffer does not save you from a deadlock at shutdown.
-            while (m_running.load(std::memory_order_acquire) &&
-                   m_output.space() < k_model.m_input_size) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+            size_t pushed = 0;
+            while (pushed < k_model.m_input_size && m_running.load(std::memory_order_acquire)) {
+                if (m_output.try_push(m_model_block[pushed])) { ++pushed; }
             }
-            if (m_output.space() >= k_model.m_input_size) {
-                m_output.push(m_model_block.data(), k_model.m_input_size);
-            }
-        }
-        // Drain what the host pushed just before the end.
-        while (m_input.available() >= k_model.m_input_size) {
-            m_input.pop(m_model_block.data(), k_model.m_input_size);
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
-            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
         }
     }
 
@@ -210,20 +193,16 @@ private:
     std::vector<float> m_model_block;  // The worker's block, sized in prepare()
     std::thread m_worker;
     std::atomic<bool> m_running{false};
-    std::atomic<long> m_dropped{0};  // Host blocks the worker had no room for
-    std::vector<float> m_produced;
-    std::vector<float> m_silence;
     std::vector<float> m_dry_block;  // Scratch, sized in prepare()
     std::vector<float> m_wet_block;
-    size_t m_wet_debt = 0;  // Wet samples whose slot already went out as silence
-    size_t m_position = 0;  // Samples handed to the host so far
-    std::vector<size_t> m_late;  // Where a late wet block went out as silence
+    size_t m_unpushed = 0;  // Audio thread: samples that did not fit into m_input, owed as zeros
+    size_t m_debt = 0;      // Audio thread: samples that went out as zeros, thrown away when they
+                            // arrive
     float m_mix = 1.0f;
 };
 
 // Runs the whole signal through the processor at one mix setting.
-// @late: set to where a late wet block went out as silence
-std::vector<float> run(LatencyProcessor& processor, float mix, std::vector<size_t>& late) {
+std::vector<float> run(LatencyProcessor& processor, float mix) {
     processor.prepare(k_host_block_size);
     processor.set_mix(mix);
 
@@ -237,28 +216,11 @@ std::vector<float> run(LatencyProcessor& processor, float mix, std::vector<size_
         k_model.m_sample_rate);
 
     processor.stop();
-    late = processor.late();
     return output;
 }
 
-// Compares a signal against a reference that is `latency` samples earlier.
-// Callbacks where a late wet block went out as silence are left out: they are
-// glitches, and what matters is that everything around them still lines up.
-// @got: what came out of the processor
-// @want: what it should be, undelayed
-// @latency: how far `want` has to be pushed back to line up
-// @late: where a late wet block went out as silence, in callback order
-float diff_with_latency(const std::vector<float>& got, const float* want, size_t latency,
-                        const std::vector<size_t>& late) {
-    if (got.size() <= latency) { return 1.0f; }
-    float diff = 0.0f;
-    size_t next = 0;
-    for (size_t i = latency; i < got.size(); ++i) {
-        while (next < late.size() && i >= late[next] + k_host_block_size) { ++next; }
-        if (next < late.size() && i >= late[next]) { continue; }
-        diff = std::max(diff, std::abs(got[i] - want[i - latency]));
-    }
-    return diff;
+bool silent(const std::vector<float>& signal) {
+    return std::all_of(signal.begin(), signal.end(), [](float x) { return x == 0.0f; });
 }
 
 }  // namespace
@@ -270,6 +232,11 @@ int main() {
     } catch (const std::runtime_error& error) {
         std::fprintf(stderr, "%s\n", error.what());
         return 2;
+    }
+
+    if (k_max_inference_ms <= 0.0) {
+        std::printf("TODO 1: put your worst case from step 3 into k_max_inference_ms.\n");
+        return 1;
     }
 
     LatencyProcessor processor(engine);
@@ -285,46 +252,41 @@ int main() {
                 1000.0 * static_cast<double>(latency) / k_model.m_sample_rate,
                 k_model.m_sample_rate);
 
-    std::vector<size_t> dry_late;
-    std::vector<size_t> wet_late;
-    const std::vector<float> dry = run(processor, 0.0f, dry_late);
-    if (std::all_of(dry.begin(), dry.end(), [](float x) { return x == 0.0f; })) {
-        std::printf("TODO 3: at mix 0 the dry signal has to come through.\n");
+    const std::vector<float> dry = run(processor, 0.0f);
+    if (silent(dry)) {
+        std::printf("At mix 0 the dry signal has to come through, but the output is silent.\n");
         return 1;
     }
-    if (diff_with_latency(dry, k_input_signal.data(), 0, {}) <= k_tolerance) {
-        std::printf("TODO 2: the dry signal comes out undelayed, so it cannot line up with the wet one.\n");
-        return 1;
-    }
-
-    const std::vector<float> wet = run(processor, 1.0f, wet_late);
-    if (std::all_of(wet.begin(), wet.end(), [](float x) { return x == 0.0f; })) {
-        std::printf("TODO 3: at mix 1 the wet signal has to come through.\n");
+    if (diff_with_latency(dry.data(), k_input_signal.data(), dry.size(), 0) <= k_tolerance) {
+        std::printf(
+            "TODO 2: the dry signal comes out undelayed, so it cannot line up with the wet one.\n");
         return 1;
     }
 
-    const float dry_diff = diff_with_latency(dry, k_input_signal.data(), latency, {});
+    const std::vector<float> wet = run(processor, 1.0f);
+    if (silent(wet)) {
+        std::printf("At mix 1 the wet signal has to come through, but the output is silent.\n");
+        return 1;
+    }
+
+    // The dry path is the audio thread's own: exact, no dropouts.
+    const bool dry_ok =
+        report_line("dry, delayed by the latency",
+                    diff_with_latency(dry.data(), k_input_signal.data(), dry.size(), latency));
+
     // The reference already carries the model's own delay, so the wet path
-    // lines up with it after the rest of the reported latency.
-    const float wet_diff =
-        latency < k_model.m_latency
-            ? 1.0f
-            : diff_with_latency(wet, k_target_output_signal.data(), latency - k_model.m_latency, wet_late);
-
-    const bool dry_ok = report_line("dry, delayed by the latency", dry_diff);
-    const bool wet_ok = report_line("wet, delayed by the latency", wet_diff);
-
-    // A slow or busy machine can make the worker late now and then; those
-    // callbacks are silent and left out above. Late most of the time is a
-    // machine that cannot run the model in real time at all.
-    const size_t callbacks = k_input_signal.size() / k_host_block_size;
-    if (!wet_late.empty()) {
-        std::printf("  late wet callbacks, silent    %zu of %zu\n", wet_late.size(), callbacks);
-    }
-    if (wet_late.size() * 4 > callbacks) {
-        std::printf("\nFAILED: the worker was late in more than a quarter of the callbacks.\n");
+    // lines up with it after the rest of the reported latency. A busy machine
+    // can make the worker late now and then: those callbacks are dropouts.
+    if (latency < k_model.m_latency) {
+        std::printf("\nFAILED: the reported latency is shorter than the model's own.\n");
         return 1;
     }
+    std::printf("  wet, delayed by the latency:\n");
+    const bool wet_ok = report_with_dropouts(wet.data(),
+                                             k_target_output_signal.data(),
+                                             wet.size(),
+                                             latency - k_model.m_latency,
+                                             k_host_block_size) == 0;
 
     if (dry_ok && wet_ok) {
         std::printf("\nOK: both paths are late by exactly the reported latency, so they mix.\n");

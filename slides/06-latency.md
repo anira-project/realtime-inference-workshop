@@ -72,14 +72,14 @@ The host asks our plugin for its latency once, and then aligns the whole session
 </div>
 
 Note:
-- Wet is late by design: collect a block, hand to worker, pick up later, and the model answers late
+- Wet is late by design: collect a block, give the worker its time, and the model answers late
 - Undelayed dry + late wet: no blend, a slap-back echo and comb filtering
 - Delay dry by exactly the same amount
 - Then they line up and we can crossfade
 
 **Script:**
 
-"The second thing is the dry/wet mix. Our wet signal is late because of how we built it: we collect a block, hand it to the worker, pick it up later, and the model itself also answers late.
+"The second thing is the dry/wet mix. Our wet signal is late because of how we built it: we collect a block, give the worker its time, and the model itself also answers late.
 If we mix a dry signal that isn't delayed with a wet signal that is, we don't get a blend. We get a slap-back echo, and comb filtering on the way there. So the dry signal has to be delayed by exactly the same amount as the wet one. Then the two line up and we can crossfade between them."
 
 ---
@@ -138,10 +138,11 @@ Note:
 - Step 5's processor plus a dry path
 - Third ring buffer, filled with silence in `prepare`: as many samples as our latency
 - Host still real time, 512 samples per call
+- `k_max_inference_ms` again: your number from step 3
 
 **Script:**
 
-"We don't get any new files. This is step 5's processor with one addition: a dry path. That's a third ring buffer, which gets filled with silence in `prepare`, as many samples as our latency. The host still runs in real time with 512 samples per call."
+"We don't get any new files. This is step 5's processor with one addition: a dry path. That's a third ring buffer, which gets filled with silence in `prepare`, as many samples as our latency. The host still runs in real time with 512 samples per call. And you need your number from step 3 again, for `k_max_inference_ms`."
 
 ---
 
@@ -162,8 +163,8 @@ cmake --build --preset release --target step06_exercise
   <div class="run-step" data-seconds="2.6">
     <div class="run-title"><span>1</span>Work out the latency</div>
     <div class="run-visual run-latency">
-      <div class="lat-part">collect a block</div>
-      <div class="lat-part">hand it over</div>
+      <div class="lat-part">buffer adaptation</div>
+      <div class="lat-part">the worker's time</div>
       <div class="lat-part">the model itself</div>
       <div class="run-size">? samples</div>
     </div>
@@ -179,14 +180,14 @@ cmake --build --preset release --target step06_exercise
 </div>
 
 Note:
-- `main.cpp` in steps/06_latency/exercise
-- TODO 1: where does the delay come from? Collecting, handing over, the model
+- `main.cpp` in steps/06_latency/exercise, first your `k_max_inference_ms`
+- TODO 1: where does the delay come from? Buffer adaptation, the worker's time, the model
 - TODO 2: delay the dry signal by that number
 - 5 minutes, don't worry if you don't finish, we solve it together
 
 **Script:**
 
-"Your turn. You'll find the `main.cpp` in `steps/06_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: collecting a block, handing it over to the worker, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
+"Your turn. You'll find the `main.cpp` in `steps/06_latency/exercise`; first put your number from step 3 in again. For the first TODO, think about where the delay comes from. There are three parts: the buffer adaptation from step 2, the time we give the worker from step 5, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
 
 *Timebox.*
 
@@ -197,38 +198,37 @@ Note:
 ## TODO 1: Work out the latency
 
 <div class="lat-sum" style="margin-bottom: 5rem">
-  <div class="lat-part">collect a block<strong>2048</strong></div>
+  <div class="lat-part">buffer adaptation<small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">hand it over<strong>2048</strong></div>
+  <div class="lat-part">rounded max inference time<small>8.2 ms → 1 callback</small><strong>512</strong></div>
   <div class="lat-plus">+</div>
   <div class="lat-part">the model itself<strong>2224</strong></div>
   <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>6320</strong></div>
+  <div class="lat-part total">latency<strong>4272</strong></div>
 </div>
-
-<!-- <div class=fragment> -->
 
 ```cpp
 size_t latency_samples() const {
-    size_t latency = 2 * k_model.m_input_size + k_model.m_latency; // <- fill out
-    return latency;                                                // 6320
+    size_t latency = (k_model.m_input_size - k_host_block_size) + rounded_max_inference_time() +
+                     k_model.m_latency;  // <- fill out
+    return latency;                      // 4272
 }
 ```
-<!-- </div> -->
 
 Note:
-- Collect a full block: 2048
-- Hand-over: a full block of time for the worker: 2048. A choice
+- Buffer adaptation: the model needs a whole block, the host brings 512 at a time: 2048 − 512 = 1536 (step 2)
+- The worker's time: your worst case from step 3, rounded up to whole callbacks (step 5). A choice
 - Smaller: the worker might not be done, latency no longer fixed
-- That block gives 46 ms, we measured 10 to 12 at worst once warmed up: fits
+- 8.2 ms fit in one callback of 11.6 ms: 512. Yours may be more
 - The model itself: 2224, convolutions and filter bank, from the export script, not visible from C++
-- Total: 6320 samples, about 143 ms at 44.1 kHz. We report this to the host
-- Honest: fine for mixing, can't play through it live. Safe choice, part 2 comes back to it
+- Total: 4272 samples, about 97 ms at 44.1 kHz. We report this to the host
+- Only for 512: other block sizes give other numbers, part 2
+- Honest: fine for mixing, can't play through it live. Part 2 comes back to it
 
 **Script:**
 
-"Let's add it up. First, we have to collect a full block before the model can run, that's 2048 samples. Second, the hand-over: we give the worker a full block of time to process, that's another 2048. That one is a choice. We could make it smaller, but then the worker might not be done in time, and the latency wouldn't be fixed anymore. That block gives the worker 46 milliseconds. In step 3 we measured 10 to 12 milliseconds at worst, once the model is warmed up, so it fits with room to spare. And third, the model itself is late by 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
-So in total: 6320 samples, that's about 143 milliseconds at 44.1 kHz. In a plugin, this is the number we report to the host. And let's be honest: 143 milliseconds is fine for mixing, but you can't play through it live. We made the safe choice here, and in part 2 we come back to how low it can go."
+"Let's add it up. First the buffer adaptation from step 2: the model needs a whole block before it can run, and the host brings 512 samples at a time, so that's 2048 minus 512, 1536 samples. Second, the time we give the worker: your worst case from step 3, rounded up to whole callbacks, like in step 5. That one is a choice. We could make it smaller, but then the worker might not be done in time, and the latency wouldn't be fixed anymore. My 8.2 milliseconds fit into one callback of 11.6 milliseconds, so that's 512; yours may be more. And third, the model itself is late by 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
+So in total: 4272 samples, that's about 97 milliseconds at 44.1 kHz. In a plugin, this is the number we report to the host. It only holds for 512, though: other block sizes give other numbers, and that's part 2. And let's be honest: 97 milliseconds is fine for mixing, but you can't play through it live. In part 2 we come back to how low it can go."
 
 ---
 
@@ -238,19 +238,19 @@ So in total: 6320 samples, that's about 143 milliseconds at 44.1 kHz. In a plugi
 
 ```cpp
 // in prepare(): the wet path gets a prefill of silence, and so does the dry one
-m_output.push(m_silence.data(), 2 * k_model.m_input_size);    // given
-m_dry.push(m_silence.data(), latency_samples());              // <- fill out
+m_output.push(silence.data(), prefill_samples());   // given: step 5's prefill
+m_dry.push(silence.data(), latency_samples());      // <- fill out
 ```
 
 Note:
 - Host aligns everything to the number we report
 - Prefill the dry ring buffer with `latency_samples()` of silence before the first callback
-- Every sample comes out 6320 samples later, like the wet one
-- Wet only gets the two blocks of silence: the model's 2224 are already in what it returns
+- Every sample comes out 4272 samples later, like the wet one
+- Wet only gets step 5's prefill, 2048: the model's 2224 are already in what it returns
 
 **Script:**
 
-"The host aligns everything to the number we report. So the dry signal has to start exactly that much later: we prefill the dry ring buffer with latency_samples() of silence before the first callback. Then every sample we push in comes out 6320 samples later, just like the wet one. The wet path only gets the two blocks of silence, because the model's own 2224 samples are already inside what it returns."
+"The host aligns everything to the number we report. So the dry signal has to start exactly that much later: we prefill the dry ring buffer with latency_samples() of silence before the first callback. Then every sample we push in comes out 4272 samples later, just like the wet one. The wet path only gets step 5's prefill, because the model's own 2224 samples are already inside what it returns."
 
 ---
 

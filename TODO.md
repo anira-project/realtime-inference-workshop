@@ -30,3 +30,6 @@
 - Latency is collect a block, model inference (assumed one inference takes at max one buffersize of time), model internal latency (filters inside of the model, STFT, non-causal layers (i.e. convolutions), etc..)..
 - In the case that the hostbuffersize is constant, is a Teiler von 2048 oder ein Multiple of 2048
 - window not necessary
+
+- Blocking is also unsing exponential backoff at the beginning...
+- An engine per channel?? in anira recap part 1 step 8

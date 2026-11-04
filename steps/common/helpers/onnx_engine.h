@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -75,24 +76,50 @@ public:
         }
     }
 
-    // One block, processed in place.
-    // @samples: the block to process, overwritten with the model's output
-    // @num_samples: samples in that block
-    void process(float* samples, size_t num_samples) {
+    // One block, with everything the model takes passed in, processed in place.
+    // @data: {audio} or {audio, state}: your vectors themselves, not copies of them.
+    //        Without the state the model gets a zero state on this call, as if the
+    //        stream had just started. The block in audio is overwritten with the
+    //        model's output, and state with the new state.
+    // @sizes: sizes[0] is the samples in this block, sizes[1] the size of the state
+    // @start: where the block starts in data[0]
+    void process(const std::vector<std::reference_wrapper<std::vector<float>>>& data,
+                 const std::vector<size_t>& sizes,
+                 size_t start = 0) {
+        if (data.empty() || data.size() > 2 || data.size() != sizes.size()) {
+            throw std::runtime_error("got " + std::to_string(data.size()) + " buffers but " +
+                                     std::to_string(sizes.size()) +
+                                     " sizes: pass the audio, and optionally the state, with one size per buffer");
+        }
+        const size_t num_samples = sizes[0];
+        if (num_samples != elements(m_input_shapes[0])) {
+            throw std::runtime_error("the model takes exactly " + std::to_string(elements(m_input_shapes[0])) +
+                                     " samples per call, got " + std::to_string(num_samples));
+        }
+        if (start + num_samples > data[0].get().size()) {
+            throw std::runtime_error("the block at sample " + std::to_string(start) +
+                                     " runs past the end of the audio");
+        }
+        const bool has_state = data.size() == 2;
+        if (has_state && (sizes[1] != m_state[0].size() || data[1].get().size() != m_state[0].size())) {
+            throw std::runtime_error("the state is exactly " + std::to_string(m_state[0].size()) + " floats, got size " +
+                                     std::to_string(sizes[1]) + " and a buffer of " + std::to_string(data[1].get().size()));
+        }
+
+        float* samples = data[0].get().data() + start;
+        std::vector<float>& state = has_state ? data[1].get() : m_state[0];  // m_state stays all zeros
+
         m_audio_shape[2] = static_cast<int64_t>(num_samples);
         m_inputs.push_back(Ort::Value::CreateTensor<float>(m_memory,
                                                            samples,
                                                            num_samples,
                                                            m_audio_shape.data(),
                                                            m_audio_shape.size()));
-
-        for (size_t i = 0; i < m_state.size(); ++i) {
-            m_inputs.push_back(Ort::Value::CreateTensor<float>(m_memory,
-                                                               m_state[i].data(),
-                                                               m_state[i].size(),
-                                                               m_input_shapes[i + 1].data(),
-                                                               m_input_shapes[i + 1].size()));
-        }
+        m_inputs.push_back(Ort::Value::CreateTensor<float>(m_memory,
+                                                           state.data(),
+                                                           state.size(),
+                                                           m_input_shapes[1].data(),
+                                                           m_input_shapes[1].size()));
 
         const auto outputs = m_session.Run(Ort::RunOptions{nullptr},
                                            m_input_name_pointers.data(),
@@ -101,21 +128,12 @@ public:
                                            m_output_name_pointers.data(),
                                            m_output_name_pointers.size());
 
-        const auto produced = outputs[0].GetTensorTypeAndShapeInfo().GetElementCount();
-        if (produced != num_samples) {
-            throw std::runtime_error("the model returned " + std::to_string(produced) +
-                                     " samples for " + std::to_string(num_samples) + " in");
-        }
         std::copy_n(outputs[0].GetTensorData<float>(), num_samples, samples);
 
         m_inputs.clear();  // Keeps the capacity the constructor reserved
 
-        // Carry the new state over to the next call. Hidden in LibTorch, ours here.
-        for (size_t i = 0; i < m_state.size(); ++i) {
-            std::copy_n(outputs[i + 1].GetTensorData<float>(),
-                        m_state[i].size(),
-                        m_state[i].begin());
-        }
+        // The new state goes back to the caller, for the next call.
+        if (has_state) { std::copy_n(outputs[1].GetTensorData<float>(), state.size(), state.begin()); }
     }
 
 private:

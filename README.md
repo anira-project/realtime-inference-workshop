@@ -25,15 +25,15 @@ directory configures without the network.
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/bin/step01_solution
+./build/bin/step01a_solution
 ```
 
 Or with the preset, one step at a time:
 
 ```bash
 cmake --preset release
-cmake --build --preset release --target step01_exercise
-./build/bin/step01_exercise
+cmake --build --preset release --target step01a_exercise
+./build/bin/step01a_exercise
 ```
 
 To step through a task in a debugger, use the debug preset. It builds into
@@ -41,14 +41,14 @@ To step through a task in a debugger, use the debug preset. It builds into
 
 ```bash
 cmake --preset debug
-cmake --build --preset debug --target step01_exercise
-./build-debug/bin/step01_exercise
+cmake --build --preset debug --target step01a_exercise
+./build-debug/bin/step01a_exercise
 ```
 
 Timings, such as the benchmark in step 3, only mean something in the release
 build.
 
-Build a single step with `-DWORKSHOP_STEP=01`. See
+Build a single step with `-DWORKSHOP_STEP=01a`. See
 [models/README.md](models/README.md) for the model.
 
 If a download fails in the room, it is retried a few times. If it still fails,

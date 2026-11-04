@@ -72,7 +72,8 @@ def synthesize(passes):
     return out.astype(np.float32)
 
 
-def run_model(model_path, audio):
+def run_model(model_path, audio, carry_state=True):
+    """Block by block. carry_state=False starts every block from a zero state: what step 1b shows."""
     session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
     inputs = session.get_inputs()
     out_names = [o.name for o in session.get_outputs()]
@@ -86,7 +87,8 @@ def run_model(model_path, audio):
         block = padded[begin:begin + BLOCK].reshape(1, 1, BLOCK)
         result = session.run(out_names, dict(zip([i.name for i in inputs], [block] + states)))
         out.append(result[0].reshape(-1))
-        states = result[1:]
+        if carry_state:
+            states = result[1:]
     return np.concatenate(out)[:len(audio)]
 
 
@@ -131,19 +133,23 @@ def main():
     loop = int(LOOP_BEATS * BEAT * SAMPLE_RATE)
     dry_all = synthesize(PASSES + 1)
     wet_all = run_model(args.model, dry_all)
+    no_state_all = run_model(args.model, dry_all, carry_state=False)
     lag = latency(args.model)
 
     # The middle pass: the state has settled, and the output's tail from the pass before is in it
     begin = loop
     dry = seamless(dry_all[begin:begin + loop + FADE])
     wet = seamless(wet_all[begin + lag:begin + lag + loop + FADE])
+    no_state = seamless(no_state_all[begin + lag:begin + lag + loop + FADE])
     duration = loop / SAMPLE_RATE
 
     args.out.mkdir(parents=True, exist_ok=True)
     sf.write(args.out / "demo_input.wav", dry, SAMPLE_RATE, subtype="PCM_16")
     sf.write(args.out / "demo_output.wav", wet, SAMPLE_RATE, subtype="PCM_16")
+    sf.write(args.out / "demo_output_no_state.wav", no_state, SAMPLE_RATE, subtype="PCM_16")
     print(f"{duration:.1f} s loop, latency {lag} samples ({1000 * lag / SAMPLE_RATE:.1f} ms), "
-          f"peak in {np.abs(dry).max():.2f}, peak out {np.abs(wet).max():.2f}")
+          f"peak in {np.abs(dry).max():.2f}, peak out {np.abs(wet).max():.2f}, "
+          f"peak out without state {np.abs(no_state).max():.2e}")
 
 
 if __name__ == "__main__":

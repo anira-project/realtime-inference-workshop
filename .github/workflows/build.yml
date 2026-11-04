@@ -84,7 +84,7 @@ jobs:
         env:
           WORKSHOP_HOST_SLOWDOWN: 4
         run: |
-          for binary in step01_solution step02_solution step03_solution step05_solution step06_solution step09_solution step10_solution; do
+          for binary in step01a_solution step01b_solution step02_solution step03_solution step05_solution step06_solution step09_solution step10_solution; do
             path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)
             echo "=== $binary"
             "$path"
@@ -106,7 +106,7 @@ jobs:
       - name: Exercises build and report their first open TODO
         shell: bash
         run: |
-          for binary in step01_exercise step02_exercise step05_exercise step06_exercise; do
+          for binary in step01a_exercise step01b_exercise step02_exercise step05_exercise step06_exercise; do
             path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)
             if [ -z "$path" ]; then echo "$binary was not built"; exit 1; fi
             echo "=== $binary"

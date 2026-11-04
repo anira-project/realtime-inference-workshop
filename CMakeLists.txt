@@ -39,10 +39,10 @@ option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
 # expected output are compiled in (steps/common/assets/test_signal.h).
 workshop_fetch_models()
 
-# Build one step (-DWORKSHOP_STEP=01) or all of them.
-set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01, or all")
+# Build one step (-DWORKSHOP_STEP=01a) or all of them.
+set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01a or 02, or all")
 
-set(WORKSHOP_STEPS 01_minimal_inference 02_host_buffer_size 03_benchmark 04_realtime_safety 05_threading 06_latency)
+set(WORKSHOP_STEPS 01a_minimal_inference 01b_state 02_host_buffer_size 03_benchmark 04_realtime_safety 05_threading 06_latency)
 
 if(WORKSHOP_JUCE)
     list(APPEND WORKSHOP_STEPS 08_juce_plugin)

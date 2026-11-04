@@ -268,7 +268,9 @@ const size_t zeros = std::min(m_unpushed, num_samples);     // given: zeros for 
 std::fill_n(samples, zeros, 0.0f);
 m_unpushed -= zeros;
 
-while (m_debt > 0 && m_output.try_pop(late)) { --m_debt; }  // <- fill out
+while (m_debt > 0) {                                        // pay the debt first
+    if (m_output.try_pop(late)) { --m_debt; } else { break; }  // <- fill out
+}
 
 for (size_t i = zeros; i < num_samples; ++i) {
     const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);  // <- fill out

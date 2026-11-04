@@ -136,7 +136,13 @@ public:
         // Samples that came too late already went out as zeros: thrown away
         // when they arrive, so the wet path stays exactly the prefill late.
         float late = 0.0f;
-        while (m_debt > 0 && m_output.try_pop(late)) { --m_debt; }
+        while (m_debt > 0) {
+            if (m_output.try_pop(late)) {
+                --m_debt;
+            } else {
+                break;
+            }
+        }
 
         // The first sample that is not there yet ends the callback: it and the
         // rest go out as zeros and are owed. So does anything still owed: what

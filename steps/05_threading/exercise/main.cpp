@@ -191,7 +191,13 @@ public:
         m_unpushed -= zeros;
 
         [[maybe_unused]] float late = 0.0f;
-        while (m_debt > 0 && false) { --m_debt; }  // <- 4. fill out
+        while (m_debt > 0) {
+            if (false) {  // <- 4. fill out
+                --m_debt;
+            } else {
+                break;
+            }
+        }
 
         for (size_t i = zeros; i < num_samples; ++i) {
             const bool popped = false;  // <- 3. fill out

@@ -148,7 +148,13 @@ public:
         m_unpushed -= zeros;
 
         float late = 0.0f;
-        while (m_debt > 0 && m_output.try_pop(late)) { --m_debt; }
+        while (m_debt > 0) {
+            if (m_output.try_pop(late)) {
+                --m_debt;
+            } else {
+                break;
+            }
+        }
 
         for (size_t i = zeros; i < num_samples; ++i) {
             if (m_debt > 0 || !m_output.try_pop(m_wet_block[i])) {

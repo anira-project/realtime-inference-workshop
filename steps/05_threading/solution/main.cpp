@@ -196,7 +196,13 @@ public:
         m_unpushed -= zeros;
 
         float late = 0.0f;
-        while (m_debt > 0 && m_output.try_pop(late)) { --m_debt; }  // <- solution
+        while (m_debt > 0) {
+            if (m_output.try_pop(late)) {  // <- solution
+                --m_debt;
+            } else {
+                break;
+            }
+        }
 
         for (size_t i = zeros; i < num_samples; ++i) {
             const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);  // <- solution

@@ -6,13 +6,13 @@
 Note:
 - Ask: what buffer sizes do you ship with? Collect a few
 - Wide range of host block sizes, the model always takes 2048
-- Goal: make it work with any host block size
+- In this part: the host hands us 512, a divisor of 2048. Any size: part 2
 
 **Script:**
 
 *Ask the room: "What buffer sizes do you ship with?" Collect a few
 numbers: 64, 128, 256, 441...*
-"As we can hear we have a wide range of host block sizes. The model takes 2048 samples, but the host can give us anything. So we need to make the model work with any host block size."
+"As we can hear we have a wide range of host block sizes. The model takes 2048 samples, but the host can give us anything. In this part of the workshop our host hands us 512 samples per call, which is not 2048, but at least it divides it. Making it work for any block size is a topic of its own, and we come back to it in part 2."
 
 ---
 
@@ -21,22 +21,21 @@ numbers: 64, 128, 256, 441...*
 ## What is the problem? <span class="then">Two owners, two block sizes.</span>
 
 <div class="streams">
-  {{STREAM:host=64|model=2048|length=4096|seconds=7}}
-  {{STREAM:host=441|model=2048|length=4096|seconds=7}}
+  {{STREAM:host=512|model=2048|length=4096|seconds=7}}
 </div>
 
 Note:
 - Two owners, two block sizes
 - Model: fixed at export
 - Host: device and user, can change while running
-- 64: 31 callbacks nothing, the 32nd runs the whole model
-- 441: doesn't divide 2048, the model runs at a different place each time
+- 512: three callbacks nothing, the fourth runs the whole model
 - They can match by coincidence, we can't count on it
+- Sizes that don't divide 2048 (441, …): part 2
 
 **Script:**
 
-"So our problem is, we have two owners, with two different block sizes. The model's block is fixed at export. The host's block comes from the device and the user, and it can even change while running. Let's look at an example with our model. At 64 samples e.g., nothing happens in the first 31 callbacks, because we haven't reached the models block size yet. The 32nd callback runs the whole model. For a host blocksize of 441 it doesn't even divide, 2048 is not a multiple of 441: the model will always run at a different place in the relevant callback.
-Sometimes the block sizes will match by coincidence, but we cannot count on that happening."
+"So our problem is, we have two owners, with two different block sizes. The model's block is fixed at export. The host's block comes from the device and the user, and it can even change while running. Let's look at our case: the host hands us 512 samples. In the first three callbacks nothing happens, because we haven't reached the model's block size yet. The fourth callback runs the whole model.
+Sometimes the block sizes will match by coincidence, but we cannot count on that happening. And sizes that don't even divide 2048, like 441, make it harder still; we keep those for part 2."
 
 ---
 
@@ -75,7 +74,7 @@ ring buffer. From there the host takes as many samples as its block size asks fo
 
 <div class="tag">Goal</div>
 
-## The goal<br><span class="then">The model should work with any host block size.</span>
+## The goal<br><span class="then">The model runs on the host's 512-sample blocks.</span>
 
 <div class="statement-points">
   <div><small>1</small>Create the ring buffers</div>
@@ -84,14 +83,14 @@ ring buffer. From there the host takes as many samples as its block size asks fo
 </div>
 
 Note:
-- Goal: works with any host block size
+- Goal: the model gets 2048, the host gets its 512 back
 - Size the ring buffers
 - Pump whole blocks through the model
 - Hand the samples back to the host
 
 **Script:**
 
-"So, the goal is to make sure the system works with any host block size. For that we need to give the ring buffers a size, pump whole blocks through the model and then hand the samples back to the host."
+"So, the goal is that the model always gets its 2048 samples and the host always gets its 512 back. For that we need to give the ring buffers a size, pump whole blocks through the model and then hand the samples back to the host."
 
 ---
 
@@ -173,22 +172,20 @@ std::vector<float> out = run_host(signal, num_samples, block_size,
 ```
 
 <div class="streams">
-  {{STREAM:host=64|model=0|length=4096|seconds=5}}
   {{STREAM:host=512|model=0|length=4096|seconds=5}}
-  {{STREAM:host=2048|model=0|length=4096|seconds=5}}
 </div>
 
 Note:
 - A DAW without the DAW: signal + block size in, calls your callback block by block
 - Overwrite the samples in place, like an audio callback
-- Block size is just a parameter: many sizes in one run (64, 512, 2048 here)
-- Goal: works at all block sizes, output matches the reference
+- Block size is just a parameter: 512 for the whole first part
+- Check: the model's output matches the reference, and the host gets exactly that stream back
 
 **Script:**
 
 "And this is our host. It’s a DAW without the DAW: you give it a signal and a block size, and it calls your callback block by block, just like an audio callback, so you overwrite the samples in place.
 
-Because the block size is just a parameter, we can test lots of sizes in one run. Here you see 64, 512 and 2048. For this exercise we our goal is that your code works for all of the blocks sizes, and that the output is the same as the reference."
+The block size is just a parameter, and for the whole first part it is 512. The check at the end looks at two things: the model's output has to match the reference, and the host has to get exactly that stream back."
 
 ---
 
@@ -228,7 +225,7 @@ cmake --build --preset release --target step02_exercise
         <div class="run-silence"></div>
         {{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=6}}
       </div>
-      <div class="run-ok">✓ the same stream at every block size</div>
+      <div class="run-ok">✓ the host gets the model's stream back</div>
     </div>
   </div>
 </div>
@@ -251,18 +248,19 @@ Note:
 ## TODO 1: Size the ring buffers
 
 ```cpp
-const size_t capacity = max_block_size + 2 * m_model_input_size; // <- fill out
+const size_t capacity = m_model_input_size; // <- fill out
 ```
 
 Note:
-- Big enough for the worst case
-- Worst case: host just wrote a block, model just produced one, previous one not drained yet
-- Happens whenever the sizes don't divide
-- `max_block_size + 2 * model_size`
+- Big enough for the worst moment on each side
+- Input: just before a model block is taken out, 2048 waiting
+- Output: just after the model put one in. 512 divides 2048, so the last one is drained by then: 2048
+- So one model block for both
+- Sizes that don't divide need more: part 2
 
 **Script:**
 
-"We need to give the ring buffers a size that will be big enough for our worst case scenario. So the worst case would be: the host just wrote a block, the model just produced one, and the previous one isn't drained yet. That happens whenever the sizes don't divide. That will be `max_block_size + 2 * model_size`."
+"We need to give the ring buffers a size that is big enough for the worst moment on each side. On the input side that's just before a model block is taken out: then 2048 samples are waiting. On the output side it's just after the model put a block in. Because 512 divides 2048, the host has taken the previous block out completely by then, so that's 2048 too. One model block for both. If the sizes didn't divide, we'd need more, and that's part 2."
 
 ---
 
@@ -273,9 +271,9 @@ Note:
 ```cpp
 m_input.push(samples, num_samples); // <- 1. fill out
 
-const size_t num_model_blocks = m_input.available() / m_model_input_size; // <- 2. fill out
+const bool has_block = m_input.available() >= m_model_input_size; // <- 2. fill out
 
-for (size_t b = 0; b < num_model_blocks; ++b) {
+if (has_block) {
     m_input.pop(m_model_block.data(), m_model_input_size); // <- 3. fill out
     m_engine.process(m_model_block.data(), m_model_input_size);
     m_output.push(m_model_block.data(), m_model_input_size); // <- 3. fill out
@@ -286,14 +284,14 @@ for (size_t b = 0; b < num_model_blocks; ++b) {
 Note:
 - Only pump with at least 2048 samples
 - Push the host's samples into the input ring buffer
-- Count whole model blocks waiting: available / 2048
-- Can be more than one, if the host block is bigger than the model block
-- For each: pop, process, push to the output ring buffer
+- Check whether a whole model block is waiting: available >= 2048
+- With 512 per call that is every fourth callback, never more than one block
+- Then: pop, process, push to the output ring buffer
 - The rest waits for the next callback
 
 **Script:**
 
-"We should only pump the block when we have at least 2048 samples. So we need to check how many samples are in our input ring buffer. So first we push the host's samples into the input ring buffer, and then we count how many whole model blocks are waiting: available divided by 2048. That can be more than one, if the host block is bigger than the model block. For each of them we pop the samples that came in first into our model block, process them, and push them into the output ring buffer. Whatever is left waits for the next callback."
+"We should only pump the block when we have at least 2048 samples. So first we push the host's samples into the input ring buffer, and then we check whether a whole model block is waiting: available at least 2048. With 512 samples per call that's true every fourth callback, and it's never more than one block. Then we pop the samples that came in first into our model block, process them, and push them into the output ring buffer. Whatever is left waits for the next callback."
 
 ---
 
@@ -321,9 +319,41 @@ hears its own input."
 
 ---
 
+<div class="tag">Latency</div>
+
+## How late is the host's output?
+
+<div class="lat-sum" style="margin-bottom: 5rem">
+  <div class="lat-part fragment">buffer adaptation<small>2048 − 512</small><strong>1536</strong></div>
+  <div class="lat-plus fragment">+</div>
+  <div class="lat-part fragment">the model itself<small>in this case?</small><strong class="fragment">2224</strong></div>
+  <div class="lat-plus fragment">=</div>
+  <div class="lat-part total fragment">latency<strong>3760</strong></div>
+</div>
+
+<div class="lat-why fragment">For 512 into 2048. Other host block sizes give other numbers: part 2.</div>
+
+Note:
+- Ask first: the host got silence at the start. How late is what it hears?
+- Buffer adaptation: the model needs 2048, the host brings 512 at a time
+- First block complete in the fourth callback; the host hears sample 0 1536 samples after it went in
+- In general: model block minus the largest block that divides both, here 2048 − 512
+- Plus the model itself: ask the room. Here 2224 (convolutions and the filter bank, from the export script, not visible from C++)
+- Total 3760 samples, about 85 ms at 44.1 kHz
+- Only for 512: other host block sizes give other numbers, part 2
+
+**Script:**
+
+*Ask the room: "The host got silence at the start. How late is what it hears?"*
+"First, the buffer adaptation. The model needs 2048 samples, but the host brings them 512 at a time. The first block is complete in the fourth callback, and from then on every sample the host hears went in 1536 samples earlier: 2048 minus 512.
+But that's not all. The model itself is late too. *Ask: "How late, in this case?"* For our model it's 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
+So in total the host hears our output 3760 samples late, about 85 milliseconds. And this number is only right for 512: other host block sizes give other numbers, and part 2 shows how."
+
+---
+
 <div class="tag">Done</div>
 
-## The model runs on any host block size
+## The model runs on the host's 512-sample blocks
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -333,11 +363,10 @@ hears its own input."
 </div>
 
 Note:
-- Runs at any host block size
-- Open: the output starts with silence, that's latency
-- Open: each callback does nothing or a full forward pass
-- How long does it take? Can we run it in time? Let's measure
+- Runs on the host's 512-sample blocks, and we know how late
+- Open: three callbacks do nothing, the fourth a full forward pass
+- How long does that take? Can we run it in time? Let's measure
 
 **Script:**
 
-"The model now runs at any host block size. But two things are open. The output starts with silence, which is latency. And each callback either does nothing or a full forward pass. How long does that forward pass take? We need to know about how much latency we have, and whether we can run the model in time. So let's measure it."
+"The model now runs on the host's 512-sample blocks, and we know how late the output is. But one thing is open: three callbacks do nothing, and the fourth runs a full forward pass. How long does that forward pass take, and can we run it in time? So let's measure it."

@@ -304,8 +304,8 @@ Note:
 
 Note:
 - Same output as Python: it works
-- But a host doesn't always hand us 2048 samples: step 2
+- But a host doesn't hand us 2048 samples, ours hands us 512: step 2
 
 **Script:**
 
-"The results show us: we get the same output as Python. It works. But a host doesn't always hand us 2048 samples. Which brings us to step 2."
+"The results show us: we get the same output as Python. It works. But a host doesn't hand us 2048 samples; ours hands us 512 at a time. Which brings us to step 2."

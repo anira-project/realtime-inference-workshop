@@ -11,9 +11,9 @@ The model's block size comes from the export. The host's comes from the audio de
 ## What you have
 
 - [`common/helpers/ring_buffer.h`](../common/helpers/ring_buffer.h) — a ring buffer, written for you: `push`, `pop`, `available`, `space`. It throws on overflow and underflow, which is how you find out your capacity was wrong.
-- [`common/helpers/host.h`](../common/helpers/host.h) — a fake host: it calls your `process(samples, num_samples)` with one block at a time, 512 samples each. No audio device, so it runs anywhere.
 - `common/helpers/libtorch_engine.h` — the engine from step 1, unchanged.
 - `common/helpers/support.h`, `common/assets/test_signal.h`, `common/assets/target_signal.h` — as before.
+- [`common/checks/step02.h`](../common/checks/step02.h) — `check_todos`, called at the end of `process_block`: says which TODO is still missing. Not part of the exercise.
 
 ## What to do
 
@@ -39,28 +39,25 @@ cmake --build build -j
 ## Expected output
 
 ```
-  host block 512           max abs diff 3.28e-07   OK
-
-OK: the host got the model's stream back, after a stretch of silence.
+OK: max abs diff 4.25e-07, within 0.0001 of the reference.
 ```
 
-The check listens like the host: what came back has to be silence first, then the model's stream from step 1, sample for sample, however the host chopped up the input.
+`main` plays the host: a loop that hands `process_block` 512 samples at a time, in place, like the loop in step 1. What came back has to be the model's stream from step 1, sample for sample, after a stretch of silence.
 
 ## If you're stuck
 
 Each TODO says so when it is still missing:
 
 - **`TODO 1: give the ring buffers a capacity in prepare()`** — `capacity` is still 0. Think about the worst moment on each side: the input just before a model block is taken out, the output just after one was put in.
-- **`TODO 2: nothing came back from the model`** — nothing was pushed into the input ring buffer, `has_block` is still false, or the model's results never reached the output ring buffer.
-- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but it is not popped from `m_input`.
-- **`TODO 3: give the host its samples back`** — the output is piling up instead of going out.
-- **`TODO 3: the host got its own input back`** — the host buffer was never written to.
-- **`TODO 3: the host did not get silence first, then the model's stream`** — samples reach the host, but not the right ones, or not in the right place.
+- **`TODO 2: push the samples into m_input and m_output`** — both ring buffers are empty after a callback: the host's samples were not pushed into `m_input`, or the model's result was not pushed into `m_output`.
+- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but `has_block` is still false or it is not popped from `m_input`.
+- **`TODO 3: give the host its samples back`** — the output is piling up instead of being popped into the host's buffer.
 
 The ring buffer complains too:
 
-- **`ring buffer overflow: 512 samples pushed, room for …`** — the capacity from TODO 1 is too small.
-- **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; TODO 3 decides what the host gets instead.
+- **`ring buffer overflow: 512 samples pushed, room for …`** — the capacity from TODO 1 is still 0, or too small.
+- **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; the condition in TODO 3 decides when the host gets silence instead.
+- **`FAILED: max abs diff …`** — every TODO is filled in, but the host did not get the model's stream back: the samples are not the right ones, or not in the right place.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 

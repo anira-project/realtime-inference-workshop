@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <exception>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -75,7 +76,6 @@ public:
         // m_output from here.
         m_model_block.assign(m_model_input_size, 0.0f);
 
-        m_produced.clear();
         m_engine.reset();
     }
 
@@ -99,8 +99,6 @@ public:
             m_input.pop(m_model_block.data(), m_model_input_size);  // <- solution
             m_engine.process(m_model_block.data(), m_model_input_size);
             m_output.push(m_model_block.data(), m_model_input_size);  // <- solution
-
-            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
         }
 
         // ---- TODO 3 --------------------------------------------------------
@@ -125,20 +123,12 @@ public:
         }
     }
 
-    // Everything the model produced, in order — what the check reads. It grows
-    // inside process_block(), which is fine offline and a problem later.
-    const std::vector<float>& produced() const { return m_produced; }
-
-    // Samples the model produced that the host has not taken yet.
-    size_t waiting_for_host() const { return m_output.available(); }
-
 private:
     LibTorchEngine& m_engine;
     size_t m_model_input_size;
     RingBuffer m_input{0};
     RingBuffer m_output{0};
     std::vector<float> m_model_block;
-    std::vector<float> m_produced;
 };
 
 }  // namespace
@@ -174,14 +164,6 @@ int main() {
         return 1;
     }
 
-    // Nothing came out of the model at all.
-    const std::vector<float>& produced = processor.produced();
-    if (produced.empty()) {
-        std::printf("  %-24s TODO 2: the model never ran   <-- FAILED\n", label.c_str());
-        std::printf("\nFAILED.\n");
-        return 1;
-    }
-
     // The host has to be given something back, even if it is silence.
     if (std::equal(host_output.begin(), host_output.end(), input.begin())) {
         std::printf("  %-24s TODO 3: the host got its own input back   <-- FAILED\n",
@@ -190,46 +172,34 @@ int main() {
         return 1;
     }
 
-    // The model ran, but none of it reached the host.
+    // Nothing reached the host at all.
     if (std::all_of(host_output.begin(), host_output.end(), [](float x) { return x == 0.0f; })) {
-        std::printf("  %-24s TODO 2: nothing was pushed into m_output   <-- FAILED\n",
+        std::printf("  %-24s TODO 2: nothing came back from the model   <-- FAILED\n",
                     label.c_str());
-        std::printf("\nFAILED.\n");
-        return 1;
-    }
-
-    // Every whole model block of the input has to have gone through the model.
-    const size_t expected = input.size() / model_input_size * model_input_size;
-    if (produced.size() != expected) {
-        std::printf("  %-24s produced %zu samples, expected %zu   <-- FAILED\n",
-                    label.c_str(),
-                    produced.size(),
-                    expected);
         std::printf("\nFAILED.\n");
         return 1;
     }
 
     // What the host got back: silence until the first model block was ready,
     // then the model's stream, sample for sample. How long that silence is
-    // depends on your ring buffers.
-    const size_t handed_back = produced.size() - processor.waiting_for_host();
-    const size_t silence = host_output.size() - handed_back;
-    const bool silent_start = std::all_of(host_output.begin(),
-                                          host_output.begin() + static_cast<long>(silence),
-                                          [](float x) { return x == 0.0f; });
-    const bool same_stream = std::equal(produced.begin(),
-                                        produced.begin() + static_cast<long>(handed_back),
-                                        host_output.begin() + static_cast<long>(silence));
-    if (!silent_start || !same_stream) {
+    // depends on your ring buffers, so every whole number of callbacks up to
+    // two model blocks is tried, and the closest one counts.
+    float closest = std::numeric_limits<float>::infinity();
+    for (size_t delay = 0; delay <= 2 * model_input_size; delay += k_host_block_size) {
+        closest = std::min(
+            closest,
+            diff_with_latency(host_output.data(), target.data(), host_output.size(), delay));
+    }
+    if (closest == std::numeric_limits<float>::infinity()) {
         std::printf(
-            "  %-24s TODO 3: the host did not get the model's stream back in order   <-- FAILED\n",
+            "  %-24s TODO 3: the host did not get silence first, then the model's stream   <-- "
+            "FAILED\n",
             label.c_str());
         std::printf("\nFAILED.\n");
         return 1;
     }
 
-    if (!report_line(label.c_str(),
-                     max_abs_diff(produced.data(), target.data(), produced.size()))) {
+    if (!report_line(label.c_str(), closest)) {
         std::printf("\nFAILED.\n");
         return 1;
     }

@@ -44,25 +44,23 @@ cmake --build build -j
 OK: the host got the model's stream back, after a stretch of silence.
 ```
 
-Two things are checked. What the model produced has to be the same stream as in step 1, however the host chopped up the input. And what the host got back has to be exactly that stream, sample for sample, after the silence at the start.
+The check listens like the host: what came back has to be silence first, then the model's stream from step 1, sample for sample, however the host chopped up the input.
 
 ## If you're stuck
 
 Each TODO says so when it is still missing:
 
 - **`TODO 1: give the ring buffers a capacity in prepare()`** — `capacity` is still 0. Think about the worst moment on each side: the input just before a model block is taken out, the output just after one was put in.
-- **`TODO 2: the model never ran`** — nothing was pushed into the input ring buffer, or `has_block` is still false.
-- **`TODO 2: nothing was pushed into m_output`** — the model ran, but its results never reached the output ring buffer.
+- **`TODO 2: nothing came back from the model`** — nothing was pushed into the input ring buffer, `has_block` is still false, or the model's results never reached the output ring buffer.
 - **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but it is not popped from `m_input`.
 - **`TODO 3: give the host its samples back`** — the output is piling up instead of going out.
 - **`TODO 3: the host got its own input back`** — the host buffer was never written to.
-- **`TODO 3: the host did not get the model's stream back in order`** — samples reach the host, but not the right ones, or not in the right place.
+- **`TODO 3: the host did not get silence first, then the model's stream`** — samples reach the host, but not the right ones, or not in the right place.
 
 The ring buffer complains too:
 
 - **`ring buffer overflow: 512 samples pushed, room for …`** — the capacity from TODO 1 is too small.
 - **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; TODO 3 decides what the host gets instead.
-- **`produced 4096 samples, expected …`** — samples are being dropped. Everything the host gives you has to go in, and only whole model blocks come out.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 

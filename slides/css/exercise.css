@@ -1184,7 +1184,7 @@ html.tanh .deadline-bars i {
   transform-origin: bottom;
 }
 
-/* Threshold at 17.4 % of the height, so the forward pass, factor 5.4, reaches the top */
+/* Threshold at 25.4 % of the height, so the slow call, factor 3.7, reaches the top */
 html.tanh .deadline-bars i.runs {
   height: 94%;
   background: var(--ink);
@@ -1216,7 +1216,7 @@ html.tanh .deadline-budget {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(40px + (100% - 40px) * 0.174);
+  bottom: calc(40px + (100% - 40px) * 0.254);
   border-top: 2px dashed var(--ink);
 }
 
@@ -1391,7 +1391,7 @@ html.tanh .deadline-bars i.runs span {
   font-style: normal;
 }
 
-/* Two labels: the 31 that wait, the one that runs */
+/* Two labels: the three that wait, the one that runs */
 html.tanh .deadline-axis {
   right: 0;
   display: flex;

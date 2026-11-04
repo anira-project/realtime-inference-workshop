@@ -16,6 +16,7 @@
 - synchronious ringbuffer example:
 - Ringbuffersize input: 2048 and output: 2048
 - Whats the latency? Bufferadaptation Latency: 2048-512 + Model latency (In this case ?)
+- m_dept has been rewritten check   
 
 - Async:
 - Latency Bufferadaptation + Model Latency + inference_time_in_sample round up to next 512 samples (do not push model latency)

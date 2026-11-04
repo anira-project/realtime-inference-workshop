@@ -39,34 +39,51 @@ void SlotTile::paintButton(juce::Graphics& g, bool highlighted, bool down) {
     const float size = area.getWidth() * 0.11f;
     g.setColour(ink);
     if (on) {
-        g.fillRoundedRectangle(juce::Rectangle<float>(1.6f * size, 1.6f * size).withCentre(centre), 3.0f);
+        g.fillRoundedRectangle(juce::Rectangle<float>(1.6f * size, 1.6f * size).withCentre(centre),
+                               3.0f);
     } else {
         juce::Path triangle;
-        triangle.addTriangle(centre.x - 0.7f * size, centre.y - size,
-                             centre.x - 0.7f * size, centre.y + size,
-                             centre.x + size, centre.y);
+        triangle.addTriangle(centre.x - 0.7f * size,
+                             centre.y - size,
+                             centre.x - 0.7f * size,
+                             centre.y + size,
+                             centre.x + size,
+                             centre.y);
         g.fillPath(triangle);
     }
 
     g.setColour(ink.withAlpha(on ? 0.8f : 0.6f));
     g.setFont(font(12.0f));
-    g.drawFittedText(getButtonText(), area.reduced(12.0f, 10.0f).toNearestInt(),
-                     juce::Justification::centredBottom, 1);
+    g.drawFittedText(getButtonText(),
+                     area.reduced(12.0f, 10.0f).toNearestInt(),
+                     juce::Justification::centredBottom,
+                     1);
 }
 
-void WorkshopLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
-                                         bool highlighted, bool) {
+void WorkshopLookAndFeel::drawButtonText(juce::Graphics& g,
+                                         juce::TextButton& button,
+                                         bool highlighted,
+                                         bool) {
     g.setColour(highlighted ? palette::k_text : palette::k_muted);
     g.setFont(font(12.0f));
     g.drawText(button.getButtonText(), button.getLocalBounds(), juce::Justification::centred);
 }
 
-void WorkshopLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
-                                           float position, float, float, juce::Slider::SliderStyle,
+void WorkshopLookAndFeel::drawLinearSlider(juce::Graphics& g,
+                                           int x,
+                                           int y,
+                                           int width,
+                                           int height,
+                                           float position,
+                                           float,
+                                           float,
+                                           juce::Slider::SliderStyle,
                                            juce::Slider&) {
     const float centre = static_cast<float>(y) + static_cast<float>(height) / 2.0f;
-    const auto track = juce::Rectangle<float>(static_cast<float>(x), centre - 4.0f,
-                                              static_cast<float>(width), 8.0f);
+    const auto track = juce::Rectangle<float>(static_cast<float>(x),
+                                              centre - 4.0f,
+                                              static_cast<float>(width),
+                                              8.0f);
     g.setColour(palette::k_tile);
     g.fillRoundedRectangle(track, 4.0f);
     g.setColour(palette::k_accent);
@@ -93,7 +110,9 @@ WorkshopPluginEditor::WorkshopPluginEditor(WorkshopPluginProcessor& processor)
     }
 
     m_mix_attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        m_processor.parameters(), "mix", m_mix);
+        m_processor.parameters(),
+        "mix",
+        m_mix);
     m_mix.onValueChange = [this] { repaint(m_mix_area); };
     addAndMakeVisible(m_mix);
 
@@ -116,8 +135,7 @@ void WorkshopPluginEditor::paint(juce::Graphics& g) {
     g.drawText("Workshop Inference", header.removeFromTop(22), juce::Justification::centredLeft);
     g.setColour(palette::k_muted);
     g.setFont(font(12.0f));
-    g.drawText("Realtime Audio Variational autoEncoder",
-               header, juce::Justification::centredLeft);
+    g.drawText("Realtime Audio Variational autoEncoder", header, juce::Justification::centredLeft);
 
     const auto labels = m_mix_area.withHeight(16);
     g.setFont(font(12.0f));
@@ -125,13 +143,16 @@ void WorkshopPluginEditor::paint(juce::Graphics& g) {
     g.drawText("Dry", labels, juce::Justification::centredLeft);
     g.drawText("Wet", labels, juce::Justification::centredRight);
     g.setColour(palette::k_text);
-    g.drawText(juce::String(juce::roundToInt(m_mix.getValue() * 100.0)) + " %", labels,
+    g.drawText(juce::String(juce::roundToInt(m_mix.getValue() * 100.0)) + " %",
+               labels,
                juce::Justification::centred);
 
     if (m_status.isNotEmpty()) {
         g.setColour(palette::k_warning);
-        g.drawText(m_status, getLocalBounds().reduced(k_margin, 0).removeFromBottom(k_status + 8),
-                   juce::Justification::centredLeft, true);
+        g.drawText(m_status,
+                   getLocalBounds().reduced(k_margin, 0).removeFromBottom(k_status + 8),
+                   juce::Justification::centredLeft,
+                   true);
     }
 }
 
@@ -154,13 +175,13 @@ void WorkshopPluginEditor::resized() {
 
 void WorkshopPluginEditor::timerCallback() {
     const int playing = m_processor.player().playing();
-    const juce::String status = m_processor.load_error();
+    const juce::String status = m_processor.status();
     if (playing != m_playing || status != m_status) { refresh(); }
 }
 
 void WorkshopPluginEditor::refresh() {
     m_playing = m_processor.player().playing();
-    m_status = m_processor.load_error();
+    m_status = m_processor.status();
     for (int slot = 0; slot < ExamplePlayer::k_num_slots; ++slot) {
         auto& tile = m_slots[static_cast<size_t>(slot)].m_tile;
         tile.setToggleState(m_playing == slot, juce::dontSendNotification);
@@ -170,8 +191,9 @@ void WorkshopPluginEditor::refresh() {
 }
 
 void WorkshopPluginEditor::choose_file(int slot) {
-    m_chooser = std::make_unique<juce::FileChooser>(
-        "Audio file for slot " + juce::String(slot + 1), juce::File{}, "*.wav;*.aif;*.aiff;*.flac");
+    m_chooser = std::make_unique<juce::FileChooser>("Audio file for slot " + juce::String(slot + 1),
+                                                    juce::File{},
+                                                    "*.wav;*.aif;*.aiff;*.flac");
     m_chooser->launchAsync(
         juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
         [this, slot](const juce::FileChooser& chooser) {

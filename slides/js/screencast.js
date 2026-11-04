@@ -25,6 +25,8 @@
         const slide = Reveal.getCurrentSlide();
         if (stream && isSolution(slide)) {
             slide.appendChild(video);
+            // Taking a video out of the page pauses it, and autoplay doesn't restart it
+            video.play().catch(() => {});
             slide.classList.add('screencast-on');
         } else {
             video.remove();

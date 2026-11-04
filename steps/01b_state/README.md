@@ -44,9 +44,9 @@ OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 
 ## If you're stuck
 
-- **Block 0 is OK and every block after it fails** — the model only gets the audio, so every block starts from a zero state: every block is the first block.
-- **The program stops with `got 2 buffers but 1 sizes: ...`** — the sizes need the size of the state as well.
-- **The program stops with `the state is exactly 63488 floats, ...`** — the state buffer or its size is wrong.
+- **`TODO 1 and 2: block 0 is right, the blocks after it are not`** — the model only gets the audio, so every block starts from a zero state: every block is the first block.
+- **`FAILED: got 2 buffers but 1 sizes: ...`** — the sizes need the size of the state as well.
+- **`FAILED: the state is exactly 63488 floats, ...`** — the state buffer or its size is wrong.
 - **The same failure after adding the state** — the state is being created inside the loop, so it starts at zero on every block. It belongs above the loop.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.

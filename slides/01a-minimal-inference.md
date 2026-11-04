@@ -213,11 +213,6 @@ not code problems.*
 
 ```cpp
 const std::string model_path = k_model.m_path; // <- fill out
-
-if (!std::filesystem::exists(model_path)) {
-    std::fprintf(stderr, "TODO 1: set the path to the model first\n");
-    return 2;
-}
 ```
 
 Note:
@@ -259,11 +254,11 @@ Note:
 ## TODO 3: Run the first block
 
 ```cpp
-std::vector<float> audio(input.begin(), input.end());
+std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
 
 engine.process({audio}, {process_size}); // <- fill out
 
-return report(audio.data(), target.data(), process_size, k_block_tolerance);
+return report_first_block(audio, k_input_signal, k_target_output_signal, process_size);
 ```
 
 Note:

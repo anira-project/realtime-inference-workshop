@@ -2,6 +2,6 @@
   "hard": {
     "budget": { "ms": 20 },
     "warmup": { "fixed": 3 },
-    "on_miss": "zeros"
+    "on_miss": "bypass"
   }
 }

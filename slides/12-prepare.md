@@ -33,7 +33,7 @@ Note:
 
 ```json
 { "hard": { "budget": "measured", "warmup": "until_stable",
-            "on_miss": "zeros", "wait_ratio": 0 } }
+            "on_miss": "bypass", "wait_ratio": 0 } }
 ```
 
 ```cpp
@@ -56,7 +56,7 @@ Note:
 - Host blocks are the smallest, the largest and the sample rate.
 - Equal min and max give the tightest latency; a range gives a latency that covers its worst case.
 - The budget is the worst time of one inference, measured at prepare on the user's machine; the warm-up runs the model until its times are stable, before the stream starts.
-- on_miss and wait_ratio say what happens when a result is late; our file asks for zeros, like step 6, and we come to the choices in Process.
+- on_miss and wait_ratio say what happens when a result is late; our file asks for bypass, the input block in place of the late one, and we come to the choices in Process.
 - Async is not in this release, so prepare refuses it.
 
 ---

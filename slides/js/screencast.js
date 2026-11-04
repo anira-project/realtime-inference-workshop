@@ -54,12 +54,15 @@
         place();
     }
 
-    // The live picture goes into the current slide when it is a solution slide
+    // The live picture covers the whole window, header and footer included, when
+    // the current slide is a solution slide. It sits on the page, not in the
+    // slide: the slides are scaled to fit, and inside them it could only be as
+    // large as a slide.
     function place() {
         document.querySelectorAll('.screencast-on').forEach(slide => slide.classList.remove('screencast-on'));
         const slide = Reveal.getCurrentSlide();
         if (stream && isSolution(slide)) {
-            slide.appendChild(video);
+            document.body.appendChild(video);
             // Taking a video out of the page pauses it, and autoplay doesn't restart it
             video.play().catch(() => {});
             slide.classList.add('screencast-on');

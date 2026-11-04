@@ -1,8 +1,8 @@
 // The ring buffer from step 2, safe between two threads. Given complete.
 //
-// Goal: the same push, pop, available and space as RingBuffer, with the writer
-//       on one thread and the reader on another (step 5). One writer, one
-//       reader, fixed capacity, no lock, no allocation after construction.
+// Goal: move samples between the audio thread and the worker (step 5). One
+//       writer, one reader, fixed capacity, no lock, no allocation after
+//       construction.
 //
 // Underneath is moodycamel's single-producer single-consumer circular buffer.
 // Only its try_ functions are used: they never wait and never allocate.
@@ -17,34 +17,38 @@
 class ThreadSafeRingBuffer {
 public:
     // @capacity: how many samples can be in flight at once
-    // One sample more underneath: see space().
-    explicit ThreadSafeRingBuffer(size_t capacity) : m_samples(capacity + 1) {}
+    explicit ThreadSafeRingBuffer(size_t capacity) : m_samples(capacity) {}
 
-    // Samples waiting to be read. From the writer's thread this can only be
-    // too small, never too large: checking it before pop() is safe.
+    // Appends one sample. Returns false, and changes nothing, if the buffer is
+    // full. Only one thread may push.
+    bool try_push(float sample) { return m_samples.try_enqueue(sample); }
+
+    // Takes the oldest sample out. Returns false, and leaves `sample` alone, if
+    // the buffer is empty. Only one thread may pop.
+    bool try_pop(float& sample) { return m_samples.try_dequeue(sample); }
+
+    // Samples waiting to be read. Seen from the reader's thread this can only
+    // be too small, never too large, so checking it before pop() is safe.
     size_t available() const { return m_samples.size_approx(); }
 
-    // Room left for writing. While the reader takes a sample out, the count
-    // has already dropped but the slot is not free yet; keeping one sample in
-    // reserve makes sure this, too, is never too large.
-    size_t space() const { return m_samples.max_capacity() - 1 - available(); }
-
-    // Appends num_samples to the back of the buffer. Throws if they do not fit:
-    // check space() first. Only one thread may push.
+    // Appends num_samples. Throws if they do not all fit — used to prefill the
+    // buffer before the threads start, where that would be a sizing mistake.
     void push(const float* samples, size_t num_samples) {
-        if (num_samples > space()) {
-            throw std::runtime_error("ring buffer overflow: " + std::to_string(num_samples) +
-                                     " samples pushed, room for " + std::to_string(space()));
+        for (size_t i = 0; i < num_samples; ++i) {
+            if (!m_samples.try_enqueue(samples[i])) {
+                throw std::runtime_error("ring buffer overflow: room for " + std::to_string(i) +
+                                         " of " + std::to_string(num_samples) + " samples");
+            }
         }
-        for (size_t i = 0; i < num_samples; ++i) { m_samples.try_enqueue(samples[i]); }
     }
 
-    // Removes num_samples from the front of the buffer into `samples`. Throws if
-    // there are not enough: check available() first. Only one thread may pop.
+    // Removes num_samples into `samples`. Throws if there are not enough:
+    // check available() first. Only one thread may pop.
     void pop(float* samples, size_t num_samples) {
         if (num_samples > available()) {
             throw std::runtime_error("ring buffer underflow: " + std::to_string(num_samples) +
-                                     " samples popped, only " + std::to_string(available()) + " available");
+                                     " samples popped, only " + std::to_string(available()) +
+                                     " available");
         }
         for (size_t i = 0; i < num_samples; ++i) { m_samples.try_dequeue(samples[i]); }
     }

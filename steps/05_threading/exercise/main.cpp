@@ -1,33 +1,32 @@
 // Step 5 — Inference on a worker thread
 //
-// Goal:   get the engine off the audio thread, and keep the audio thread free
-//         of allocations and locks.
+// Goal:   get the engine off the audio thread, keep the audio thread free of
+//         allocations and locks, and keep the latency fixed.
 // Given:  ThreadSafeRingBuffer, step 2's ring buffer made safe between two
 //         threads, and the fake host.
 // Task:   fill in the three TODO banners.
-// Check:  the model still produces the reference output, and the callback does
-//         not allocate once.
+// Check:  the host gets the model's stream back, exactly the prefill later,
+//         and the callback does not allocate once.
 //
 // It builds and runs as it is, and says which TODO is still open.
 
 #include <algorithm>
 #include <atomic>
-#include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <exception>
 #include <new>
 #include <stdexcept>
 #include <thread>
 #include <vector>
 
-#include "common/helpers/host.h"
-#include "common/helpers/libtorch_engine.h"
-#include "common/helpers/threadsafe_ring_buffer.h"
-#include "common/helpers/support.h"
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
+#include "common/helpers/host.h"
+#include "common/helpers/libtorch_engine.h"
+#include "common/helpers/support.h"
+#include "common/helpers/threadsafe_ring_buffer.h"
 
 // Model settings taken from the export metadata.
 // @m_path: absolute path to the exported model, set via CMake
@@ -40,7 +39,12 @@ constexpr struct {
 } k_model{};
 
 constexpr size_t k_host_block_size = 512;  // What the host hands over per callback
-constexpr size_t k_blocks_in_flight = 8;   // Model blocks waiting between the threads
+
+// Your worst case after the warm-up, from the last lines of step 3, in ms.
+constexpr double k_max_inference_ms = 0.0;  // <- fill out: your number from step 3
+
+// The first calls are slow (step 3): made before the audio starts.
+constexpr size_t k_warm_up_calls = 2;
 
 // Counts what the audio thread allocates. Any number above zero here is a bug,
 // whether or not it showed up as a glitch today.
@@ -84,87 +88,120 @@ namespace {
 //   audio thread:  host block -> m_input              m_output -> host block
 //   worker thread:               m_input -> model -> m_output
 //
-// Each has one writer and one reader, on different threads.
+// Each has one writer and one reader, on different threads. m_output starts
+// with the prefill: as many zeros as the host is late, so that the worker has
+// time and the host always finds something to take.
 class ThreadedProcessor {
 public:
     explicit ThreadedProcessor(LibTorchEngine& engine) : m_engine(engine) {}
 
     ~ThreadedProcessor() { stop(); }
 
-    // Everything that allocates: buffers, and the thread itself.
+    // Everything that allocates: buffers, the warm-up, and the thread itself.
     // @max_block_size: the largest block the callback will be given
     void prepare(size_t max_block_size) {
         stop();
 
-        // The worker can hand several blocks back at once, so the output side
-        // has to hold what can be in flight.
-        m_output = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
-        m_model_block.assign(k_model.m_input_size, 0.0f);
-        m_engine.reset();
-        m_received = 0;
-        m_produced.clear();
-        m_produced.reserve(k_signal_length);
+        if (k_max_inference_ms <= 0.0) {
+            throw std::runtime_error(
+                "TODO 1: put your worst case from step 3 into k_max_inference_ms");
+        }
 
         // ---- TODO 1 --------------------------------------------------------
-        //   1. Size m_input. In step 2 the model ran right away, so one model
-        //      block was enough. Now the worker can fall behind: room for
-        //      k_blocks_in_flight model blocks, on top of one host block.
-        //   2. Start the worker thread. Which function does it run?
-        //
-        // Hint: the constructor of ThreadSafeRingBuffer, and the member function worker().
+        //   1. rounded_max_inference_time: k_max_inference_ms in samples,
+        //      rounded up to whole callbacks of max_block_size samples
+        //   2. the prefill: the buffer adaptation from step 2 plus the time
+        //      the worker is given
+        //   3. the size of m_output: the worker's time plus one model block
+        //   4. start the worker thread. Which function does it run?
         // --------------------------------------------------------------------
-        const size_t input_capacity = 0; // <- 1. fill out
+        const double max_inference_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+        const size_t rounded_max_inference_time = 0;  // <- 1. fill out
+        m_prefill = 0;                                // <- 2. fill out
+        const size_t output_capacity = 0;             // <- 3. fill out
 
-        if (input_capacity < max_block_size + k_model.m_input_size) {
-            throw std::runtime_error("TODO 1: give m_input room for at least a host block and a model block");
+        if (rounded_max_inference_time == 0 || rounded_max_inference_time % max_block_size != 0 ||
+            static_cast<double>(rounded_max_inference_time) < max_inference_samples) {
+            throw std::runtime_error(
+                "TODO 1: round k_max_inference_ms up to whole callbacks, in samples");
         }
-        m_input = ThreadSafeRingBuffer(input_capacity);
+        if (m_prefill == 0) { throw std::runtime_error("TODO 1: work out the prefill"); }
+        if (output_capacity < m_prefill + max_block_size) {
+            throw std::runtime_error(
+                "TODO 1: give m_output room for the prefill and a callback more");
+        }
+
+        // Given: the input holds one model block, as in step 2. The output
+        // starts with the prefill.
+        m_input = ThreadSafeRingBuffer(k_model.m_input_size);
+        m_output = ThreadSafeRingBuffer(output_capacity);
+        const std::vector<float> silence(m_prefill, 0.0f);
+        m_output.push(silence.data(), m_prefill);
+
+        // Given: the warm-up. The first calls are slow (step 3), so they are
+        // made here, before the audio starts; then the model state is cleared.
+        m_model_block.assign(k_model.m_input_size, 0.0f);
+        for (size_t i = 0; i < k_warm_up_calls; ++i) {
+            m_engine.process(m_model_block.data(), k_model.m_input_size);
+        }
+        m_engine.reset();
+
+        m_unpushed = 0;
+        m_debt = 0;
 
         m_running.store(true, std::memory_order_release);
-        // m_worker = std::thread([this] { ?(); }); // <- 2. fill out
+        // m_worker = std::thread([this] { ?(); });  // <- 4. fill out
     }
 
-    // Finish what is still in flight, then stop the thread.
+    // Stop the worker thread.
     void stop() {
         if (!m_worker.joinable()) { return; }
         m_running.store(false, std::memory_order_release);
         m_worker.join();
     }
 
-    // The audio thread: no engine, no allocation, no lock. Only copies.
+    // The audio thread: no engine, no allocation, no lock, no waiting. Only copies.
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
         // ---- TODO 2 --------------------------------------------------------
         // The audio thread: step 2's process_block(), without the engine.
-        //   1. push the host's samples into m_input, if there is room
-        //   2. hand the host its samples from m_output, if they are ready
+        //   1. push the host's samples into m_input, one by one. If one does
+        //      not fit, the worker is a whole block behind: count it and the
+        //      rest in m_unpushed, and stop
+        //   2. (given) those never reach the model: the host gets as many
+        //      zeros instead, and nothing is taken out of m_output for them
+        //   3. take the rest from m_output, one by one. Where nothing is there
+        //      yet, the host gets a zero, and the sample is owed: m_debt
+        //   4. pay the debt first: what is owed came too late, its place
+        //      already went out as a zero. Take it out and throw it away
         //
-        // Hint:
-        //   - space() and available() never wait. No room means the worker is
-        //     behind: drop the block, do not wait for it.
+        // Hint: try_push() and try_pop() never wait, they say whether it worked.
         // --------------------------------------------------------------------
-        const bool has_room = false; // <- 1. fill out
-
-        if (has_room) {
-            // m_input.push(?, ?); // <- 2. fill out
-            m_received += num_samples;
-        } else {
-            m_dropped.fetch_add(1, std::memory_order_relaxed);  // The worker is behind: dropped
+        for (size_t i = 0; i < num_samples; ++i) {
+            const bool pushed = false;  // <- 1. fill out
+            if (!pushed) {
+                m_unpushed += 0;  // <- 1. fill out
+                break;
+            }
         }
 
-        const bool is_ready = false; // <- 3. fill out
+        const size_t zeros = std::min(m_unpushed, num_samples);
+        std::fill_n(samples, zeros, 0.0f);
+        m_unpushed -= zeros;
 
-        if (is_ready) {
-            // m_output.pop(?, ?); // <- 4. fill out
-        } else {
-            std::fill_n(samples, num_samples, 0.0f);
+        [[maybe_unused]] float late = 0.0f;
+        while (m_debt > 0 && false) { --m_debt; }  // <- 4. fill out
+
+        for (size_t i = zeros; i < num_samples; ++i) {
+            const bool popped = false;  // <- 3. fill out
+            if (!popped) {
+                samples[i] = 0.0f;
+                m_debt += 0;  // <- 3. fill out
+            }
         }
     }
 
-    // Everything the model produced, in order — what the check reads.
-    const std::vector<float>& produced() const { return m_produced; }
-
-    // Samples the audio thread handed over to the worker.
-    size_t received() const { return m_received; }
+    // How late the host hears the model's stream: the prefill, in samples.
+    size_t prefill_samples() const { return m_prefill; }
 
     // True once prepare() has started the worker thread.
     bool worker_started() const { return m_worker.joinable(); }
@@ -176,39 +213,25 @@ private:
         while (m_running.load(std::memory_order_acquire)) {
             // ---- TODO 3 ----------------------------------------------------
             // The worker thread: the other half of step 2's process_block().
-            //   1. wait until m_input holds a whole model block
+            //   1. check whether m_input holds a whole model block. If not,
+            //      check again: no sleep, the result is needed soon
             //   2. take it out and run the engine on it
-            //   3. push the result into m_output
-            // Nothing here is real-time: sleeping, waiting and allocating are
-            // all allowed on this side.
+            //   3. push the result into m_output, sample by sample. If
+            //      m_output is full, try again until there is room, but keep
+            //      watching m_running: once the host stops calling, nobody
+            //      makes room, and stop() would wait forever
             // ------------------------------------------------------------------
-            const bool has_block = false; // <- 1. fill out
+            const bool has_block = false;  // <- 1. fill out
 
-            if (!has_block) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
-                continue;
+            if (!has_block) { continue; }
+
+            // m_input.pop(?, ?);  // <- 2. fill out
+            // m_engine.process(?, ?);  // <- 2. fill out
+
+            size_t pushed = 0;
+            while (pushed < k_model.m_input_size && m_running.load(std::memory_order_acquire)) {
+                if (false) { ++pushed; }  // <- 3. fill out
             }
-
-            // m_input.pop(?, ?); // <- 2. fill out
-            // m_engine.process(?, ?); // <- 3. fill out
-            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
-
-            // Wait for room, but keep watching the stop flag: once the host
-            // stops calling back, nobody makes room, and stop() would wait forever.
-            while (m_running.load(std::memory_order_acquire) &&
-                   m_output.space() < k_model.m_input_size) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
-            }
-            if (m_output.space() >= k_model.m_input_size) {
-                // m_output.push(?, ?); // <- 4. fill out
-            }
-        }
-
-        // Drain what the host pushed just before the end.
-        while (m_input.available() >= k_model.m_input_size) {
-            m_input.pop(m_model_block.data(), k_model.m_input_size);
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
-            m_produced.insert(m_produced.end(), m_model_block.begin(), m_model_block.end());
         }
     }
 
@@ -218,9 +241,10 @@ private:
     std::vector<float> m_model_block;  // The worker's block, sized in prepare()
     std::thread m_worker;
     std::atomic<bool> m_running{false};
-    std::atomic<long> m_dropped{0};  // Host blocks the worker had no room for
-    size_t m_received = 0;           // Written on the audio thread only
-    std::vector<float> m_produced;   // Written on the worker thread only
+    size_t m_prefill = 0;   // Set in prepare()
+    size_t m_unpushed = 0;  // Audio thread: samples that did not fit into m_input, owed as zeros
+    size_t m_debt = 0;      // Audio thread: samples that went out as zeros, thrown away when they
+                            // arrive
 };
 
 }  // namespace
@@ -265,40 +289,43 @@ int main() {
     processor.stop();
 
     const long allocations = g_allocations.load(std::memory_order_relaxed);
-    const std::vector<float>& produced = processor.produced();
+    const size_t prefill = processor.prefill_samples();
 
-    if (produced.empty()) {
-        std::printf(processor.received() == 0
-                        ? "TODO 2: the audio thread never handed a block over.\n"
-                        : "TODO 3: the worker never picked a block up.\n");
-        return 1;
-    }
-
-    // The worker ran the model, but nothing came back to the host.
+    // Nothing came back to the host.
     if (std::all_of(host_output.begin(), host_output.end(), [](float x) { return x == 0.0f; })) {
-        std::printf("TODO 2 or 3: the host only got silence. Does the worker push its blocks\n"
-                    "into m_output, and does the audio thread pop them?\n");
+        std::printf(
+            "TODO 2 or 3: the host only got silence. Does the audio thread push into m_input,\n"
+            "does the worker push its blocks into m_output, and does the audio thread pop them?\n");
         return 1;
     }
 
+    std::printf("  %-28s %zu samples (%.1f ms)\n",
+                "prefill",
+                prefill,
+                1000.0 * static_cast<double>(prefill) / k_model.m_sample_rate);
     std::printf("  %-28s %ld\n", "allocations on the audio thread", allocations);
-    std::printf("  %-28s %zu of %zu samples\n",
-                "the model produced",
-                produced.size(),
-                k_input_signal.size());
-
-    const float diff =
-        max_abs_diff(produced.data(), k_target_output_signal.data(), produced.size());
-    std::printf("  %-28s %.3g\n\n", "max abs diff vs. reference", diff);
 
     if (allocations > 0) {
         std::printf("FAILED: the audio thread allocated %ld times.\n", allocations);
         return 1;
     }
-    if (diff > k_tolerance) {
-        std::printf("FAILED: the output drifted from the reference.\n");
-        return 1;
+
+    // What the host heard: the prefill in silence, then the model's stream,
+    // apart from callbacks where the worker was late and zeros went out.
+    const int result = report_with_dropouts(host_output.data(),
+                                            k_target_output_signal.data(),
+                                            host_output.size(),
+                                            prefill,
+                                            k_host_block_size);
+    if (result != 0) {
+        std::printf(
+            "Dropouts or wrong samples mean the worker was late: raise k_max_inference_ms to\n"
+            "the worst case of a few step 3 runs. If it is already that, the machine is busy.\n");
+        return result;
     }
-    std::printf("OK: inference ran on the worker thread, the audio thread only moved samples.\n");
+    std::printf(
+        "OK: inference ran on the worker thread, the host got the model's stream back\n"
+        "%zu samples late.\n",
+        prefill);
     return 0;
 }

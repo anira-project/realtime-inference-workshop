@@ -189,6 +189,38 @@ Note:
 
 ---
 
+<div class="tag">Solution</div>
+
+## What it prints
+
+```text
+The first 10 of 200 calls:
+  call  1  ########################################  88.23 ms
+  call  2  #################                         37.32 ms
+  call  3  ####                                       7.88 ms
+  ...
+
+The 5 slowest calls:
+  call   1   88.23 ms
+  call   2   37.32 ms
+  call  40   11.06 ms
+  call 138   11.06 ms
+  call 164   10.11 ms
+```
+
+Note:
+- Screen share on (C): run it live in the IDE's terminal
+- Without a share: this slide shows the output of one earlier run
+- Look at the first calls together, then at the list of the 5 slowest
+- Run it again: what stays the same, what changes?
+
+**Script:**
+
+*Run it live.*
+"Let's run it together. Here's the table from Google Benchmark, and below it the first 10 calls. Look at the first two: they're much slower than the rest. And in the list of the 5 slowest calls, the first entries are those same calls. Let's run it again and see what stays the same."
+
+---
+
 <div class="tag">Result</div>
 
 ## The first calls are a warm-up<br><span class="then">After that it is flat.</span>

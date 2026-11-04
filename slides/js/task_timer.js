@@ -1,9 +1,29 @@
 /**
  * Task timer: <div class="task-timer" data-minutes="5"></div> on a task slide.
- * Click to start, click again to pause; double-click resets.
+ * Click to start, click again to pause; double-click resets. One soft tone
+ * with a minute left, three when the time is up.
  */
 
 (() => {
+    // The speaker view's previews are decks of their own: they stay silent
+    const silent = /receiver/i.test(window.location.search);
+    let audio = null;
+
+    // A short sine with a soft attack and decay, `delay` seconds from now
+    const tone = (frequency, delay = 0) => {
+        if (!audio) return;
+        const start = audio.currentTime + delay;
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.6);
+        oscillator.connect(gain).connect(audio.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.65);
+    };
+
     const format = seconds => {
         const s = Math.max(0, Math.ceil(seconds));
         return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -13,6 +33,8 @@
         clearInterval(timer._interval);
         timer._interval = null;
         timer._remaining = Number(timer.dataset.minutes || 5) * 60;
+        // A timer shorter than two minutes gets no one-minute tone
+        timer._warned = timer._remaining < 120;
         timer.classList.remove('running', 'done');
         timer.textContent = format(timer._remaining);
     };
@@ -20,12 +42,17 @@
     const tick = timer => {
         const remaining = timer._remaining - (Date.now() - timer._started) / 1000;
         timer.textContent = format(remaining);
+        if (!timer._warned && remaining <= 60) {
+            timer._warned = true;
+            tone(880);
+        }
         if (remaining <= 0) {
             clearInterval(timer._interval);
             timer._interval = null;
             timer._remaining = 0;
             timer.classList.remove('running');
             timer.classList.add('done');
+            [0, 0.35, 0.7].forEach(delay => tone(880, delay));
         }
     };
 
@@ -41,6 +68,9 @@
             timer.classList.remove('running');
             return;
         }
+        // Created on the click that starts it: browsers allow audio only after a gesture
+        if (!silent && !audio) audio = new AudioContext();
+        audio?.resume();
         timer._started = Date.now();
         timer._interval = setInterval(() => tick(timer), 250);
         timer.classList.add('running');

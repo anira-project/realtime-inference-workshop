@@ -1688,6 +1688,69 @@ html.tanh .click-note {
   font-size: 0.65em;
 }
 
+/* A miss that shifts the audio: the late stretch, and where it belongs */
+html.tanh .miss .click { margin-top: var(--space-3); }
+html.tanh .miss pre { font-size: 0.5em; }
+html.tanh .shift-band { fill: var(--mark-over); fill-opacity: 0.12; }
+html.tanh .shift-line {
+  fill: none;
+  stroke: var(--mark-over);
+  stroke-width: 3;
+  stroke-linejoin: miter;
+}
+html.tanh .shift-ghost {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-dasharray: 6 8;
+  stroke-opacity: 0.45;
+}
+
+/* The input under it: the samples never pushed, and the latency until they go missing */
+html.tanh .click-labels .lane { left: 0; color: var(--ink); font-weight: 600; }
+html.tanh .click.lost { margin-top: var(--space-2); }
+html.tanh .lost-line { stroke-width: 4; }
+html.tanh .lost-link { stroke: var(--mark-over); stroke-width: 2; stroke-dasharray: 6 6; }
+html.tanh .lost-arrowhead { fill: var(--mark-over); }
+html.tanh .lost-mark { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 4 6; }
+html.tanh .callback-box { fill: none; stroke: var(--ink); stroke-width: 2.5; }
+html.tanh .callback-note {
+  margin-top: var(--space-1);
+  font-size: 0.55em;
+  color: var(--fs-text-muted-color);
+}
+
+/* anira: the missed block is filled by the policy, the rest stays in line */
+html.tanh .fill-band { fill: var(--mark-model); fill-opacity: 0.16; }
+html.tanh .fill-edge { stroke: var(--mark-model); stroke-width: 2; }
+html.tanh .fill-line {
+  fill: none;
+  stroke: var(--mark-model);
+  stroke-width: 4;
+  stroke-linejoin: miter;
+}
+html.tanh .click-labels .fill-label { color: var(--ink); font-weight: 600; }
+
+/* The four on_miss policies, one missed block each */
+html.tanh .policies {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5) var(--space-7);
+  margin-top: var(--space-6);
+}
+html.tanh .policy-name {
+  margin-bottom: var(--space-2);
+  font-size: 0.55em;
+  color: var(--fs-text-muted-color);
+}
+html.tanh .policy-name code { margin-right: var(--space-2); color: var(--ink); font-weight: 600; }
+html.tanh .policy .click-line,
+html.tanh .policy .fill-line,
+html.tanh .policy .shift-ghost,
+html.tanh .policy .fill-edge,
+html.tanh .policy .click-div { vector-effect: non-scaling-stroke; }
+html.tanh .click-note.fill b { background: var(--mark-model); color: var(--ink); }
+
 html.tanh .click-note b {
   margin-right: var(--space-3);
   padding: var(--space-1) var(--space-3);

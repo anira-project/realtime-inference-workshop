@@ -61,30 +61,29 @@ Note:
 
 ```cpp
 contract.hard_host_blocks(block, block, sample_rate);
-anira_handler_prepare(handler, contract.native(), &error);
-setLatencySamples(static_cast<int>(anira_handler_get_latency(handler, 0)));
+m_handler.prepare(contract);
+setLatencySamples(static_cast<int>(m_handler.get_latency(0)));
 ```
 
 **`processBlock`** — one tensor over the channel pointers, in place
 
 ```cpp
 const int64_t shape[2] = {buffer.getNumChannels(), buffer.getNumSamples()};
-anira_tensor_init_host_planar(&block, buffer.getArrayOfWritePointers(),
-                              buffer.getNumChannels(), ANIRA_DTYPE_F32, 2, shape);
-anira_handler_process(handler, &block, 0, &block, 0, nullptr);
+const std::span channels(buffer.getArrayOfWritePointers(), size_t(shape[0]));
+const auto block = anira::Tensor::from_host_planar<float>(channels, shape);
+m_handler.process(block, 0, block, 0);
 ```
 
-**`releaseResources`** — nothing: our wrapper's destructor calls `anira_handler_destroy`
+**`releaseResources`** — nothing: the `InferenceHandler` frees itself when the plugin goes
 
 Note:
 - Three places, three calls: the same three places as step 8.
 - In prepareToPlay the host's blocks go into the contract, we prepare the handler, and we report its latency to the host.
 - Prepare runs again whenever the host changes its blocks.
-- The configs use the C++ handles of anira.hpp, and the handler calls are the C functions themselves, as in steps 9 and 10, so you see exactly what crosses the ABI.
-- anira.hpp's InferenceHandler wraps the same three calls, if you prefer C++ all the way.
+- Everything is anira.hpp, as in steps 9 to 11: the model config, the contract and the InferenceHandler.
 - In processBlock we put one tensor over the channel pointers JUCE hands out: planar float32, with the sample count as its shape.
-- anira_handler_process then runs it in place.
-- releaseResources does nothing: our small wrapper destroys the handler when it goes.
+- process then runs it in place.
+- releaseResources does nothing: the InferenceHandler destroys itself when the plugin goes.
 - The threads are not ours to stop any more: the context keeps the pool while any handler exists.
 
 ---

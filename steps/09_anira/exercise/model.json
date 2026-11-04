@@ -3,11 +3,35 @@
     { "engine": "onnxruntime", "path": "../../../models/model_forward.onnx" }
   ],
   "inputs": [
-    { "name": "audio",     "dtype": "float32", "role": "streamed" },
-    { "name": "state_in",  "dtype": "float32", "role": "state" }
+    {
+      "name": "audio",
+      "dtype": "float32",
+      "role": "streamed",
+      "axes": [["batch", 1], ["channel", 1], ["time", "TODO 1"]],
+      "window": { "min": 2048, "max": 2048 }
+    },
+    {
+      "name": "state_in",
+      "dtype": "float32",
+      "role": "state",
+      "axes": [["batch", 1], ["any", 63488]],
+      "state_source": "TODO 2"
+    }
   ],
   "outputs": [
-    { "name": "audio_out", "dtype": "float32", "role": "streamed" },
-    { "name": "state_out", "dtype": "float32", "role": "state" }
+    {
+      "name": "audio_out",
+      "dtype": "float32",
+      "role": "streamed",
+      "axes": [["batch", 1], ["channel", 1], ["time", "TODO 1"]],
+      "window": { "min": 2048, "max": 2048 },
+      "latency": "TODO 1"
+    },
+    {
+      "name": "state_out",
+      "dtype": "float32",
+      "role": "state",
+      "axes": [["batch", 1], ["any", 63488]]
+    }
   ]
 }

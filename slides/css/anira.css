@@ -470,7 +470,7 @@ html.tanh .crowd-plugins {
 
 html.tanh .crowd-plugin {
   display: grid;
-  grid-template-columns: 1fr 40px 40px;
+  grid-template-columns: 1fr 40px;
   align-items: center;
   column-gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
@@ -486,7 +486,7 @@ html.tanh .crowd-plugin span {
   font-weight: 600;
 }
 
-/* Two worker threads per instance */
+/* One worker thread per instance */
 html.tanh .crowd-plugin i {
   height: 30px;
   border-radius: 4px;
@@ -533,7 +533,7 @@ html.tanh .crowd-count strong {
   color: var(--ink);
 }
 
-/* Instances arrive one by one; the cores fill with the first four, the rest queue up */
+/* Instances arrive one by one; the four cores fill with the first four, the rest wait */
 html.tanh .reveal section.present .crowd-plugin {
   animation: crowd-in 0.4s var(--ease) calc(0.4s + var(--i) * 0.35s) both;
 }
@@ -1793,6 +1793,8 @@ html.tanh .arch-box code { font-size: 0.9em; }
 
 html.tanh .state-demo {
   display: grid;
+  /* One row under the other, not the two columns of the stateless/stateful demo */
+  grid-template-columns: 1fr;
   row-gap: var(--space-4);
   margin-top: var(--space-6);
   text-align: left;

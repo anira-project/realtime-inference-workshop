@@ -2340,13 +2340,17 @@
   visibility: hidden;
 }
 
-.reveal .slides section .screencast-video {
-  position: absolute;
+/* Over the whole window, above the footer; the chapter overview still opens on top */
+.screencast-video {
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #000;
-  border-radius: 6px;
-  z-index: 5;
+  background: var(--fs-background-color);
+  z-index: 1500;
+}
+
+body:has(> .screencast-video) .header-logo-box {
+  visibility: hidden;
 }

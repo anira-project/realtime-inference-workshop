@@ -13,18 +13,25 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 
 <div class="title-logos">
   <img class="title-logo bmftr" src="assets/images/logos/bmftr-funding.png" alt="With funding from the Federal Ministry of Research, Technology and Space">
-  <img class="title-logo tu-berlin" src="assets/images/logos/tu-berlin.svg" alt="TU Berlin">
-  <img class="title-logo baby-audio" src="assets/images/logos/baby-audio.svg" alt="Baby Audio">
 </div>
 
 <!-- .slide: data-state="no-header" -->
 
 Note:
+- Hi all
 - Welcome to our workshop on real-time inference of neural networks.
-- A neural network in a plugin has to deliver every block, on time, on every machine.
-- Today we take an exported model all the way to an audio plugin that does exactly that.
+- Today we take an exported neural network model and implement it in an audio plugin that does exactly that.
 
 ---
+
+## Teaser
+
+- FFT comparison
+- Neural networks typically work in fixed buffer sizes, and their runtimes are often not real-time safe.
+- How can we reconcile this with the callback inside an audio plugin or software, which can take different buffer sizes and needs to adhere to real-time principle?
+
+---
+
 
 <div class="tag">introduction</div>
 
@@ -63,6 +70,7 @@ Note:
 - We share these slides, so you can click through to both talks later.
 
 ---
+
 <div class="tag">introduction</div>
 
 ## About us
@@ -133,7 +141,7 @@ Note:
   <div class="card">{{ICON:shield}}<div class="card-title">Real-time safe</div><div class="card-text">Worker thread, latency</div></div>
   <div class="card-arrow">→</div>
   <div class="card">{{ICON:plug}}<div class="card-title">Plugin</div><div class="card-text">All of it, in a host</div></div>
-  <div class="cards-span" style="margin-bottom: 200px;"><span>anira</span> solves these three steps</div>
+  <div class="cards-span" style="margin-bottom: 200px;"><span>Workshop Scope</span> How to solve these three steps</div>
 </div>
 
 

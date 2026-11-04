@@ -65,7 +65,7 @@ int main() try {
     }
 
     // The reference already carries the model's own delay, so it lines up with
-    // the output after the rest of the reported latency, as in step 6.
+    // the output after the rest of the reported latency, as in step 7.
     return report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                latency - k_model_latency, late, k_host.m_block_size);
 } catch (const std::exception& error) {

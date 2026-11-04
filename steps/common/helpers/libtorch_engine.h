@@ -1,4 +1,4 @@
-// The inference engine for step 1, given complete.
+// The LibTorch engine, for the steps still on it, given complete.
 //
 // Goal: LibTorch behind three methods — load_model, reset, process. Later steps
 //       keep this interface and change who calls process(), and from which

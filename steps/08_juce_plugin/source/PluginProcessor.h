@@ -57,14 +57,14 @@ private:
     std::atomic<float>* m_mix = nullptr;
 
     // ONNX Runtime, not LibTorch: it is the one with a static build, so the
-    // plugin is a single self-contained bundle — step 7, made good on.
+    // plugin is a single self-contained bundle.
     // One engine and one processor: the model is mono, so the input is mixed
     // down to one signal, and the result goes out on every channel.
     std::unique_ptr<OnnxEngine> m_engine;
     std::unique_ptr<LatencyProcessor<OnnxEngine>> m_processor;
     juce::String m_status;  // Written in prepareToPlay, read by the editor
 
-    // The processor from steps 5 and 6 is built for 512-sample blocks only.
+    // The processor from steps 6 and 7 is built for 512-sample blocks only.
     std::atomic<bool> m_prepared{false};     // prepareToPlay got a block size it supports
     std::atomic<bool> m_wrong_block{false};  // processBlock was called with another size
 

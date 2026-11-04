@@ -1,6 +1,6 @@
-// The ring buffer from step 2, safe between two threads. Given complete.
+// The ring buffer from step 3, safe between two threads. Given complete.
 //
-// Goal: move samples between the audio thread and the worker (step 5). One
+// Goal: move samples between the audio thread and the worker (step 6). One
 //       writer, one reader, fixed capacity, no lock, no allocation after
 //       construction.
 //

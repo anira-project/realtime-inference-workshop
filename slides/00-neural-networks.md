@@ -119,7 +119,7 @@ Note:
 (hidden) Note:
     - Conditioned: the controls are inputs too, and have to reach the model at the right time.
     - Causal: a model that looks ahead needs future samples, so its output is late by that much.
-    - Fixed input size: the host block size rarely matches; step 2 is about this.
+    - Fixed input size: the host block size rarely matches; step 3 is about this.
     - Rates: not everything runs per sample; control and note rates change how often the model is called. -->
 
 ---

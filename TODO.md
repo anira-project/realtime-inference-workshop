@@ -35,7 +35,7 @@
 - same with loaded models
 - Have a look into the ctors and into prepare and please find out what the steps are really doing!!!!!!!
 - Better handling of ... in   { "name": "audio_out", "role": "streamed", …, "latency": 2224 },
-- We do not use the sleep anymore in the part 1 step 5 example..
+- We do not use the sleep anymore in the part 1 step 6 example..
 - Add latency to blocking ratio plots
 - Inline execution is next to come with gpu and npu accelerators
 - Ab after process überarbeiten

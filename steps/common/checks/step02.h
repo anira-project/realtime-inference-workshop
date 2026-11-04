@@ -1,31 +1,42 @@
 // Step 2's checks, given complete. Not part of the exercise.
 //
-// Goal: say which TODO is still missing, from what the two ring buffers hold
-//       after a callback.
+// Goal: compare the signal with what the model produced in Python, block by
+//       block, to see where it goes wrong.
 #pragma once
 
+#include <array>
 #include <cstddef>
-#include <stdexcept>
+#include <cstdio>
+#include <string>
+#include <vector>
 
-#include "common/helpers/ring_buffer.h"
+#include "common/assets/test_signal.h"
+#include "common/helpers/support.h"
 
-// After a working callback the ring buffers have a capacity, samples are in
-// flight, less than one model block waits for the model, and less than one
-// model block waits for the host.
-// @input: the ring buffer in front of the model
-// @output: the ring buffer behind the model
-// @model_input_size: samples the model takes per forward pass
-inline void check_todos(const RingBuffer& input, const RingBuffer& output, size_t model_input_size) {
-    if (input.available() + input.space() == 0) {
-        throw std::runtime_error("TODO 1: give the ring buffers a capacity in prepare()");
+// One line per block, then the whole signal. Returns what main should exit with.
+// @audio: the whole signal, processed in place
+// @target: what the model produced in Python
+// @process_size: samples per block
+inline int report_blocks(const std::vector<float>& audio,
+                         const std::array<float, k_signal_length>& target,
+                         size_t process_size) {
+    bool later_blocks_fail = false;
+    bool first_block_ok = true;
+    for (size_t start = 0; start < audio.size(); start += process_size) {
+        const std::string label = "block " + std::to_string(start / process_size);
+        const bool ok = report_line(
+            label.c_str(), max_abs_diff(audio.data() + start, target.data() + start, process_size));
+        if (start == 0) {
+            first_block_ok = ok;
+        } else if (!ok) {
+            later_blocks_fail = true;
+        }
     }
-    if (input.available() == 0 && output.available() == 0) {
-        throw std::runtime_error("TODO 2: push the samples into m_input and m_output");
+
+    // Right at the start, wrong after it: every block starts from a zero state.
+    if (first_block_ok && later_blocks_fail) {
+        std::printf("FAILED: TODO 1 and 2: block 0 is right, the blocks after it are not\n");
+        return 1;
     }
-    if (input.available() >= model_input_size) {
-        throw std::runtime_error("TODO 2: run the model on the samples that arrived");
-    }
-    if (output.available() >= model_input_size) {
-        throw std::runtime_error("TODO 3: give the host its samples back");
-    }
+    return report(audio.data(), target.data(), audio.size());
 }

@@ -6,7 +6,7 @@
 Note:
 - Back to coding.
 - In Step 9 we take the model from part 1 and run it through anira.
-- We use the same model and the same check, but this time Steps 2, 5 and 6 are not written by hand.
+- We use the same model and the same check, but this time Steps 3, 6 and 7 are not written by hand.
 
 ---
 
@@ -16,7 +16,7 @@ Note:
 
 <div class="state-demo">
   <div class="state-row was">
-    <div class="state-label">step 4</div>
+    <div class="state-label">step 2</div>
     <code>std::copy_n(outputs[1].GetTensorData&lt;float&gt;(), m_state.size(), m_state.begin());</code>
   </div>
   <div class="state-row is">
@@ -26,7 +26,7 @@ Note:
 </div>
 
 Note:
-- Remember the line in Step 4 where we copied the state back by hand?
+- Remember the line in Step 2 where we copied the state back by hand?
 - In anira it is one line in the model file: this input is a state, and its source is that output.
 - The ring buffers, the worker and the latency go the same way.
 
@@ -111,7 +111,7 @@ Note:
 - If the model needed overlapping windows or a receptive field, the extra past samples would be added here.
 - The second input is state_in, with the role state: no time axis, it is carried from one call to the next.
 - The outputs mirror the inputs: audio_out, streamed, with the same shape and window, and state_out, the new state.
-- On audio_out sits a number you know from Step 6: the model's own latency of 2224 samples, declared on the output it belongs to.
+- On audio_out sits a number you know from Step 7: the model's own latency of 2224 samples, declared on the output it belongs to.
 
 ---
 
@@ -128,9 +128,9 @@ Three lines. The geometry comes from the host, at `prepare`.
 Note:
 - The contract is three lines.
 - We have a hard contract because this is a real-time stream: the host calls us with fixed blocks, every block has a deadline, and nothing may wait. For jobs without a stream, like images, there is an async contract.
-- The budget is measured: anira benchmarks the model at prepare, on this machine, with this engine. That is Step 3, done by the library.
-- The warm-up runs until the times are stable, before prepare returns. We saw why in Step 3: the first calls took much longer, about 60 and 40 ms instead of 7.5, so we make them before the audio starts.
-- And bypass on a miss: a block whose result is late goes out as the input block, not as zeros like in Step 6.
+- The budget is measured: anira benchmarks the model at prepare, on this machine, with this engine. That is Step 4, done by the library.
+- The warm-up runs until the times are stable, before prepare returns. We saw why in Step 4: the first calls took much longer, about 60 and 40 ms instead of 7.5, so we make them before the audio starts.
+- And bypass on a miss: a block whose result is late goes out as the input block, not as zeros like in Step 7.
 - The host's blocks come in at prepare.
 
 ---
@@ -204,7 +204,7 @@ Note:
 Note:
 - Here are the four tensors.
 - Audio in and out have a time axis and a window of 2048.
-- The state has no time axis: it is one flat block of 63,488 floats, the same state we copied by hand in Step 4. Its size was given.
+- The state has no time axis: it is one flat block of 63,488 floats, the same state we copied by hand in Step 2. Its size was given.
 - If a size is wrong, prepare refuses the file and names the tensor.
 
 ---
@@ -248,7 +248,7 @@ status = handler.process(block, 0, block, 0);
 Note:
 - Loading, the pipeline, the handler and prepare were given, all from anira.hpp; the warm-up runs inside prepare.
 - First blank: give the contract the host's block size, twice, and its sample rate.
-- Second: ask for the latency of output 0. Here it is 6320, the same as by hand in Step 6: on this machine the inference takes longer than one host block of 11.6 ms.
+- Second: ask for the latency of output 0. Here it is 6320, the same as by hand in Step 7: on this machine the inference takes longer than one host block of 11.6 ms.
 - Where it fits in one host block, anira reports 4272, 2048 fewer.
 - Third: in the audio callback, one call over the block, in place: the same block is input and output.
 
@@ -256,7 +256,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## Steps 2, 5 and 6,<br><span class="then">in two files.</span>
+## Steps 3, 6 and 7,<br><span class="then">in two files.</span>
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -266,6 +266,6 @@ Note:
 </div>
 
 Note:
-- That is Steps 2, 5 and 6 in two files.
-- There is no ring buffer, no worker, no queue, no state copy and no latency arithmetic in main.cpp, and the check from Step 6 passes.
+- That is Steps 3, 6 and 7 in two files.
+- There is no ring buffer, no worker, no queue, no state copy and no latency arithmetic in main.cpp, and the check from Step 7 passes.
 - Next we take the model apart.

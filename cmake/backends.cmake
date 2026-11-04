@@ -151,7 +151,7 @@ endfunction()
 #
 # The plugin links the static one: one self-contained bundle instead of a
 # shared library that has to be found at load time. LibTorch has no static
-# build in the release, which is half of step 7's point.
+# build in the release.
 macro(workshop_setup_onnxruntime)
     set(ort_linkage "shared")
     set(ort_target "workshop::onnxruntime")

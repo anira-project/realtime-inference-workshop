@@ -101,7 +101,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Steps 2 and 6</div>
+<div class="tag">Part 1 · Steps 3 and 7</div>
 
 ## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
 
@@ -175,7 +175,7 @@ Note:
   </g>
 </svg>
 
-<div class="cards-note">The default stage is step 2: a window out of the ring, the result back in. <code>before</code> and <code>after</code> are empty. You write a stage for another shape.</div>
+<div class="cards-note">The default stage is step 3: a window out of the ring, the result back in. <code>before</code> and <code>after</code> are empty. You write a stage for another shape.</div>
 
 Note:
 - anira puts four phases around the engine: pre_process and post_process on the audio thread, before_inference and after_inference on the pool.
@@ -184,7 +184,7 @@ Note:
 - [click] Bottom lane: a pool thread runs before_inference, the engine and after_inference on the tensor, and hands the slot back.
 - In a later callback the audio thread takes the next stamp in line, and post_process writes the result into the output ring.
 - [click] The state pair from the create chapter swaps around the engine itself, not around the stage.
-- The default stage is what step 2 did by hand, with before and after empty.
+- The default stage is what step 3 did by hand, with before and after empty.
 - You write your own stage only when the model needs another shape than audio in, audio out.
 
 ---
@@ -281,9 +281,9 @@ Note:
 ---
 
 <!-- .slide: class="recap miss" -->
-<!-- TODO: update the code once the step 5 and 6 examples use try_push / try_pop -->
+<!-- TODO: update the code once the step 6 and 7 examples use try_push / try_pop -->
 
-<div class="tag">Part 1 · Step 6</div>
+<div class="tag">Part 1 · Step 7</div>
 
 ## What happens if the input ring is full?<br><span class="then">Zeros, then the audio is late for one latency.</span>
 
@@ -349,9 +349,9 @@ Note:
 ---
 
 <!-- .slide: class="recap miss" -->
-<!-- TODO: update the code once the step 5 and 6 examples use try_push / try_pop -->
+<!-- TODO: update the code once the step 6 and 7 examples use try_push / try_pop -->
 
-<div class="tag">Part 1 · Step 6</div>
+<div class="tag">Part 1 · Step 7</div>
 
 ## What happens if an inference is too late?<br><span class="then">Zeros, then the late samples are dropped.</span>
 
@@ -487,9 +487,9 @@ Note:
 - What a missed block delivers is the contract's choice: on_miss.
 - bypass, the default, passes the input through unchanged.
 - hold_last repeats the last block the model delivered.
-- zeros is silence, as in step 6, and callback calls your own function on the audio thread.
+- zeros is silence, as in step 7, and callback calls your own function on the audio thread.
 - process reports the block as missed, and that is not an error: the buffer holds what the policy chose.
-- A late result that arrives after a miss is dropped, so the stream stays aligned, without the counters of step 6.
+- A late result that arrives after a miss is dropped, so the stream stays aligned, without the counters of step 7.
 - If every slot is busy, the window is dropped and filled the same way: that is overload, and rt_error tells you so.
 - After a miss the pool catches up, and the next block is on time again.
 
@@ -517,7 +517,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 4</div>
+<div class="tag">Part 1 · Step 5</div>
 
 ## We checked real-time safety by hand.<br><span class="then">Once, on our machine.</span>
 
@@ -529,7 +529,7 @@ void audio_callback(Engine& engine, float* samples, size_t num_samples)
 <div class="cards-note">RTSan on both engines, one run: what it caught, and what it could not see.</div>
 
 Note:
-- In step 4 we checked real-time safety by hand, once, on our machine.
+- In step 5 we checked real-time safety by hand, once, on our machine.
 - We tagged the callback nonblocking, built with -fsanitize=realtime, and ran RTSan once per engine.
 - That showed us what it caught, and what it could not see.
 - And it has to be repeated for every change, every model, every engine.

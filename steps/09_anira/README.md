@@ -1,24 +1,24 @@
 # Step 9: The model with anira
 
-**Goal:** run the part 1 model on anira. Two JSON files say what the model is and how it runs; three calls connect it to the host. Steps 2, 5 and 6 are the library's now.
+**Goal:** run the part 1 model on anira. Two JSON files say what the model is and how it runs; three calls connect it to the host. Steps 3, 6 and 7 are the library's now.
 
 **Problem it solves:** everything from part 1 was infrastructure, and every piece of it is a place to get it wrong. Here it is declared, not implemented.
 
 ## What you have
 
-- `models/model_forward.onnx` — the model as in step 4: audio plus a state tensor in, audio plus the new state out.
+- `models/model_forward.onnx` — the model as in step 1: audio plus a state tensor in, audio plus the new state out.
 - [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named, their roles and windows given. Every `"TODO 1"` and `"TODO 2"` is a blank: replace it with the value.
 - [`exercise/contract.json`](exercise/contract.json) — how it runs: a budget of 20 ms per inference, with headroom (anira will measure it at prepare, `"budget": "measured"`, from the next alpha on; this pre-release needs a number), three warm-up runs, zeros on a miss. Complete.
-- [`common/helpers/host.h`](../common/helpers/host.h) — the fake host from step 5, pacing its callbacks.
-- [`common/helpers/support.h`](../common/helpers/support.h) — `report_with_latency`: the step 6 comparison, with the late callbacks left out.
+- [`common/helpers/host.h`](../common/helpers/host.h) — the fake host from step 6, pacing its callbacks.
+- [`common/helpers/support.h`](../common/helpers/support.h) — `report_with_latency`: the step 7 comparison, with the late callbacks left out.
 - anira, fetched and built by CMake ([`cmake/anira.cmake`](../../cmake/anira.cmake)), with ONNX Runtime built in. The first configure clones it and builds it once; a couple of minutes.
 
 ## What to do
 
 Open [`exercise/model.json`](exercise/model.json) and [`exercise/main.cpp`](exercise/main.cpp).
 
-1. **Declare the tensors** (`model.json`). The sizes: `"time"` of the audio in and out is the model's block, 2048 (step 1). The state's length, 63488 floats, is given. The audio output carries the model's own delay: `"latency": 2224` (step 6).
-2. **Pair the state** (`model.json`). `state_in` is fed from `state_out`: `"state_source": "state_out"`. That is the whole state loop from step 4.
+1. **Declare the tensors** (`model.json`). The sizes: `"time"` of the audio in and out is the model's block, 2048 (step 1). The state's length, 63488 floats, is given. The audio output carries the model's own delay: `"latency": 2224` (step 7).
+2. **Pair the state** (`model.json`). `state_in` is fed from `state_out`: `"state_source": "state_out"`. That is the whole state loop from step 2.
 3. **Prepare and process** (`main.cpp`). Loading, the pipeline, the handler and prepare are given, all from `anira.hpp`; three blanks, marked `fill out`:
    1. `contract.hard_host_blocks(…)`: the host's block size, twice (smallest and largest), and its sample rate, from `k_host`.
    2. `latency`: `handler.get_latency` of output slot 0.
@@ -39,9 +39,9 @@ Reported latency: 6320 samples (143.3 ms at 44100 Hz)
 OK: max abs diff 2.79e-07, within 0.0001 of the reference.
 ```
 
-6320 is the figure of step 6: a budget of 20 ms is more than one host block of 11.6 ms. A budget that fits in one host block gives 4272: 1536 (block adaptation, 2048 − gcd(512, 2048)) + 512 (one host block for the inference) + 2224 (the model).
+6320 is the figure of step 7: a budget of 20 ms is more than one host block of 11.6 ms. A budget that fits in one host block gives 4272: 1536 (block adaptation, 2048 − gcd(512, 2048)) + 512 (one host block for the inference) + 2224 (the model).
 
-The check is step 6's: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. A callback whose block was not back in time went out as zeros (`ANIRA_MISSED`); those are listed and left out, and more than a quarter of them fails the run. On a busy machine a few are normal.
+The check is step 7's: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. A callback whose block was not back in time went out as zeros (`ANIRA_MISSED`); those are listed and left out, and more than a quarter of them fails the run. On a busy machine a few are normal.
 
 ## If you're stuck
 

@@ -27,7 +27,7 @@ Note:
 setLatencySamples(static_cast<int>(LatencyProcessor<OnnxEngine>::latency_samples()));
 ``` -->
 
-2. **`processBlock`** — callback from step 6, unchanged
+2. **`processBlock`** — callback from step 7, unchanged
 
 3. **`releaseResources`** — stop the threads
 
@@ -36,7 +36,7 @@ Only 512-sample buffers: any other size is silence, and the window says why.
 Note:
 - What did we add? Not much: the host talks to us in three places
 - `prepareToPlay`: load the model, size buffers, start worker threads, report latency
-- `processBlock`: callback from step 6, unchanged
+- `processBlock`: callback from step 7, unchanged
 - `releaseResources`: stop the threads
 - Everything else: JUCE boilerplate
 - Only 512: our prefill and latency are only right for that block size. Other sizes: silence and a message
@@ -45,7 +45,7 @@ Note:
 
 **Script:**
 
-"So what did we have to add to turn our processor into a plugin? Not much, actually. The host talks to us in three places. In `prepareToPlay` we load the model, size the buffers, start the worker threads, and tell the host our latency. `processBlock` is our callback from step 6, unchanged. And in `releaseResources` we stop the threads again. Everything else in the plugin is JUCE boilerplate.
+"So what did we have to add to turn our processor into a plugin? Not much, actually. The host talks to us in three places. In `prepareToPlay` we load the model, size the buffers, start the worker threads, and tell the host our latency. `processBlock` is our callback from step 7, unchanged. And in `releaseResources` we stop the threads again. Everything else in the plugin is JUCE boilerplate.
 
 There's one limit, and it's on purpose: our prefill and our latency are only right for a buffer of 512 samples. If the host asks for anything else, the plugin stays silent and tells you why. Supporting any buffer size needs a different design, and that's what part 2 is about.
 

@@ -1,7 +1,7 @@
 // Step 9 — The model with anira, reference implementation
 //
 // Goal:  the part 1 model on anira: the model file and the contract say what
-//        runs and how, the handler does steps 2, 5 and 6.
+//        runs and how, the handler does steps 3, 6 and 7.
 // Given: model.json and contract.json next to this file, the plugin around it.
 // Check: step09_solution_check: the output equals the reference, shifted by
 //        latency().

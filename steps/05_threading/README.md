@@ -76,7 +76,7 @@ cmake --build build-rtsan -j --target step05_solution
 
 ## The host runs in real time now
 
-`run_host` paces the callbacks: one block of audio every `block_size / sample_rate`, 11.6 ms for 512 samples at 44.1 kHz. Up to now the loop ran as fast as it could, which no worker thread could ever keep up with — and with two threads, keeping up is the whole question.
+Step 2's host loop is now [`run_host`](../common/helpers/host.h), and it paces the callbacks: one block of audio every `block_size / sample_rate`, 11.6 ms for 512 samples at 44.1 kHz. Up to now the loop ran as fast as it could, which no worker thread could ever keep up with — and with two threads, keeping up is the whole question.
 
 ## What the audio thread still does
 

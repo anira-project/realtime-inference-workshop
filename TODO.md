@@ -45,3 +45,5 @@
 - Webcam on all plattforms!!!!!!!! Linux first!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 - Two models, two rates, one library. Wir haben 3 verschiedene Rates!
 - Outlook at inline inference when buffersize matches and budget is fine and engine is declared real-time safe..
+
+- Say it on the slides: part 1 only works with a fixed 512-sample host block (a divisor of 2048). anira handles any host block size, including the latency calculation, and also host blocks smaller than the announced maximum.

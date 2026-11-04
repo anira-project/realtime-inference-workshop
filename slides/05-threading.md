@@ -82,7 +82,7 @@ Note:
 
 <div class="tag">Given</div>
 
-## What we get <span class="then">1 new helper, 1 file to edit.</span>
+## What we get <span class="then">2 new helpers, 1 file to edit.</span>
 
 
 
@@ -99,7 +99,7 @@ Note:
     <div class="given-folder">common/helpers/ · CMake</div>
     {{FILE:libtorch_engine.h}}
     {{FILE:ring_buffer.h}}
-    {{FILE:host.h}}
+    {{FILE:host.h|new}}
     {{FILE:threadsafe_ring_buffer.h|new}}
   </div>
   <div class="given-column exercise">
@@ -110,14 +110,14 @@ Note:
 </div>
 
 Note:
-- Still the model, signals, engine, ring buffer and host
+- Still the model, signals, engine and ring buffer
 - New: `ThreadSafeRingBuffer`, step 2's ring buffer safe between two threads, on moodycamel, fetched by CMake
-- Host now runs in real time: waits between callbacks, 512 samples per call
+- New: `run_host` in `host.h`, step 2's host loop in real time: waits between callbacks, 512 samples per call
 - `main.cpp` counts allocations: check the audio thread doesn't allocate anymore
 
 **Script:**
 
-"We still have the model, the signals, the engine, the ring buffer and the host from the steps before. New is the `ThreadSafeRingBuffer`: the ring buffer from step 2, with the same functions, but safe between two threads. Underneath is a lock-free buffer from moodycamel, which CMake fetches for us. Our fake host also changed: it now runs in real time, so it waits between the callbacks like a real audio device, with 512 samples per call. And in `main.cpp` there's a counter for allocations, so we can check that the audio thread really doesn't allocate anymore."
+"We still have the model, the signals, the engine and the ring buffer from the steps before. New is the `ThreadSafeRingBuffer`: the ring buffer from step 2, with the same functions, but safe between two threads. Underneath is a lock-free buffer from moodycamel, which CMake fetches for us. Also new is `host.h`: the host loop from step 2, but in real time, so it waits between the callbacks like a real audio device, with 512 samples per call. And in `main.cpp` there's a counter for allocations, so we can check that the audio thread really doesn't allocate anymore."
 
 ---
 

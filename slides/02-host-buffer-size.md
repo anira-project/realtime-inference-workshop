@@ -96,7 +96,7 @@ Note:
 
 <div class="tag">Given</div>
 
-## What we get<br><span class="then">2 new helpers, 1 file to edit.</span>
+## What we get<br><span class="then">1 new helper, 1 file to edit.</span>
 
 <div class="given">
   <div class="given-column">
@@ -111,7 +111,6 @@ Note:
     <div class="given-folder">common/helpers/</div>
     {{FILE:libtorch_engine.h}}
     {{FILE:ring_buffer.h|new}}
-    {{FILE:host.h|new}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
@@ -122,12 +121,12 @@ Note:
 
 Note:
 - Same model, signals and engine helper
-- New: a ring buffer and a fake host
+- New: a ring buffer
 - The exercise isn't writing a ring buffer, it's sizing and using it
 
 **Script:**
 
-"We still have the same model and signal files, we also still have the engine helper file. But now we get 2 new helper files. One is a ring buffer and the other a fake host that we will use to solve the exercise. The exercise won't be to create a ring buffer yourself, but rather to handle it, so to give it the right size and use it."
+"We still have the same model and signal files, we also still have the engine helper file. But now we get a new helper file: a ring buffer. The exercise won't be to create a ring buffer yourself, but rather to handle it, so to give it the right size and use it."
 
 ---
 
@@ -162,13 +161,14 @@ Note:
 
 ---
 
-<div class="tag">Helpers: <code>host.h</code></div>
+<div class="tag">Given: <code>main.cpp</code></div>
 
 ## The host <span class="then">A DAW, minus the DAW.</span>
 
 ```cpp
-std::vector<float> out = run_host(signal, num_samples, block_size,
-                                  [&](float* samples, size_t n) { /* your callback */ });
+for (size_t start = 0; start < output.size(); start += 512) {
+    processor.process_block(output.data() + start, 512);   // Your callback, in place
+}
 ```
 
 <div class="streams">
@@ -176,14 +176,14 @@ std::vector<float> out = run_host(signal, num_samples, block_size,
 </div>
 
 Note:
-- A DAW without the DAW: signal + block size in, calls your callback block by block
+- A DAW without the DAW: a loop in `main` that calls your callback block by block, like step 1
 - Overwrite the samples in place, like an audio callback
 - Block size is just a parameter: 512 for the whole first part
 - Check: the model's output matches the reference, and the host gets exactly that stream back
 
 **Script:**
 
-"And this is our host. It’s a DAW without the DAW: you give it a signal and a block size, and it calls your callback block by block, just like an audio callback, so you overwrite the samples in place.
+"And this is our host. It’s a DAW without the DAW: just a loop in `main`, like the one in step 1, that calls our callback block by block, just like an audio callback, so we overwrite the samples in place.
 
 The block size is just a parameter, and for the whole first part it is 512. The check at the end looks at two things: the model's output has to match the reference, and the host has to get exactly that stream back."
 
@@ -248,7 +248,7 @@ Note:
 ## TODO 1: Size the ring buffers
 
 ```cpp
-const size_t capacity = m_model_input_size; // <- fill out
+const size_t capacity = k_model.m_input_size; // <- fill out
 ```
 
 Note:
@@ -271,13 +271,12 @@ Note:
 ```cpp
 m_input.push(samples, num_samples); // <- 1. fill out
 
-const bool has_block = m_input.available() >= m_model_input_size; // <- 2. fill out
+const bool has_block = m_input.available() >= k_model.m_input_size; // <- 2. fill out
 
 if (has_block) {
-    m_input.pop(m_model_block.data(), m_model_input_size); // <- 3. fill out
-    m_engine.process(m_model_block.data(), m_model_input_size);
-    m_output.push(m_model_block.data(), m_model_input_size); // <- 3. fill out
-    …
+    m_input.pop(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
+    m_engine.process(m_model_block.data(), k_model.m_input_size);
+    m_output.push(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
 }
 ```
 

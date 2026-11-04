@@ -271,8 +271,12 @@ m_unpushed -= zeros;
 while (m_debt > 0 && m_output.try_pop(late)) { --m_debt; }  // <- fill out
 
 for (size_t i = zeros; i < num_samples; ++i) {
-    const bool popped = m_output.try_pop(samples[i]);       // <- fill out
-    if (!popped) { samples[i] = 0.0f; m_debt += 1; }        // <- fill out
+    const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);  // <- fill out
+    if (!popped) {                                    // late: the rest is zeros, all owed
+        std::fill_n(samples + i, num_samples - i, 0.0f);
+        m_debt += num_samples - i;                                     // <- fill out
+        break;
+    }
 }
 ```
 
@@ -280,7 +284,8 @@ Note:
 - Step 2's `process_block`, without the engine, one sample at a time
 - Push: if the input is full, the worker is a whole block behind. Count the rest, don't wait
 - Those never reach the model: the host gets as many zeros, and nothing comes out of `m_output` for them
-- Pop: where nothing is there yet, a zero goes out and the sample is owed: the debt
+- Pop: if a sample isn't there yet, or something is still owed, the worker is late: the rest of the callback goes out as zeros, all owed: the debt
+- Not just that one sample: the worker may be pushing right now, and the next one would land one place too early
 - When the late samples arrive, their place already went out as zeros: take them out, throw them away
 - So the stream stays exactly the prefill late, a dropout doesn't shift it
 - Not in here: no `new`, no mutex, no engine, no waiting
@@ -288,7 +293,7 @@ Note:
 **Script:**
 
 "The audio thread is step 2's process_block, without the engine, and one sample at a time. We push the host's samples into the input ring buffer. If one doesn't fit, the worker is a whole block behind. We don't wait: we count the rest and stop. Those samples never reach the model, so the host gets as many zeros instead, and nothing is taken out of the output for them.
-Then we hand the host its samples from the output ring buffer. Where nothing is there yet, a zero goes out, and we owe that sample: that's the debt. When the late samples finally arrive, their place already went out as zeros, so we take them out and throw them away. That way a dropout is a dropout, and it doesn't make the rest of the stream later.
+Then we hand the host its samples from the output ring buffer. If a sample isn't there yet, or we still owe something, the worker is late: the rest of this callback goes out as zeros, and we owe all of those samples: that's the debt. Why the whole rest and not just that one sample? The worker may be pushing at this very moment, and the next sample we'd get would land one place too early. When the late samples finally arrive, their place already went out as zeros, so we take them out and throw them away. That way a dropout is a dropout, and it doesn't make the rest of the stream later.
 Notice what's not in here: no `new`, no mutex, no engine, and no waiting."
 
 ---

@@ -169,8 +169,10 @@ public:
         //      rest in m_unpushed, and stop
         //   2. (given) those never reach the model: the host gets as many
         //      zeros instead, and nothing is taken out of m_output for them
-        //   3. take the rest from m_output, one by one. Where nothing is there
-        //      yet, the host gets a zero, and the sample is owed: m_debt
+        //   3. take the rest from m_output, one by one. If one is not there
+        //      yet, or something is still owed, the worker is late: it and the
+        //      rest of this callback go out as zeros, and all of them are
+        //      owed: m_debt
         //   4. pay the debt first: what is owed came too late, its place
         //      already went out as a zero. Take it out and throw it away
         //
@@ -194,8 +196,12 @@ public:
         for (size_t i = zeros; i < num_samples; ++i) {
             const bool popped = false;  // <- 3. fill out
             if (!popped) {
-                samples[i] = 0.0f;
+                // Not the next one either: while anything is owed, or while
+                // the worker is pushing right now, what comes next would land
+                // one place too early.
+                std::fill_n(samples + i, num_samples - i, 0.0f);
                 m_debt += 0;  // <- 3. fill out
+                break;
             }
         }
     }

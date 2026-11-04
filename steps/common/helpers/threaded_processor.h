@@ -138,10 +138,15 @@ public:
         float late = 0.0f;
         while (m_debt > 0 && m_output.try_pop(late)) { --m_debt; }
 
+        // The first sample that is not there yet ends the callback: it and the
+        // rest go out as zeros and are owed. So does anything still owed: what
+        // comes out next belongs to an earlier place, the worker is still
+        // pushing it.
         for (size_t i = zeros; i < num_samples; ++i) {
-            if (!m_output.try_pop(m_wet_block[i])) {
-                m_wet_block[i] = 0.0f;
-                m_debt += 1;
+            if (m_debt > 0 || !m_output.try_pop(m_wet_block[i])) {
+                std::fill_n(m_wet_block.data() + i, num_samples - i, 0.0f);
+                m_debt += num_samples - i;
+                break;
             }
         }
 

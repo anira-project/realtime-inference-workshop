@@ -36,7 +36,7 @@ Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners
 1. **In `prepare()`**: work out `rounded_max_inference_time`, the prefill and the size of `m_output` (the worker's time plus one model block), and start the worker thread. Everything that allocates belongs here; so does the warm-up (given).
 2. **In `process_block()`**: the audio thread. Step 2's `process_block`, without the engine, one sample at a time:
    - push into `m_input`. If it is full, the worker is a whole block behind: count the rest in `m_unpushed`, the host gets that many zeros instead (given), and nothing is taken out of `m_output` for them;
-   - pop from `m_output`. Where nothing is there yet, the host gets a zero and the sample is owed, `m_debt`;
+   - pop from `m_output`. If a sample is not there yet, or something is still owed, the worker is late: the rest of the callback goes out as zeros, all of it owed, `m_debt`. Not just that one sample: the worker may be pushing right now, and the next one would land one place too early;
    - pay the debt first: an owed sample came too late, its place already went out as a zero, so it is taken out and thrown away.
 3. **In `worker()`**: check for a whole model block in `m_input`, run the engine, push the result into `m_output`. No sleep: check again right away. If `m_output` is full, try again until there is room, but keep watching `m_running`.
 

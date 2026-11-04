@@ -39,6 +39,36 @@ html.tanh .given-column.many .file-icon {
   height: 89px;
 }
 
+/* Where a step brings new files, they lead: larger, and the files known from
+   earlier steps step back. The files to edit keep their size. */
+html.tanh .given:has(.file.new) .file.new .file-icon {
+  width: 112px;
+  height: 139px;
+}
+
+html.tanh .given:has(.file.new) .given-column.many .file.new .file-icon {
+  width: 104px;
+  height: 129px;
+}
+
+html.tanh .given:has(.file.new) .given-column:not(.exercise) .file:not(.new) .file-icon {
+  width: 56px;
+  height: 69px;
+}
+
+html.tanh .given:has(.file.new) .given-column:not(.exercise) .file:not(.new) .file-name {
+  font-size: 0.4em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .given:has(.file.new) .file.new .file-name {
+  font-weight: 600;
+}
+
+html.tanh .given:has(.file.new) .file.new::after {
+  right: calc(50% - 72px);
+}
+
 html.tanh .given-column.many {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1154,7 +1184,7 @@ html.tanh .deadline-bars i {
   transform-origin: bottom;
 }
 
-/* Threshold at 17.4 % of the height, so the forward pass, factor 5.4, reaches the top */
+/* Threshold at 25.4 % of the height, so the slow call, factor 3.7, reaches the top */
 html.tanh .deadline-bars i.runs {
   height: 94%;
   background: var(--ink);
@@ -1186,7 +1216,7 @@ html.tanh .deadline-budget {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(40px + (100% - 40px) * 0.174);
+  bottom: calc(40px + (100% - 40px) * 0.254);
   border-top: 2px dashed var(--ink);
 }
 
@@ -1361,7 +1391,7 @@ html.tanh .deadline-bars i.runs span {
   font-style: normal;
 }
 
-/* Two labels: the 31 that wait, the one that runs */
+/* Two labels: the three that wait, the one that runs */
 html.tanh .deadline-axis {
   right: 0;
   display: flex;

@@ -10,6 +10,9 @@
 include_guard(GLOBAL)
 include(FetchContent)
 
+# TODO: once anira's prepare accepts "budget": "measured" and "warmup": "until_stable"
+# (M2b PR 4, v3.0.0-alpha.3), bump this pin and switch the contract.json of steps 9,
+# 10 and 11 from {"ms": 20} and {"fixed": 3} to them, as the slides already show.
 set(WORKSHOP_ANIRA_TAG "561f0408317f94676aa3d067242367c0ca92a5b8"
     CACHE STRING "anira commit or tag the part 2 steps build against")
 

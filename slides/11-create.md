@@ -189,7 +189,7 @@ Note:
 
 <div class="tag">Part 1 · Step 5</div>
 
-## A worker per channel, per instance.<br><span class="then">It grows with every instance the host adds.</span>
+## A worker per instance.<br><span class="then">It grows with every instance the host adds.</span>
 
 <div class="lanes">
   <div class="lane-label">audio thread</div>
@@ -204,7 +204,7 @@ Note:
 </div>
 
 Note:
-- Threads: in step 5 we had a worker per channel, per instance.
+- Threads: in step 5 we had a worker per instance; the plugin mixes down to mono, so one is enough.
 - One worker, two ring buffers, one engine: correct, but it does not scale.
 - The worker belongs to the instance, and the host decides how many instances there are, so the threads grow with every instance it adds.
 
@@ -311,19 +311,18 @@ Note:
 
 <div class="tag">Part 1 · Step 8</div>
 
-## An engine per channel, per instance.<br><span class="then">Every one loads the model again.</span>
+## An engine per instance.<br><span class="then">Every instance loads the model again.</span>
 
 ```cpp
-while (m_engines.size() < channels) {
-    m_engines.push_back(std::make_unique<OnnxEngine>(WORKSHOP_ONNX_MODEL_PATH));
+if (m_engine == nullptr) {
+    m_engine = std::make_unique<OnnxEngine>(WORKSHOP_ONNX_MODEL_PATH);
     …
 }
 ```
 
 Note:
-- Memory: step 8's plugin has an engine per channel, per instance, and every one loads the model again.
-- It loads one ONNX session per channel, because the state belongs to the signal running through it.
-- Ten stereo instances hold twenty copies of the same model.
+- Memory: step 8's plugin mixes its input down to mono and runs one engine, but that engine belongs to the instance.
+- Every instance loads the model again: ten instances hold ten copies of the same model.
 - Memory grows with the instances the host adds, like the threads did.
 
 ---

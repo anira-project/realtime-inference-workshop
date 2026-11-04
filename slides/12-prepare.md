@@ -32,8 +32,8 @@ Note:
 ## The Hard contract:<br><span class="then">what the host promises, what it gets.</span>
 
 ```json
-{ "hard": { "budget": { "ms": 8.2 }, "warmup": { "fixed": 3 },
-            "on_miss": "zeros", "wait_ratio": 0 } }
+{ "hard": { "budget": "measured", "warmup": "until_stable",
+            "on_miss": "bypass", "wait_ratio": 0 } }
 ```
 
 ```cpp
@@ -55,8 +55,8 @@ Note:
 - The file carries no host blocks: the plugin fills them in from the host, and prepares again when the host changes them.
 - Host blocks are the smallest, the largest and the sample rate.
 - Equal min and max give the tightest latency; a range gives a latency that covers its worst case.
-- The budget is the worst time of one inference, and the warm-up is how many times the model runs before the stream starts.
-- on_miss and wait_ratio say what happens when a result is late; our file asks for zeros, like step 6, and we come to the choices in Process.
+- The budget is the worst time of one inference, measured at prepare on the user's machine; the warm-up runs the model until its times are stable, before the stream starts.
+- on_miss and wait_ratio say what happens when a result is late; our file asks for bypass, the input block in place of the late one, and we come to the choices in Process.
 - Async is not in this release, so prepare refuses it.
 
 ---
@@ -108,7 +108,7 @@ Note:
 
 Note:
 - anira computes the latency at prepare, for the block size the host actually uses.
-- Our example: the host delivers 512 samples, the model wants 2048, the budget is 8.2 ms, at 44.1 kHz.
+- Our example: the host delivers 512 samples, the model wants 2048, at 44.1 kHz, and say the measured budget is 8.2 ms.
 - In the animation, four host blocks fill one model block, and only then can the model run.
 - That wait is the block adaptation.
 - On the slide, P is the model block and b the host block, and the adaptation is P minus the largest block that divides both: 2048 minus 512, so 1536.
@@ -117,6 +117,7 @@ Note:
 - 8.2 ms fit in one host block of 11.6 ms, so that is 512 samples.
 - Add the model's own 2224 from the model file: 4272 in total.
 - That is 2048 samples less than our 6320, with the same guarantee.
+- The budget is measured on the user's machine, so the latency is that machine's too: a slower machine gets a larger number, not dropouts.
 
 ---
 
@@ -175,13 +176,13 @@ Note:
 | step 3 | |
 |---|---|
 | mean, p95, p99, max | over many runs, on our machine |
-| the max decides | 8.2 ms, the number every step since uses |
+| the max decides | about 12 ms after the warm-up, on our machine, for LibTorch |
 
 Note:
 - In step 3 we measured the budget by hand.
 - Mean, p95, p99 and max, over many runs, on our machine.
-- The max decides: 8.2 ms, the number every step since uses.
-- But it was a benchmark we ran on one machine.
+- The max decides: about 12 milliseconds after the warm-up, for the LibTorch model.
+- But it was a benchmark we ran on one machine, for one engine: the ONNX model of part 2 we never measured.
 - It has to be repeated for every model, every engine, every machine the plugin runs on.
 
 ---
@@ -193,18 +194,18 @@ Note:
 ## Warm-up at <code>prepare</code>.<br><span class="then">The budget from the contract.</span>
 
 <div class="statement-points">
-  <div><code>{"fixed": n}</code>: n model runs at <code>prepare</code>, on the thread that calls it</div>
-  <div>Today the budget is explicit: the number from step 3</div>
-  <div><code>"measured"</code>, the worst time of the warm-up, and <code>"until_stable"</code> follow in a later release</div>
+  <div><code>"until_stable"</code>: model runs at <code>prepare</code> until their times settle</div>
+  <div><code>"measured"</code>: the budget, measured at <code>prepare</code> on the user's machine</div>
+  <div>Or explicit: <code>{"fixed": n}</code> runs, <code>{"ms": x}</code> as the budget</div>
   <div>A benchmark fixture for your own model: real-time factor and underruns</div>
 </div>
 
 Note:
 - anira runs the warm-up at prepare and takes the budget from the contract.
 - The first runs of a model are slow: the engine allocates, compiles and fills its caches, and that must not happen in the first callback.
-- With fixed n, prepare runs the model n times on the thread that calls it, so prepareToPlay takes n model runs longer.
-- Today the budget is the number you measured, like our 8.2 ms from step 3.
-- A later release measures it on the user's machine during the warm-up.
+- With until_stable, prepare runs the model on the thread that calls it until the last runs agree, so prepareToPlay takes those runs longer.
+- With measured, anira benchmarks the model at prepare, on the user's machine, with this engine: step 3, done by the library.
+- Both can also be given by hand: a fixed number of runs, and a budget in milliseconds.
 - To measure your own model, the fixture behind step 3 is part of anira: it reports the real-time factor and underruns per block size and engine.
 
 ---

@@ -120,7 +120,7 @@ Note:
 ## How it runs.
 
 ```json
-{ "hard": { "budget": "measured", "warmup": "until_stable", "on_miss": "zeros" } }
+{ "hard": { "budget": "measured", "warmup": "until_stable", "on_miss": "bypass" } }
 ```
 
 Three lines. The geometry comes from the host, at `prepare`.
@@ -130,7 +130,7 @@ Note:
 - We have a hard contract because this is a real-time stream: the host calls us with fixed blocks, every block has a deadline, and nothing may wait. For jobs without a stream, like images, there is an async contract.
 - The budget is measured: anira benchmarks the model at prepare, on this machine, with this engine. That is Step 3, done by the library.
 - The warm-up runs until the times are stable, before prepare returns. We saw why in Step 3: the first calls took much longer, about 60 and 40 ms instead of 7.5, so we make them before the audio starts.
-- And zeros on a miss, just like Step 6.
+- And bypass on a miss: a block whose result is late goes out as the input block, not as zeros like in Step 6.
 - The host's blocks come in at prepare.
 
 ---

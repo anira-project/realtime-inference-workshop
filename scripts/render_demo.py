@@ -73,7 +73,7 @@ def synthesize(passes):
 
 
 def run_model(model_path, audio, carry_state=True):
-    """Block by block. carry_state=False starts every block from a zero state: what step 1b shows."""
+    """Block by block. carry_state=False starts every block from a zero state: what step 2 shows."""
     session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
     inputs = session.get_inputs()
     out_names = [o.name for o in session.get_outputs()]

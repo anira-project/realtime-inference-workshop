@@ -1,4 +1,4 @@
-// The processor from steps 5 and 6, given complete — this is what the plugin in
+// The processor from steps 6 and 7, given complete — this is what the plugin in
 // step 8 runs.
 //
 // Goal: inference on a worker thread, lock-free ring buffers, a dry path delayed
@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <functional>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -21,6 +22,7 @@
 // Model settings taken from the export metadata.
 constexpr struct {
     size_t m_input_size = 2048;
+    size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
     size_t m_latency = 2224;  // The model's own delay: how much later its output answers its input
 } k_model{};
@@ -28,14 +30,14 @@ constexpr struct {
 // The only host block size this processor is built for.
 constexpr size_t k_host_block_size = 512;
 
-// Your worst case after the warm-up, from the last lines of step 3, in ms.
-// Step 3 measured LibTorch; the plugin runs ONNX Runtime, which is usually no slower.
+// Your worst case after the warm-up, from the last lines of step 4, in ms.
+// Step 4 measured LibTorch; the plugin runs ONNX Runtime, which is usually no slower.
 constexpr double k_max_inference_ms = 8.2;
 
-// The first calls are slow (step 3): made before the audio starts.
+// The first calls are slow (step 4): made before the audio starts.
 constexpr size_t k_warm_up_calls = 2;
 
-// What an audio callback promises; see step 4. RTSan checks everything below a
+// What an audio callback promises; see step 5. RTSan checks everything below a
 // function marked with it.
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
 #define WORKSHOP_AUDIO_CALLBACK [[clang::nonblocking]]
@@ -43,10 +45,10 @@ constexpr size_t k_warm_up_calls = 2;
 #define WORKSHOP_AUDIO_CALLBACK
 #endif
 
-// Step 6's processor: step 5's hand-over between the audio thread and a worker,
+// Step 7's processor: step 6's hand-over between the audio thread and a worker,
 // with a dry path and a mix control.
-// @Engine: anything with process(float*, size_t) and reset() — the engines from
-//          step 1 and step 4 both fit, which is the point of that interface.
+// @Engine: anything with the process({audio, state}, {sizes}) of OnnxEngine. The
+//          state is carried here, one per processor.
 template <typename Engine>
 class LatencyProcessor {
 public:
@@ -97,10 +99,15 @@ public:
         m_wet_block.assign(max_block_size, 0.0f);
 
         m_model_block.assign(k_model.m_input_size, 0.0f);
+        m_state.assign(k_model.m_state_size, 0.0f);
+        // Built once, so the worker does not allocate them on every block.
+        m_buffers = {m_model_block, m_state};
+        m_sizes = {k_model.m_input_size, k_model.m_state_size};
+
         for (size_t i = 0; i < k_warm_up_calls; ++i) {
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_engine.process(m_buffers, m_sizes);
         }
-        m_engine.reset();
+        std::fill(m_state.begin(), m_state.end(), 0.0f);  // The warm-up is not part of the stream
 
         m_unpushed = 0;
         m_debt = 0;
@@ -173,7 +180,7 @@ private:
             if (m_input.available() < k_model.m_input_size) { continue; }
 
             m_input.pop(m_model_block.data(), k_model.m_input_size);
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_engine.process(m_buffers, m_sizes);
 
             // Wait for room, but keep watching the stop flag: the audio thread
             // may have stopped calling us, and then this would never return —
@@ -190,6 +197,9 @@ private:
     ThreadSafeRingBuffer m_output{0};  // Written by the worker, read by the audio thread
     RingBuffer m_dry{0};               // The audio thread's own
     std::vector<float> m_model_block;  // The worker's block, sized in prepare()
+    std::vector<float> m_state;        // The worker's state, sized in prepare()
+    std::vector<std::reference_wrapper<std::vector<float>>> m_buffers;  // What the engine gets
+    std::vector<size_t> m_sizes;
     std::thread m_worker;
     std::atomic<bool> m_running{false};
     std::vector<float> m_dry_block;  // Scratch, sized in prepare()

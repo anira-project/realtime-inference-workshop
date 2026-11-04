@@ -170,7 +170,7 @@ int main() try {
     std::printf("  latent frames                %zu, %zu of them priming\n", frames, encoder_latency_frames);
 
     // The reference carries the model's own delay, which the decoder declared:
-    // it lines up after the rest, as in steps 6 and 9.
+    // it lines up after the rest, as in steps 7 and 9.
     return report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                latency - k_model_latency, late, k_host.m_block_size);
 } catch (const std::exception& error) {

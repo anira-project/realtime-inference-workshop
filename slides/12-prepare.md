@@ -63,7 +63,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 6</div>
+<div class="tag">Part 1 · Step 7</div>
 
 ## One latency for every block size.<br><span class="then">The same number, whatever block size the host uses.</span>
 
@@ -78,7 +78,7 @@ Note:
 </div>
 
 Note:
-- Step 6 gave us one latency for every block size: the same number, whatever block size the host uses.
+- Step 7 gave us one latency for every block size: the same number, whatever block size the host uses.
 - A full block to collect, 2048, a full block for the worker, 2048, and the model's own 2224: 6320 samples.
 - That number is safe at any host block size.
 - But it is generous: at 512 samples per callback, most of the first 2048 is waiting for nothing.
@@ -123,7 +123,7 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Steps 2 and 5</div>
+<div class="tag">Part 1 · Steps 3 and 6</div>
 
 ## Every buffer sized by hand.<br><span class="then">From the worst moment we could think of.</span>
 
@@ -133,8 +133,8 @@ m_output = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_
 ```
 
 Note:
-- In step 2 we sized the ring buffers by hand, by thinking through the worst moment.
-- Step 5 sized them for eight model blocks in flight: a guess.
+- In step 3 we sized the ring buffers by hand, by thinking through the worst moment.
+- Step 6 sized them for eight model blocks in flight: a guess.
 - All of it was allocated in prepare, none of it in the callback.
 - That rule was ours to keep, and every size was ours to get right.
 
@@ -169,17 +169,17 @@ Note:
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Step 3</div>
+<div class="tag">Part 1 · Step 4</div>
 
 ## We measured the budget by hand.
 
-| step 3 | |
+| step 4 | |
 |---|---|
 | mean, p95, p99, max | over many runs, on our machine |
 | the max decides | about 12 ms after the warm-up, on our machine, for LibTorch |
 
 Note:
-- In step 3 we measured the budget by hand.
+- In step 4 we measured the budget by hand.
 - Mean, p95, p99 and max, over many runs, on our machine.
 - The max decides: about 12 milliseconds after the warm-up, for the LibTorch model.
 - But it was a benchmark we ran on one machine, for one engine: the ONNX model of part 2 we never measured.
@@ -204,9 +204,9 @@ Note:
 - anira runs the warm-up at prepare and takes the budget from the contract.
 - The first runs of a model are slow: the engine allocates, compiles and fills its caches, and that must not happen in the first callback.
 - With until_stable, prepare runs the model on the thread that calls it until the last runs agree, so prepareToPlay takes those runs longer.
-- With measured, anira benchmarks the model at prepare, on the user's machine, with this engine: step 3, done by the library.
+- With measured, anira benchmarks the model at prepare, on the user's machine, with this engine: step 4, done by the library.
 - Both can also be given by hand: a fixed number of runs, and a budget in milliseconds.
-- To measure your own model, the fixture behind step 3 is part of anira: it reports the real-time factor and underruns per block size and engine.
+- To measure your own model, the fixture behind step 4 is part of anira: it reports the real-time factor and underruns per block size and engine.
 
 ---
 

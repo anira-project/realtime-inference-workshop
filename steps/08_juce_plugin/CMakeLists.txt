@@ -4,7 +4,7 @@ workshop_setup_juce()
 workshop_setup_readerwriterqueue()
 
 # Static, so the bundle carries the engine inside it instead of looking for a
-# shared library at load time. LibTorch has no static build — see step 7.
+# shared library at load time. LibTorch has no static build.
 workshop_setup_onnxruntime(STATIC)
 
 juce_add_plugin(step08_plugin

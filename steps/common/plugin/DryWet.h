@@ -1,5 +1,5 @@
 // The dry/wet mix of an in-place processor: the dry signal, delayed by the
-// latency the host is told, so it lines up with the wet one. Step 6's dry
+// latency the host is told, so it lines up with the wet one. Step 7's dry
 // path, kept out of the way of the anira steps.
 #pragma once
 

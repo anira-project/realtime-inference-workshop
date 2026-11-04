@@ -25,15 +25,15 @@ directory configures without the network.
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/bin/step01a_solution
+./build/bin/step01_solution
 ```
 
 Or with the preset, one step at a time:
 
 ```bash
 cmake --preset release
-cmake --build --preset release --target step01a_exercise
-./build/bin/step01a_exercise
+cmake --build --preset release --target step01_exercise
+./build/bin/step01_exercise
 ```
 
 To step through a task in a debugger, use the debug preset. It builds into
@@ -41,14 +41,14 @@ To step through a task in a debugger, use the debug preset. It builds into
 
 ```bash
 cmake --preset debug
-cmake --build --preset debug --target step01a_exercise
-./build-debug/bin/step01a_exercise
+cmake --build --preset debug --target step01_exercise
+./build-debug/bin/step01_exercise
 ```
 
-Timings, such as the benchmark in step 3, only mean something in the release
+Timings, such as the benchmark in step 4, only mean something in the release
 build.
 
-Build a single step with `-DWORKSHOP_STEP=01a`. See
+Build a single step with `-DWORKSHOP_STEP=01`. See
 [models/README.md](models/README.md) for the model.
 
 If a download fails in the room, it is retried a few times. If it still fails,
@@ -64,18 +64,18 @@ as files or over HTTP (`python3 -m http.server` inside it).
 
 The steps so far:
 
-1. [Minimal C++ inference](steps/01_minimal_inference/README.md) — load the model, run it, match the Python reference
-2. [Model input size vs. host buffer size](steps/02_host_buffer_size/README.md) — ring buffers between the host's block size and the model's
-3. [Benchmarking and the real-time budget](steps/03_benchmark/README.md) — how long a forward pass takes, and how long in the worst case
-4. [Real-time safety](steps/04_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
-5. [Inference on a worker thread](steps/05_threading/README.md) — lock-free ring buffers, and an audio thread that allocates nothing
-6. [Latency and the dry/wet mix](steps/06_latency/README.md) — what to report to the host, and how to prove it
-7. [Shipping the engine](steps/07_shipping_the_engine/README.md) — LibTorch vs. ONNX Runtime vs. your own code; talk only, no exercise
+1. [Minimal C++ inference](steps/01_minimal_inference/README.md) — load the model, run one block, match the Python reference
+2. [Stateless and stateful](steps/02_state/README.md) — pass the state along, and run the whole signal
+3. [Model input size vs. host buffer size](steps/03_host_buffer_size/README.md) — ring buffers between the host's block size and the model's
+4. [Benchmarking and the real-time budget](steps/04_benchmark/README.md) — how long a forward pass takes, and how long in the worst case
+5. [Real-time safety](steps/05_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
+6. [Inference on a worker thread](steps/06_threading/README.md) — lock-free ring buffers, and an audio thread that allocates nothing
+7. [Latency and the dry/wet mix](steps/07_latency/README.md) — what to report to the host, and how to prove it
 8. [The plugin](steps/08_juce_plugin/README.md) — all of it inside JUCE; solution only, built with `-DWORKSHOP_JUCE=ON`
 
 Part 2, on anira (fetched and built by CMake, `-DWORKSHOP_ANIRA=OFF` to skip):
 
-9. [The model with anira](steps/09_anira/README.md) — two JSON files and three calls replace steps 2, 5 and 6
+9. [The model with anira](steps/09_anira/README.md) — two JSON files and three calls replace steps 3, 6 and 7
 10. [Encoder, latents, decoder](steps/10_split/README.md) — two handlers on one context, eight numbers in between
 11. [Hands on the latents](steps/11_hands/README.md) — a camera and hand tracking drive the decoder; JUCE app, with `-DWORKSHOP_JUCE=ON`
 

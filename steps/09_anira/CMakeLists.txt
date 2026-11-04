@@ -1,5 +1,5 @@
 # The part 1 model on anira: two JSON files and AniraProcessor (prepare and
-# process) replace steps 2, 5 and 6. Per variant:
+# process) replace steps 3, 6 and 7. Per variant:
 #   step09_<variant>_check  drives AniraProcessor on the fake host and compares
 #                           the output with the reference; always built
 #   step09_<variant>        the plugin around it (VST3, Standalone); with WORKSHOP_JUCE

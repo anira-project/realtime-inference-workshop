@@ -49,7 +49,7 @@ async function generateHTML(isDev = false) {
     const kindMatch = slide.content.match(/<!--\s*kind:\s*([\w,\s]+?)\s*-->/);
     chapters.push({
       ...slide,
-      id: slide.filename.replace(/\.(md|html)$/, '').replace(/^\d+[a-z]?-/, ''),
+      id: slide.filename.replace(/\.(md|html)$/, '').replace(/^\d+-/, ''),
       title: extractTitle(slide.content, slide.isHtml),
       part: part,
       kinds: kindMatch ? kindMatch[1].split(',').map(k => k.trim()) : []

@@ -51,7 +51,7 @@ void WorkshopPluginProcessor::prepareToPlay(double sample_rate, int samples_per_
         return;
     }
 
-    // The prefill and the latency of steps 5 and 6 are only right for one host
+    // The prefill and the latency of steps 6 and 7 are only right for one host
     // block size. Any other one needs a different design: that is part 2.
     const auto block_size = static_cast<size_t>(samples_per_block);
     if (!LatencyProcessor<OnnxEngine>::supports_block_size(block_size)) {
@@ -68,7 +68,7 @@ void WorkshopPluginProcessor::prepareToPlay(double sample_rate, int samples_per_
     m_processor->prepare(block_size);
     m_prepared.store(true, std::memory_order_release);
 
-    // The number from step 6, now where it belongs: the host delays every other
+    // The number from step 7, now where it belongs: the host delays every other
     // track by this much, so our output lines up with the rest of the session.
     setLatencySamples(static_cast<int>(m_processor->latency_samples()));
 
@@ -97,7 +97,7 @@ void WorkshopPluginProcessor::releaseResources() {
     if (m_processor != nullptr) { m_processor->stop(); }
 }
 
-// The audio callback. Everything in here comes from steps 5 and 6: no engine,
+// The audio callback. Everything in here comes from steps 6 and 7: no engine,
 // no allocation, no lock — only the hand-over.
 void WorkshopPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals no_denormals;

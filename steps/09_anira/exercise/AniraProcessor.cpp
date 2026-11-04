@@ -1,7 +1,7 @@
 // Step 9 — The model with anira
 //
 // Goal:   the part 1 model on anira: the model file and the contract say what
-//         runs and how, the handler does steps 2, 5 and 6.
+//         runs and how, the handler does steps 3, 6 and 7.
 // Given:  contract.json, the plugin around this class, anira (anira.hpp).
 // Task:   TODO 1 and 2 in model.json: replace every "TODO n" there.
 //         TODO 3 below: three blanks, marked "fill out".

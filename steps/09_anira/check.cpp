@@ -27,11 +27,11 @@ constexpr size_t k_model_latency = 2224;
 
 int main() try {
     AniraProcessor processor(WORKSHOP_STEP_DIR);
-    processor.prepare(k_host.m_sample_rate, k_host.m_block_size, 1);  // Mono: the test signal
+    processor.prepare(k_host.m_sample_rate, k_host.m_block_size);
     const size_t latency = processor.latency();
 
     if (latency == 0) {
-        std::fprintf(stderr, "TODO 3: prepare the handlers and read the latency of output slot 0 into m_latency.\n");
+        std::fprintf(stderr, "TODO 3: read the latency of output slot 0 into m_latency.\n");
         return 2;
     }
     if (latency < k_model_latency) {
@@ -53,8 +53,7 @@ int main() try {
         k_input_signal.size(),
         k_host.m_block_size,
         [&](float* samples, size_t num_samples) {
-            float* const channels[1] = {samples};
-            if (processor.process(channels, 1, num_samples) > 0) { late.push_back(position); }
+            if (processor.process(samples, num_samples)) { late.push_back(position); }
             position += num_samples;
         },
         k_host.m_sample_rate);

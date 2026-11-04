@@ -35,7 +35,7 @@ public:
 
         const int channels = getTotalNumInputChannels();
         try {
-            m_anira->prepare(sample_rate, static_cast<size_t>(samples_per_block), static_cast<size_t>(channels));
+            m_anira->prepare(sample_rate, static_cast<size_t>(samples_per_block));
         } catch (const std::exception& error) {
             std::fprintf(stderr, "plugin: %s\n", error.what());
             m_load_error = error.what();
@@ -58,16 +58,29 @@ public:
     // The audio callback: no allocation, no lock, no wait.
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override {
         juce::ScopedNoDenormals no_denormals;
-        if (!m_ready) {
+        if (!m_ready || getTotalNumInputChannels() == 0) {
             buffer.clear();  // Not prepared: silence beats garbage
             return;
         }
 
         m_player.render(buffer);  // A playing example slot replaces the input
         m_dry_wet.store(buffer);
-        m_anira->process(buffer.getArrayOfWritePointers(),
-                         static_cast<size_t>(getTotalNumInputChannels()),
-                         static_cast<size_t>(buffer.getNumSamples()));
+
+        // The model is mono: the channels mixed down into the first one, in place
+        const int num_samples = buffer.getNumSamples();
+        const int channels = getTotalNumInputChannels();
+        float* mono = buffer.getWritePointer(0);
+        for (int channel = 1; channel < channels; ++channel) {
+            juce::FloatVectorOperations::add(mono, buffer.getReadPointer(channel), num_samples);
+        }
+        juce::FloatVectorOperations::multiply(mono, 1.0f / static_cast<float>(channels), num_samples);
+
+        m_anira->process(mono, static_cast<size_t>(num_samples));
+
+        // The one result, on every output channel, then the dry signal mixed in
+        for (int channel = 1; channel < getTotalNumOutputChannels(); ++channel) {
+            buffer.copyFrom(channel, 0, buffer, 0, 0, num_samples);
+        }
         m_dry_wet.mix(buffer, mix());
     }
 

@@ -32,9 +32,9 @@ That one line is what lets the host line our track up with every other track: 15
 
 **`releaseResources`** — stop the worker threads.
 
-## What is per channel
+## One engine, mono
 
-One engine and one processor per channel. The model is mono and stateful, so two channels need two states — sharing one would mix the left channel's history into the right. That also doubles the memory and the worker threads, which is exactly the problem the second block of the workshop is about.
+The model is mono and stateful, so the plugin runs it once: the input channels are mixed down to one signal, that signal goes through one engine and one processor, and the result goes out on every channel. Running a copy per channel would need a second state, a second engine and a second worker thread for every channel. Even so, every instance of the plugin loads the model again and runs its own worker, which is exactly the problem the second block of the workshop is about.
 
 ## What it sounds like
 
@@ -61,7 +61,7 @@ type name in `PluginProcessor.h` — the processor itself is templated on it.
 - **The model path is absolute**, baked in at compile time. A real plugin ships `model_forward.onnx` inside the bundle.
 - **The sample rate is fixed at 44.1 kHz** by the export. At another rate the plugin says so and still runs; it is a different instrument then, not a broken one.
 - **The buffer size is fixed at 512 samples.** At any other size the plugin is silent and says so: set the audio device or the DAW to 512.
-- **The worker busy-waits.** It checks for a new block without sleeping, which keeps one core busy per channel.
+- **The worker busy-waits.** It checks for a new block without sleeping, which keeps one core busy.
 
 ## Slides
 
@@ -69,6 +69,6 @@ type name in `PluginProcessor.h` — the processor itself is templated on it.
 
 ## What's next
 
-This is the end of the first block: a correct, real-time safe, latency-reporting plugin, built from scratch. Count what it took — ring buffers, a worker thread, a prefill rule, a latency calculation, a dry path, one engine per channel.
+This is the end of the first block: a correct, real-time safe, latency-reporting plugin, built from scratch. Count what it took — ring buffers, a worker thread, a prefill rule, a latency calculation, a dry path, one engine mixed down to mono.
 
 After the break: what anira does with all of this, and what it does better.

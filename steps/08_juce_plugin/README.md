@@ -18,15 +18,17 @@ The VST3 passes `pluginval --strictness-level 5`.
 
 ## The three places the host talks to us
 
-**`prepareToPlay`** — everything that allocates: load the model, size the ring buffers, start the worker threads. Then the number from step 6:
+**`prepareToPlay`** — everything that allocates: load the model, size the ring buffers, warm up, start the worker threads. Then the number from step 6:
 
 ```cpp
-setLatencySamples(static_cast<int>(m_channels.front()->latency_samples()));
+setLatencySamples(static_cast<int>(LatencyProcessor<OnnxEngine>::latency_samples()));
 ```
 
-That one line is what lets the host line our track up with every other track.
+That one line is what lets the host line our track up with every other track: 1536 + the rounded max inference time + 2224, 4272 samples with `k_max_inference_ms` up to 11.6 ms. Put your step 3 number into `k_max_inference_ms` in [`threaded_processor.h`](../common/helpers/threaded_processor.h).
 
 **`processBlock`** — the audio callback from step 6, unchanged: ring buffer in, ring buffer out, mix, out. No engine, no allocation, no lock.
+
+**Only 512 samples.** The prefill and the latency from steps 5 and 6 are only right for a host block of 512. If the host asks for another buffer size in `prepareToPlay`, or calls `processBlock` with another block size, the plugin outputs silence and the window says so. Arbitrary buffer sizes need a different design; that is part 2.
 
 **`releaseResources`** — stop the worker threads.
 
@@ -38,7 +40,7 @@ One engine and one processor per channel. The model is mono and stateful, so two
 
 The window has three example slots. Clicking a tile plays its slot in a loop in place of the plugin's input, so the standalone needs no microphone and no DAW; **load** under a tile, or dropping an audio file on it, replaces the slot. The slots start with the files in [`assets/`](assets/), compiled into the plugin — replace `example_1.wav` to `example_3.wav` there to change what they start with. The files play at their own sample rate; the model expects 44.1 kHz.
 
-The `Dry/Wet` parameter is the mix from step 6. At 0 you hear the input, delayed by 6320 samples and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
+The `Dry/Wet` parameter is the mix from step 6. At 0 you hear the input, delayed by the reported latency and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
 
 ## Which engine, and why it matters here
 
@@ -58,6 +60,8 @@ type name in `PluginProcessor.h` — the processor itself is templated on it.
 
 - **The model path is absolute**, baked in at compile time. A real plugin ships `model_forward.onnx` inside the bundle.
 - **The sample rate is fixed at 44.1 kHz** by the export. At another rate the plugin says so and still runs; it is a different instrument then, not a broken one.
+- **The buffer size is fixed at 512 samples.** At any other size the plugin is silent and says so: set the audio device or the DAW to 512.
+- **The worker busy-waits.** It checks for a new block without sleeping, which keeps one core busy per channel.
 
 ## Slides
 

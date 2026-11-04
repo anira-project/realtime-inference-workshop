@@ -39,3 +39,8 @@
 - Add latency to blocking ratio plots
 - Inline execution is next to come with gpu and npu accelerators
 - Ab after process überarbeiten
+
+- Better use bypass not zeros on miss in the example
+- look at anchor tensors for the encoder decoder example!!
+- Webcam on all plattforms!!!!!!!! Linux first!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+- Two models, two rates, one library. Wir haben 3 verschiedene Rates!

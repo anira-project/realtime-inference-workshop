@@ -9,8 +9,8 @@
 #include <anira/anira.hpp>
 
 #include <cstddef>
+#include <optional>
 #include <string>
-#include <vector>
 
 class AniraProcessor {
 public:
@@ -18,16 +18,16 @@ public:
     // @throws anira::Error with anira's reason
     explicit AniraProcessor(const std::string& step_dir);
 
-    // Before the stream starts: the host's rate, its largest block and its
-    // channels. Plans one handler per channel and warms the model up. Main
-    // thread, blocking.
+    // Before the stream starts: the host's rate and its largest block. Plans
+    // the handler and warms the model up. Main thread, blocking.
     // @throws anira::Error with anira's reason
-    void prepare(double sample_rate, size_t max_block_size, size_t num_channels);
+    void prepare(double sample_rate, size_t max_block_size);
 
-    // One callback, in place: every channel's block in, the model's out.
-    // Audio thread: no allocation, no lock, no wait.
-    // @return how many channels the miss policy filled (0: all on time)
-    size_t process(float* const* channels, size_t num_channels, size_t num_samples);
+    // One callback, in place: one mono block in, the model's out. The model is
+    // mono; the plugin mixes the host's channels down before and copies the
+    // result out after. Audio thread: no allocation, no lock, no wait.
+    // @return true if the miss policy filled the block
+    bool process(float* samples, size_t num_samples);
 
     // What the host is told, in samples. Valid after prepare.
     size_t latency() const { return m_latency; }
@@ -37,6 +37,6 @@ private:
     anira::Context m_context{anira::ContextConfig{}};
     anira::ModelConfig m_model;
     anira::ContractHandle m_contract;
-    std::vector<anira::InferenceHandler> m_handlers;  // One per channel: the model is mono, its state per signal
+    std::optional<anira::InferenceHandler> m_handler;  // Created at the first prepare
     size_t m_latency = 0;
 };

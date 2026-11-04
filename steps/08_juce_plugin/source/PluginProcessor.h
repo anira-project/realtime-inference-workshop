@@ -55,10 +55,10 @@ private:
 
     // ONNX Runtime, not LibTorch: it is the one with a static build, so the
     // plugin is a single self-contained bundle — step 7, made good on.
-    // One engine and one processor per channel: the model is mono, and its
-    // state belongs to the signal that is running through it.
-    std::vector<std::unique_ptr<OnnxEngine>> m_engines;
-    std::vector<std::unique_ptr<LatencyProcessor<OnnxEngine>>> m_channels;
+    // One engine and one processor: the model is mono, so the input is mixed
+    // down to one signal, and the result goes out on every channel.
+    std::unique_ptr<OnnxEngine> m_engine;
+    std::unique_ptr<LatencyProcessor<OnnxEngine>> m_processor;
     juce::String m_load_error;
 
     ExamplePlayer m_player;

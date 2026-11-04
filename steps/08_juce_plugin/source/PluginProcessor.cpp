@@ -31,33 +31,30 @@ juce::AudioProcessorValueTreeState::ParameterLayout WorkshopPluginProcessor::mak
 // The host says how it will call us. Everything that allocates belongs here,
 // including loading the model and starting the worker threads.
 void WorkshopPluginProcessor::prepareToPlay(double sample_rate, int samples_per_block) {
-    const auto channels = static_cast<size_t>(getTotalNumInputChannels());
     m_load_error.clear();
 
-    // Loading takes a second and the host may call this often — once per
-    // channel is enough, and only when the channel count actually changed.
+    // Loading takes a second and the host may call this often: once is
+    // enough. The model is mono, so one engine serves every channel.
     try {
-        while (m_engines.size() < channels) {
-            m_engines.push_back(std::make_unique<OnnxEngine>(WORKSHOP_ONNX_MODEL_PATH));
-            m_channels.push_back(std::make_unique<LatencyProcessor<OnnxEngine>>(*m_engines.back()));
+        if (m_engine == nullptr) {
+            m_engine = std::make_unique<OnnxEngine>(WORKSHOP_ONNX_MODEL_PATH);
+            m_processor = std::make_unique<LatencyProcessor<OnnxEngine>>(*m_engine);
         }
     } catch (const std::exception& error) {
         std::fprintf(stderr, "plugin: %s\n", error.what());
         m_load_error = error.what();
-        m_engines.clear();
-        m_channels.clear();
+        m_engine.reset();
+        m_processor.reset();
         setLatencySamples(0);
         return;
     }
 
-    // Buffers and threads do get rebuilt: the block size may have changed.
-    for (size_t channel = 0; channel < channels; ++channel) {
-        m_channels[channel]->prepare(static_cast<size_t>(samples_per_block));
-    }
+    // Buffers and the thread do get rebuilt: the block size may have changed.
+    m_processor->prepare(static_cast<size_t>(samples_per_block));
 
     // The number from step 6, now where it belongs: the host delays every other
     // track by this much, so our output lines up with the rest of the session.
-    setLatencySamples(static_cast<int>(m_channels.front()->latency_samples()));
+    setLatencySamples(static_cast<int>(m_processor->latency_samples()));
 
     // The model was trained at one rate. Running it at another is a different
     // instrument, not a bug — worth hearing, worth knowing.
@@ -68,7 +65,7 @@ void WorkshopPluginProcessor::prepareToPlay(double sample_rate, int samples_per_
 }
 
 void WorkshopPluginProcessor::releaseResources() {
-    for (auto& channel : m_channels) { channel->stop(); }
+    if (m_processor != nullptr) { m_processor->stop(); }
 }
 
 // The audio callback. Everything in here comes from steps 5 and 6: no engine,
@@ -76,10 +73,10 @@ void WorkshopPluginProcessor::releaseResources() {
 void WorkshopPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals no_denormals;
 
-    const auto num_samples = static_cast<size_t>(buffer.getNumSamples());
-    const auto channels = static_cast<size_t>(getTotalNumInputChannels());
+    const int num_samples = buffer.getNumSamples();
+    const int channels = getTotalNumInputChannels();
 
-    if (m_channels.size() < channels) {
+    if (m_processor == nullptr || channels == 0) {
         buffer.clear();  // The model did not load; silence beats garbage
         return;
     }
@@ -87,12 +84,19 @@ void WorkshopPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
     // A playing example slot replaces the input.
     m_player.render(buffer);
 
-    const float mix = m_mix != nullptr ? m_mix->load() : 1.0f;
+    // The model is mono: the channels mixed down into the first one, in place
+    float* mono = buffer.getWritePointer(0);
+    for (int channel = 1; channel < channels; ++channel) {
+        juce::FloatVectorOperations::add(mono, buffer.getReadPointer(channel), num_samples);
+    }
+    juce::FloatVectorOperations::multiply(mono, 1.0f / static_cast<float>(channels), num_samples);
 
-    for (size_t channel = 0; channel < channels; ++channel) {
-        m_channels[channel]->set_mix(mix);
-        m_channels[channel]->process_block(buffer.getWritePointer(static_cast<int>(channel)),
-                                           num_samples);
+    m_processor->set_mix(m_mix != nullptr ? m_mix->load() : 1.0f);
+    m_processor->process_block(mono, static_cast<size_t>(num_samples));
+
+    // The one result, on every output channel
+    for (int channel = 1; channel < getTotalNumOutputChannels(); ++channel) {
+        buffer.copyFrom(channel, 0, buffer, 0, 0, num_samples);
     }
 }
 

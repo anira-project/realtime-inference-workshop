@@ -7,7 +7,7 @@
 ## What we ship right now
 
 ```
-build/bin/step01_solution                     262 KB
+build/bin/step01a_solution                    203 KB
 build/_deps/workshop_libtorch-src/lib         318 MB
   libtorch_cpu.dylib                          206 MB
 ```
@@ -15,7 +15,7 @@ build/_deps/workshop_libtorch-src/lib         318 MB
 Check it yourself after a build:
 
 ```bash
-ls -lh build/bin/step01_solution
+ls -lh build/bin/step01a_solution
 du -sh build/_deps/workshop_libtorch-src/lib
 ```
 

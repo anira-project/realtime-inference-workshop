@@ -44,14 +44,15 @@ inline bool report_line(const char* label, float diff) {
 // @got: what the model produced
 // @want: what it should have produced
 // @num_samples: samples in both
-inline int report(const float* got, const float* want, size_t num_samples) {
+// @tolerance: the largest difference that still counts as the same signal
+inline int report(const float* got, const float* want, size_t num_samples, float tolerance = k_tolerance) {
     const float worst = max_abs_diff(got, want, num_samples);
 
-    if (worst <= k_tolerance) {
-        std::printf("OK: max abs diff %.3g, within %g of the reference.\n", worst, k_tolerance);
+    if (worst <= tolerance) {
+        std::printf("OK: max abs diff %.3g, within %g of the reference.\n", worst, tolerance);
         return 0;
     }
-    std::printf("FAILED: max abs diff %.3g, tolerance %g.\n", worst, k_tolerance);
+    std::printf("FAILED: max abs diff %.3g, tolerance %g.\n", worst, tolerance);
     return 1;
 }
 

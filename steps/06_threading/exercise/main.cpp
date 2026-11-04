@@ -24,7 +24,7 @@
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/helpers/host.h"
-#include "common/helpers/libtorch_engine.h"
+#include "common/helpers/onnx_engine.h"
 #include "common/helpers/support.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
 
@@ -33,8 +33,9 @@
 // @m_input_size: samples the model takes per forward pass
 // @m_sample_rate: the sample rate the model was trained for
 constexpr struct {
-    const char* m_path = WORKSHOP_MODEL_PATH;
+    const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
+    size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
 } k_model{};
 
@@ -93,7 +94,7 @@ namespace {
 // time and the host always finds something to take.
 class ThreadedProcessor {
 public:
-    explicit ThreadedProcessor(LibTorchEngine& engine) : m_engine(engine) {}
+    explicit ThreadedProcessor(OnnxEngine& engine) : m_engine(engine) {}
 
     ~ThreadedProcessor() { stop(); }
 
@@ -141,10 +142,11 @@ public:
         // Given: the warm-up. The first calls are slow (step 4), so they are
         // made here, before the audio starts; then the model state is cleared.
         m_model_block.assign(k_model.m_input_size, 0.0f);
+        m_state.assign(k_model.m_state_size, 0.0f);
         for (size_t i = 0; i < k_warm_up_calls; ++i) {
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_engine.process({m_model_block, m_state}, {k_model.m_input_size, k_model.m_state_size});
         }
-        m_engine.reset();
+        std::fill(m_state.begin(), m_state.end(), 0.0f);  // The warm-up is not part of the stream
 
         m_unpushed = 0;
         m_debt = 0;
@@ -238,7 +240,7 @@ private:
             if (!has_block) { continue; }
 
             // m_input.pop(?, ?);  // <- 2. fill out
-            // m_engine.process(?, ?);  // <- 2. fill out
+            // m_engine.process({?, ?}, {?, ?});  // <- 2. fill out
 
             size_t pushed = 0;
             while (pushed < k_model.m_input_size && m_running.load(std::memory_order_acquire)) {
@@ -247,10 +249,11 @@ private:
         }
     }
 
-    LibTorchEngine& m_engine;
+    OnnxEngine& m_engine;
     ThreadSafeRingBuffer m_input{0};   // Written by the audio thread, read by the worker
     ThreadSafeRingBuffer m_output{0};  // Written by the worker, read by the audio thread
     std::vector<float> m_model_block;  // The worker's block, sized in prepare()
+    std::vector<float> m_state;        // The worker's state, sized in prepare()
     std::thread m_worker;
     std::atomic<bool> m_running{false};
     size_t m_prefill = 0;   // Set in prepare()
@@ -262,21 +265,12 @@ private:
 }  // namespace
 
 int main() {
-    LibTorchEngine engine;
-    try {
-        engine.load_model(k_model.m_path);
-    } catch (const std::runtime_error& error) {
-        std::fprintf(stderr, "%s\n", error.what());
-        return 2;
-    }
+    OnnxEngine engine(k_model.m_path);
+
 
     ThreadedProcessor processor(engine);
-    try {
-        processor.prepare(k_host_block_size);
-    } catch (const std::runtime_error& error) {
-        std::printf("%s\n", error.what());
-        return 1;
-    }
+    processor.prepare(k_host_block_size);
+  
     if (!processor.worker_started()) {
         std::printf("TODO 1: start the worker thread.\n");
         return 1;

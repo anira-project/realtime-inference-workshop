@@ -52,17 +52,17 @@ TODO 2 or 3: the host only got silence. ...
 ## What you get
 
 ```
-  prefill                      2048 samples (46.4 ms)
+  prefill                      2560 samples (58.0 ms)
   allocations on the audio thread 0
-OK: max abs diff 3.28e-07, within 0.0001 of the reference.
+OK: max abs diff 3.73e-07, within 0.0001 of the reference.
 OK: inference ran on the worker thread, the host got the model's stream back
-2048 samples late.
+2560 samples late.
 ```
 
-The prefill is 2048 for a worst case of up to 11.6 ms; yours may be more. The check listens like the host:
+The prefill is 2560 for a worst case of 11.6 to 23.2 ms; yours may differ. The check listens like the host:
 
 - **Zero allocations in the callback.** The program counts them with its own `operator new`, thread-local, so the worker thread's allocations — thousands per block, see step 5 — do not count.
-- **The host hears the prefill in silence, then the model's stream**, to 3.28e-07 of the reference. A callback with zeros where the reference is not silent is a dropout: the worker was late. More than a quarter of them fail the run, and so does any sample that is neither the reference nor a zero.
+- **The host hears the prefill in silence, then the model's stream**, to 3.73e-07 of the reference. A callback with zeros where the reference is not silent is a dropout: the worker was late. More than a quarter of them fail the run, and so does any sample that is neither the reference nor a zero.
 
 Under RTSan the audio thread now reports nothing at all:
 

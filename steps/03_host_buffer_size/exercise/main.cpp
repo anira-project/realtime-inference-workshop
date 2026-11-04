@@ -15,14 +15,15 @@
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/checks/step03.h"
-#include "common/helpers/libtorch_engine.h"
+#include "common/helpers/onnx_engine.h"
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/support.h"
 
 // Model settings taken from the export metadata, as in step 1.
 constexpr struct {
-    const char* m_path = WORKSHOP_MODEL_PATH;
+    const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
+    size_t m_state_size = 63488;
 } k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
@@ -35,7 +36,7 @@ constexpr size_t k_host_block_size = 512;
 //   host block -> m_input -> m_model_block -> model -> m_output -> host block
 class ProcessorExample {
 public:
-    explicit ProcessorExample(LibTorchEngine& engine) : m_engine(engine) {}
+    explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
 
     void prepare([[maybe_unused]] size_t max_block_size) {
         // ---- TODO 1 --------------------------------------------------------
@@ -49,6 +50,7 @@ public:
         m_input = RingBuffer(capacity);
         m_output = RingBuffer(capacity);
         m_model_block.assign(k_model.m_input_size, 0.0f);
+        m_state.assign(k_model.m_state_size, 0.0f);
     }
 
     // One callback: the host's samples come in and go back out in place.
@@ -68,7 +70,7 @@ public:
 
         if (has_block) {
             // m_input.pop(?, ?);  // <- 3. fill out
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_engine.process({m_model_block, m_state}, {k_model.m_input_size, k_model.m_state_size});
             // m_output.push(?, ?);  // <- 3. fill out
         }
 
@@ -87,16 +89,16 @@ public:
     }
 
 private:
-    LibTorchEngine& m_engine;
+    OnnxEngine& m_engine;
     RingBuffer m_input{0};
     RingBuffer m_output{0};
     std::vector<float> m_model_block;
+    std::vector<float> m_state;
 };
 
 int main() {
     try {
-        LibTorchEngine engine;
-        engine.load_model(k_model.m_path);
+        OnnxEngine engine(k_model.m_path);
 
         ProcessorExample processor(engine);
         processor.prepare(k_host_block_size);

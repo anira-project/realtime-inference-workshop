@@ -24,7 +24,7 @@ The VST3 passes `pluginval --strictness-level 5`.
 setLatencySamples(static_cast<int>(LatencyProcessor<OnnxEngine>::latency_samples()));
 ```
 
-That one line is what lets the host line our track up with every other track: 1536 + the rounded max inference time + 2224, 4272 samples with `k_max_inference_ms` up to 11.6 ms. Put your step 4 number into `k_max_inference_ms` in [`threaded_processor.h`](../common/helpers/threaded_processor.h).
+That one line is what lets the host line our track up with every other track: 1536 + the rounded max inference time + 2224, 4784 samples with `k_max_inference_ms` from 11.6 to 23.2 ms. Put your step 4 number into `k_max_inference_ms` in [`threaded_processor.h`](../common/helpers/threaded_processor.h).
 
 **`processBlock`** — the audio callback from step 7, unchanged: ring buffer in, ring buffer out, mix, out. No engine, no allocation, no lock.
 
@@ -44,8 +44,8 @@ The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed
 
 ## Which engine, and why it matters here
 
-The plugin runs **ONNX Runtime, linked statically** — not LibTorch, which every
-step before it used. The reason is what has to ship:
+The plugin runs **ONNX Runtime, linked statically**, where the steps before it
+use it as a shared library. The reason is what has to ship:
 
 | | what ships |
 |---|---|
@@ -53,8 +53,7 @@ step before it used. The reason is what has to ship:
 | ONNX Runtime, static | **one 28 MB bundle**, nothing to find |
 
 LibTorch has no static build in the backends release, so the choice is made for
-you. The engine sits behind `construct / process / reset`, so the switch is one
-type name in `PluginProcessor.h` — the processor itself is templated on it.
+you.
 
 ## Known rough edges, on purpose
 

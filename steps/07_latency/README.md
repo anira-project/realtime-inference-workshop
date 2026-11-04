@@ -11,9 +11,9 @@ Nothing here is the engine being slow. It is the design, and the model:
 | | samples | why |
 |---|---|---|
 | buffer adaptation | 2048 − 512 = 1536 | the model cannot run before a whole block has arrived, and the host brings 512 at a time (step 3) |
-| rounded max inference time | your step 4 number, rounded up to whole 512-sample callbacks: 512 for up to 11.6 ms | the time the worker is given (step 6) |
+| rounded max inference time | your step 4 number, rounded up to whole 512-sample callbacks: 1024 for 11.6 to 23.2 ms | the time the worker is given (step 6) |
 | the model itself | 2224 | its output answers its input this much later: `k_model.m_latency`, computed by `scripts/export_model.py` |
-| **total** | **4272** with up to 11.6 ms | 96.9 ms at 44.1 kHz |
+| **total** | **4784** with 11.6 to 23.2 ms | 108.5 ms at 44.1 kHz |
 
 The first two are step 6's prefill. The second is a choice: it buys the worker the time of your worst case, and in exchange the latency is a **fixed number** instead of whatever the worker managed today. A number that changes with the weather is useless to the host. And it only holds for a host block of 512: other block sizes give other numbers, which is part 2.
 
@@ -37,19 +37,19 @@ TODO 2: the dry signal comes out undelayed, so it cannot line up with the wet on
 ## Expected output
 
 ```
-Reported latency: 4272 samples (96.9 ms at 44100 Hz)
+Reported latency: 4784 samples (108.5 ms at 44100 Hz)
 
   dry, delayed by the latency max abs diff 0          OK
   wet, delayed by the latency:
-OK: max abs diff 3.28e-07, within 0.0001 of the reference.
+OK: max abs diff 3.73e-07, within 0.0001 of the reference.
 
 OK: both paths are late by exactly the reported latency, so they mix.
 ```
 
-With a worst case above 11.6 ms your latency is larger, by 512 for every further callback. The check is the point: the program runs the signal twice, once at 100% dry and once at 100% wet, and compares each against its reference *shifted by the reported latency*.
+With a different worst case your latency differs, by 512 for every callback. The check is the point: the program runs the signal twice, once at 100% dry and once at 100% wet, and compares each against its reference *shifted by the reported latency*.
 
 - **Dry has to match exactly**, 0.0 difference. It is the input, only later. If the latency is off by a single sample, this number jumps.
-- **Wet matches to 1e-6**, the usual difference between LibTorch here and ONNX Runtime in Python. The reference already carries the model's own delay, so it is shifted by the rest: the prefill. Leave the model's part out of the latency and this check fails. A callback where the worker was late goes out with zeros and is counted as a dropout; more than a quarter of them fail the run.
+- **Wet matches to 1e-6**, the usual difference between ONNX Runtime here and in Python. The reference already carries the model's own delay, so it is shifted by the rest: the prefill. Leave the model's part out of the latency and this check fails. A callback where the worker was late goes out with zeros and is counted as a dropout; more than a quarter of them fail the run.
 
 Which means: a wrong latency number cannot pass. That is also how you would catch it in a plugin — bypass the model, and the signal has to come out unchanged apart from the delay.
 

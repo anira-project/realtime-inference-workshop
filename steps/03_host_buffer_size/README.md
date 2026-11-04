@@ -11,7 +11,7 @@ The model's block size comes from the export. The host's comes from the audio de
 ## What you have
 
 - [`common/helpers/ring_buffer.h`](../common/helpers/ring_buffer.h) — a ring buffer, written for you: `push`, `pop`, `available`, `space`. It throws on overflow and underflow, which is how you find out your capacity was wrong.
-- `common/helpers/libtorch_engine.h` — the engine from step 1, unchanged.
+- `common/helpers/onnx_engine.h` — the engine from step 1, unchanged, with the state from step 2.
 - `common/helpers/support.h`, `common/assets/test_signal.h`, `common/assets/target_signal.h` — as before.
 - [`common/checks/step03.h`](../common/checks/step03.h) — `check_todos`, called at the end of `process_block`: says which TODO is still missing. Not part of the exercise.
 
@@ -39,7 +39,7 @@ cmake --build build -j
 ## Expected output
 
 ```
-OK: max abs diff 4.25e-07, within 0.0001 of the reference.
+OK: max abs diff 3.73e-07, within 0.0001 of the reference.
 ```
 
 `main` plays the host: a loop that hands `process_block` 512 samples at a time, in place, like the loop in step 2. What came back has to be the model's stream from step 1, sample for sample, after a stretch of silence.

@@ -41,7 +41,7 @@ Note:
 - Everything else: JUCE boilerplate
 - Only 512: our prefill and latency are only right for that block size. Other sizes: silence and a message
 - Takeaway: arbitrary buffer sizes need a different design, part 2
-- One change: ONNX Runtime instead of LibTorch, statically linked: 28 MB + 126 MB model
+- One change: ONNX Runtime is now linked statically: 28 MB + 126 MB model
 
 **Script:**
 
@@ -49,7 +49,7 @@ Note:
 
 There's one limit, and it's on purpose: our prefill and our latency are only right for a buffer of 512 samples. If the host asks for anything else, the plugin stays silent and tells you why. Supporting any buffer size needs a different design, and that's what part 2 is about.
 
-One change: every step so far used LibTorch, but the plugin uses ONNX Runtime, linked statically, which is 28 MB of engine, plus the 126 MB model."
+One change: so far ONNX Runtime was a shared library next to our program, but the plugin links it statically, which is 28 MB of engine, plus the 126 MB model."
 
 --- 
 

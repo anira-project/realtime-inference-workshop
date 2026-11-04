@@ -114,14 +114,14 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ · common/assets/</div>
-    {{FILE:model.pt}}
+    {{FILE:model_forward.onnx}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>
   <div class="given-column many">
     <div class="given-label">Helpers</div>
     <div class="given-folder">common/helpers/ · CMake</div>
-    {{FILE:libtorch_engine.h}}
+    {{FILE:onnx_engine.h}}
     {{FILE:ring_buffer.h}}
     {{FILE:host.h}}
     {{FILE:threadsafe_ring_buffer.h}}
@@ -200,18 +200,18 @@ Note:
 <div class="lat-sum" style="margin-bottom: 5rem">
   <div class="lat-part">buffer adaptation<small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">rounded max inference time<small>8.2 ms → 1 callback</small><strong>512</strong></div>
+  <div class="lat-part">rounded max inference time<small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
   <div class="lat-plus">+</div>
   <div class="lat-part">the model itself<strong>2224</strong></div>
   <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>4272</strong></div>
+  <div class="lat-part total">latency<strong>4784</strong></div>
 </div>
 
 ```cpp
 size_t latency_samples() const {
     size_t latency = (k_model.m_input_size - k_host_block_size) + rounded_max_inference_time() +
                      k_model.m_latency;  // <- fill out
-    return latency;                      // 4272
+    return latency;                      // 4784
 }
 ```
 
@@ -219,16 +219,16 @@ Note:
 - Buffer adaptation: the model needs a whole block, the host brings 512 at a time: 2048 − 512 = 1536 (step 3)
 - The worker's time: your worst case from step 4, rounded up to whole callbacks (step 6). A choice
 - Smaller: the worker might not be done, latency no longer fixed
-- 8.2 ms fit in one callback of 11.6 ms: 512. Yours may be more
+- 15.3 ms don't fit in one callback of 11.6 ms, they take two: 1024. Yours may differ
 - The model itself: 2224, convolutions and filter bank, from the export script, not visible from C++
-- Total: 4272 samples, about 97 ms at 44.1 kHz. We report this to the host
+- Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host
 - Only for 512: other block sizes give other numbers, part 2
 - Honest: fine for mixing, can't play through it live. Part 2 comes back to it
 
 **Script:**
 
-"Let's add it up. First the buffer adaptation from step 3: the model needs a whole block before it can run, and the host brings 512 samples at a time, so that's 2048 minus 512, 1536 samples. Second, the time we give the worker: your worst case from step 4, rounded up to whole callbacks, like in step 6. That one is a choice. We could make it smaller, but then the worker might not be done in time, and the latency wouldn't be fixed anymore. My 8.2 milliseconds fit into one callback of 11.6 milliseconds, so that's 512; yours may be more. And third, the model itself is late by 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
-So in total: 4272 samples, that's about 97 milliseconds at 44.1 kHz. In a plugin, this is the number we report to the host. It only holds for 512, though: other block sizes give other numbers, and that's part 2. And let's be honest: 97 milliseconds is fine for mixing, but you can't play through it live. In part 2 we come back to how low it can go."
+"Let's add it up. First the buffer adaptation from step 3: the model needs a whole block before it can run, and the host brings 512 samples at a time, so that's 2048 minus 512, 1536 samples. Second, the time we give the worker: your worst case from step 4, rounded up to whole callbacks, like in step 6. That one is a choice. We could make it smaller, but then the worker might not be done in time, and the latency wouldn't be fixed anymore. My 15.3 milliseconds don't fit into one callback of 11.6 milliseconds, they take two, so that's 1024; yours may differ. And third, the model itself is late by 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
+So in total: 4784 samples, that's about 108 milliseconds at 44.1 kHz. In a plugin, this is the number we report to the host. It only holds for 512, though: other block sizes give other numbers, and that's part 2. And let's be honest: 108 milliseconds is fine for mixing, but you can't play through it live. In part 2 we come back to how low it can go."
 
 ---
 
@@ -245,12 +245,12 @@ m_dry.push(silence.data(), latency_samples());      // <- fill out
 Note:
 - Host aligns everything to the number we report
 - Prefill the dry ring buffer with `latency_samples()` of silence before the first callback
-- Every sample comes out 4272 samples later, like the wet one
-- Wet only gets step 6's prefill, 2048: the model's 2224 are already in what it returns
+- Every sample comes out 4784 samples later, like the wet one
+- Wet only gets step 6's prefill, 2560: the model's 2224 are already in what it returns
 
 **Script:**
 
-"The host aligns everything to the number we report. So the dry signal has to start exactly that much later: we prefill the dry ring buffer with latency_samples() of silence before the first callback. Then every sample we push in comes out 4272 samples later, just like the wet one. The wet path only gets step 6's prefill, because the model's own 2224 samples are already inside what it returns."
+"The host aligns everything to the number we report. So the dry signal has to start exactly that much later: we prefill the dry ring buffer with latency_samples() of silence before the first callback. Then every sample we push in comes out 4784 samples later, just like the wet one. The wet path only gets step 6's prefill, because the model's own 2224 samples are already inside what it returns."
 
 ---
 

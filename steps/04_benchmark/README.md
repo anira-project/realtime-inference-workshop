@@ -35,41 +35,48 @@ cmake --build --preset release --target step04_solution
 On an M-series laptop, Release build:
 
 ```
-forward_pass/iterations:1/repeats:200_mean         9.11 ms         8.32 ms          200
-forward_pass/iterations:1/repeats:200_median       8.08 ms         7.66 ms          200
-forward_pass/iterations:1/repeats:200_stddev       8.08 ms         4.90 ms          200
-forward_pass/iterations:1/repeats:200_cv          88.72 %         58.87 %           200
-forward_pass/iterations:1/repeats:200_min          7.52 ms         7.17 ms          200
-forward_pass/iterations:1/repeats:200_p95          9.94 ms         9.16 ms          200
-forward_pass/iterations:1/repeats:200_p99          12.1 ms         10.9 ms          200
-forward_pass/iterations:1/repeats:200_max          95.7 ms         64.0 ms          200
+forward_pass_onnx_mean 13.2 ms 13.2 ms 200
+forward_pass_onnx_min 12.8 ms 12.7 ms 200
+forward_pass_onnx_p95 13.6 ms 13.5 ms 200
+forward_pass_onnx_p99 14.5 ms 14.3 ms 200
+forward_pass_onnx_max 19.0 ms 18.1 ms 200
+forward_pass_libtorch_mean 8.51 ms 7.89 ms 200
+forward_pass_libtorch_min 7.45 ms 7.09 ms 200
+forward_pass_libtorch_p95 8.65 ms 8.13 ms 200
+forward_pass_libtorch_p99 22.7 ms 12.4 ms 200
+forward_pass_libtorch_max 79.6 ms 60.3 ms 200
 
-The first 10 of 200 calls:
-  call  1  ##################################        81.67 ms
-  call  2  ########################################  95.66 ms
-  call  3  ###                                        8.31 ms
-  call  4  ####                                       8.67 ms
+ONNX Runtime, the first 10 of 200 calls:
+  call  1  ########################################  18.97 ms
+  call  2  ############################              13.24 ms
+  call  3  ###########################               12.91 ms
   ...
 
-The 5 slowest calls:
-  call   2   95.66 ms
-  call   1   81.67 ms
-  call 177   12.05 ms
-  call  48   11.93 ms
-  call  50   11.22 ms
+LibTorch, the first 10 of 200 calls:
+  call  1  ########################################  79.62 ms
+  call  2  ###################                       38.42 ms
+  call  3  ####                                       7.84 ms
+  ...
 
-Your worst case after the warm-up (calls 3 to 200):
-  max inference time            12.05 ms = 531 samples
+The two engines, after the warm-up:
+               fastest   slowest
+  ONNX Runtime  12.77 ms  15.30 ms
+  LibTorch       7.45 ms  22.65 ms
+
+Your worst case on ONNX Runtime after the warm-up (calls 3 to 200):
+  max inference time            15.30 ms = 675 samples
   rounded_max_inference_time   1024 samples (whole 512-sample callbacks)
 
-Put 12.05 into k_max_inference_ms in steps 6 and 7.
+Put 15.30 into k_max_inference_ms in steps 6 and 7.
 ```
 
-Your numbers will differ. The shape is what matters: **the first two calls are far slower than the rest**, and it is not random. TorchScript optimises the model while it runs it, so a plugin has to make those calls before the audio starts.
+Your numbers will differ. The shape is what matters: **the first calls are slower than the rest**, and it is not random. On LibTorch they are far slower, because TorchScript optimises the model while it runs it. A plugin has to make those calls before the audio starts.
 
-The max in the table is one of those first calls. The last lines leave them out: that is your worst case after the warm-up, here 12.05 ms, or 531 samples at 44.1 kHz. Rounded up to whole 512-sample callbacks it is 1024 samples, the `rounded_max_inference_time`: in step 6 the worker gets that much time, because the audio thread only picks results up once per callback. **Write your milliseconds down**, steps 6 and 7 ask for them as `k_max_inference_ms`.
+The two engines run the same model but behave differently. Here ONNX Runtime has a short warm-up and a slower typical call, while LibTorch has a long warm-up and a faster typical call. The slowest call changes from run to run on both, and gets much worse when the machine is busy.
 
-Run it a few times. The first calls are slow every time. Sometimes a call after the warm-up is slow too: one run here had 43.38 ms, a factor of 0.93 against a model block and 3.7 against a 512-sample callback. That is not warm-up but the rest of the system getting in the way, which is why the worst case has to fit with room to spare: take the largest of a few runs.
+The last lines leave the first calls out: that is your worst case on ONNX Runtime after the warm-up, here 15.30 ms, or 675 samples at 44.1 kHz. Rounded up to whole 512-sample callbacks it is 1024 samples, the `rounded_max_inference_time`: in step 6 the worker gets that much time, because the audio thread only picks results up once per callback. **Write your milliseconds down**, steps 6 and 7 ask for them as `k_max_inference_ms`.
+
+Run it a few times. The first calls are slow every time. Sometimes a call after the warm-up is slow too: one LibTorch run here had 43.38 ms, a factor of 0.93 against a model block and 3.7 against a 512-sample callback. That is not warm-up but the rest of the system getting in the way, which is why the worst case has to fit with room to spare: take the largest of a few runs.
 
 Google Benchmark may print a warning about the CPU frequency or thread affinity. It does not affect the measurement.
 
@@ -83,6 +90,6 @@ Google Benchmark may print a warning about the CPU frequency or thread affinity.
 
 ## What broke?
 
-The measurement itself is fine. What it says is not: warmed up, the call fits the 11.6 ms of a 512-sample callback on average, but every fourth callback spends most of its time on it, and a single slow call is a dropout.
+The measurement itself is fine. What it says is not: warmed up, the call fits a model block easily, but on ONNX Runtime it does not even fit the 11.6 ms of a 512-sample callback on average, and every fourth callback has to run it.
 
 And none of this is the whole story yet — we measured the forward pass on its own, on an ordinary thread. Next: what happens when that call sits in the audio callback.

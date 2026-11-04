@@ -30,7 +30,7 @@ Note:
 </div>
 
 <div class="statement-points two fragment">
-  <div><strong>Real-time capable</strong><br>A slow call is 3.7 callbacks; the worker gets its own time (step 4)</div>
+  <div><strong>Real-time capable</strong><br>A call takes longer than a callback; the worker gets its own time (step 4)</div>
   <div><strong>Real-time safe</strong><br>Allocations and locks leave the audio thread (step 5)</div>
 </div>
 
@@ -44,7 +44,7 @@ Note:
 - The audio thread never waits for it
 - Click: this solves two problems
 - Real-time safe, step 5: the engine's allocations and locks leave the audio thread
-- Real-time capable, step 4: a slow call of 43 ms was 3.7 callbacks; the worker isn't inside any callback, it gets its own time
+- Real-time capable, step 4: even a typical call of 13 ms is longer than a callback; the worker isn't inside any callback, it gets its own time
 
 **Script:**
 
@@ -53,7 +53,7 @@ The worker is allowed to allocate. It doesn't have a per-callback deadline. It d
 
 *Click: the two problems.*
 
-So with the worker thread we solve two problems at once. First, real-time safety from step 5: the engine's allocations and locks are no longer on the audio thread. And second, real-time capability from step 4: a slow call of 43 milliseconds was almost four callbacks long. Now the forward pass no longer runs inside any callback, it gets its own time."
+So with the worker thread we solve two problems at once. First, real-time safety from step 5: the engine's allocations and locks are no longer on the audio thread. And second, real-time capability from step 4: even a typical call of 13 milliseconds is longer than a callback. Now the forward pass no longer runs inside any callback, it gets its own time."
 
 ---
 
@@ -90,14 +90,14 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ · common/assets/</div>
-    {{FILE:model.pt}}
+    {{FILE:model_forward.onnx}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>
   <div class="given-column many">
     <div class="given-label">Helpers</div>
     <div class="given-folder">common/helpers/ · CMake</div>
-    {{FILE:libtorch_engine.h}}
+    {{FILE:onnx_engine.h}}
     {{FILE:ring_buffer.h}}
     {{FILE:host.h|new}}
     {{FILE:threadsafe_ring_buffer.h|new}}
@@ -242,14 +242,14 @@ m_worker = std::thread([this] { worker(); });     // <- fill out
 Note:
 - Your worst case from step 4, in samples, rounded up to whole callbacks: the worker's time
 - Prefill: buffer adaptation from step 3, 2048 − 512, plus the worker's time
-- 8.2 ms → 512, so 2048 samples of silence before the first result
+- 15.3 ms → 1024, so 2560 samples of silence before the first result
 - `m_output`: the worker's time plus one model block; `m_input`: one model block, as in step 3
 - Warm-up given: the slow first calls happen here, not in the audio
 - All in `prepare`: the ring buffers allocate here, once, so the callback never has to
 
 **Script:**
 
-"Let's look at the solutions together. First we take your worst case from step 4, in samples, and round it up to whole callbacks: that's the time the worker gets. The prefill is the buffer adaptation we had in step 3, 2048 minus 512, plus that time. With 8.2 milliseconds that's 512, so the output starts with 2048 samples of silence. The output ring buffer needs room for the worker's time plus one model block, and the input keeps one model block, like in step 3. The warm-up is given: the slow first calls from step 4 happen here, before the audio starts. And then we start the worker. It's important that all of this happens in `prepare`: the ring buffers allocate their memory here, once, so the callback never has to."
+"Let's look at the solutions together. First we take your worst case from step 4, in samples, and round it up to whole callbacks: that's the time the worker gets. The prefill is the buffer adaptation we had in step 3, 2048 minus 512, plus that time. With 15.3 milliseconds that's 1024, so the output starts with 2560 samples of silence. The output ring buffer needs room for the worker's time plus one model block, and the input keeps one model block, like in step 3. The warm-up is given: the slow first calls from step 4 happen here, before the audio starts. And then we start the worker. It's important that all of this happens in `prepare`: the ring buffers allocate their memory here, once, so the callback never has to."
 
 ---
 
@@ -310,7 +310,8 @@ while (m_running.load(std::memory_order_acquire)) {
     if (!has_block) { continue; }                                         // no sleep
 
     m_input.pop(m_model_block.data(), k_model.m_input_size);              // <- fill out
-    m_engine.process(m_model_block.data(), k_model.m_input_size);         // <- fill out
+    m_engine.process({m_model_block, m_state},                            // <- fill out
+                     {k_model.m_input_size, k_model.m_state_size});
 
     size_t pushed = 0;  // wait for room, but do not hang at stop
     while (pushed < k_model.m_input_size && m_running.load(std::memory_order_acquire)) {

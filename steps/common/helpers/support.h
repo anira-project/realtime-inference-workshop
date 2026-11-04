@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -61,9 +62,14 @@ inline int report(const float* got, const float* want, size_t num_samples) {
 // @want: what it should be, undelayed
 // @num_samples: samples in both
 // @latency: how far `want` has to be pushed back to line up
-inline int report_with_latency(const float* got, const float* want, size_t num_samples, size_t latency) {
+inline int report_with_latency(const float* got,
+                               const float* want,
+                               size_t num_samples,
+                               size_t latency) {
     if (latency >= num_samples) {
-        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n", latency, num_samples);
+        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n",
+                    latency,
+                    num_samples);
         return 1;
     }
     return report(got + latency, want, num_samples - latency);
@@ -74,10 +80,16 @@ inline int report_with_latency(const float* got, const float* want, size_t num_s
 // around them still lines up. Fails when more than a quarter were late.
 // @late: the first sample of every callback that went out as silence
 // @block_size: samples per callback
-inline int report_with_latency(const float* got, const float* want, size_t num_samples, size_t latency,
-                               const std::vector<size_t>& late, size_t block_size) {
+inline int report_with_latency(const float* got,
+                               const float* want,
+                               size_t num_samples,
+                               size_t latency,
+                               const std::vector<size_t>& late,
+                               size_t block_size) {
     if (latency >= num_samples) {
-        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n", latency, num_samples);
+        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n",
+                    latency,
+                    num_samples);
         return 1;
     }
     float worst = 0.0f;
@@ -101,4 +113,79 @@ inline int report_with_latency(const float* got, const float* want, size_t num_s
     }
     std::printf("FAILED: max abs diff %.3g, tolerance %g.\n", worst, k_tolerance);
     return 1;
+}
+
+// How far a host's output is from a reference that is `latency` samples
+// earlier: the first `latency` samples have to be silence, the rest the
+// reference. Returns the worst difference, or infinity if the start is not
+// silent. Prints nothing.
+inline float diff_with_latency(const float* got,
+                               const float* want,
+                               size_t num_samples,
+                               size_t latency) {
+    if (latency >= num_samples) { return std::numeric_limits<float>::infinity(); }
+    for (size_t i = 0; i < latency; ++i) {
+        if (got[i] != 0.0f) { return std::numeric_limits<float>::infinity(); }
+    }
+    return max_abs_diff(got + latency, want, num_samples - latency);
+}
+
+// Compares what a host heard with a reference that is `latency` samples
+// earlier, the way a listener would: silence first, then the reference. A
+// callback with zeros where the reference is not silent is a dropout, the
+// worker was late: counted, not compared. Any other difference is a wrong
+// sample. Fails on a wrong sample, or when more than a quarter of the
+// callbacks had a dropout.
+// @got: what the host heard
+// @want: the reference, undelayed
+// @num_samples: samples in both
+// @latency: how late `got` is
+// @block_size: samples per callback
+inline int report_with_dropouts(const float* got,
+                                const float* want,
+                                size_t num_samples,
+                                size_t latency,
+                                size_t block_size) {
+    if (latency >= num_samples) {
+        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n",
+                    latency,
+                    num_samples);
+        return 1;
+    }
+    float worst = 0.0f;
+    size_t wrong = 0;
+    size_t dropouts = 0;
+    const size_t callbacks = num_samples / block_size;
+    for (size_t callback = 0; callback < callbacks; ++callback) {
+        bool dropout = false;
+        for (size_t i = callback * block_size; i < (callback + 1) * block_size; ++i) {
+            const float expected = i < latency ? 0.0f : want[i - latency];
+            const float diff = std::fabs(got[i] - expected);
+            if (diff <= k_tolerance) {
+                worst = std::fmax(worst, diff);
+            } else if (got[i] == 0.0f) {
+                dropout = true;
+            } else {
+                worst = std::fmax(worst, diff);
+                ++wrong;
+            }
+        }
+        if (dropout) { ++dropouts; }
+    }
+    if (dropouts > 0) {
+        std::printf("  callbacks with a dropout     %zu of %zu\n", dropouts, callbacks);
+    }
+    if (wrong > 0) {
+        std::printf(
+            "FAILED: %zu samples are neither the reference nor silence, max abs diff %.3g.\n",
+            wrong,
+            worst);
+        return 1;
+    }
+    if (dropouts * 4 > callbacks) {
+        std::printf("FAILED: more than a quarter of the callbacks had a dropout.\n");
+        return 1;
+    }
+    std::printf("OK: max abs diff %.3g, within %g of the reference.\n", worst, k_tolerance);
+    return 0;
 }

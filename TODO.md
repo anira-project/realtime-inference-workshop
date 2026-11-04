@@ -44,3 +44,4 @@
 - look at anchor tensors for the encoder decoder example!!
 - Webcam on all plattforms!!!!!!!! Linux first!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 - Two models, two rates, one library. Wir haben 3 verschiedene Rates!
+- Outlook at inline inference when buffersize matches and budget is fine and engine is declared real-time safe..

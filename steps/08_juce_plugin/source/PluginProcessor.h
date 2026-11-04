@@ -7,6 +7,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include <atomic>
 #include <memory>
 
 #include "ExamplePlayer.h"
@@ -41,7 +42,9 @@ public:
 
     juce::AudioProcessorValueTreeState& parameters() { return m_parameters; }
     ExamplePlayer& player() { return m_player; }
-    juce::String load_error() const { return m_load_error; }
+    // What the editor shows: a model that did not load, a block size or a
+    // sample rate the processor is not built for. Message thread.
+    juce::String status() const;
 
     // Replaces an example slot with a file, with the audio thread held off
     // while the slot changes. Message thread only.
@@ -59,7 +62,11 @@ private:
     // state belongs to the signal that is running through it.
     std::vector<std::unique_ptr<OnnxEngine>> m_engines;
     std::vector<std::unique_ptr<LatencyProcessor<OnnxEngine>>> m_channels;
-    juce::String m_load_error;
+    juce::String m_status;  // Written in prepareToPlay, read by the editor
+
+    // The processor from steps 5 and 6 is built for 512-sample blocks only.
+    std::atomic<bool> m_prepared{false};     // prepareToPlay got a block size it supports
+    std::atomic<bool> m_wrong_block{false};  // processBlock was called with another size
 
     ExamplePlayer m_player;
 

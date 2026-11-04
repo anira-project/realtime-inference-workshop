@@ -21,17 +21,17 @@ Note:
 
 ## Three places the host talks to us
 
-1. **`prepareToPlay`** — load the model, size the buffers, start the threads
+1. **`prepareToPlay`** — load the model, size the buffers, start the threads, report the latency
 
 <!-- ```cpp
-setLatencySamples(static_cast<int>(processor.latency_samples()));
+setLatencySamples(static_cast<int>(LatencyProcessor<OnnxEngine>::latency_samples()));
 ``` -->
 
 2. **`processBlock`** — callback from step 6, unchanged
 
 3. **`releaseResources`** — stop the threads
 
-Everything else in the plugin is JUCE boilerplate.
+Only 512-sample buffers: any other size is silence, and the window says why.
 
 Note:
 - What did we add? Not much: the host talks to us in three places
@@ -39,11 +39,15 @@ Note:
 - `processBlock`: callback from step 6, unchanged
 - `releaseResources`: stop the threads
 - Everything else: JUCE boilerplate
+- Only 512: our prefill and latency are only right for that block size. Other sizes: silence and a message
+- Takeaway: arbitrary buffer sizes need a different design, part 2
 - One change: ONNX Runtime instead of LibTorch, statically linked: 28 MB + 126 MB model
 
 **Script:**
 
 "So what did we have to add to turn our processor into a plugin? Not much, actually. The host talks to us in three places. In `prepareToPlay` we load the model, size the buffers, start the worker threads, and tell the host our latency. `processBlock` is our callback from step 6, unchanged. And in `releaseResources` we stop the threads again. Everything else in the plugin is JUCE boilerplate.
+
+There's one limit, and it's on purpose: our prefill and our latency are only right for a buffer of 512 samples. If the host asks for anything else, the plugin stays silent and tells you why. Supporting any buffer size needs a different design, and that's what part 2 is about.
 
 One change: every step so far used LibTorch, but the plugin uses ONNX Runtime, linked statically, which is 28 MB of engine, plus the 126 MB model."
 
@@ -66,12 +70,13 @@ Note:
 - Commands are on the slide: standalone or VST3
 - Start the build now, ready during the break
 - Play with dry/wet, try your own sounds, headphones please
+- Buffer size: set your device or DAW to 512 samples, otherwise it stays silent and says so
 - Sample rate warning: model expects 44.1 kHz
 - At 48 kHz it runs but sounds different: set your device to 44.1
 
 **Script:**
 
-"If you want to try it yourself, the commands are on the slide, as a standalone app or as a VST3. Start the build now and it will be ready during the break. Play around with the dry/wet parameter and try your own sounds, with headphones please. If the plugin warns you about the sample rate, that's because the model expects 44.1 kHz. At 48 kHz it still runs, but it sounds different, so set your device to 44.1 to hear it as intended."
+"If you want to try it yourself, the commands are on the slide, as a standalone app or as a VST3. Start the build now and it will be ready during the break. Play around with the dry/wet parameter and try your own sounds, with headphones please. Set your audio device or DAW to a buffer of 512 samples, otherwise the plugin stays silent and tells you so. And if it warns you about the sample rate, that's because the model expects 44.1 kHz. At 48 kHz it still runs, but it sounds different, so set your device to 44.1 to hear it as intended."
 
 ---
 

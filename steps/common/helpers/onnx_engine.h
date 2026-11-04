@@ -65,8 +65,19 @@ public:
         }
 
         m_state.resize(m_input_shapes.size() - 1);
-        m_inputs.reserve(m_input_shapes.size());  // So process() allocates nothing of its own
         reset();
+
+        // The tensors, once: each one wraps its buffer for the engine's whole life, and
+        // process() only fills and reads those buffers. The model's outputs have the same
+        // shapes as its inputs.
+        m_audio_in.resize(elements(m_input_shapes[0]));
+        m_audio_out.resize(m_audio_in.size());
+        m_state_out.resize(m_state[0].size());
+
+        m_inputs.push_back(create_tensor(m_audio_in, m_input_shapes[0]));
+        m_inputs.push_back(create_tensor(m_state[0], m_input_shapes[1]));
+        m_outputs.push_back(create_tensor(m_audio_out, m_input_shapes[0]));
+        m_outputs.push_back(create_tensor(m_state_out, m_input_shapes[1]));
     }
 
     // Clears the state, for a new stream — what prepare() does in a plugin.
@@ -107,36 +118,33 @@ public:
         }
 
         float* samples = data[0].get().data() + start;
-        std::vector<float>& state = has_state ? data[1].get() : m_state[0];  // m_state stays all zeros
 
-        m_audio_shape[2] = static_cast<int64_t>(num_samples);
-        m_inputs.push_back(Ort::Value::CreateTensor<float>(m_memory,
-                                                           samples,
-                                                           num_samples,
-                                                           m_audio_shape.data(),
-                                                           m_audio_shape.size()));
-        m_inputs.push_back(Ort::Value::CreateTensor<float>(m_memory,
-                                                           state.data(),
-                                                           state.size(),
-                                                           m_input_shapes[1].data(),
-                                                           m_input_shapes[1].size()));
+        std::copy_n(samples, num_samples, m_audio_in.begin());
+        if (has_state) {
+            std::copy_n(data[1].get().begin(), m_state[0].size(), m_state[0].begin());
+        } else {
+            reset();
+        }
 
-        const auto outputs = m_session.Run(Ort::RunOptions{nullptr},
-                                           m_input_name_pointers.data(),
-                                           m_inputs.data(),
-                                           m_inputs.size(),
-                                           m_output_name_pointers.data(),
-                                           m_output_name_pointers.size());
+        m_session.Run(Ort::RunOptions{nullptr},
+                      m_input_name_pointers.data(),
+                      m_inputs.data(),
+                      m_inputs.size(),
+                      m_output_name_pointers.data(),
+                      m_outputs.data(),
+                      m_outputs.size());
 
-        std::copy_n(outputs[0].GetTensorData<float>(), num_samples, samples);
-
-        m_inputs.clear();  // Keeps the capacity the constructor reserved
+        std::copy_n(m_audio_out.begin(), num_samples, samples);
 
         // The new state goes back to the caller, for the next call.
-        if (has_state) { std::copy_n(outputs[1].GetTensorData<float>(), state.size(), state.begin()); }
+        if (has_state) { std::copy_n(m_state_out.begin(), m_state_out.size(), data[1].get().begin()); }
     }
 
 private:
+    Ort::Value create_tensor(std::vector<float>& buffer, const std::vector<int64_t>& shape) {
+        return Ort::Value::CreateTensor<float>(m_memory, buffer.data(), buffer.size(), shape.data(), shape.size());
+    }
+
     static size_t elements(const std::vector<int64_t>& shape) {
         size_t count = 1;
         for (const int64_t dimension : shape) { count *= static_cast<size_t>(dimension); }
@@ -152,6 +160,9 @@ private:
     std::vector<const char*> m_output_name_pointers;
     std::vector<std::vector<int64_t>> m_input_shapes;
     std::vector<std::vector<float>> m_state;
+    std::vector<float> m_audio_in;
+    std::vector<float> m_audio_out;
+    std::vector<float> m_state_out;
     std::vector<Ort::Value> m_inputs;
-    std::vector<int64_t> m_audio_shape{1, 1, 0};
+    std::vector<Ort::Value> m_outputs;
 };

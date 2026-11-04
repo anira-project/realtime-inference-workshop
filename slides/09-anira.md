@@ -21,7 +21,7 @@ Note:
   <div class="card need">{{ICON:model}}<div class="card-title">Inference</div><div class="card-text">steps 1, 2, 7 · one engine, one block size</div></div>
   <div class="card need">{{ICON:gauge}}<div class="card-title">Benchmarking</div><div class="card-text">step 3 · one benchmark, on our machine</div></div>
   <div class="card need">{{ICON:shield}}<div class="card-title">Real-time safety</div><div class="card-text">step 4 · RTSan, run once</div></div>
-  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 5, 8 · a worker per channel</div></div>
+  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 5, 8 · a worker per instance</div></div>
   <div class="card need">{{ICON:clock}}<div class="card-title">Minimal latency</div><div class="card-text">step 6 · a prefill, counted by hand</div></div>
   <div class="card need">{{ICON:flag}}<div class="card-title">Real-time guarantees</div><div class="card-text">steps 3, 6 · hoping the budget holds</div></div>
   <div class="needs-anira fragment"><span>anira</span> covers all six, for one plugin instance or many.</div>

@@ -106,7 +106,7 @@ Note:
 
 *Run the sanitizer live.*
 "If we run the LibTorch engine with the sanitizer, it stops immediately, before the model has even run. If we read the stack from the bottom up: our audio callback calls `process`, `process` calls `from_blob`, and `from_blob` calls `malloc`.
-Remember step 1? `from_blob` doesn't copy our samples. That's true. But it does create a new tensor object that describes them, for example their shape, and that object needs memory. So there is no copy, but there is still an allocation. It's only a small one, but even a small `malloc` can take too long on the audio thread."
+`from_blob` doesn't copy our samples. That's true. But it does create a new tensor object that describes them, for example their shape, and that object needs memory. So there is no copy, but there is still an allocation. It's only a small one, but even a small `malloc` can take too long on the audio thread."
 
 ---
 

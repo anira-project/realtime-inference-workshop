@@ -37,9 +37,9 @@ Note:
     <table class="budget-table factor">
       <thead><tr><th>Forward pass</th><th>÷ Threshold</th><th>= Factor</th><th></th></tr></thead>
       <tbody>
-        <tr><td>7.8 ms</td><td>46.4 ms <small>model block</small></td><td class="result">0.17</td><td class="meaning">What a CPU meter shows</td></tr>
-        <tr><td>7.8 ms</td><td>11.6 ms <small>host callback</small></td><td class="result">0.67</td><td class="meaning">Fits, on average</td></tr>
-        <tr><td>43 ms <small>a slow call</small></td><td>11.6 ms <small>host callback</small></td><td class="result over">3.7</td><td class="meaning">What you hear</td></tr>
+        <tr><td>13 ms</td><td>46.4 ms <small>model block</small></td><td class="result">0.28</td><td class="meaning">What a CPU meter shows</td></tr>
+        <tr><td>13 ms</td><td>11.6 ms <small>host callback</small></td><td class="result over">1.12</td><td class="meaning">Too long, on average</td></tr>
+        <tr><td>15.3 ms <small>a slow call</small></td><td>11.6 ms <small>host callback</small></td><td class="result over">1.32</td><td class="meaning">What you hear</td></tr>
       </tbody>
     </table>
   </div>
@@ -47,7 +47,7 @@ Note:
 
 <div class="deadline fragment" data-fragment-index="2">
   <div class="deadline-budget"><span>real-time threshold · 11.6 ms</span></div>
-  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i class="runs" style="--i:3"><span>a slow call<br>43 ms</span></i></div>
+  <div class="deadline-bars"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i class="runs" style="--i:3;height:33.5%"><span>a slow call<br>15.3 ms</span></i></div>
   <div class="deadline-axis"><span>callbacks 1–3 · only copy samples, ≈ 0 ms</span><span>callback 4 · 2048 collected, run the model</span></div>
 </div>
 
@@ -56,10 +56,10 @@ Note:
 - 512 samples at 44.1 kHz: threshold of 11.6 ms per callback
 - Model: 2048 samples = threshold of 46 ms
 - Click: real-time factor, how much of that time we use; has to stay below 1
-- Forward pass on my Mac: 7.8 ms
-- Against the model's threshold: 0.17, what a CPU meter shows
-- Against the callback's threshold: 0.67. Fits, on average, but uses two thirds of the callback
-- A slow call, 43 ms: 3.7, what you hear: a dropout
+- Forward pass on ONNX Runtime on my Mac: about 13 ms
+- Against the model's threshold: 0.28, what a CPU meter shows
+- Against the callback's threshold: 1.12. Too long, even on average
+- A slow call, 15.3 ms: 1.32, what you hear: a dropout
 - Click: 3 callbacks just copy samples, the 4th runs the whole network in 11.6 ms
 - The average doesn't decide, the worst case does: measure it
 - Linger here: key insight of the first half
@@ -70,7 +70,7 @@ Note:
 
 *Click: the real-time factor.*
 
-The real-time factor is how much of that time we use: the processing time divided by the threshold. It has to stay below 1, because above 1 we're too late. The forward pass on my Mac takes 7.8 milliseconds. Against the model's threshold that's a factor of 0.17, which is what a CPU meter shows. Against the callback's threshold it's 0.67: that fits, on average, but it takes two thirds of the callback. And not every call takes 7.8 milliseconds: a slow one of 43 milliseconds is a factor of 3.7, and that's what you hear, a dropout.
+The real-time factor is how much of that time we use: the processing time divided by the threshold. It has to stay below 1, because above 1 we're too late. The forward pass on ONNX Runtime on my Mac takes about 13 milliseconds. Against the model's threshold that's a factor of 0.28, which is what a CPU meter shows. Against the callback's threshold it's 1.12: that's too long, even on average. And not every call takes 13 milliseconds: a slow one of 15.3 milliseconds is a factor of 1.32, and that's what you hear, a dropout.
 
 *Click: the bars.*
 
@@ -103,19 +103,21 @@ Note:
 
 <div class="tag">Given</div>
 
-## What we get <span class="then">1 new library, nothing to edit.</span>
+## What we get <span class="then">A second engine, 1 new library, nothing to edit.</span>
 
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ & common/assets/</div>
-    {{FILE:model.pt}}
+    {{FILE:model_forward.onnx}}
+    {{FILE:model.pt|new}}
     {{FILE:test_signal.h}}
   </div>
   <div class="given-column">
     <div class="given-label">Helpers</div>
     <div class="given-folder">common/helpers/ & CMake</div>
-    {{FILE:libtorch_engine.h}}
+    {{FILE:onnx_engine.h}}
+    {{FILE:libtorch_engine.h|new}}
     {{FILE:Google Benchmark|new}}
   </div>
   <div class="given-column exercise">
@@ -127,11 +129,12 @@ Note:
 
 Note:
 - Google Benchmark, fetched by CMake, anira benchmarks with it too
-- Model is loaded before timing: loading isn't what we measure
+- Both engines side by side: ONNX Runtime, which we use, and LibTorch to compare it with
+- Models are loaded before timing: loading isn't what we measure
 
 **Script:**
 
-"For this we will use Google Benchmark, fetched by CMake. It's what anira benchmarks with too. The model is loaded before timing, because loading isn't what we want to measure."
+"For this we will use Google Benchmark, fetched by CMake. It's what anira benchmarks with too. We measure two engines side by side: ONNX Runtime, which we've been using, and LibTorch, to compare it with. The models are loaded before timing, because loading isn't what we want to measure."
 
 ---
 
@@ -140,16 +143,17 @@ Note:
 ## Google Benchmark <span class="then">Only the loop is timed.</span>
 
 ```cpp
-void forward_pass(benchmark::State& state) {
+void forward_pass_onnx(benchmark::State& state) {
     for (auto _ : state) {                            // only this is timed
-        engine().process(block.data(), block_size);
+        onnx().process(buffers, sizes);
         benchmark::DoNotOptimize(block.data());
     }
 }
 
-BENCHMARK(forward_pass)
+BENCHMARK(forward_pass_onnx)
     ->Iterations(1)      // one call per repetition, otherwise an average
     ->Repetitions(200);  // 200 single calls
+// forward_pass_libtorch: the same, with LibTorchEngine
 ```
 
 Note:
@@ -181,14 +185,14 @@ cmake --build --preset release --target step04_solution
 Note:
 - Nothing to edit: build it and run it
 - Look at the first calls, then at the list of the 5 slowest
-- The last lines: your worst case after the warm-up. Write it down, steps 6 and 7 need it
+- The last lines: your worst case on ONNX Runtime after the warm-up. Write it down, steps 6 and 7 need it
 - Run it three times
 - 2 minutes
 
 **Script:**
 
 *Timebox.*
-"So, there's nothing to edit here. Please build it and run it. Have a look at which calls are slow, and at the list of the 5 slowest calls. The last lines print your worst call after the warm-up: please write that number down, you'll need it in steps 6 and 7. Then run it three times and see what changes. You have 2 minutes."
+"So, there's nothing to edit here. Please build it and run it. Have a look at which calls are slow, and at the list of the 5 slowest calls. The last lines print your worst ONNX Runtime call after the warm-up: please write that number down, you'll need it in steps 6 and 7. Then run it three times and see what changes. You have 2 minutes."
 
 ---
 
@@ -197,18 +201,20 @@ Note:
 ## What it prints
 
 ```text
-The first 10 of 200 calls:
-  call  1  ########################################  88.23 ms
-  call  2  #################                         37.32 ms
-  call  3  ####                                       7.88 ms
+ONNX Runtime, the first 10 of 200 calls:
+  call  1  ########################################  18.97 ms
+  call  2  ############################              13.24 ms
+  ...
+LibTorch, the first 10 of 200 calls:
+  call  1  ########################################  79.62 ms
+  call  2  ###################                       38.42 ms
+  call  3  ####                                       7.84 ms
   ...
 
-The 5 slowest calls:
-  call   1   88.23 ms
-  call   2   37.32 ms
-  call  40   11.06 ms
-  call 138   11.06 ms
-  call 164   10.11 ms
+The two engines, after the warm-up:
+               fastest   slowest
+  ONNX Runtime  12.77 ms  15.30 ms
+  LibTorch       7.45 ms  22.65 ms
 ```
 
 Note:
@@ -220,46 +226,101 @@ Note:
 **Script:**
 
 *Run it live.*
-"Let's run it together. Here's the table from Google Benchmark, and below it the first 10 calls. Look at the first two: they're much slower than the rest. And in the list of the 5 slowest calls, the first entries are those same calls. Let's run it again and see what stays the same."
+"Let's run it together. Here's the table from Google Benchmark, and below it the first 10 calls. Look at the first calls: they're slower than the rest, and much slower on LibTorch. And in the list of the 5 slowest calls, you'll find those same calls. Let's run it again and see what stays the same."
 
 ---
 
 <div class="tag">Result</div>
 
-## The first calls are a warm-up<br><span class="then">After that it is flat.</span>
+## ONNX Runtime<br><span class="then">One slower call, then flat, above the callback.</span>
 
 <div class="warmup">
-  <div class="warmup-line model fragment" data-fragment-index="1" style="--at:0.663"><span>model block<br>46.4 ms</span></div>
-  <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.166"><span>512-sample callback<br>11.6 ms</span></div>
-  <div class="warmup-bars"><i class="warm" style="--h:85.8%;--i:0"><span>60.1 ms</span><em>1</em></i><i class="warm" style="--h:53.4%;--i:1"><span>37.4 ms</span><em>2</em></i><i class="" style="--h:11.1%;--i:2"><span>7.8 ms</span><em>3</em></i><i class="" style="--h:11.1%;--i:3"><span>7.8 ms</span><em>4</em></i><i class="" style="--h:11.1%;--i:4"><span>7.8 ms</span><em>5</em></i><i class="" style="--h:11.2%;--i:5"><span>7.8 ms</span><em>6</em></i><i class="" style="--h:11.1%;--i:6"><span>7.8 ms</span><em>7</em></i><i class="" style="--h:11.1%;--i:7"><span>7.7 ms</span><em>8</em></i><i class="" style="--h:11.1%;--i:8"><span>7.8 ms</span><em>9</em></i><i class="" style="--h:11.2%;--i:9"><span>7.8 ms</span><em>10</em></i></div>
-  <div class="warmup-note fragment" data-fragment-index="0">worst after warm-up: 8.5 ms</div>
+  <div class="warmup-line model fragment" data-fragment-index="1" style="--at:0.516"><span>model block<br>46.4 ms</span></div>
+  <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.129"><span>512-sample callback<br>11.6 ms</span></div>
+  <div class="warmup-bars"><i class="warm" style="--h:21.1%;--i:0"><span>19.0 ms</span><em>1</em></i><i class="" style="--h:14.7%;--i:1"><span>13.2 ms</span><em>2</em></i><i class="" style="--h:14.3%;--i:2"><span>12.9 ms</span><em>3</em></i><i class="" style="--h:14.5%;--i:3"><span>13.0 ms</span><em>4</em></i><i class="" style="--h:14.3%;--i:4"><span>12.8 ms</span><em>5</em></i><i class="" style="--h:14.5%;--i:5"><span>13.1 ms</span><em>6</em></i><i class="" style="--h:16.1%;--i:6"><span>14.5 ms</span><em>7</em></i><i class="" style="--h:17.0%;--i:7"><span>15.3 ms</span><em>8</em></i><i class="" style="--h:15.4%;--i:8"><span>13.9 ms</span><em>9</em></i><i class="" style="--h:15.4%;--i:9"><span>13.9 ms</span><em>10</em></i></div>
+  <div class="warmup-note fragment" data-fragment-index="0" style="top:40%;bottom:auto">worst after warm-up: 15.3 ms</div>
   <div class="warmup-axis">call</div>
 </div>
 
 Note:
-- One run on my Mac: the first 10 of 200 calls
-- First call 60 ms, second 37 ms: TorchScript optimises the model while it runs it
-- It's the first calls every time, not random
-- Click: from the third call on it's flat, about 7.8 ms
-- Worst after warm-up, over all the calls: 8.5 ms, factor 0.18 against a model block, 0.73 against a callback
+- One run on my Mac: the first 10 of 200 calls, on ONNX Runtime
+- First call 19 ms, then about 13 ms
+- Click: worst after warm-up, over all the calls: 15.3 ms, factor 0.33 against a model block, 1.32 against a callback
 - The last lines of your output: the worst call after the warm-up
 - Click: the two thresholds
-- First call doesn't fit the 46 ms of a model block; second just about does
-- Both are far above the 11.6 ms of a callback
-- Warmed up: below 11.6 ms, but with little room
+- It fits the 46 ms of a model block easily
+- It doesn't fit the 11.6 ms of a callback, not even a typical call
 - Linger here
 
 **Script:**
 
-"This is one run on my Mac, the first 10 calls. The first call takes 60 milliseconds, the second 37. And that's not random: you should see the same on your machine, every time you run it. TorchScript optimises the model while it runs it, so the first calls are a warm-up.
+"This is one run on my Mac, the first 10 calls on ONNX Runtime. The first call takes 19 milliseconds, and after that it's about 13.
 
 *Click: warmed up.*
 
-From the third call on it's flat, at about 7.8 milliseconds. Now look at the last lines in your terminal: that's your worst case after the warm-up. In this run, over all the calls, mine was 8.5 milliseconds. That's a factor of 0.18 against a model block and 0.73 against a 512-sample callback.
+Now look at the last lines in your terminal: that's your worst case after the warm-up. In this run, over all the calls, mine was 15.3 milliseconds. That's a factor of 0.33 against a model block and 1.32 against a 512-sample callback.
 
 *Click: the thresholds.*
 
-Now let's add our two thresholds. The very first call doesn't even fit the 46 milliseconds of a model block, and both warm-up calls are far above the 11.6 milliseconds of a callback. Once it's warmed up, it fits below the callback's threshold, but with not much room to spare."
+Now let's add our two thresholds. It fits easily into the 46 milliseconds of a model block. But it doesn't fit into the 11.6 milliseconds of a callback, not even a typical call."
+
+---
+
+<div class="tag">Result</div>
+
+## LibTorch<br><span class="then">A long warm-up, then faster.</span>
+
+<div class="warmup">
+  <div class="warmup-line model fragment" data-fragment-index="1" style="--at:0.516"><span>model block<br>46.4 ms</span></div>
+  <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.129"><span>512-sample callback<br>11.6 ms</span></div>
+  <div class="warmup-bars"><i class="warm" style="--h:88.5%;--i:0"><span>79.6 ms</span><em>1</em></i><i class="warm" style="--h:42.7%;--i:1"><span>38.4 ms</span><em>2</em></i><i class="" style="--h:8.7%;--i:2"><span>7.8 ms</span><em>3</em></i><i class="" style="--h:8.7%;--i:3"><span>7.9 ms</span><em>4</em></i><i class="" style="--h:9.2%;--i:4"><span>8.3 ms</span><em>5</em></i><i class="" style="--h:9.1%;--i:5"><span>8.2 ms</span><em>6</em></i><i class="" style="--h:8.4%;--i:6"><span>7.6 ms</span><em>7</em></i><i class="" style="--h:8.5%;--i:7"><span>7.6 ms</span><em>8</em></i><i class="" style="--h:8.5%;--i:8"><span>7.6 ms</span><em>9</em></i><i class="" style="--h:8.3%;--i:9"><span>7.5 ms</span><em>10</em></i></div>
+  <div class="warmup-note fragment" data-fragment-index="0">worst after warm-up: 22.7 ms</div>
+  <div class="warmup-axis">call</div>
+</div>
+
+Note:
+- The same run, the same scale, on LibTorch
+- First call 80 ms, second 38 ms: TorchScript optimises the model while it runs it
+- It's the first calls every time, not random
+- Click: from the third call on about 7.7 ms, faster than ONNX Runtime
+- Worst after warm-up in this run: 22.7 ms. That number changes from run to run, on both engines
+- Click: the two thresholds: a typical call fits the callback, with little room
+
+**Script:**
+
+"And here's the same run on LibTorch, on the same scale. The first call takes 80 milliseconds, the second 38. And that's not random: you should see the same on your machine, every time you run it. TorchScript optimises the model while it runs it, so the first calls are a warm-up.
+
+*Click: warmed up.*
+
+From the third call on it's about 7.7 milliseconds, so warmed up it's faster than ONNX Runtime here. But in this run its slowest call was 22.7 milliseconds, and on both engines that number changes from run to run.
+
+*Click: the thresholds.*
+
+The very first call doesn't even fit a model block. A typical call does fit the callback, but with not much room to spare."
+
+---
+
+<div class="tag">Result</div>
+
+## The two engines<br><span class="then">One run, 200 calls each.</span>
+
+| | first call | second call | typical | slowest after warm-up |
+|---|---|---|---|---|
+| ONNX Runtime | 19.0 ms | 13.2 ms | 13 ms | 15.3 ms |
+| LibTorch | 79.6 ms | 38.4 ms | 7.7 ms | 22.7 ms |
+
+Neither may run in a 512-sample callback. **From here on: your ONNX Runtime number.**
+
+Note:
+- Same model, same machine, very different shape
+- ONNX Runtime: short warm-up, slower typical call
+- LibTorch: long warm-up, faster typical call
+- The slowest call changes from run to run on both, and gets much worse when the machine is busy: run it again and compare
+- We continue with ONNX Runtime, so that's the number you write down
+
+**Script:**
+
+"Side by side: it's the same model on the same machine, but the shape is very different. ONNX Runtime has a short warm-up and a slower typical call. LibTorch has a long warm-up and a faster typical call. The slowest call changes from run to run on both engines, and it gets much worse when the machine is busy. These numbers are from a single run, so run it again and compare. We continue with ONNX Runtime, so that's the number you write down."
 
 ---
 
@@ -268,21 +329,21 @@ Now let's add our two thresholds. The very first call doesn't even fit the 46 mi
 ## Your worst case<br><span class="then">In samples, in whole callbacks.</span>
 
 <div class="lat-sum" style="margin-bottom: 4rem">
-  <div class="lat-part">max inference time<small>after the warm-up</small><strong>8.5 ms</strong></div>
+  <div class="lat-part">max inference time<small>after the warm-up</small><strong>15.3 ms</strong></div>
   <div class="lat-plus">=</div>
-  <div class="lat-part fragment" data-fragment-index="1">in samples<small>× 44.1 kHz</small><strong>375</strong></div>
+  <div class="lat-part fragment" data-fragment-index="1">in samples<small>× 44.1 kHz</small><strong>675</strong></div>
   <div class="lat-plus fragment" data-fragment-index="2">→</div>
-  <div class="lat-part total fragment" data-fragment-index="2">rounded_max_inference_time<small>whole 512-sample callbacks</small><strong>512</strong></div>
+  <div class="lat-part total fragment" data-fragment-index="2">rounded_max_inference_time<small>whole 512-sample callbacks</small><strong>1024</strong></div>
 </div>
 
 ```cpp
-constexpr double k_max_inference_ms = 8.5;  // steps 6 and 7: your number from here
+constexpr double k_max_inference_ms = 15.3;  // steps 6 and 7: your number from here
 ```
 
 Note:
 - Your worst call after the warm-up, from the last lines of the output
-- Click: in samples, at 44.1 kHz: 8.5 ms are 375 samples
-- Click: rounded up to whole 512-sample callbacks: 512
+- Click: in samples, at 44.1 kHz: 15.3 ms are 675 samples
+- Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
 - Whole callbacks, because the audio thread only picks results up once per callback
 - That's how much time the worker gets in step 6, and part of the latency in step 7
 - Everyone has their own number: write it down
@@ -290,15 +351,15 @@ Note:
 
 **Script:**
 
-"Let's turn your worst case into the number we'll need. Mine was 8.5 milliseconds after the warm-up.
+"Let's turn your worst case into the number we'll need. Mine was 15.3 milliseconds after the warm-up.
 
 *Click.*
 
-In samples that's 8.5 milliseconds times 44.1 kilohertz: 375 samples.
+In samples that's 15.3 milliseconds times 44.1 kilohertz: 675 samples.
 
 *Click.*
 
-And we round that up to whole callbacks of 512 samples, so 512. Whole callbacks, because the audio thread only picks results up once per callback. We call that the rounded max inference time. In step 6 it's the time the worker gets, and in step 7 it becomes part of our latency. Everyone has their own number here, so please write yours down. And because we measured after the warm-up, our plugin will have to warm up before the audio starts."
+And we round that up to whole callbacks of 512 samples, so 1024: two callbacks. Whole callbacks, because the audio thread only picks results up once per callback. We call that the rounded max inference time. In step 6 it's the time the worker gets, and in step 7 it becomes part of our latency. Everyone has their own number here, so please write yours down. And because we measured after the warm-up, our plugin will have to warm up before the audio starts."
 
 ---
 
@@ -315,8 +376,8 @@ And we round that up to whole callbacks of 512 samples, so 512. Whole callbacks,
 
 Note:
 - A plugin makes the first calls before the audio starts
-- Warmed up: about 8 ms, it fits a 46 ms block easily, and a 11.6 ms callback just about
-- Run it again: sometimes a call after the warm-up is slow too, one of my runs had 43 ms, factor 0.93 against a block, 3.7 against a callback
+- Warmed up: about 13 ms, it fits a 46 ms block easily, but not a 11.6 ms callback
+- Run it again: sometimes a call after the warm-up is slow too, one LibTorch run of mine had 43 ms, factor 0.93 against a block, 3.7 against a callback
 - That one isn't warm-up: the worst case has to fit with room to spare
 - In the callback it doesn't: the next steps take the model out of it
 - Mean: your CPU meter
@@ -326,5 +387,5 @@ Note:
 
 **Script:**
 
-"So what does this tell us? A plugin has to make those first calls before the audio starts. Once it's warmed up, our computer is fast enough for a model block, and just about for a 512-sample callback.
-If you ran it a few times, you may have seen something else: sometimes a call after the warm-up is slow too. One of my runs had 43 milliseconds, which is nearly the whole model block, and almost four callbacks. That isn't warm-up, it's the rest of the system getting in the way, so the worst case has to fit with room to spare. Inside the callback it doesn't, and that's what the next steps solve. The mean is your CPU meter. p99 means one call in a hundred is slower than this, and at this block size that is about every 4.6 seconds. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in the next step."
+"So what does this tell us? A plugin has to make those first calls before the audio starts. Once it's warmed up, our computer is fast enough for a model block, but not for a 512-sample callback.
+If you ran it a few times, you may have seen something else: sometimes a call after the warm-up is slow too. One of my LibTorch runs had 43 milliseconds, which is nearly the whole model block, and almost four callbacks. That isn't warm-up, it's the rest of the system getting in the way, so the worst case has to fit with room to spare. Inside the callback it doesn't, and that's what the next steps solve. The mean is your CPU meter. p99 means one call in a hundred is slower than this, and at this block size that is about every 4.6 seconds. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in the next step."

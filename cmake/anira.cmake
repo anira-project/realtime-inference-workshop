@@ -5,7 +5,7 @@
 #   workshop_setup_anira()   -> target anira::anira
 #
 # anira links the static ONNX Runtime of backends.cmake, the one the plugin
-# links; the LibTorch of steps 1 to 7 is not involved.
+# links; the LibTorch of steps 4 and 5 is not involved.
 
 include_guard(GLOBAL)
 include(FetchContent)

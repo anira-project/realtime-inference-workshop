@@ -1,15 +1,11 @@
-# Same build as step 1, plus the ring buffer and the fake host from common/.
+# Same build as step 1, plus the ring buffer from common/.
+workshop_setup_onnxruntime()
 
-# Exercise
-add_executable(step03_exercise exercise/main.cpp)
-target_include_directories(step03_exercise PRIVATE "${CMAKE_SOURCE_DIR}/steps" "${CMAKE_CURRENT_LIST_DIR}" ${TORCH_INCLUDE_DIRS})
-target_compile_definitions(step03_exercise PRIVATE WORKSHOP_MODEL_PATH="${WORKSHOP_MODEL}")
-target_link_libraries(step03_exercise PRIVATE "${TORCH_LIBRARIES}")
-workshop_copy_libtorch_runtime(step03_exercise)
-
-# Solution
-add_executable(step03_solution solution/main.cpp)
-target_include_directories(step03_solution PRIVATE "${CMAKE_SOURCE_DIR}/steps" "${CMAKE_CURRENT_LIST_DIR}" ${TORCH_INCLUDE_DIRS})
-target_compile_definitions(step03_solution PRIVATE WORKSHOP_MODEL_PATH="${WORKSHOP_MODEL}")
-target_link_libraries(step03_solution PRIVATE "${TORCH_LIBRARIES}")
-workshop_copy_libtorch_runtime(step03_solution)
+foreach(variant exercise solution)
+    set(target step03_${variant})
+    add_executable(${target} ${variant}/main.cpp)
+    target_include_directories(${target} PRIVATE "${CMAKE_SOURCE_DIR}/steps")
+    target_compile_definitions(${target} PRIVATE WORKSHOP_ONNX_MODEL_PATH="${WORKSHOP_ONNX_MODEL}")
+    target_link_libraries(${target} PRIVATE workshop::onnxruntime)
+    workshop_copy_onnxruntime_runtime(${target})
+endforeach()

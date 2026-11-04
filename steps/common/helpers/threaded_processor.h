@@ -31,8 +31,7 @@ constexpr struct {
 constexpr size_t k_host_block_size = 512;
 
 // Your worst case after the warm-up, from the last lines of step 4, in ms.
-// Step 4 measured LibTorch; the plugin runs ONNX Runtime, which is usually no slower.
-constexpr double k_max_inference_ms = 8.2;
+constexpr double k_max_inference_ms = 15.3;
 
 // The first calls are slow (step 4): made before the audio starts.
 constexpr size_t k_warm_up_calls = 2;

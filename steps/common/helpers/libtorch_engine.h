@@ -1,8 +1,6 @@
-// The LibTorch engine, for the steps still on it, given complete.
+// The LibTorch engine, for the comparisons in steps 4 and 5, given complete.
 //
-// Goal: LibTorch behind three methods — load_model, reset, process. Later steps
-//       keep this interface and change who calls process(), and from which
-//       thread.
+// Goal: LibTorch behind three methods — load_model, reset, process.
 #pragma once
 
 #include <torch/script.h>

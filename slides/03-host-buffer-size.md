@@ -102,14 +102,14 @@ Note:
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ & common/assets/</div>
-    {{FILE:model.pt}}
+    {{FILE:model_forward.onnx}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
   </div>
   <div class="given-column">
     <div class="given-label">Helpers</div>
     <div class="given-folder">common/helpers/</div>
-    {{FILE:libtorch_engine.h}}
+    {{FILE:onnx_engine.h}}
     {{FILE:ring_buffer.h|new}}
   </div>
   <div class="given-column exercise">
@@ -275,7 +275,8 @@ const bool has_block = m_input.available() >= k_model.m_input_size; // <- 2. fil
 
 if (has_block) {
     m_input.pop(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
-    m_engine.process(m_model_block.data(), k_model.m_input_size);
+    m_engine.process({m_model_block, m_state},
+                     {k_model.m_input_size, k_model.m_state_size});
     m_output.push(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
 }
 ```

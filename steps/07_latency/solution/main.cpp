@@ -14,22 +14,22 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
-#include <stdexcept>
 #include <thread>
 #include <vector>
 
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/helpers/host.h"
-#include "common/helpers/libtorch_engine.h"
+#include "common/helpers/onnx_engine.h"
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/support.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
 
 // Model settings taken from the export metadata.
 constexpr struct {
-    const char* m_path = WORKSHOP_MODEL_PATH;
+    const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
+    size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
     size_t m_latency = 2224;  // The model's own delay: how much later its output answers its input
 } k_model{};
@@ -37,7 +37,7 @@ constexpr struct {
 constexpr size_t k_host_block_size = 512;  // What the host hands over per callback
 
 // Your worst case after the warm-up, from the last lines of step 4, in ms.
-constexpr double k_max_inference_ms = 8.2;  // <- solution
+constexpr double k_max_inference_ms = 15.3;  // <- solution
 
 // The first calls are slow (step 4): made before the audio starts.
 constexpr size_t k_warm_up_calls = 2;
@@ -61,7 +61,7 @@ size_t rounded_max_inference_time() {
 // Step 6's processor, with a dry path and a mix control.
 class LatencyProcessor {
 public:
-    explicit LatencyProcessor(LibTorchEngine& engine) : m_engine(engine) {}
+    explicit LatencyProcessor(OnnxEngine& engine) : m_engine(engine) {}
 
     ~LatencyProcessor() { stop(); }
 
@@ -114,10 +114,11 @@ public:
 
         // Step 6: the warm-up, before the audio starts.
         m_model_block.assign(k_model.m_input_size, 0.0f);
+        m_state.assign(k_model.m_state_size, 0.0f);
         for (size_t i = 0; i < k_warm_up_calls; ++i) {
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_engine.process({m_model_block, m_state}, {k_model.m_input_size, k_model.m_state_size});
         }
-        m_engine.reset();
+        std::fill(m_state.begin(), m_state.end(), 0.0f);  // The warm-up is not part of the stream
 
         m_unpushed = 0;
         m_debt = 0;
@@ -185,7 +186,7 @@ private:
             if (m_input.available() < k_model.m_input_size) { continue; }
 
             m_input.pop(m_model_block.data(), k_model.m_input_size);
-            m_engine.process(m_model_block.data(), k_model.m_input_size);
+            m_engine.process({m_model_block, m_state}, {k_model.m_input_size, k_model.m_state_size});
 
             size_t pushed = 0;
             while (pushed < k_model.m_input_size && m_running.load(std::memory_order_acquire)) {
@@ -194,11 +195,12 @@ private:
         }
     }
 
-    LibTorchEngine& m_engine;
+    OnnxEngine& m_engine;
     ThreadSafeRingBuffer m_input{0};   // Written by the audio thread, read by the worker
     ThreadSafeRingBuffer m_output{0};  // Written by the worker, read by the audio thread
     RingBuffer m_dry{0};               // The audio thread's own
     std::vector<float> m_model_block;  // The worker's block, sized in prepare()
+    std::vector<float> m_state;        // The worker's state, sized in prepare()
     std::thread m_worker;
     std::atomic<bool> m_running{false};
     std::vector<float> m_dry_block;  // Scratch, sized in prepare()
@@ -234,13 +236,7 @@ bool silent(const std::vector<float>& signal) {
 }  // namespace
 
 int main() {
-    LibTorchEngine engine;
-    try {
-        engine.load_model(k_model.m_path);
-    } catch (const std::runtime_error& error) {
-        std::fprintf(stderr, "%s\n", error.what());
-        return 2;
-    }
+    OnnxEngine engine(k_model.m_path);
 
     if (k_max_inference_ms <= 0.0) {
         std::printf("TODO 1: put your worst case from step 4 into k_max_inference_ms.\n");

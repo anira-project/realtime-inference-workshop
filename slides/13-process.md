@@ -212,7 +212,7 @@ Note:
 
 Note:
 - Between enqueue and dequeue, the audio thread may wait: wait_ratio says how long.
-- process itself never waits; only its waiting twin, anira_handler_process_wait, does, and only up to wait_ratio of a block.
+- process itself never waits; only its waiting twin, process_wait, does, and only up to wait_ratio of a block.
 - Why wait at all: if the model is fast, a short wait gets the result out in the same callback, one block earlier.
 - This is the same pipeline with a fast model: a window of two blocks, and one run takes about a third of a block; simplified, not to scale.
 - With wait_ratio 0, the default, the audio thread goes straight from the enqueue to the dequeue.
@@ -318,7 +318,7 @@ Note:
 ## What a missed block delivers<br><span class="then">is the contract's choice.</span>
 
 ```json
-{ "hard": { "budget": { "ms": 8.2 }, "warmup": { "fixed": 3 }, "on_miss": "bypass" } }
+{ "hard": { "budget": "measured", "warmup": "until_stable", "on_miss": "bypass" } }
 ```
 
 <div class="statement-points">

@@ -7,8 +7,8 @@
 ## What you have
 
 - `models/model_forward.onnx` — the model as in step 4: audio plus a state tensor in, audio plus the new state out.
-- [`exercise/model.json`](exercise/model.json) — the model file, with gaps: the tensors are named, their shapes and roles are the task.
-- [`exercise/contract.json`](exercise/contract.json) — how it runs: a budget of 8.2 ms per inference (the number from step 3), three warm-up runs, zeros on a miss. Complete.
+- [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named, their roles and windows given. Every `"TODO 1"` and `"TODO 2"` is a blank: replace it with the value.
+- [`exercise/contract.json`](exercise/contract.json) — how it runs: a budget of 20 ms per inference, with headroom (anira will measure it at prepare, `"budget": "measured"`, from the next alpha on; this pre-release needs a number), three warm-up runs, zeros on a miss. Complete.
 - [`common/helpers/host.h`](../common/helpers/host.h) — the fake host from step 5, pacing its callbacks.
 - [`common/helpers/support.h`](../common/helpers/support.h) — `report_with_latency`: the step 6 comparison, with the late callbacks left out.
 - anira, fetched and built by CMake ([`cmake/anira.cmake`](../../cmake/anira.cmake)), with ONNX Runtime built in. The first configure clones it and builds it once; a couple of minutes.
@@ -17,9 +17,12 @@
 
 Open [`exercise/model.json`](exercise/model.json) and [`exercise/main.cpp`](exercise/main.cpp).
 
-1. **Declare the tensors** (`model.json`). Every tensor needs its `axes` — `[["batch", 1], ["channel", 1], ["time", 2048]]` for the audio, `[["batch", 1], ["any", 63488]]` for the state — and the streamed ones their `window`. The output carries the model's own delay: `"latency": 2224`.
+1. **Declare the tensors** (`model.json`). The sizes: `"time"` of the audio in and out is the model's block, 2048 (step 1). The state's length, 63488 floats, is given. The audio output carries the model's own delay: `"latency": 2224` (step 6).
 2. **Pair the state** (`model.json`). `state_in` is fed from `state_out`: `"state_source": "state_out"`. That is the whole state loop from step 4.
-3. **Prepare and process** (`main.cpp`). Load the two files, give the contract the host's blocks, create the handler over a pipeline with one inference stage, prepare, read the latency. The audio callback is written: one tensor over the block, one call.
+3. **Prepare and process** (`main.cpp`). Loading, the pipeline, the handler and prepare are given, all from `anira.hpp`; three blanks, marked `fill out`:
+   1. `contract.hard_host_blocks(…)`: the host's block size, twice (smallest and largest), and its sample rate, from `k_host`.
+   2. `latency`: `handler.get_latency` of output slot 0.
+   3. In the audio callback, `handler.process` over the block: in place, so the block is both input and output.
 
 Build and run from the repository root:
 
@@ -31,29 +34,35 @@ cmake --build --preset release --target step09_exercise
 ## Expected output
 
 ```
-Reported latency: 4272 samples (96.9 ms at 44100 Hz)
+Reported latency: 6320 samples (143.3 ms at 44100 Hz)
 
-OK: max abs diff 3.87e-07, within 0.0001 of the reference.
+OK: max abs diff 2.79e-07, within 0.0001 of the reference.
 ```
 
-4272 is 1536 (block adaptation, 2048 − gcd(512, 2048)) + 512 (one host block for the 8.2 ms inference) + 2224 (the model). Step 6 reported 6320 for the same guarantee: the second whole block we gave the worker was more than the budget needed.
+6320 is the figure of step 6: a budget of 20 ms is more than one host block of 11.6 ms. A budget that fits in one host block gives 4272: 1536 (block adaptation, 2048 − gcd(512, 2048)) + 512 (one host block for the inference) + 2224 (the model).
 
 The check is step 6's: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. A callback whose block was not back in time went out as zeros (`ANIRA_MISSED`); those are listed and left out, and more than a quarter of them fails the run. On a busy machine a few are normal.
 
 ## If you're stuck
 
-- **`TODO 3: create and prepare the handler first.`** — `handler.m_handle` is still null.
-- **`prepare: ... 'audio' ... axes`** or a similar refusal naming a tensor — TODO 1: prepare checks every spec against the file and says which one does not fit.
+- **`inputs[0].axes[2][1]: an extent is a positive integer or "dynamic"`** — TODO 1: a size is still `"TODO 1"`. The path names it: `inputs[0]` is `audio`, `inputs[1]` is `state_in`, `outputs[…]` the same for the outputs.
+- **`prepare: ... 'audio' ... axes`** or a similar refusal naming a tensor — TODO 1: a size is filled but wrong; prepare checks every spec against the file and says which one does not fit.
 - **`create: configuration error: tensor 'state_in': a State input needs a state_source`** — TODO 2: a state input nobody feeds is refused by name, at create.
+- **`prepare: configuration error: contract: Hard host blocks missing`** — TODO 3.1: the contract does not know the host's blocks yet.
+- **`TODO 3: read the latency of output slot 0`** — TODO 3.2.
+- **`outputs[0].latency: an integer is required, got "TODO 1"`** — TODO 1: the latency of `audio_out`.
+- **`state_source 'TODO 2' names no output tensor`** — TODO 2.
+- **`TODO 1: audio_out declares no latency`** — `"latency"` in `model.json` is 0.
+- **`TODO 3: the output is the input`** — TODO 3.3: the block goes out untouched; nothing processed it.
 - **`FAILED: max abs diff 0.158`** with the latency reported — the state is not carried: block 0 matches, every block after it does not. Same failure as a fresh engine per block in step 1. Check `state_source`.
-- **`prepare: not supported in this build: contract: a MEASURED budget ...`** — this anira build needs an explicit budget; keep `{"ms": 8.2}`.
-- **Many late callbacks** — the machine is busy, or 8.2 ms is below its worst case. Raise the budget; the latency grows by a host block per 11.6 ms.
+- **`prepare: not supported in this build: contract: a MEASURED budget ...`** — this anira build needs an explicit budget; keep `{"ms": 20}`.
+- **Many late callbacks** — the machine is busy, or 20 ms is below its worst case. Raise the budget; the latency grows with it.
 
 Compare with [`solution/`](solution/) when you want to.
 
 ## Slides
 
-[`slides/14-anira-inference.md`](../../slides/14-anira-inference.md).
+[`slides/15-anira-inference.md`](../../slides/15-anira-inference.md).
 
 ## What's next
 

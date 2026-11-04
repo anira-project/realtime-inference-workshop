@@ -122,30 +122,32 @@ Note:
 ```cpp
 // constructor
 m_session = Ort::Session(m_env, model_path.c_str(), options);
+m_inputs.push_back(create_tensor(m_audio_in, m_input_shapes[0]));
+m_outputs.push_back(create_tensor(m_audio_out, m_input_shapes[0]));
 
 // process()
-m_inputs.push_back(Ort::Value::CreateTensor<float>(m_memory, samples, ...));
-m_inputs.push_back(Ort::Value::CreateTensor<float>(m_memory, state.data(), ...));
+std::copy_n(samples, num_samples, m_audio_in.begin());
 
-const auto outputs = m_session.Run(Ort::RunOptions{nullptr}, ..., m_inputs.data(), ...);
+m_session.Run(Ort::RunOptions{nullptr}, ..., m_inputs.data(), ..., m_outputs.data(), ...);
 
-std::copy_n(outputs[0].GetTensorData<float>(), num_samples, samples);
+std::copy_n(m_audio_out.begin(), num_samples, samples);
 ```
 
 Note:
 - `Ort::Session`: structure + weights, no rebuilding in C++
 - 126 MB, so load once and keep the engine
-- `CreateTensor`: wraps our buffer, no copy. Shape: 1 batch, 1 channel, N samples
-- `Run`: runs the block
-- Copy the result back: in place, like an audio callback
+- Tensors created once, each wrapping a buffer of the engine. Shape: 1 batch, 1 channel, N samples
+- Every block: copy in, `Run`, copy out
+- `Run` writes into the output tensors we already have
+- From the outside still in place, like an audio callback
 
 **Script:**
 
 "Let's take a quick look inside the engine. The constructor creates an ONNX Runtime session. That file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++. Loading it takes a moment, it's 126 megabytes, so we do it once and keep the engine around.
 
-Then for every block: CreateTensor wraps a tensor around our buffer, without copying anything. The shape is one batch, one channel, and our number of samples. You can see there is a second tensor too, we will get to that in step 1b.
+The constructor also creates the tensors, once. Each one wraps a buffer owned by the engine. The audio shape is one batch, one channel, and our number of samples. There is a second pair of tensors too, not shown here, and we will get to that in step 1b.
 
-Run then runs the model on that block. And finally we copy the result back into our buffer, so it's processed in place, just like an audio callback."
+Then for every block we copy the samples into the input buffer and call Run, which writes into the output tensors we already have. And finally we copy the result back into our buffer, so from the outside it's processed in place, just like an audio callback."
 
 ---
 

@@ -131,11 +131,11 @@ inline float diff_with_latency(const float* got,
 }
 
 // Compares what a host heard with a reference that is `latency` samples
-// earlier, the way a listener would: silence first, then the reference. A
-// callback with zeros where the reference is not silent is a dropout, the
-// worker was late: counted, not compared. Any other difference is a wrong
-// sample. Fails on a wrong sample, or when more than a quarter of the
-// callbacks had a dropout.
+// earlier, the way a listener would: silence first, then the reference. Zeros
+// are the processor's own silence and are not compared; a callback with zeros
+// where the reference is not silent had a dropout, the worker was late. Every
+// other sample has to be the reference. Fails on a wrong sample, or when more
+// than a quarter of the callbacks had a dropout.
 // @got: what the host heard
 // @want: the reference, undelayed
 // @num_samples: samples in both
@@ -157,18 +157,22 @@ inline int report_with_dropouts(const float* got,
     size_t dropouts = 0;
     const size_t callbacks = num_samples / block_size;
     for (size_t callback = 0; callback < callbacks; ++callback) {
+        const size_t begin = callback * block_size;
+        const size_t end = begin + block_size;
+        auto expected = [&](size_t i) { return i < latency ? 0.0f : want[i - latency]; };
+
+        // Zeros are silence the processor wrote, never a model sample: the
+        // prefill, or a dropout. Where the reference is not silent, they are a
+        // dropout; everything else has to be the reference.
         bool dropout = false;
-        for (size_t i = callback * block_size; i < (callback + 1) * block_size; ++i) {
-            const float expected = i < latency ? 0.0f : want[i - latency];
-            const float diff = std::fabs(got[i] - expected);
-            if (diff <= k_tolerance) {
-                worst = std::fmax(worst, diff);
-            } else if (got[i] == 0.0f) {
-                dropout = true;
-            } else {
-                worst = std::fmax(worst, diff);
-                ++wrong;
+        for (size_t i = begin; i < end; ++i) {
+            if (got[i] == 0.0f) {
+                if (std::fabs(expected(i)) > k_tolerance) { dropout = true; }
+                continue;
             }
+            const float diff = std::fabs(got[i] - expected(i));
+            worst = std::fmax(worst, diff);
+            if (diff > k_tolerance) { ++wrong; }
         }
         if (dropout) { ++dropouts; }
     }

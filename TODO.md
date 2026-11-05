@@ -1,5 +1,7 @@
 # TODOs
 
+- Signs between tanh lab slide and scope shall be consistent..
+  - (Valentin) Not clear what is meant here: the icons (chip = Research there, Inference in C++ here), the layout, or something else?
 - Change the audio example
 - The integration process: Rectangle over Train and Export
 - After QR-code -> slide how to clone and configure, also tell the audience to do it now!

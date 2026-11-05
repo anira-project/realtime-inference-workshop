@@ -863,6 +863,10 @@ html.tanh .reveal .output-full pre code {
   line-height: 1.3;
 }
 
+html.tanh .reveal .output-full.large pre code {
+  font-size: 26px;
+}
+
 /* Task card 1: the two parts arrive, the sum stays a question */
 html.tanh .run-latency {
   gap: var(--space-3);

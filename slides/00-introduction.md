@@ -223,6 +223,33 @@ Note:
 
 ---
 
+<div class="tag">Setup</div>
+
+## Set up now<br><span class="then">Clone, configure and build while we talk.</span>
+
+```bash
+git clone https://github.com/anira-project/realtime-inference-workshop.git
+cd realtime-inference-workshop
+cmake --preset release           # downloads about 500 MB: models, ONNX Runtime, JUCE, anira
+cmake --build --preset release   # builds every step
+```
+
+<div class="cards-note">Release, because we benchmark the model later.</div>
+
+<div class="cards-note">Cloned it at home already? <code>git pull</code> and configure again: only what changed is fetched.</div>
+
+Note:
+- We sent the setup instructions by email. If you did it at home: thank you, just pull and configure again.
+- If not: please start now. Clone, configure, build.
+- Configuring downloads about 500 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
+- It runs while we talk. Building every step takes a while too, so start the build right after.
+- Why release: the benchmark in step 3 measures how long a forward pass takes, and those timings only mean something in a release build.
+- Debugging works too: `cmake --preset debug` builds into `build-debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so do that later, not now on the shared network.
+- If configuring fails, raise your hand and we come to you.
+- Do not wait for the first exercise: that is the worst moment to start a download.
+
+---
+
 ## Agenda
 
 {{AGENDA}}

@@ -7,20 +7,20 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 ## Layout
 
 - `steps/` — one buildable folder per step, each with `exercise/` and `solution/`
-- `steps/common/assets/` — the test signal and its target output
+- `steps/common/assets/` — the test signal and its target output, the example audio in `audio/`, and the models in `models/` (downloaded at configure time)
 - `steps/common/helpers/` — the engines, the ring buffer, the fake host and the reporting, shared by every step
-- `models/` — the exported model (LibTorch `.pt`; ONNX forward, encoder and decoder)
 - `setup/` — setup check
 - `cmake/` — shared CMake helpers (backends, models, anira, JUCE)
 - `slides/` — Reveal.js slides
 
 ## Setup
 
-CMake ≥ 3.22 and a C++17 compiler. The models and the inference engines are
-downloaded at configure time; nothing else to install. **Configure once before
-the workshop**, at home: about 500 MB, and the room's network is shared by
-everyone. The archives are kept in `downloads/`, so every later build
-directory configures without the network.
+CMake ≥ 3.22 and a C++17 compiler. Everything else is fetched at configure
+time; nothing to install. **Configure once before the workshop**, at home:
+about 500 MB, and the room's network is shared by everyone.
+
+- the models, from this repository's release, into `steps/common/assets/models/`
+- JUCE, ONNX Runtime and anira, with CMake's `FetchContent`, into the build folder
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -49,18 +49,8 @@ Timings, such as the benchmark in step 4, only mean something in the release
 build.
 
 Build a single step with `-DWORKSHOP_STEP=01`. See
-[models/README.md](models/README.md) for the model.
-
-If a download fails in the room, it is retried a few times. If it still fails,
-take the archives from the room's mirror or the USB stick instead of GitHub:
-
-```bash
-cmake --preset release -DWORKSHOP_MIRROR_URL=file:///Volumes/<stick>/downloads
-```
-
-A mirror is any `downloads/` folder of a machine that has configured once, with
-`-DWORKSHOP_JUCE=ON` so it holds JUCE and the hand tracking models too, served
-as files or over HTTP (`python3 -m http.server` inside it).
+[steps/common/assets/models/README.md](steps/common/assets/models/README.md) for
+the model.
 
 The steps so far:
 
@@ -71,13 +61,13 @@ The steps so far:
 5. [Real-time safety](steps/05_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
 6. [Inference on a worker thread](steps/06_threading/README.md) — lock-free ring buffers, and an audio thread that allocates nothing
 7. [Latency and the dry/wet mix](steps/07_latency/README.md) — what to report to the host, and how to prove it
-8. [The plugin](steps/08_juce_plugin/README.md) — all of it inside JUCE; solution only, built with `-DWORKSHOP_JUCE=ON`
+8. [The plugin](steps/08_juce_plugin/README.md) — all of it inside JUCE; solution only
 
 Part 2, on anira (fetched and built by CMake, `-DWORKSHOP_ANIRA=OFF` to skip):
 
 9. [The model with anira](steps/09_anira/README.md) — two JSON files and three calls replace steps 3, 6 and 7
 10. [Encoder, latents, decoder](steps/10_split/README.md) — two handlers on one context, eight numbers in between
-11. [Hands on the latents](steps/11_hands/README.md) — a camera and hand tracking drive the decoder; JUCE app, with `-DWORKSHOP_JUCE=ON`
+11. [Hands on the latents](steps/11_hands/README.md) — a camera and hand tracking drive the decoder; a JUCE app
 
 ## License
 

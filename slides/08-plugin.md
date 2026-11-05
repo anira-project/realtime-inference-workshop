@@ -6,14 +6,14 @@ Everything from steps 1 to 7, where the host can reach it
 <!-- kind: demo -->
 
 Note:
-- Run the standalone: click an example tile, move dry/wet, drop in an audio file
+- Run the standalone: the example plays, move dry/wet, drop in an audio file, switch to the input
 - Everything from steps 1 to 7, in a plugin
 - Listen first: switch examples, dry/wet, your own audio files
 
 **Script:**
 
-*Run the standalone. Click one of the three example tiles, move dry/wet. Drop an audio file on a tile to replace it.*
-"Here it is: everything from steps 1 to 7, in a plugin. Let's listen to it first. You can switch between the examples, move the dry/wet, and drop in your own audio files."
+*Run the standalone. The example plays from the start, move dry/wet. Drop an audio file on the window, or switch to the input.*
+"Here it is: everything from steps 1 to 7, in a plugin. Let's listen to it first. The example plays from the start. You can move the dry/wet, drop in your own audio file, or switch to your microphone."
 
 ---
 
@@ -60,11 +60,10 @@ One change: so far ONNX Runtime was a shared library next to our program, but th
 Standalone or VST3. Play around with the dry/wet parameter, with headphones please.
 
 ```bash
-cmake -S . -B build-juce -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
-cmake --build build-juce --config Release --parallel --target step08_plugin_Standalone
+cmake --build --preset release --target step08_plugin_Standalone
 ```
 
-Or `step08_plugin_VST3`. The result is in `build-juce/steps/08_juce_plugin/step08_plugin_artefacts/Release/`.
+Or `step08_plugin_VST3`. The result is in `build/steps/08_juce_plugin/step08_plugin_artefacts/Release/`.
 
 Note:
 - Commands are on the slide: standalone or VST3

@@ -49,7 +49,7 @@ The important point is: these things aren't necessarily slow. Most of the time t
 ## Sets the promise in the type system <span class="then">The sanitizer catches what breaks it.</span>
 
 ```cpp
-// Step 3's processor: the callback makes the promise
+// Step 3's processor, shortened: the callback makes the promise
 void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
     m_input.push(samples, num_samples);
     if (m_input.available() >= k_model.m_input_size) {
@@ -57,12 +57,10 @@ void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
         m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
         m_output.push(m_model_block.data(), k_model.m_input_size);
     }
-    …
 }
 ```
 
-`-fsanitize=realtime` checks every call underneath it, at runtime, and reports the first thing that breaks the promise.
-
+`-fsanitize=realtime` checks every call underneath at runtime and reports the first break.<br>
 Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang.
 
 Note:

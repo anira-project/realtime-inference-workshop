@@ -2036,3 +2036,14 @@ html.tanh .meter.over .meter-late,
 html.tanh .meter.over .meter-label strong { color: var(--mark-over); }
 
 html.tanh .deadline-bars i.runs { background: var(--mark-over); }
+/* Introduction · teaser: one canvas per variant, drawn by js/teaser.js */
+html.tanh .teaser {
+  margin-top: var(--space-6);
+}
+
+html.tanh .teaser canvas {
+  display: block;
+  width: 100%;
+  height: 680px;
+}
+

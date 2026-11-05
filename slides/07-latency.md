@@ -113,7 +113,7 @@ Note:
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/ · common/assets/</div>
+    <div class="given-folder">common/assets/</div>
     {{FILE:model_forward.onnx}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
@@ -203,7 +203,7 @@ Note:
   <div class="lat-plus">+</div>
   <div class="lat-part">rounded max inference time<small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">the model itself<strong>2224</strong></div>
+  <div class="lat-part">the model itself<small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
   <div class="lat-plus">=</div>
   <div class="lat-part total">latency<strong>4784</strong></div>
 </div>
@@ -218,7 +218,8 @@ Note:
 - The worker's time: your worst case from step 4, rounded up to whole callbacks (step 6). A choice
 - Smaller: the worker might not be done, latency no longer fixed
 - 15.3 ms don't fit in one callback of 11.6 ms, they take two: 1024. Yours may differ
-- The model itself: 2224, convolutions and filter bank, from the export script, not visible from C++
+- The model itself: 2224. 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. From the export script, not visible from C++
+- In general a model is late because of what it does inside: filters and filter banks, STFT windows, layers that look ahead. Ours was trained causal, so no look-ahead
 - Step 6's prefill already holds the first two: `m_prefill + k_model.m_latency`
 - Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE
 - Only for 512: other block sizes give other numbers, part 2
@@ -226,7 +227,7 @@ Note:
 
 **Script:**
 
-"Let's add it up. First the buffer adaptation from step 3: the model needs a whole block before it can run, and the host brings 512 samples at a time, so that's 2048 minus 512, 1536 samples. Second, the time we give the worker: your worst case from step 4, rounded up to whole callbacks, like in step 6. That one is a choice. We could make it smaller, but then the worker might not be done in time, and the latency wouldn't be fixed anymore. My 15.3 milliseconds don't fit into one callback of 11.6 milliseconds, they take two, so that's 1024; yours may differ. And third, the model itself is late by 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
+"Let's add it up. First the buffer adaptation from step 3: the model needs a whole block before it can run, and the host brings 512 samples at a time, so that's 2048 minus 512, 1536 samples. Second, the time we give the worker: your worst case from step 4, rounded up to whole callbacks, like in step 6. That one is a choice. We could make it smaller, but then the worker might not be done in time, and the latency wouldn't be fixed anymore. My 15.3 milliseconds don't fit into one callback of 11.6 milliseconds, they take two, so that's 1024; yours may differ. And third, the model itself is late by 2224 samples: 1696 from the transposed convolutions in the decoder, and 528 from the PQMF filter bank. We can't see that from C++, it comes from the export script.
 The first two are exactly step 6's prefill, so in code it's the prefill plus the model's latency. In total: 4784 samples, that's about 108 milliseconds at 44.1 kHz. In a plugin, this is the number we report to the host, in JUCE with `setLatencySamples`. It only holds for 512, though: other block sizes give other numbers, and that's part 2. And let's be honest: 108 milliseconds is fine for mixing, but you can't play through it live. In part 2 we come back to how low it can go."
 
 ---
@@ -264,9 +265,12 @@ Note:
   </svg>
 </div>
 
+<div class="cards-note">For a constant 512. anira handles any host block size, smaller blocks than announced included, and computes the latency for it: part 2.</div>
+
 Note:
 - Correct, real-time safe, late by a known, fixed amount
 - Host can line it up, dry and wet crossfade cleanly
+- Only for a constant 512: the plugin in step 8 bypasses outside 512 samples and 44.1 or 48 kHz. Every size: part 2, with anira
 - Next: all of this in a JUCE plugin, where the host asks for exactly these numbers
 
 **Script:**

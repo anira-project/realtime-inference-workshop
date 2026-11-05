@@ -91,12 +91,18 @@ async function generateHTML(isDev = false) {
   console.log('✅ All HTML files generated successfully!');
 }
 
-// {{INTEGRATION:train|export|implement}} → the train/export/implement diagram,
-// with a box around that one step
+// {{INTEGRATION:train|export|implement}} → the train/export/implement diagram, with a box
+// around that step. Neighbouring steps share one box: {{INTEGRATION:train,export}}
+const INTEGRATION_STEPS = ['train', 'export', 'implement'];
 function renderIntegration(content, template) {
-  return content.replace(/\{\{INTEGRATION:(\w+)\}\}/g, (match, step) =>
-    template.replace(/\{\{(TRAIN|EXPORT|IMPLEMENT)\}\}/g, (m, name) =>
-      name.toLowerCase() === step ? 'highlight-step' : ''));
+  return content.replace(/\{\{INTEGRATION:([\w,]+)\}\}/g, (match, list) => {
+    const steps = list.split(',');
+    const indices = steps.map(step => INTEGRATION_STEPS.indexOf(step)).sort();
+    return template
+      .replace(/\{\{(TRAIN|EXPORT|IMPLEMENT)\}\}/g, (m, name) =>
+        steps.includes(name.toLowerCase()) ? 'highlight-step' : '')
+      .replace('{{BOX}}', `--from:${indices[0]};--span:${indices.length}`);
+  });
 }
 
 // {{MAP:show=create,prepare|focus=process|abi|memory}} → the architecture map: the rows in

@@ -26,7 +26,7 @@ decode() fills the cropped latent dimensions with noise. Here the encoder takes 
 reference.
 
 Usage:
-    uv run scripts/export_model.py path/to/mrp_strengjavera_b2048_r44100_z16.ts [--out models]
+    uv run scripts/export_model.py path/to/mrp_strengjavera_b2048_r44100_z16.ts [--out steps/common/assets/models/rave]
 """
 import argparse
 import pathlib
@@ -364,7 +364,7 @@ def stream_onnx(path, first_name, blocks, state_size):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("model", type=pathlib.Path)
-    parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent.parent / "models")
+    parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent.parent / "steps/common/assets/models/rave")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 

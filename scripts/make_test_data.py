@@ -9,7 +9,7 @@ path: model_forward.onnx in ONNX Runtime, the state carried by hand from a zero
 start. Embedding both keeps the C++ steps free of file IO.
 
 Usage:
-    uv run scripts/make_test_data.py [--model models/model_forward.onnx] [--blocks 8] [--out steps/common/assets]
+    uv run scripts/make_test_data.py [--model steps/common/assets/models/rave/model_forward.onnx] [--blocks 8] [--out steps/common/assets]
 """
 
 import argparse
@@ -86,7 +86,7 @@ def as_rows(samples, per_row=8, indent="    "):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=pathlib.Path, default=ROOT / "models/model_forward.onnx")
+    parser.add_argument("--model", type=pathlib.Path, default=ROOT / "steps/common/assets/models/rave/model_forward.onnx")
     parser.add_argument("--blocks", type=int, default=8)
     parser.add_argument("--out", type=pathlib.Path, default=ROOT / "steps/common/assets")
     args = parser.parse_args()

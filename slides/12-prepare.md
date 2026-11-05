@@ -8,6 +8,8 @@ Contract, latency, memory
 Note:
 - Prepare: the second row of the map.
 - This is what happens when the host announces its blocks.
+- Prepare checks the files again, now with the contract, loads the models, pooled, builds the plans, and starts the pool's threads with the first prepare in the process.
+- Then the rest: the latency, the rings and slots, the warm-up.
 - We look at the contract, the latency that follows from it, the memory it sizes, and the warm-up.
 
 ---
@@ -37,11 +39,11 @@ Note:
 ```
 
 ```cpp
-contract.hard_host_blocks(block, block, sample_rate);   // from the host
+contract.hard_host_blocks(1, max_block_size, sample_rate);   // from prepareToPlay
 ```
 
 <div class="statement-points">
-  <div>Host blocks: the smallest, the largest, the rate; equal min and max earn the tight latency</div>
+  <div>Host blocks: the smallest and the largest the host may send, and the rate</div>
   <div>Budget: the worst case per inference; warm-up: model runs before the stream starts</div>
   <div><code>on_miss</code> and <code>wait_ratio</code>: what a callback does when a result is late, in Process</div>
 </div>
@@ -53,8 +55,8 @@ Note:
 - A contract says how one handler is scheduled; it is fixed at prepare and holds until the next prepare.
 - Hard is a stream: blocks in and blocks out, in every callback.
 - The file carries no host blocks: the plugin fills them in from the host, and prepares again when the host changes them.
-- Host blocks are the smallest, the largest and the sample rate.
-- Equal min and max give the tightest latency; a range gives a latency that covers its worst case.
+- Host blocks are the smallest and the largest the host may send, and the sample rate.
+- The block size from prepareToPlay is the largest, not the only one: we declare 1 up to it, and the latency covers the worst case.
 - The budget is the worst time of one inference, measured at prepare on the user's machine; the warm-up runs the model until its times are stable, before the stream starts.
 - on_miss and wait_ratio say what happens when a result is late; our file asks for bypass, the input block in place of the late one, and we come to the choices in Process.
 - Async is not in this release, so prepare refuses it.
@@ -65,24 +67,23 @@ Note:
 
 <div class="tag">Part 1 · Step 7</div>
 
-## One latency for every block size.<br><span class="then">The same number, whatever block size the host uses.</span>
+## The minimal latency, for 512.<br><span class="then">And for every other block size?</span>
 
 <div class="lat-sum">
-  <div class="lat-part">collect a block<strong>2048</strong></div>
+  <div class="lat-part">buffer adaptation<small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">hand it over<strong>2048</strong></div>
+  <div class="lat-part">rounded max inference time<small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
   <div class="lat-plus">+</div>
   <div class="lat-part">the model itself<strong>2224</strong></div>
   <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>6320</strong></div>
+  <div class="lat-part total">latency<strong>4784</strong></div>
 </div>
 
 Note:
-- Step 7 gave us one latency for every block size: the same number, whatever block size the host uses.
-- A full block to collect, 2048, a full block for the worker, 2048, and the model's own 2224: 6320 samples.
-- That number is safe at any host block size.
-- But it is generous: at 512 samples per callback, most of the first 2048 is waiting for nothing.
-- Now let's see what anira computes instead.
+- In step 7 we worked out the minimal latency by hand: 1536 for the buffer adaptation, 1024 for the worker, two callbacks for 15.3 ms, and the model's own 2224. 4784 samples.
+- But only for a host block of 512, the one size the whole first part used.
+- A host can call with other sizes, and with smaller blocks than it announced.
+- Now let's see what anira computes, for the block size the host actually uses.
 
 ---
 
@@ -104,7 +105,7 @@ Note:
   <div class="lat-part total">latency<strong>4272</strong></div>
 </div>
 
-<div class="lat-why">6320 by hand: we gave the worker a whole model block. anira gives it ⌈budget⌉ host blocks: 8.2 ms fit in one of 11.6 ms.</div>
+<div class="lat-why">anira gives the inference ⌈budget ÷ host block⌉ host blocks: 8.2 ms fit in one of 11.6 ms.</div>
 
 Note:
 - anira computes the latency at prepare, for the block size the host actually uses.
@@ -116,8 +117,30 @@ Note:
 - For the inference, by hand we waited a whole model block; anira waits as many host blocks as the budget needs.
 - 8.2 ms fit in one host block of 11.6 ms, so that is 512 samples.
 - Add the model's own 2224 from the model file: 4272 in total.
-- That is 2048 samples less than our 6320, with the same guarantee.
 - The budget is measured on the user's machine, so the latency is that machine's too: a slower machine gets a larger number, not dropouts.
+
+---
+
+<div class="tag">anira · Latency</div>
+
+## Smaller blocks than announced.<br><span class="then">The latency covers the worst one.</span>
+
+```cpp
+contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the announced size
+```
+
+| Host blocks | Latency |
+|---|---|
+| exactly 512, every callback | 4272 |
+| any block from 1 to 512: step 9 | 6320 |
+
+Note:
+- prepareToPlay announces a block size, but that is the largest the host sends, not the only one.
+- Loop a region in a DAW, and the callback at the loop point is shorter.
+- Logic is known for it: what prepare announces and what process delivers do not always match.
+- So we declare 1 up to the announced size, and anira's latency has to hold for the worst block in that range.
+- The block adaptation alone becomes P − 1 instead of P − gcd(b, P) (Rath & Geier, LAC 2026).
+- Step 9 declares 1 to the host's maximum and reports 6320, whatever the budget. The 4272 of the previous slide only holds if every block is exactly 512.
 
 ---
 
@@ -212,12 +235,12 @@ Note:
 
 <div class="tag">The map</div>
 
-## After prepare:<br><span class="then">a latency, and every buffer the stream needs.</span>
+## After prepare:<br><span class="then">loaded models, a latency, every buffer the stream needs.</span>
 
 {{MAP:show=create,prepare}}
 
 Note:
-- After prepare we have a latency, and every buffer the stream needs.
+- After prepare the models are loaded, pooled, and the plans exist.
 - The latency went to the host, the rings and slots exist, and the pool threads run.
 - From here on, only the audio thread's calls remain: the third row.
 

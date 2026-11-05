@@ -6,12 +6,12 @@
 
 ## What you have
 
-A JUCE app, built with `-DWORKSHOP_JUCE=ON` (JUCE is cloned and built once, a few minutes):
+A JUCE app (JUCE is built once, the first time, a few minutes):
 
 ```bash
-cmake -S . -B build-juce -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
-cmake --build build-juce --target step11_exercise      # or step11_solution
-open "build-juce/steps/11_hands/step11_exercise_artefacts/Release/Workshop Hands (exercise).app"
+cmake --preset release
+cmake --build --preset release --target step11_exercise      # or step11_solution
+open "build/steps/11_hands/step11_exercise_artefacts/Release/Workshop Hands (exercise).app"
 ```
 
 - [`handtracking/`](handtracking/) — MediaPipe's hand chain on anira, from [anira-cam](https://github.com/anira-project/anira-cam): palm detector, landmarks, gesture. Given; it runs on anira's 2.x C++ API, which the v3 library still carries. Its four ONNX models (`hand_detector.onnx` and friends, Apache 2.0) come with the other models and are compiled into the app.

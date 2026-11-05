@@ -5,7 +5,6 @@
 
 include_guard(GLOBAL)
 include(FetchContent)
-include(download)
 
 # The release, its engine versions and the SHA256 of every archive the workshop
 # can ask for, pinned: no GitHub API call at configure, and a broken download
@@ -30,8 +29,8 @@ set(_workshop_backend_archives
     "onnxruntime-1.26.0-Windows-x86_64-static.zip|9abd843c91eb0309d8e21c29a9d775e11025368772b0a32e25d378391fbf9749"
     "onnxruntime-1.26.0-Windows-x86_64-static-debug.zip|0971d1c3f57edbe2bfe0cc86f70ab2160e59cf01d0176ef79c3f746cc54c8dff")
 
-# Download one engine archive of the release (or take it from downloads/) and
-# unpack it into the build tree as <name>_SOURCE_DIR, returned in <out_var>.
+# Fetch one engine archive of the release into the build tree, unpacked, as
+# <name>_SOURCE_DIR, returned in <out_var>.
 function(_workshop_fetch_backend name asset out_var)
     set(sha256 "")
     foreach(entry IN LISTS _workshop_backend_archives)
@@ -45,11 +44,8 @@ function(_workshop_fetch_backend name asset out_var)
         message(FATAL_ERROR "Workshop: ${asset} is not an archive of the release this workshop pins")
     endif()
 
-    workshop_download(
-        "https://github.com/anira-project/backends/releases/download/${WORKSHOP_BACKENDS_VERSION}/${asset}"
-        "${sha256}" archive)
     FetchContent_Declare(${name}
-        URL "${archive}"
+        URL "https://github.com/anira-project/backends/releases/download/${WORKSHOP_BACKENDS_VERSION}/${asset}"
         URL_HASH "SHA256=${sha256}"
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         SOURCE_SUBDIR no-cmake-project  # a binary tree, not a project to add

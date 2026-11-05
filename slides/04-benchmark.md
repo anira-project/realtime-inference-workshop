@@ -107,7 +107,7 @@ Note:
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/ & common/assets/</div>
+    <div class="given-folder">common/assets/</div>
     {{FILE:model_forward.onnx}}
     {{FILE:test_signal.h}}
   </div>

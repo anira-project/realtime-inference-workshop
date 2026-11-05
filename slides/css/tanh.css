@@ -329,12 +329,30 @@ html.tanh .statement-points > div {
   border-top-width: var(--hairline);
 }
 
-/* Only the step's name is marked; the other steps step back */
+/* One box around the marked steps, however many; the other steps step back */
+html.tanh .integration {
+  position: relative;
+  /* Room for the box at the slide's edges */
+  margin-left: calc(var(--space-3) + 5px);
+  margin-right: calc(var(--space-3) + 5px);
+}
+
 html.tanh .integration-step.highlight-step {
-  outline: 5px solid var(--tint-exercise);
-  outline-offset: var(--space-3);
-  border-radius: var(--radius-main);
+  outline: none;
   background: none;
+}
+
+html.tanh .integration-box {
+  position: absolute;
+  top: calc(-1 * (var(--space-3) + 5px));
+  bottom: calc(-1 * (var(--space-3) + 5px));
+  left: calc(var(--from) / 3 * 100% - var(--space-3) - 5px);
+  width: calc(var(--span) / 3 * 100% + 2 * (var(--space-3) + 5px));
+  box-sizing: border-box;
+  border: 5px solid var(--tint-exercise);
+  border-radius: var(--radius-main);
+  pointer-events: none;
+  transition: border-color 0.4s var(--ease);
 }
 
 html.tanh .integration:has(.highlight-step) .integration-step:not(.highlight-step) {
@@ -357,7 +375,10 @@ html.tanh .integration-step {
    later slide's fragment is still hidden */
 html.tanh .reveal section:not(:has(section)):has(.integration-focus:not(.visible)) .integration .integration-step {
   opacity: 1;
-  outline-color: transparent;
+}
+
+html.tanh .reveal section:not(:has(section)):has(.integration-focus:not(.visible)) .integration .integration-box {
+  border-color: transparent;
 }
 
 

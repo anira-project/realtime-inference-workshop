@@ -8,10 +8,10 @@ workshop_setup_anira()
 juce_add_binary_data(step11_models
     NAMESPACE BinaryData
     SOURCES
-        "${WORKSHOP_MODELS_DIR}/hand_detector.onnx"
-        "${WORKSHOP_MODELS_DIR}/hand_landmarks_detector.onnx"
-        "${WORKSHOP_MODELS_DIR}/gesture_embedder.onnx"
-        "${WORKSHOP_MODELS_DIR}/canned_gesture_classifier.onnx")
+        "${WORKSHOP_MODELS_DIR}/handtracking/hand_detector.onnx"
+        "${WORKSHOP_MODELS_DIR}/handtracking/hand_landmarks_detector.onnx"
+        "${WORKSHOP_MODELS_DIR}/handtracking/gesture_embedder.onnx"
+        "${WORKSHOP_MODELS_DIR}/handtracking/canned_gesture_classifier.onnx")
 
 # The tracker from anira-cam (src/handtracking), given: palm detector, landmarks,
 # gesture, on anira's 2.x C++ API, which the v3 library still carries.

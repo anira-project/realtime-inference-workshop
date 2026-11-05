@@ -44,11 +44,10 @@
     <line class="ov-flow" x1="584" y1="149" x2="646" y2="149" marker-end="url(#ov-arrow)"/>
     <path class="ov-flow" d="M584 128 H1300" marker-end="url(#ov-arrow)"/>
     <text x="940" y="121" class="ov-note">get instance</text>
-    <rect class="ov-pill" x="646" y="134" width="236" height="30" rx="6"/><text x="764" y="154" class="ov-pill-text">plans: engine × provider</text>
+    <rect class="ov-pill" x="646" y="134" width="236" height="30" rx="6"/><text x="764" y="154" class="ov-pill-text">check the files</text>
     <rect class="ov-pill mem" x="892" y="134" width="132" height="30" rx="6"/><text x="958" y="154" class="ov-pill-text">state pairs</text>
-    <rect class="ov-pill mem" x="646" y="172" width="378" height="30" rx="6"/><text x="835" y="192" class="ov-pill-text">load the models, pooled</text>
+    <rect class="ov-pill" x="646" y="172" width="378" height="30" rx="6"/><text x="835" y="192" class="ov-pill-text">a slot per tensor · nothing loaded yet</text>
     <rect class="ov-pill" x="1316" y="134" width="248" height="30" rx="6"/><text x="1440" y="154" class="ov-pill-text">one pool per process</text>
-    <rect class="ov-pill mem" x="1316" y="172" width="248" height="30" rx="6"/><text x="1440" y="192" class="ov-pill-text">loaded models, pooled</text>
   </g>
 
   <!-- prepare: when the host announces its blocks -->
@@ -60,10 +59,14 @@
     <rect class="ov-pill" x="346" y="286" width="238" height="30" rx="6"/><text x="465" y="306" class="ov-pill-text">prepare(contract)</text>
     <rect class="ov-pill" x="346" y="324" width="238" height="30" rx="6"/><text x="465" y="344" class="ov-pill-text">get_latency()</text>
     <line class="ov-flow" x1="584" y1="301" x2="646" y2="301" marker-end="url(#ov-arrow)"/>
+    <rect class="ov-pill" x="646" y="248" width="378" height="30" rx="6"/><text x="835" y="268" class="ov-pill-text">plans: engine × provider</text>
     <rect class="ov-pill" x="646" y="286" width="378" height="30" rx="6"/><text x="835" y="306" class="ov-pill-text">latency = adaptation + inference + model</text>
     <rect class="ov-pill mem" x="646" y="324" width="378" height="30" rx="6"/><text x="835" y="344" class="ov-pill-text">rings, slots, warm-up, budget</text>
-    <path class="ov-flow" d="M1024 339 H1140 V190 H1300" marker-end="url(#ov-arrow)"/>
+    <path class="ov-flow" d="M1024 263 H1140 V149 H1300" marker-end="url(#ov-arrow)"/>
     <text x="1170" y="180" class="ov-note">start threads</text>
+    <path class="ov-flow" d="M1024 339 H1300" marker-end="url(#ov-arrow)"/>
+    <text x="1162" y="331" class="ov-note">load the models</text>
+    <rect class="ov-pill mem" x="1316" y="324" width="248" height="30" rx="6"/><text x="1440" y="344" class="ov-pill-text">loaded models, pooled</text>
     <text x="1440" y="268" class="ov-sub">the queue</text>
     <rect class="ov-pill" x="1316" y="286" width="248" height="30" rx="6"/><text x="1440" y="306" class="ov-pill-text">lock-free, every handler</text>
   </g>

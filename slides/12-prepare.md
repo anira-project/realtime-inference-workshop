@@ -8,6 +8,8 @@ Contract, latency, memory
 Note:
 - Prepare: the second row of the map.
 - This is what happens when the host announces its blocks.
+- Prepare checks the files again, now with the contract, loads the models, pooled, builds the plans, and starts the pool's threads with the first prepare in the process.
+- Then the rest: the latency, the rings and slots, the warm-up.
 - We look at the contract, the latency that follows from it, the memory it sizes, and the warm-up.
 
 ---
@@ -233,12 +235,12 @@ Note:
 
 <div class="tag">The map</div>
 
-## After prepare:<br><span class="then">a latency, and every buffer the stream needs.</span>
+## After prepare:<br><span class="then">loaded models, a latency, every buffer the stream needs.</span>
 
 {{MAP:show=create,prepare}}
 
 Note:
-- After prepare we have a latency, and every buffer the stream needs.
+- After prepare the models are loaded, pooled, and the plans exist.
 - The latency went to the host, the rings and slots exist, and the pool threads run.
 - From here on, only the audio thread's calls remain: the third row.
 

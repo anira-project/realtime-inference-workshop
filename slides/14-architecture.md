@@ -21,7 +21,7 @@ Note:
 - This is the path from your callback to the engine and back, in one picture.
 - On the left your app: the three files and the three calls.
 - The dashed line is the C ABI: right of it is the library, and the handler is all you touch.
-- The session is private to each handler: plans and state pairs from create, latency, rings and slots from prepare.
+- The session is private to each handler: the state pairs from create; the plans, the latency, the rings and the slots from prepare.
 - On the right the context, one per process: the pool, the queue and the loaded models, shared by every handler.
 - A block crosses it in process and comes back the same way, in place, in the same buffer.
 - Nothing on the audio side allocates or locks: the rules from steps 5 to 7, kept by the library.

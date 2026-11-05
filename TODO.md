@@ -8,7 +8,6 @@
 - Benchmark -> convert to samples (todo-lina)
 
 - Step 10 (encoder/decoder split) declares a fixed 512: `hard_host_blocks(k_host.m_block_size, k_host.m_block_size, …)`. Step 9 declares 1 to the host's maximum; decide whether the split should do the same, and update slides/16-split.md
-- m_dept has been rewritten check   
 
 - Async:
 - Latency Bufferadaptation + Model Latency + inference_time_in_sample round up to next 512 samples (do not push model latency)

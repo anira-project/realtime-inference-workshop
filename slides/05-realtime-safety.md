@@ -120,26 +120,27 @@ Note:
 ## Not once<br><span class="then">Every callback.</span>
 
 ```bash
-RTSAN_OPTIONS=halt_on_error=false ./build-rtsan/bin/step05_solution
+RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false ./build-rtsan/bin/step05_solution
 ```
 
 | the whole test signal, 8 forward passes | total | per forward pass |
 |---|---|---|
-| `malloc` | 649 | 81 |
-| `free` | 304 | 38 |
+| `malloc` | 8620 | 1078 |
+| `free` | 8619 | 1077 |
 
 
 Not a slip. The engine is built this way.
 
 Note:
 - `halt_on_error=false`: RTSan reports every violation instead of stopping at the first
-- Over the whole test signal: 8 forward passes, 649 mallocs and 304 frees
-- About 80 mallocs and 40 frees in every forward pass
+- `suppress_equal_stacks=false`: also when the call stack is one it has seen before
+- Over the whole test signal: 8 forward passes, 8,620 mallocs and as many frees
+- About 1,080 of each in every forward pass
 - Not a small mistake: built for throughput, not for real-time
 
 **Script:**
 
-"And it doesn't happen just once. If we tell the sanitizer not to stop at the first violation, it reports all of them. Over the whole test signal, eight forward passes, that's 649 mallocs and 304 frees: about 80 and 40 in every single forward pass.
+"And it doesn't happen just once. If we tell the sanitizer not to stop at the first violation, it reports all of them. Over the whole test signal, eight forward passes, that's 8,620 mallocs and as many frees: about 1,080 of each in every single forward pass.
 So this isn't a small mistake we can fix. The engine is built this way: it's made for throughput, not for real-time."
 
 
@@ -153,19 +154,19 @@ The same run, as RTSan reports it:
 
 | | total | per forward pass |
 |---|---|---|
-| `pthread_mutex_lock` | 64 | 8 |
+| `pthread_mutex_lock` | 608 | 76 |
 
 A slow allocation is bad. <br>
 A lock is worse: it can wait on another thread.
 
 Note:
 - Not only allocations: the same run, as the sanitizer reports it
-- Mutex locks: 64, eight in every forward pass
+- Mutex locks: 608, 76 in every forward pass
 - A lock is worse: our thread can wait for a completely different thread
 
 **Script:**
 
-"And it's not only allocations. In the same run the sanitizer also reports mutex locks: 64 of them, eight in every forward pass. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
+"And it's not only allocations. In the same run the sanitizer also reports mutex locks: 608 of them, 76 in every forward pass. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
 
 
 ---

@@ -19,43 +19,38 @@ The first two are step 6's prefill. The second is a choice: it buys the worker t
 
 ## What to do
 
-Open [`exercise/main.cpp`](exercise/main.cpp). First put your number from step 4 into `k_max_inference_ms`, as in step 6. Then fill in the two TODO banners.
+Open [`exercise/main.cpp`](exercise/main.cpp). It is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses. First put your number from step 4 into `k_max_inference_ms`, as in step 6. Then fill in the two TODO banners, both in `prepare()`:
 
-1. **`latency_samples()`** — the number above. It decides what the host is told and how far the dry signal is delayed. The wet path only gets step 6's prefill: the model's own delay is already inside what it returns.
-2. **The dry delay** in `prepare()` — prefill the dry ring buffer with the full latency in silence.
+1. **`m_latency`**: the number above, what the host is told. Step 6's prefill already holds the first two parts. The wet path only gets that prefill: the model's own delay is already inside what it returns.
+2. **The dry delay**: prefill `m_dry` with the full latency in silence.
 
 The mix in `process_block()` is given: both paths are equally late, so it is a plain crossfade between the delayed dry signal and the wet one.
 
 Each TODO says so while it is still open:
 
 ```
-TODO 1: put your worst case from step 4 into k_max_inference_ms.
-TODO 1: work out the latency the design introduces.
-TODO 2: the dry signal comes out undelayed, so it cannot line up with the wet one.
+FAILED: put your worst case from step 4 into k_max_inference_ms
+FAILED: TODO 1: work out the latency
+FAILED: TODO 2: delay the dry signal: m_dry has to start with the latency in silence
 ```
+
+The checks behind these messages live in [`common/checks/step07.h`](../common/checks/step07.h).
 
 ## Expected output
 
 ```
 Reported latency: 4784 samples (108.5 ms at 44100 Hz)
-
-  dry, delayed by the latency max abs diff 0          OK
-  wet, delayed by the latency:
-OK: max abs diff 3.73e-07, within 0.0001 of the reference.
-
-OK: both paths are late by exactly the reported latency, so they mix.
+OK: max abs diff 1.94e-07 at mix 0.5: dry and wet are both late by exactly the
+reported latency, so they line up.
 ```
 
-With a different worst case your latency differs, by 512 for every callback. The check is the point: the program runs the signal twice, once at 100% dry and once at 100% wet, and compares each against its reference *shifted by the reported latency*.
+With a different worst case your latency differs, by 512 for every callback. The host runs as in step 6, at a mix of 0.5. The check builds what the host should hear: half the input, delayed by the reported latency, plus half the model's stream, delayed by the rest of it (the reference already carries the model's own delay). If either path is off by a single sample, the two do not line up and the run fails. A callback where the worker was late has only the dry half: that is a dropout, and more than a quarter of them fail the run.
 
-- **Dry has to match exactly**, 0.0 difference. It is the input, only later. If the latency is off by a single sample, this number jumps.
-- **Wet matches to 1e-6**, the usual difference between ONNX Runtime here and in Python. The reference already carries the model's own delay, so it is shifted by the rest: the prefill. Leave the model's part out of the latency and this check fails. A callback where the worker was late goes out with zeros and is counted as a dropout; more than a quarter of them fail the run.
-
-Which means: a wrong latency number cannot pass. That is also how you would catch it in a plugin — bypass the model, and the signal has to come out unchanged apart from the delay.
+So a wrong latency number cannot pass.
 
 ## Why the dry path needs a delay line at all
 
-Mixing an undelayed dry signal with a wet one that is 97 ms late does not sound like a blend; it sounds like a slap-back echo, and at low mix values like comb filtering. The dry path gets its own ring buffer, primed with the full latency in silence, so both arrive together.
+Mixing an undelayed dry signal with a wet one that is 108 ms late does not sound like a blend; it sounds like a slap-back echo, and at low mix values like comb filtering. The dry path gets its own ring buffer, primed with the full latency in silence, so both arrive together.
 
 In a plugin you report the same number with `setLatencySamples()`, and the host lines the track up with everything else.
 

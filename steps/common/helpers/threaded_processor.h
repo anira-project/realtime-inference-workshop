@@ -15,6 +15,7 @@
 #include <thread>
 #include <vector>
 
+#include "common/helpers/audio_callback.h"
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
 
@@ -34,14 +35,6 @@ constexpr double k_max_inference_ms = 15.3;
 
 // The first calls are slow (step 4): made before the audio starts.
 constexpr size_t k_warm_up_calls = 2;
-
-// What an audio callback promises; see step 5. RTSan checks everything below a
-// function marked with it.
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
-#define WORKSHOP_AUDIO_CALLBACK [[clang::nonblocking]]
-#else
-#define WORKSHOP_AUDIO_CALLBACK
-#endif
 
 // Step 7's processor: step 6's hand-over between the audio thread and a worker,
 // with a dry path and a mix control.

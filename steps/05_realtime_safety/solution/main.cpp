@@ -2,8 +2,9 @@
 //
 // Goal:  show that the engine is not real-time safe. Not a question of being
 //        fast enough: it allocates, locks and calls into the system.
-// Given: step 3's processor, with its callback marked [[clang::nonblocking]],
-//        and RealtimeSanitizer (clang -fsanitize=realtime).
+// Given: step 3's processor, with its callback marked [[clang::nonblocking]]
+//        (common/helpers/audio_callback.h), and RealtimeSanitizer
+//        (clang -fsanitize=realtime).
 // Check: RTSan stops at the first violation inside the callback.
 //
 // There is no exercise here. Build it with -DWORKSHOP_RTSAN=ON and a clang that
@@ -16,6 +17,7 @@
 
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
+#include "common/helpers/audio_callback.h"
 #include "common/helpers/onnx_engine.h"
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/support.h"
@@ -29,15 +31,6 @@ constexpr struct {
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
-
-// What an audio callback promises: it returns in bounded time, so it must not
-// allocate, lock, or call the kernel. RTSan checks that promise at runtime and
-// reports the first thing that breaks it.
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
-#define WORKSHOP_AUDIO_CALLBACK [[clang::nonblocking]]
-#else
-#define WORKSHOP_AUDIO_CALLBACK
-#endif
 
 // Whether this build has RealtimeSanitizer (clang -fsanitize=realtime).
 #if defined(__has_feature)

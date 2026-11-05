@@ -24,6 +24,13 @@ inline double host_slowdown() {
     return slowdown >= 1.0 ? slowdown : 1.0;
 }
 
+// How long one block of audio lasts: what a device waits between two
+// callbacks. 11.6 ms for 512 samples at 44.1 kHz, times host_slowdown().
+inline std::chrono::nanoseconds block_duration(size_t block_size, double sample_rate) {
+    return std::chrono::nanoseconds(static_cast<long long>(
+        1e9 * host_slowdown() * static_cast<double>(block_size) / sample_rate));
+}
+
 // Calls `callback` with one block at a time until the signal is used up, in
 // place: the callback overwrites what it was given.
 // @signal: the input, copied so the caller keeps theirs
@@ -39,10 +46,8 @@ inline std::vector<float> run_host(const float* signal,
                                    double sample_rate = 0.0) {
     std::vector<float> audio(signal, signal + num_samples);
 
-    const auto block_period = std::chrono::nanoseconds(
-        sample_rate > 0.0
-            ? static_cast<long long>(1e9 * host_slowdown() * static_cast<double>(block_size) / sample_rate)
-            : 0);
+    const auto block_period =
+        sample_rate > 0.0 ? block_duration(block_size, sample_rate) : std::chrono::nanoseconds(0);
     auto deadline = std::chrono::steady_clock::now();
 
     for (size_t offset = 0; offset + block_size <= num_samples; offset += block_size) {

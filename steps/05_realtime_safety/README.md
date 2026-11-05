@@ -52,21 +52,22 @@ The report is not about the forward pass. The engine allocates *on the way in*, 
 
 ## Every violation, not just the first
 
-RTSan stops at the first violation, which says *that* it happens, not *how often*. Tell it not to stop, and it reports every one, for the whole test signal: 32 callbacks, 8 forward passes.
+RTSan stops at the first violation, which says *that* it happens, not *how often*. Tell it not to stop, and to report a call stack again even when it has seen it before, and it reports every one, for the whole test signal: 32 callbacks, 8 forward passes.
 
 ```bash
-RTSAN_OPTIONS=halt_on_error=false ./build-rtsan/bin/step05_solution 2>&1 >/dev/null \
+RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false \
+  ./build-rtsan/bin/step05_solution 2>&1 >/dev/null \
   | grep -oE 'unsafe function `[a-z_]+`' | sort | uniq -c | sort -rn
 ```
 
 ```
- 649 unsafe function `malloc`
- 304 unsafe function `free`
-  64 unsafe function `pthread_mutex_unlock`
-  64 unsafe function `pthread_mutex_lock`
+8620 unsafe function `malloc`
+8619 unsafe function `free`
+ 608 unsafe function `pthread_mutex_unlock`
+ 608 unsafe function `pthread_mutex_lock`
 ```
 
-About 80 allocations, 40 frees and 8 locks in every forward pass. Not one slip — the engine is built that way. Locks, on the audio thread.
+About 1,080 allocations, as many frees and 76 locks in every forward pass. Not one slip — the engine is built that way. Locks, on the audio thread.
 
 ## Why you cannot fix this from the outside
 

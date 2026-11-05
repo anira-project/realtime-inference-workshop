@@ -14,15 +14,6 @@
 #include "common/assets/test_signal.h"
 #include "common/helpers/support.h"
 
-// How much silence m_output starts with. Given, step 7 takes it apart.
-// @model_block_size: samples the model takes per forward pass
-// @max_block_size: the largest block the callback will be given
-// @rounded_max_inference_time: the worker's time, in samples
-inline size_t compute_prefill(size_t model_block_size,
-                              size_t max_block_size,
-                              size_t rounded_max_inference_time) {
-    return (model_block_size - max_block_size) + rounded_max_inference_time;
-}
 
 // TODO 1, in prepare(), before anything is allocated.
 // @input_capacity: the size of m_input

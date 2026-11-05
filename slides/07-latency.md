@@ -265,9 +265,12 @@ Note:
   </svg>
 </div>
 
+<div class="cards-note">For a constant 512. anira handles any host block size, smaller blocks than announced included, and computes the latency for it: part 2.</div>
+
 Note:
 - Correct, real-time safe, late by a known, fixed amount
 - Host can line it up, dry and wet crossfade cleanly
+- Only for a constant 512: the plugin in step 8 bypasses outside 512 samples and 44.1 or 48 kHz. Every size: part 2, with anira
 - Next: all of this in a JUCE plugin, where the host asks for exactly these numbers
 
 **Script:**

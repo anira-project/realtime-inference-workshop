@@ -1,12 +1,12 @@
 <h1>Create</h1>
 
-Plans, tensors, the pool
+What you declare: engines, tensors, state, the pool
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->
 
 Note:
-- Create: plans, tensors and the pool.
+- Create: what we declare, the engines, the tensors, the state and the pool.
 - This is the first row of the map: what exists once the plugin is constructed.
 - We go pair by pair: first what we built by hand in part 1, then what anira does instead.
 
@@ -21,7 +21,8 @@ Note:
 Note:
 - Create runs once, on the main thread: the plugin's constructor.
 - The files go in, the handler comes out.
-- Behind the handler, the session will hold the plans and the state pairs, and the context the pool and the loaded models; this chapter builds each of them.
+- Create checks the files and builds the handler's slots, one per tensor, the state pairs among them.
+- Nothing is loaded yet: the models, the plans and the pool's threads come at prepare. This chapter is about what we declare for them.
 - Nothing in this row runs on the audio thread, so all of it may load files and allocate.
 
 ---
@@ -80,6 +81,7 @@ Note:
 - An entry for an engine the build does not have is skipped, so one file serves every build.
 - A plan is one entry on one engine and execution provider, and set_plan switches between them.
 - default_engine says which plan runs first.
+- The plans are built at prepare, when the models load: create only checks that the file names engines this build has.
 - A custom engine is your own code behind the same interface, load, prepare and process, so a class like ours from part 1 fits there.
 
 ---
@@ -240,7 +242,7 @@ context.threads(4, ANIRA_WAIT_BLOCKING);
 
 Note:
 - In anira there is one pool per process, and every instance queues into it.
-- The first context sizes the pool, and every later one shares it.
+- The first context sizes the pool, and every later one shares it. The threads start with the first prepare.
 - Strictly, it is one pool per copy of anira: every instance of your plugin shares it, and another plugin that links its own anira has its own.
 - Here, ten instances, one pool, four threads.
 - All handlers share one lock-free queue: the audio thread enqueues a job and leaves, and a free thread takes the oldest.
@@ -359,14 +361,14 @@ Note:
 
 <div class="tag">The map</div>
 
-## After create:<br><span class="then">plans, state pairs, a pool and the loaded models.</span>
+## After create:<br><span class="then">checked files, slots and state pairs.</span>
 
 {{MAP:show=create|memory}}
 
 Note:
-- After create we have plans, state pairs, a pool and the loaded models.
-- Marked is what holds memory from here on: the state pairs in the session and the models the context pools.
-- Nothing streams yet, because the handler does not know the host's blocks.
+- After create we have checked files, a slot per tensor, and the state pairs.
+- Marked is what holds memory from here on: the state pairs, both buffers of each.
+- Nothing is loaded yet: no model, no plan, no thread. All of that needs the contract, and the contract comes with the host's blocks.
 - That is the next row.
 
 ---

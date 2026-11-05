@@ -197,7 +197,7 @@ The block size is just a parameter, and for the whole first part it is 512. The 
 
 ## The task
 
-<div class="task-timer" data-minutes="10"></div>
+<div class="task-timer" data-minutes="8"></div>
 
 Fill in the TODOs in `steps/03_host_buffer_size/exercise/main.cpp`
 
@@ -237,12 +237,12 @@ cmake --build --preset release --target step03_exercise
 Note:
 - Three things: size the ring buffers, pump a whole block, hand the samples back
 - `main.cpp` in steps/03_host_buffer_size/exercise, build commands on the slide
-- 5 minutes, don't worry if you don't finish, we solve it together
+- 8 minutes, don't worry if you don't finish, we solve it together
 - The interesting TODO is the sizing: let people argue about it
 
 **Script:**
 
-"Now it's your turn again. We will now give the ring buffers the proper size. Then we will pump a whole block though our model and finally hand the samples back to the host. You'll find the main.cpp in steps/03_host_buffer_size/exercise. The build commands are on the slide. You get 5 minutes to try and solve it. Again, don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solutions main.cpp too."
+"Now it's your turn again. We will now give the ring buffers the proper size. Then we will pump a whole block though our model and finally hand the samples back to the host. You'll find the main.cpp in steps/03_host_buffer_size/exercise. The build commands are on the slide. You get 8 minutes to try and solve it. Again, don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solutions main.cpp too."
 *Timebox. The interesting TODO is the sizing. Let people argue about it.*
 
 ---

@@ -6,7 +6,7 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 
 ## Layout
 
-- `steps/` — one buildable folder per step, each with `exercise/` and `solution/`
+- `steps/` — one buildable folder per step, each with `exercise/` and `solution/`; steps 4, 5 and 8 have no exercise, only `solution/`
 - `steps/common/assets/` — the test signal and its target output, the example audio in `audio/`, and the models in `models/` (downloaded at configure time)
 - `steps/common/helpers/` — the engines, the ring buffer, the fake host and the reporting, shared by every step
 - `setup/` — setup check

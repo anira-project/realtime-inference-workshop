@@ -29,9 +29,6 @@ constexpr struct {
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
 
-// The first calls are slow (step 4): made before the audio starts.
-constexpr size_t k_warm_up_calls = 2;
-
 // Step 6's processor, with a dry path next to it:
 //
 //   audio thread:   host block -> m_input              m_output -> wet --+
@@ -65,11 +62,6 @@ public:
         const std::vector<float> dry_silence(m_latency, 0.0f);
         m_dry.push(dry_silence.data(), m_latency);  // The dry signal, the whole latency late
 
-        // The warm-up: the first calls are slow (step 4), so they are made
-        // here, before the audio starts. Then the state starts at zero again.
-        for (size_t i = 0; i < k_warm_up_calls; ++i) {
-            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-        }
         std::fill(m_state.begin(), m_state.end(), 0.0f);
         m_unpushed = 0;
         m_debt = 0;

@@ -170,7 +170,7 @@ Note:
 
 ## Run it <span class="then">Are we real-time capable?</span>
 
-<div class="task-timer" data-minutes="3"></div>
+<div class="task-timer" data-minutes="2"></div>
 
 Nothing to edit, `steps/04_benchmark/solution/main.cpp` is ready to run
 
@@ -182,14 +182,14 @@ cmake --build --preset release --target step04_solution
 Note:
 - Nothing to edit: build it and run it
 - Look at the first forward passes of every repetition, then at the list of the 5 slowest
-- The last lines: your worst case after the warm-up. Write it down, steps 6 and 7 need it
+- The last lines: your worst case, over all the forward passes. Write it down, steps 6 and 7 need it
 - Run it three times
 - 2 minutes
 
 **Script:**
 
 *Timebox.*
-"So, there's nothing to edit here. Please build it and run it. Have a look at which forward passes are slow in every repetition, and at the list of the 5 slowest. The last lines print your worst forward pass after the warm-up: please write that number down, you'll need it in steps 6 and 7. Then run it three times and see what changes. You have 2 minutes."
+"So, there's nothing to edit here. Please build it and run it. Have a look at which forward passes are slow in every repetition, and at the list of the 5 slowest. The last lines print your worst forward pass: please write that number down, you'll need it in steps 6 and 7. Then run it three times and see what changes. You have 2 minutes."
 
 ---
 
@@ -236,14 +236,14 @@ Your worst case:
 Note:
 - Screen share on (C): run it live in the IDE's terminal
 - Without a share: this slide shows the output of one earlier run, on ONNX Runtime
-- Look at the first passes of both repetitions: the warm-up comes back with every fresh engine
-- Then the list of the 5 slowest: it includes the warm-up, the statistics and your worst case do not
+- Look at the first passes of both repetitions
+- Then the list of the 5 slowest; the statistics and your worst case cover all the passes
 - Run it again: what stays the same, what changes?
 
 **Script:**
 
 *Run it live.*
-"Let's run it together. Here are the first forward passes of both repetitions. Look at the first passes: they're slower than the rest, and that comes back with every fresh engine. In the list of the 5 slowest, you'll find those same passes. The statistics and your worst case leave the first two passes of every repetition out. Let's run it again and see what stays the same."
+"Let's run it together. Here are the first forward passes of both repetitions, and then the list of the 5 slowest. The statistics and your worst case cover all the passes. Let's run it again and see what stays the same."
 
 ---
 
@@ -356,7 +356,6 @@ Note:
 - Whole callbacks, because the audio thread only picks results up once per callback
 - That's how much time the worker gets in step 6, and part of the latency in step 7
 - Everyone has their own number: it goes into a header, next slide
-- It includes the slow first call, and the plugin still makes those calls before the audio starts: step 6
 
 **Script:**
 
@@ -368,7 +367,7 @@ In samples that's 18 milliseconds times 44.1 kilohertz: 794 samples.
 
 *Click.*
 
-And we round that up to whole callbacks of 512 samples, so 1024: two callbacks. Whole callbacks, because the audio thread only picks results up once per callback. We call that the rounded max inference time. In step 6 it's the time the worker gets, and in step 7 it becomes part of our latency. Everyone has their own number here, and on the next slide we put yours in. This number includes the slow first call, and our plugin still makes those first calls before the audio starts, as we will see in step 6."
+And we round that up to whole callbacks of 512 samples, so 1024: two callbacks. Whole callbacks, because the audio thread only picks results up once per callback. We call that the rounded max inference time. In step 6 it's the time the worker gets, and in step 7 it becomes part of our latency. Everyone has their own number here, and on the next slide we put yours in."
 
 ---
 
@@ -437,10 +436,9 @@ Note:
 </div>
 
 Note:
-- A plugin makes the first calls before the audio starts
-- Warmed up: about 13 ms, it fits a 46 ms block easily, but not a 11.6 ms callback
-- Run it again: sometimes a call after the warm-up is slow too, one LibTorch run of mine had 43 ms, factor 0.93 against a block, 3.7 against a callback
-- That one isn't warm-up: the worst case has to fit with room to spare
+- Typically about 13 ms: it fits a 46 ms block easily, but not a 11.6 ms callback
+- Run it again: sometimes a later call is slow too, one LibTorch run of mine had 43 ms, factor 0.93 against a block, 3.7 against a callback
+- That's the rest of the system getting in the way: the worst case has to fit with room to spare
 - In the callback it doesn't: the next steps take the model out of it
 - Mean: your CPU meter
 - p99: one call in a hundred is slower, here about every 4.6 s
@@ -449,5 +447,5 @@ Note:
 
 **Script:**
 
-"So what does this tell us? A plugin has to make those first calls before the audio starts. Once it's warmed up, our computer is fast enough for a model block, but not for a 512-sample callback.
-If you ran it a few times, you may have seen something else: sometimes a call after the warm-up is slow too. One of my LibTorch runs had 43 milliseconds, which is nearly the whole model block, and almost four callbacks. That isn't warm-up, it's the rest of the system getting in the way, so the worst case has to fit with room to spare. Inside the callback it doesn't, and that's what the next steps solve. The mean is your CPU meter. p99 means one call in a hundred is slower than this, and at this block size that is about every 4.6 seconds. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in the next step."
+"So what does this tell us? Typically, our computer is fast enough for a model block, but not for a 512-sample callback.
+If you ran it a few times, you may have seen something else: sometimes a later call is slow too. One of my LibTorch runs had 43 milliseconds, which is nearly the whole model block, and almost four callbacks. That's the rest of the system getting in the way, so the worst case has to fit with room to spare. Inside the callback it doesn't, and that's what the next steps solve. The mean is your CPU meter. p99 means one call in a hundred is slower than this, and at this block size that is about every 4.6 seconds. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in the next step."

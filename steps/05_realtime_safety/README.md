@@ -6,7 +6,7 @@
 
 ## What it does
 
-[`solution/main.cpp`](solution/main.cpp) is step 3's processor with two changes: its callback, `process_block`, is marked `[[clang::nonblocking]]` — the promise an audio callback makes — and `prepare()` warms the engine up before the audio starts. [RealtimeSanitizer](https://clang.llvm.org/docs/RealtimeSanitizer.html) checks that promise at runtime and reports the first thing that breaks it.
+[`solution/main.cpp`](solution/main.cpp) is step 3's processor, with its callback, `process_block`, marked `[[clang::nonblocking]]` — the promise an audio callback makes. [RealtimeSanitizer](https://clang.llvm.org/docs/RealtimeSanitizer.html) checks that promise at runtime and reports the first thing that breaks it.
 
 The host loop is step 3's. Without RTSan nothing is checked, so the program warns, runs through, and shows that the engine still matches the Python reference:
 
@@ -15,7 +15,7 @@ WARNING: built without RealtimeSanitizer, so nothing is checked.
 It needs clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux)
 and -DWORKSHOP_RTSAN=ON. See the README.
 
-OK: max abs diff 3.87e-07, within 0.0001 of the reference.
+OK: max abs diff 3.73e-07, within 0.0001 of the reference.
 ```
 
 ## Building with RTSan
@@ -35,7 +35,7 @@ cmake --build build-rtsan -j
 
 ## What comes out
 
-The run stops in the fourth callback, the first one that runs the model, in `OrtApis::Run`, on its way into the model. Our engine creates its tensors once, up front, hands `Run` the outputs too, and was warmed up, and it still allocates:
+The run stops in the fourth callback, the first one that runs the model, in `OrtApis::Run`, on its way into the model. Our engine creates its tensors once, up front, and hands `Run` the outputs too, and it still allocates:
 
 ```
 ==64590==ERROR: RealtimeSanitizer: unsafe-library-call

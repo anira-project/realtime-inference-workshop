@@ -172,7 +172,7 @@ Note:
 
 ## The task
 
-<div class="task-timer" data-minutes="12"></div>
+<div class="task-timer" data-minutes="5"></div>
 
 Fill in the TODOs in `steps/02_state/exercise/main.cpp`
 
@@ -204,13 +204,13 @@ Note:
 - Two TODOs: create the state above the loop, pass it in the loop
 - It runs as it is, and fails from block 1 on
 - Block 0 passes: a zero state is correct for the first block
-- 12 minutes
+- 5 minutes
 
 **Script:**
 
-"There are two TODOs. Above the loop, create the state. In the loop, pass the state to `process`. The state size was on the engine slide. It runs as it is, and you'll see block 0 pass, because a zero state is correct for the first block, and everything after it fail. You get 12 minutes."
+"There are two TODOs. Above the loop, create the state. In the loop, pass the state to `process`. The state size was on the engine slide. It runs as it is, and you'll see block 0 pass, because a zero state is correct for the first block, and everything after it fail. You get 5 minutes."
 
-*Timebox (12 min). Walk around.*
+*Timebox (5 min). Walk around.*
 
 ---
 

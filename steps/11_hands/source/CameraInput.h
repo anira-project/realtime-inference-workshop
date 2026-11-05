@@ -9,7 +9,7 @@ namespace hands {
 
 // Webcam frames as ARGB software images (BGRA bytes in memory, unmirrored).
 // macOS: AVFoundation video data output (JUCE's CameraDevice delivers still captures there,
-// too slow for tracking). Elsewhere: juce::CameraDevice.
+// too slow for tracking). Windows: juce::CameraDevice. Linux: OpenCV.
 class CameraInput {
 public:
     using FrameCallback = std::function<void(const juce::Image&)>;  // capture thread

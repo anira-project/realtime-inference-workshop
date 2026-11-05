@@ -1,4 +1,4 @@
-// Platforms without a camera backend (JUCE has none for Linux): the pad plays.
+// Platforms without a camera backend (Linux without OpenCV): the pad plays.
 #include "CameraInput.h"
 
 namespace hands {

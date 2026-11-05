@@ -1,7 +1,8 @@
 # The model files, downloaded from the repository's own release into
 # steps/common/assets/models/, next to the audio in steps/common/assets/audio/:
 #
-#   rave/           model_forward.onnx, model_encoder.onnx, model_decoder.onnx
+#   rave/           model_forward.onnx, model_encoder.onnx, model_decoder.onnx,
+#                   model_decoder_noise.onnx
 #   handtracking/   MediaPipe's four hand tracking models
 #
 # They are not in git: 400 MB of weights would make every clone slow, and Git
@@ -34,13 +35,22 @@ set(_workshop_models_forward_archive
 set(_workshop_models_forward_folder "rave")
 set(_workshop_models_forward
     "model_forward.onnx|a75d50597aa8d4287ba5de73fd933d2df1c0f07c99539f5c88b1d7f694ad6f26")
-# Steps 10 and 11 (WORKSHOP_ANIRA): the model taken apart
+# Step 10 (WORKSHOP_ANIRA): the model taken apart
 set(_workshop_models_split_archive
     "workshop-models-split.zip|35f4e06dbe14bca4b1069c529effca0a9660405d64b1cffb1b8245de88217ec6")
 set(_workshop_models_split_folder "rave")
 set(_workshop_models_split
     "model_encoder.onnx|7c202eede08c638b75a2cd67b571ad3d15a6d8bbd1928a1f71f5a96f564d6d9a"
     "model_decoder.onnx|66ce39f2b5fc9122852c088b16cde5872a5541dceb59e601262d25f78bf3a4a8")
+# Step 11 (WORKSHOP_ANIRA and WORKSHOP_JUCE): the decoder as a generator, with the
+# cropped latent dimensions filled with fresh noise on every block, as the model's
+# own decode() does (scripts/export_model.py --decoder-noise). Not deterministic,
+# so step 10 and the checks keep the zero-filled model_decoder.onnx.
+set(_workshop_models_generator_archive
+    "workshop-models-generator.zip|3ef4b11b3e6eb5e4d80d1caca490f3393d8e24d17849c99e032174412eaf4ab1")
+set(_workshop_models_generator_folder "rave")
+set(_workshop_models_generator
+    "model_decoder_noise.onnx|49f2fc61b8650600dc459dce6db0d2fb288a0c6e714d9737ea27782a068929f0")
 # Step 11 (WORKSHOP_ANIRA and WORKSHOP_JUCE): MediaPipe's hand tracking chain as
 # ONNX (Apache 2.0), via anira-cam
 set(_workshop_models_hands_archive
@@ -128,6 +138,7 @@ function(workshop_fetch_models)
     if(WORKSHOP_ANIRA)
         _workshop_fetch_model_set(split)
         if(WORKSHOP_JUCE)
+            _workshop_fetch_model_set(generator)
             _workshop_fetch_model_set(hands)
         endif()
     endif()

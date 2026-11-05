@@ -14,6 +14,11 @@ CC BY-NC 4.0). 44.1 kHz, 2048 samples per block, one channel, 8 latents.
   model_encoder.onnx    audio[1,1,2048], state_in[1,E]   -> latents[1,8,1],      state_out[1,E]
   model_decoder.onnx    latents[1,8,1],  state_in[1,D]   -> audio[1,1,2048],     state_out[1,D]
 
+With --decoder-noise, only model_decoder_noise.onnx: the decoder with the cropped latent
+dimensions filled with fresh noise on every call, as the model's own decode() does. Not
+deterministic, so nothing checks against it; it is the generator of step 11, where it sounds
+livelier than the zero-filled decoder.
+
 The streaming TorchScript model keeps its convolution caches as buffers updated in place, which
 ONNX cannot express. So the model is re-run from the TorchScript weights with every cache passed
 in and returned as one flat state tensor (forward's state is the encoder's followed by the
@@ -27,6 +32,7 @@ reference.
 
 Usage:
     uv run scripts/export_model.py path/to/mrp_strengjavera_b2048_r44100_z16.ts [--out steps/common/assets/models/rave]
+    uv run scripts/export_model.py path/to/mrp_strengjavera_b2048_r44100_z16.ts --decoder-noise
 """
 import argparse
 import pathlib
@@ -200,6 +206,16 @@ class Decoder(torch.nn.Module):
     def forward(self, latents, state_in): return self.rave.decode(latents, state_in)
 
 
+class NoiseDecoder(torch.nn.Module):
+    """The decoder with fresh noise in the cropped dimensions on every call (RandomNormalLike in ONNX)."""
+
+    def __init__(self, rave): super().__init__(); self.rave = rave
+
+    def forward(self, latents, state_in):
+        cropped = torch.zeros(1, self.rave.full_latent_size - self.rave.latent_size, latents.shape[-1])
+        return self.rave.decode(latents, state_in, torch.randn_like(cropped))
+
+
 class Forward(torch.nn.Module):
     def __init__(self, rave): super().__init__(); self.rave = rave
 
@@ -361,10 +377,45 @@ def stream_onnx(path, first_name, blocks, state_size):
     return out
 
 
+def export_decoder_noise(rave, path):
+    """Exports the noise decoder and checks it: a RandomNormal node in the graph, and a different
+    output on every call with the same input. Prints its level next to the zero-filled decoder's."""
+    import onnx
+    L, D = rave.latent_size, rave.dec.size
+    export_onnx(NoiseDecoder(rave).eval(), (torch.zeros(1, L, 1), torch.zeros(1, D)), path,
+                ["latents", "state_in"], ["audio", "state_out"])
+    ops = {node.op_type for node in onnx.load(str(path), load_external_data=False).graph.node}
+    if not ops & {"RandomNormal", "RandomNormalLike"}:
+        raise SystemExit("model_decoder_noise.onnx has no RandomNormal node")
+
+    import onnxruntime as ort
+    latents = [np.full((1, L, 1), 0.5, dtype=np.float32) for _ in range(16)]
+    first = np.concatenate(stream_onnx(path, "latents", latents, D), -1)
+    # A new session starts from the same seed; within one session, every call draws new noise.
+    session = ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
+    inputs = {"latents": latents[0], "state_in": np.zeros((1, D), dtype=np.float32)}
+    once, twice = session.run(None, inputs)[0], session.run(None, inputs)[0]
+    with torch.no_grad():
+        state, zero_filled = torch.zeros(1, D), []
+        for z in latents:
+            out, state = rave.decode(torch.from_numpy(z), state)
+            zero_filled.append(out.numpy())
+    zero_filled = np.concatenate(zero_filled, -1)
+    rms = lambda x: float(np.sqrt(np.mean(x[..., 4 * rave.block:] ** 2)))
+    difference = float(np.abs(once - twice).max())
+    print(f"  one session, same input twice: max abs diff {difference:.2e}")
+    print(f"  rms after 4 blocks: noise {rms(first):.4f}, zero-filled {rms(zero_filled):.4f}")
+    if difference < 1e-3:
+        raise SystemExit("model_decoder_noise.onnx gives the same output twice")
+    print(f"  {path.name:24} {path.stat().st_size / 1e6:6.1f} MB")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("model", type=pathlib.Path)
     parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent.parent / "steps/common/assets/models/rave")
+    parser.add_argument("--decoder-noise", action="store_true",
+                        help="export only model_decoder_noise.onnx (cropped dimensions filled with noise)")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
@@ -378,6 +429,10 @@ def main():
     print(f"re-implementation vs. TorchScript: encoder {enc_err:.2e}, decoder {dec_err:.2e}")
     if max(enc_err, dec_err) > 1e-4:
         raise SystemExit("mismatch against the TorchScript model")
+
+    if args.decoder_noise:
+        export_decoder_noise(rave, args.out / "model_decoder_noise.onnx")
+        return
 
     encoder, decoder, forward = Encoder(rave).eval(), Decoder(rave).eval(), Forward(rave).eval()
     paths = {name: args.out / f"model_{name}.onnx" for name in ("forward", "encoder", "decoder")}

@@ -1,4 +1,4 @@
-// Non-Apple platforms: juce::CameraDevice (macOS uses CameraInput.mm).
+// Windows: juce::CameraDevice (macOS uses CameraInput.mm, Linux CameraInput_opencv.cpp).
 #include "CameraInput.h"
 
 #include <juce_video/juce_video.h>

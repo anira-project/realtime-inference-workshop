@@ -60,7 +60,7 @@ Note:
 **`prepareToPlay`** — the host blocks into the contract
 
 ```cpp
-contract.hard_host_blocks(block, block, sample_rate);
+contract.hard_host_blocks(1, block, sample_rate);   // up to the announced block
 m_handler.prepare(contract);
 setLatencySamples(static_cast<int>(m_handler.get_latency(0)));
 ```
@@ -78,7 +78,7 @@ m_handler.process(block, 0, block, 0);
 
 Note:
 - Three places, three calls: the same three places as step 8.
-- In prepareToPlay the host's blocks go into the contract, we prepare the handler, and we report its latency to the host.
+- In prepareToPlay the host's blocks go into the contract, 1 up to the block size it announces, we prepare the handler, and we report its latency to the host.
 - Prepare runs again whenever the host changes its blocks.
 - Everything is anira.hpp, as in steps 9 to 11: the model config, the contract and the InferenceHandler.
 - In processBlock we put one tensor over the channel pointers JUCE hands out: planar float32, with the sample count as its shape.

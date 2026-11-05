@@ -233,7 +233,7 @@ Note:
 ```cpp
 const auto model = anira::ModelConfig::from_file(step_dir + "/model.json");
 auto contract    = anira::ContractHandle::from_file(step_dir + "/contract.json");
-contract.hard_host_blocks(k_host.m_block_size, k_host.m_block_size, k_host.m_sample_rate);
+contract.hard_host_blocks(1, max_block_size, sample_rate);   // any block up to the host's largest
 
 anira::Pipeline pipeline;
 pipeline.add_inference(model);
@@ -247,9 +247,8 @@ status = handler.process(block, 0, block, 0);
 
 Note:
 - Loading, the pipeline, the handler and prepare were given, all from anira.hpp; the warm-up runs inside prepare.
-- First blank: give the contract the host's block size, twice, and its sample rate.
-- Second: ask for the latency of output 0. Here it is 6320, the same as by hand in Step 7: on this machine the inference takes longer than one host block of 11.6 ms.
-- Where it fits in one host block, anira reports 4272, 2048 fewer.
+- First blank: give the contract the host's blocks, any size from 1 up to its largest, and its sample rate.
+- Second: ask for the latency of output 0. Here it is 6320: the host may call with any block up to 512, so the latency covers the worst one, whatever the budget.
 - Third: in the audio callback, one call over the block, in place: the same block is input and output.
 
 ---

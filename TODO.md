@@ -7,10 +7,7 @@
 
 - Benchmark -> convert to samples (todo-lina)
 
-- All 512 hostsample examples
-- synchronious ringbuffer example:
-- Ringbuffersize input: 2048 and output: 2048
-- Whats the latency? Bufferadaptation Latency: 2048-512 + Model latency (In this case ?)
+- Step 10 (encoder/decoder split) declares a fixed 512: `hard_host_blocks(k_host.m_block_size, k_host.m_block_size, …)`. Step 9 declares 1 to the host's maximum; decide whether the split should do the same, and update slides/16-split.md
 - m_dept has been rewritten check   
 
 - Async:

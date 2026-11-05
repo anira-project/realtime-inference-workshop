@@ -19,8 +19,8 @@ Open [`exercise/model.json`](exercise/model.json) and [`exercise/main.cpp`](exer
 
 1. **Declare the tensors** (`model.json`). The sizes: `"time"` of the audio in and out is the model's block, 2048 (step 1). The state's length, 63488 floats, is given. The audio output carries the model's own delay: `"latency": 2224` (step 7).
 2. **Pair the state** (`model.json`). `state_in` is fed from `state_out`: `"state_source": "state_out"`. That is the whole state loop from step 2.
-3. **Prepare and process** (`main.cpp`). Loading, the pipeline, the handler and prepare are given, all from `anira.hpp`; three blanks, marked `fill out`:
-   1. `contract.hard_host_blocks(…)`: the host's block size, twice (smallest and largest), and its sample rate, from `k_host`.
+3. **Prepare and process** (`AniraProcessor.cpp`). Loading, the pipeline, the handler and prepare are given, all from `anira.hpp`; three blanks, marked `fill out`:
+   1. `m_contract.hard_host_blocks(…)`: the smallest block the host may send (any, down to 1), its largest (`max_block_size`) and its sample rate.
    2. `latency`: `handler.get_latency` of output slot 0.
    3. In the audio callback, `handler.process` over the block: in place, so the block is both input and output.
 
@@ -39,7 +39,7 @@ Reported latency: 6320 samples (143.3 ms at 44100 Hz)
 OK: max abs diff 2.79e-07, within 0.0001 of the reference.
 ```
 
-6320 is the figure of step 7: a budget of 20 ms is more than one host block of 11.6 ms. A budget that fits in one host block gives 4272: 1536 (block adaptation, 2048 − gcd(512, 2048)) + 512 (one host block for the inference) + 2224 (the model).
+6320, because the contract declares host blocks from 1 to 512: the host may call with any block up to its largest, so the latency covers the worst one, whatever the budget. The 20 ms budget in `contract.json` is a placeholder until anira measures the budget at prepare.
 
 The check is step 7's: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. A callback whose block was not back in time went out as zeros (`ANIRA_MISSED`); those are listed and left out, and more than a quarter of them fails the run. On a busy machine a few are normal.
 

@@ -10,8 +10,6 @@
 
 - Step 10 (encoder/decoder split) declares a fixed 512: `hard_host_blocks(k_host.m_block_size, k_host.m_block_size, …)`. Step 9 declares 1 to the host's maximum; decide whether the split should do the same, and update slides/16-split.md
 
-- An engine per channel?? in anira recap part 1 step 8
-
 - Plans are not outputted at create but at prepare, check this again
 - same with loaded models
 - Have a look into the ctors and into prepare and please find out what the steps are really doing!!!!!!!

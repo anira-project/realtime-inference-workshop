@@ -34,9 +34,6 @@ constexpr struct {
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
 
-// The first calls are slow (step 4): made before the audio starts.
-constexpr size_t k_warm_up_calls = 2;
-
 // Step 3's processor, split over two threads. The audio thread only moves
 // samples, the worker runs the model:
 //
@@ -52,43 +49,36 @@ public:
     void prepare(size_t max_block_size) {
         m_worker.stop();
 
+        const size_t rounded_max_inference_time = k_max_inference_samples_rounded;
+
+        // How much silence m_output starts with, so the worker has time and the host
+        // always finds something to take. Worked out for you in common/checks/step06.h.
+        m_prefill = compute_prefill(k_model.m_input_size, max_block_size, rounded_max_inference_time);
+
         // ---- TODO 1 --------------------------------------------------------
-        // How late does the host hear the model?
-        //   1. rounded_max_inference_time: k_max_inference_ms in samples,
-        //      rounded up to whole callbacks of max_block_size samples
-        //   2. the prefill: the buffer adaptation from step 3 plus the time
-        //      the worker is given
-        //   3. the size of m_output: the worker's time plus one model block
+        // Give both ring buffers the capacity they need. As in step 3, think of
+        // the moment each one is fullest:
+        //   1. m_input: the worker takes a whole model block out of it at once.
+        //   2. m_output: the worker pushes a whole model block into it. And while
+        //      the worker is busy, the host keeps taking samples, so those have
+        //      to be waiting in there too. How many can the host take in that time?
         // --------------------------------------------------------------------
-        const double max_inference_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
-        const size_t rounded_max_inference_time =
-            static_cast<size_t>(
-                std::ceil(max_inference_samples / static_cast<double>(max_block_size))) *
-            max_block_size;  // <- solution
-        m_prefill =
-            (k_model.m_input_size - max_block_size) + rounded_max_inference_time;  // <- solution
-        const size_t output_capacity =
-            rounded_max_inference_time + k_model.m_input_size;  // <- solution
+        const size_t input_capacity = k_model.m_input_size;  // <- solution
+        const size_t output_capacity = rounded_max_inference_time + k_model.m_input_size;  // <- solution
 
-        check_todos(k_max_inference_ms,
-                    rounded_max_inference_time,
-                    m_prefill,
+        check_todos(input_capacity,
                     output_capacity,
+                    m_prefill,
                     max_block_size,
-                    k_model.m_sample_rate);  // Given: names a missing TODO
+                    k_model.m_input_size);  // Given: names a missing TODO
 
-        m_input = ThreadSafeRingBuffer(k_model.m_input_size);
+        m_input = ThreadSafeRingBuffer(input_capacity);
         m_output = ThreadSafeRingBuffer(output_capacity);
         const std::vector<float> silence(m_prefill, 0.0f);
-        m_output.push(silence.data(), m_prefill);  // The prefill
+        m_output.push(silence.data(), m_prefill);
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
 
-        // The warm-up: the first calls are slow (step 4), so they are made
-        // here, before the audio starts. Then the state starts at zero again.
-        for (size_t i = 0; i < k_warm_up_calls; ++i) {
-            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-        }
         std::fill(m_state.begin(), m_state.end(), 0.0f);
         m_unpushed = 0;
         m_debt = 0;
@@ -102,36 +92,34 @@ public:
     // The audio thread: one callback. No engine anymore, only samples in and out.
     void process_block(float* samples, size_t num_samples) {
         // ---- TODO 2 --------------------------------------------------------
-        // Step 3's process_block(), without the model, one sample at a time:
-        //   1. push the host's samples into m_input, one by one. If one does
-        //      not fit, the worker is a whole block behind: count it and the
-        //      rest in m_unpushed, and stop
-        //   2. (given) those never reach the model: the host gets as many
-        //      zeros instead, and nothing is taken out of m_output for them
-        //   3. take the rest from m_output, one by one. If one is not there
-        //      yet, or something is still owed, the worker is late: it and the
-        //      rest of this callback go out as zeros, and all of them are
-        //      owed: m_debt
-        //   4. pay the debt first: what is owed came too late, its place
-        //      already went out as a zero. Take it out and throw it away
+        // The audio thread.
+        //   1. push the host's samples into m_input, one by one. Use try_push(),
+        //      to check if they fit, so the audio thread never blocks.
+        //   2. collect completed blocks from the worker: pop them from m_output,
+        //      one by one. Use try_pop() to check if they are there, so the audio
+        //      thread never blocks.
         //
         // Hint: try_push() and try_pop() never wait, they say whether it worked.
         // --------------------------------------------------------------------
         for (size_t i = 0; i < num_samples; ++i) {
             const bool pushed = m_input.try_push(samples[i]);  // <- solution
             if (!pushed) {
-                m_unpushed += num_samples - i;  // <- solution
+                m_unpushed += num_samples - i;
                 break;
             }
         }
 
+        // The zeros owed for m_unpushed go out first. A callback can hold at most
+        // num_samples of them; whatever is left waits for the next callback.
         const size_t zeros = std::min(m_unpushed, num_samples);
         std::fill_n(samples, zeros, 0.0f);
         m_unpushed -= zeros;
 
+        // Pay the debt first: these samples came too late, their place already went
+        // out as zeros. Throw them away, so the stream stays in its place.
         float late = 0.0f;
         while (m_debt > 0) {
-            if (m_output.try_pop(late)) {  // <- solution
+            if (m_output.try_pop(late)) {
                 --m_debt;
             } else {
                 break;
@@ -145,7 +133,7 @@ public:
                 // the worker is pushing right now, what comes next would land
                 // one place too early.
                 std::fill_n(samples + i, num_samples - i, 0.0f);
-                m_debt += num_samples - i;  // <- solution
+                m_debt += num_samples - i;
                 break;
             }
         }
@@ -179,9 +167,15 @@ private:
     std::vector<float> m_model_block;  // The worker's
     std::vector<float> m_state;        // The worker's
     WorkerThread m_worker;
+    // The silence m_output starts with, in samples: how late the host hears the stream.
     size_t m_prefill = 0;
-    size_t m_unpushed = 0;  // Samples that did not fit into m_input, owed as zeros
-    size_t m_debt = 0;      // Samples that went out as zeros, thrown away when they arrive
+    // Samples that did not fit into m_input, because the worker is a whole block
+    // behind. They never reach the model, so nothing comes out of m_output for them:
+    // the host gets a zero for each one instead, and nothing is popped.
+    size_t m_unpushed = 0;
+    // Samples the host needed before m_output had them, so they went out as zeros. The
+    // model does still deliver them, too late: they are thrown away when they arrive.
+    size_t m_debt = 0;
 };
 
 int main() {

@@ -2,6 +2,8 @@
 // it from here.
 #pragma once
 
+#include <cmath>
+
 // The largest worst case that can work at all: one model block of time, 2048
 // samples at 44.1 kHz. A forward pass that takes longer can never keep up,
 // whatever the latency.
@@ -11,6 +13,10 @@ constexpr double k_worst_case_inference_ms = 46.4;
 // starts at the worst case above, so everything runs; your number makes the
 // latency smaller.
 constexpr double k_max_inference_ms = k_worst_case_inference_ms;  // <- fill out after step 4
+
+constexpr double k_max_inference_samples = k_max_inference_ms * 44.1;
+
+inline const double k_max_inference_samples_rounded = std::ceil(k_max_inference_samples / 512.0) * 512.0;  // rounded up to whole callbacks
 
 static_assert(k_max_inference_ms > 0.0 && k_max_inference_ms <= k_worst_case_inference_ms,
               "k_max_inference_ms is larger than one model block: this machine cannot keep up "

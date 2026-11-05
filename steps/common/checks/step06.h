@@ -14,28 +14,33 @@
 #include "common/assets/test_signal.h"
 #include "common/helpers/support.h"
 
-// TODO 1, in prepare(), before anything is allocated.
-// @max_inference_ms: k_max_inference_ms, from common/inference_time.h
-// @rounded_max_inference_time: the worker's time, in samples
-// @prefill: the samples of silence m_output starts with
-// @output_capacity: the size of m_output
+// How much silence m_output starts with. Given, step 7 takes it apart.
+// @model_block_size: samples the model takes per forward pass
 // @max_block_size: the largest block the callback will be given
-// @sample_rate: in Hz
-inline void check_todos(double max_inference_ms,
-                        size_t rounded_max_inference_time,
-                        size_t prefill,
+// @rounded_max_inference_time: the worker's time, in samples
+inline size_t compute_prefill(size_t model_block_size,
+                              size_t max_block_size,
+                              size_t rounded_max_inference_time) {
+    return (model_block_size - max_block_size) + rounded_max_inference_time;
+}
+
+// TODO 1, in prepare(), before anything is allocated.
+// @input_capacity: the size of m_input
+// @output_capacity: the size of m_output
+// @prefill: the samples of silence m_output starts with
+// @max_block_size: the largest block the callback will be given
+// @model_block_size: samples the model takes per forward pass
+inline void check_todos(size_t input_capacity,
                         size_t output_capacity,
+                        size_t prefill,
                         size_t max_block_size,
-                        double sample_rate) {
-    const double max_inference_samples = max_inference_ms * sample_rate / 1000.0;
-    if (rounded_max_inference_time == 0 || rounded_max_inference_time % max_block_size != 0 ||
-        static_cast<double>(rounded_max_inference_time) < max_inference_samples) {
-        throw std::runtime_error(
-            "TODO 1: round k_max_inference_ms up to whole callbacks, in samples");
+                        size_t model_block_size) {
+    if (input_capacity < model_block_size) {
+        throw std::runtime_error("TODO 1.1: give m_input room for a whole model block");
     }
-    if (prefill == 0) { throw std::runtime_error("TODO 1: work out the prefill"); }
     if (output_capacity < prefill + max_block_size) {
-        throw std::runtime_error("TODO 1: give m_output room for the prefill and a callback more");
+        throw std::runtime_error(
+            "TODO 1.2: give m_output room for the prefill and a callback more");
     }
 }
 

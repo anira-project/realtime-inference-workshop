@@ -9,14 +9,8 @@
 
 - Step 10 (encoder/decoder split) declares a fixed 512: `hard_host_blocks(k_host.m_block_size, k_host.m_block_size, …)`. Step 9 declares 1 to the host's maximum; decide whether the split should do the same, and update slides/16-split.md
 
-- Async:
-- Latency Bufferadaptation + Model Latency + inference_time_in_sample round up to next 512 samples (do not push model latency)
-- Worker ohne sleep
 
 
-- raus    // Wait for room, but do not hang at stop
-    while (m_running.load(std::memory_order_acquire) &&
-           m_output.space() < k_model.m_input_size) { sleep_for(100us); }
 
 - Latency is collect a block, model inference (assumed one inference takes at max one buffersize of time), model internal latency (filters inside of the model, STFT, non-causal layers (i.e. convolutions), etc..)..
 - In the case that the hostbuffersize is constant, is a Teiler von 2048 oder ein Multiple of 2048

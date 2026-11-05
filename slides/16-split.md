@@ -219,7 +219,7 @@ Note:
 
 Note:
 - Both models carry their own state pair, as in Step 9.
-- Their configs, encoder.json and decoder.json, are given, and so is the contract: like Step 9's, but on_miss zeros, because bypass needs an input of the same shape as the output.
+- Their configs, encoder.json and decoder.json, are given, and so is the contract: like Step 9's, but on_miss zeros, as in anira's example. Bypass passes the input through, and anira refuses it here: the encoder's output has 8 channels, its input 1.
 - Between the two handlers you write no buffer: anira's queues are the only ones.
 - The plugin around it is given: Step 9's, with eight knobs, z0 to z7.
 - Step 10 has a reference of its own, target_split_signal.h: encoder and decoder as anira's example runs them.

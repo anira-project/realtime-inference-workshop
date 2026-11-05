@@ -49,7 +49,7 @@ OK: max abs diff 2.79e-07, within 0.0001 of the reference.
 
 6320, because the contract declares host blocks from 1 to 512: the host may call with any block up to its largest, so the latency covers the worst one, whatever the budget. The 20 ms budget in `contract.json` is a placeholder until anira measures the budget at prepare.
 
-The check is step 7's: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. A callback whose block was not back in time went out as zeros (`ANIRA_MISSED`); those are listed and left out, and more than a quarter of them fails the run. On a busy machine a few are normal.
+The check is step 7's: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. A callback whose block was not back in time went out as the miss policy's fill, here the input itself (`"on_miss": "bypass"`, `ANIRA_MISSED`); those are listed and left out, and more than a quarter of them fails the run. On a busy machine a few are normal.
 
 ## If you're stuck
 

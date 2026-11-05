@@ -502,16 +502,16 @@ Note:
 <div class="statement-points">
   <div><code>execution</code> in the contract: <code>worker</code>, <code>inline</code> or <code>auto</code>, per plan, fixed at <code>prepare</code></div>
   <div><code>inline</code> runs the model inside <code>process</code>, on the audio thread</div>
-  <div><code>auto</code> picks inline only for an engine that declares itself real-time safe, and only if the measured budget fits</div>
+  <div><code>auto</code> picks inline only if the host block matches the model block, the budget fits, and the engine declares itself real-time safe</div>
 </div>
 
-<div class="cards-note">Coming in a later release. Until then every inference runs on the pool.</div>
+<div class="cards-note">Coming in a later release, together with GPU and NPU accelerators. Until then every inference runs on the pool.</div>
 
 Note:
 - Next: inline execution, with no inference term in the latency.
 - For a tiny model, the trip to the pool costs at least one host block of latency, more than the model itself.
-- A later release can run such a model inside process, on the audio thread, but only for an engine that declares itself real-time safe and only if the budget fits.
-- Until then every inference runs on the pool.
+- A later release can run such a model inside process, on the audio thread, but only if three things hold: the host block matches the model block, the budget fits into one callback, and the engine declares itself real-time safe.
+- It comes together with GPU and NPU accelerators. Until then every inference runs on the pool.
 
 ---
 

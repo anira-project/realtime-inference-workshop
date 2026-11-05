@@ -9,7 +9,7 @@
 - `steps/common/assets/models/rave/model_encoder.onnx`, `model_decoder.onnx` — the two halves, each with its own state pair (34,304 and 29,184 floats).
 - [`exercise/encoder.json`](exercise/encoder.json) — audio in, one latent frame `[8, 1]` out per 2048 samples. Complete.
 - [`exercise/decoder.json`](exercise/decoder.json) — a latent frame in, 2048 samples out. Its anchor is the audio output: that is its clock, the latent input follows at one frame per 2048 samples. The model's own delay, 2224, is declared here, once for the whole chain. Complete.
-- [`exercise/contract.json`](exercise/contract.json) — like step 9's, but `on_miss: zeros` (bypass needs an input of the output's shape), used for both.
+- [`exercise/contract.json`](exercise/contract.json) — like step 9's, but `on_miss: zeros`, as in anira's encoder/decoder example (bypass passes the input through, and anira refuses it when the output has other channels than the input: 8 latents from 1 audio channel), used for both.
 - [`source/SplitProcessor.h`](source/SplitProcessor.h) — the class you complete: `prepare` before the stream, `process` per callback, `set_offset` per knob.
 - [`source/PluginProcessor.cpp`](source/PluginProcessor.cpp) — the plugin around it, step 9's with eight knobs, z0 to z7, from −1 to 1 as in anira's example. Complete.
 - [`check.cpp`](check.cpp) — drives `SplitProcessor` on the fake host from step 9 and compares the output with the reference. Complete.

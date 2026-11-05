@@ -67,9 +67,9 @@ inline int report_with_latency(const float* got,
 }
 
 // The same, leaving out the callbacks where a block came back late and went
-// out as silence: those are glitches, and what matters is that everything
+// out as the miss policy's fill (silence, or the input): those are glitches, and what matters is that everything
 // around them still lines up. Fails when more than a quarter were late.
-// @late: the first sample of every callback that went out as silence
+// @late: the first sample of every callback the miss policy filled
 // @block_size: samples per callback
 inline int report_with_latency(const float* got,
                                const float* want,
@@ -92,7 +92,7 @@ inline int report_with_latency(const float* got,
     }
     const size_t callbacks = num_samples / block_size;
     if (!late.empty()) {
-        std::printf("  late callbacks, silent       %zu of %zu\n", late.size(), callbacks);
+        std::printf("  late callbacks, left out     %zu of %zu\n", late.size(), callbacks);
     }
     if (late.size() * 4 > callbacks) {
         std::printf("FAILED: more than a quarter of the callbacks were late.\n");

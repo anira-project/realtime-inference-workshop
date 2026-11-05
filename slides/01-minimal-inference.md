@@ -155,7 +155,7 @@ Then for every block we copy the samples into the input buffer and call Run, whi
 
 ## The task
 
-<div class="task-timer" data-minutes="10"></div>
+<div class="task-timer" data-minutes="8"></div>
 
 Fill in the TODOs in `steps/01_minimal_inference/exercise/main.cpp`
 
@@ -193,16 +193,16 @@ cmake --build --preset release --target step01_exercise
 Note:
 - Three TODOs: set the model path, pick the block size, run the first block
 - Build commands are on the slide
-- 10 minutes, don't worry if you don't finish
+- 8 minutes, don't worry if you don't finish
 - We solve it together, solutions are in the solution's main.cpp
 - Walk around: most problems are build problems, not code problems
 
 **Script:**
 
 "So now we get to our first task. There are three TODOs in the exercise file. First set the model path, then pick the block size, and finally run the first block.
-The build commands are on the slide. You get 10 minutes to try and solve it. Don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solution's main.cpp too."
+The build commands are on the slide. You get 8 minutes to try and solve it. Don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solution's main.cpp too."
 
-*Timebox (10 min). Walk around. Most problems here are build problems,
+*Timebox (8 min). Walk around. Most problems here are build problems,
 not code problems.*
 
 ---

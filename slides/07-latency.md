@@ -171,7 +171,7 @@ Note:
 <div class="lat-add with-code">
   <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-op fragment">+</div>
-  <div class="lat-term fragment"><span>rounded max inference time</span><small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
+  <div class="lat-term fragment"><span>rounded max inference time</span><small>18 ms → 2 callbacks</small><strong>1024</strong></div>
   <div class="lat-op fragment">+</div>
   <div class="lat-term fragment"><span>the model itself</span><small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
   <div class="lat-op fragment">=</div>

@@ -39,9 +39,8 @@ constexpr size_t k_host_block_size = 512;
 #endif
 #endif
 
-// Step 3's processor, unchanged except for two things: the callback makes the
-// promise, and prepare() warms the engine up, so what RTSan finds is not a
-// first-call effect.
+// Step 3's processor, unchanged except for one thing: the callback makes the
+// promise.
 class ProcessorExample {
 public:
     explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
@@ -53,10 +52,6 @@ public:
         m_output = RingBuffer(capacity);
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
-
-        // The warm-up, before the audio starts. The state starts at zero again.
-        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-        std::fill(m_state.begin(), m_state.end(), 0.0f);
     }
 
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {

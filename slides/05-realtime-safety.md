@@ -98,13 +98,13 @@ Note:
 - Correct: matches the Python reference
 - With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has run
 - Stack from the bottom: `process_block` → `process` → `Run` → `malloc`
-- Even warmed up in `prepare()`, with one thread and our own buffers and tensors preallocated
+- Even with one thread and our own buffers and tensors preallocated
 - Even a small `malloc` can take too long on the audio thread
 
 **Script:**
 
 *Run `step05_solution`, without and with the sanitizer, live if possible.*
-"First, is it still correct? Yes, without the sanitizer it runs through and gives us the same output as the Python reference. But is it safe? With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has even run. If we read the stack from the bottom up: our callback calls `process`, `process` calls ONNX Runtime's `Run`, and `Run` calls `malloc` on its way into the model. And this is warmed up, on one thread, with our own buffers and tensors preallocated. It's only a small allocation, but even a small `malloc` can take too long on the audio thread."
+"First, is it still correct? Yes, without the sanitizer it runs through and gives us the same output as the Python reference. But is it safe? With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has even run. If we read the stack from the bottom up: our callback calls `process`, `process` calls ONNX Runtime's `Run`, and `Run` calls `malloc` on its way into the model. And this is on one thread, with our own buffers and tensors preallocated. It's only a small allocation, but even a small `malloc` can take too long on the audio thread."
 
 ---
 

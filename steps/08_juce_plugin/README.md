@@ -24,7 +24,7 @@ Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), sh
 
 ## The three places the host talks to us
 
-**`prepareToPlay`**: everything that allocates. Load the model once, `prepare` the processor, which sizes the ring buffers, warms up and starts the worker thread. Then the number from step 7:
+**`prepareToPlay`**: everything that allocates. Load the model once, `prepare` the processor, which sizes the ring buffers and starts the worker thread. Then the number from step 7:
 
 ```cpp
 setLatencySamples(static_cast<int>(m_processor->latency_samples()));

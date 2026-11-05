@@ -50,7 +50,7 @@ public:
         m_worker.stop();
 
         // How much silence m_output starts with, so the worker has time and the host
-        // always finds something to take. Worked out for you in common/checks/step06.h.
+        // always finds something to take. Given here, and step 7 takes it apart.
         m_prefill = (k_model.m_input_size - max_block_size) + k_max_inference_samples_rounded;
 
         // ---- TODO 1 --------------------------------------------------------

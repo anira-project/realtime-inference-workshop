@@ -31,8 +31,8 @@ processor.process_block(samples, num_samples) // Per callback, in place
 Build and run from the repository root:
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
+cmake --preset release
+cmake --build --preset release --target step03_exercise
 ./build/bin/step03_exercise
 ```
 

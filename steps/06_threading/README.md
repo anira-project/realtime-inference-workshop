@@ -22,9 +22,9 @@ The thread itself is given: [`WorkerThread`](../common/helpers/worker_thread.h) 
 
 ## The prefill
 
-The worker needs time, and the host must always find something to take. So `m_output` starts with silence, the prefill. It is given: `compute_prefill()` in [`common/checks/step06.h`](../common/checks/step06.h) works it out, and step 7 takes it apart.
+The worker needs time, and the host must always find something to take. So `m_output` starts with silence, the prefill. It is given, in `prepare()`, and step 7 takes it apart.
 
-It depends on `rounded_max_inference_time`, also given: your worst case from step 4 in samples, rounded up to whole 512-sample callbacks, because the audio thread only picks results up once per callback. It comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), where you put your number from step 4. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
+It depends on `k_max_inference_samples_rounded`, also given: your worst case from step 4 in samples, rounded up to whole 512-sample callbacks, because the audio thread only picks results up once per callback. It comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), where you put your number from step 4. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
 
 ## What to do
 

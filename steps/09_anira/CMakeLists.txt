@@ -32,7 +32,7 @@ foreach(variant exercise solution)
         workshop_add_plugin(${plugin}
             NAME "Workshop anira ${variant}"
             CODE "Wa9${initial}"
-            SOURCES source/Plugin.cpp ${variant}/AniraProcessor.cpp)
+            SOURCES source/PluginProcessor.cpp ${variant}/AniraProcessor.cpp)
         target_compile_features(${plugin} PRIVATE cxx_std_20)
         target_include_directories(${plugin} PRIVATE source)
         target_compile_definitions(${plugin} PRIVATE WORKSHOP_STEP_DIR="${step_dir}")

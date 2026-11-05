@@ -1,24 +1,21 @@
-# One plugin on the shared shell of steps/common/plugin, for the anira steps:
-# the example player, the dry/wet mix, the window. The step adds its own sources.
+# One plugin on the shared shell of steps/common/plugin, for steps 8 and 9:
+# PluginBase, the source player, the window. The step adds its own sources.
 #
 #   workshop_add_plugin(<target> NAME <product name> CODE <4 chars> [SOURCES ...])
 #
-# VST3 and Standalone. The example slots are step 8's files, compiled in once
-# as workshop_plugin_examples and shared by every plugin. Needs JUCE
-# (workshop_setup_juce) before the first call.
+# VST3 and Standalone. The example is common/assets/audio/example_1.wav,
+# compiled in once as workshop_plugin_audio and shared by every plugin. Needs
+# JUCE (workshop_setup_juce) before the first call.
 
 include_guard(GLOBAL)
 
 function(workshop_add_plugin target)
     cmake_parse_arguments(PARSE_ARGV 1 arg "" "NAME;CODE" "SOURCES")
     set(shell "${CMAKE_SOURCE_DIR}/steps/common/plugin")
-    set(examples "${CMAKE_SOURCE_DIR}/steps/08_juce_plugin/assets")
 
-    if(NOT TARGET workshop_plugin_examples)
-        juce_add_binary_data(workshop_plugin_examples SOURCES
-            "${examples}/example_1.wav"
-            "${examples}/example_2.wav"
-            "${examples}/example_3.wav")
+    if(NOT TARGET workshop_plugin_audio)
+        juce_add_binary_data(workshop_plugin_audio SOURCES
+            "${CMAKE_SOURCE_DIR}/steps/common/assets/audio/example_1.wav")
     endif()
 
     juce_add_plugin(${target}
@@ -33,8 +30,8 @@ function(workshop_add_plugin target)
         COPY_PLUGIN_AFTER_BUILD FALSE)
 
     target_sources(${target} PRIVATE
-        "${shell}/ProcessorBase.cpp"
-        "${shell}/PluginEditor.cpp"
+        "${shell}/PluginBase.cpp"
+        "${shell}/ui/PluginEditor.cpp"
         ${arg_SOURCES})
 
     target_compile_definitions(${target} PUBLIC
@@ -42,11 +39,12 @@ function(workshop_add_plugin target)
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
-    target_include_directories(${target} PRIVATE "${CMAKE_SOURCE_DIR}/steps" "${shell}")
+    target_include_directories(${target} PRIVATE
+        "${CMAKE_SOURCE_DIR}/steps" "${shell}" "${shell}/ui" "${shell}/dsp")
 
     target_link_libraries(${target}
         PRIVATE
-            workshop_plugin_examples
+            workshop_plugin_audio
             juce::juce_audio_utils
         PUBLIC
             juce::juce_recommended_config_flags

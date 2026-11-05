@@ -2,7 +2,7 @@
 //
 // Everything anira does for the plugin, in one class: the model file and the
 // contract say what runs and how, prepare plans it, process moves one block.
-// The plugin (source/Plugin.cpp) and the check (check.cpp) both drive it the
+// The plugin (source/PluginProcessor.cpp) and the check (check.cpp) both drive it the
 // way a host does: prepare once before the stream, process in every callback.
 #pragma once
 

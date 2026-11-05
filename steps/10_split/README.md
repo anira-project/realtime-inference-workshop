@@ -6,7 +6,7 @@
 
 ## What you have
 
-- `models/model_encoder.onnx`, `models/model_decoder.onnx` — the two halves, each with its own state pair (34,304 and 29,184 floats).
+- `steps/common/assets/models/rave/model_encoder.onnx`, `model_decoder.onnx` — the two halves, each with its own state pair (34,304 and 29,184 floats).
 - [`exercise/encoder.json`](exercise/encoder.json) — audio in, one latent frame `[8, 1]` out per 2048 samples. Complete.
 - [`exercise/decoder.json`](exercise/decoder.json) — a latent frame in, 2048 samples out. Its anchor is the audio output: that is its clock, the latent input follows at one frame per 2048 samples. The model's own delay, 2224, is declared here, once for the whole chain. Complete.
 - [`exercise/contract.json`](exercise/contract.json) — the contract from step 9, used for both.

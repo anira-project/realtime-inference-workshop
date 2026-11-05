@@ -1,12 +1,12 @@
 <h1>Create</h1>
 
-Plans, tensors, the pool
+What you declare: engines, tensors, state, the pool
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->
 
 Note:
-- Create: plans, tensors and the pool.
+- Create: what we declare, the engines, the tensors, the state and the pool.
 - This is the first row of the map: what exists once the plugin is constructed.
 - We go pair by pair: first what we built by hand in part 1, then what anira does instead.
 
@@ -21,7 +21,8 @@ Note:
 Note:
 - Create runs once, on the main thread: the plugin's constructor.
 - The files go in, the handler comes out.
-- Behind the handler, the session will hold the plans and the state pairs, and the context the pool and the loaded models; this chapter builds each of them.
+- Create checks the files and builds the handler's slots, one per tensor, the state pairs among them.
+- Nothing is loaded yet: the models, the plans and the pool's threads come at prepare. This chapter is about what we declare for them.
 - Nothing in this row runs on the audio thread, so all of it may load files and allocate.
 
 ---
@@ -80,6 +81,7 @@ Note:
 - An entry for an engine the build does not have is skipped, so one file serves every build.
 - A plan is one entry on one engine and execution provider, and set_plan switches between them.
 - default_engine says which plan runs first.
+- The plans are built at prepare, when the models load: create only checks that the file names engines this build has.
 - A custom engine is your own code behind the same interface, load, prepare and process, so a class like ours from part 1 fits there.
 
 ---
@@ -240,7 +242,7 @@ context.threads(4, ANIRA_WAIT_BLOCKING);
 
 Note:
 - In anira there is one pool per process, and every instance queues into it.
-- The first context sizes the pool, and every later one shares it.
+- The first context sizes the pool, and every later one shares it. The threads start with the first prepare.
 - Strictly, it is one pool per copy of anira: every instance of your plugin shares it, and another plugin that links its own anira has its own.
 - Here, ten instances, one pool, four threads.
 - All handlers share one lock-free queue: the audio thread enqueues a job and leaves, and a free thread takes the oldest.
@@ -284,12 +286,12 @@ Note:
   <div class="policy-name"><code>SPIN_BACKOFF</code></div>
   <div class="wait-bar spin"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div class="policy-cell ok">an atomic, nothing else</div>
-  <div class="policy-cell warn">polls: spin, yield, sleep 100 µs</div>
+  <div class="policy-cell warn">polls: 4 retries, 32 with a CPU pause, then yield and sleep 100 µs</div>
 
   <div class="policy-name"><code>BLOCKING</code></div>
   <div class="wait-bar block"><i></i></div>
-  <div class="policy-cell warn">an atomic, plus one wake syscall when a thread sleeps</div>
-  <div class="policy-cell ok">no CPU, woken at once</div>
+  <div class="policy-cell warn">an atomic, plus one wake syscall when a thread is blocked</div>
+  <div class="policy-cell ok">spins up to 10,000 tries, then blocks on a semaphore</div>
 </div>
 
 <div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
@@ -297,8 +299,10 @@ Note:
 Note:
 - In anira the pool waits for work, either spinning with backoff or blocking.
 - SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool pays by polling.
-- BLOCKING parks idle threads on a semaphore: no CPU while idle.
-- The price is on the audio thread: if a pool thread is asleep, the enqueue makes one wake syscall.
+- Its backoff: 4 retries at once, 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry. So an idle thread picks up new work within about 100 µs.
+- BLOCKING waits in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
+- It wakes up every 5 ms on its own, only to check whether it should exit. While blocked, it uses no CPU.
+- The price is on the audio thread: if a pool thread is blocked, the enqueue makes one wake syscall.
 - Under load the threads rarely sleep, so that is rare; on an idle pool it is nearly every job.
 - The choice is made once per process, in context.threads.
 - [click] We recommend BLOCKING: one bounded wake instead of threads polling while idle.
@@ -357,14 +361,14 @@ Note:
 
 <div class="tag">The map</div>
 
-## After create:<br><span class="then">plans, state pairs, a pool and the loaded models.</span>
+## After create:<br><span class="then">checked files, slots and state pairs.</span>
 
 {{MAP:show=create|memory}}
 
 Note:
-- After create we have plans, state pairs, a pool and the loaded models.
-- Marked is what holds memory from here on: the state pairs in the session and the models the context pools.
-- Nothing streams yet, because the handler does not know the host's blocks.
+- After create we have checked files, a slot per tensor, and the state pairs.
+- Marked is what holds memory from here on: the state pairs, both buffers of each.
+- Nothing is loaded yet: no model, no plan, no thread. All of that needs the contract, and the contract comes with the host's blocks.
 - That is the next row.
 
 ---

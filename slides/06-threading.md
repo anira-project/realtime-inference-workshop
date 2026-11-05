@@ -89,7 +89,7 @@ Note:
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/ · common/assets/</div>
+    <div class="given-folder">common/assets/</div>
     {{FILE:model_forward.onnx}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
@@ -127,21 +127,18 @@ Note:
 
 ```cpp
 ThreadSafeRingBuffer m_input{capacity};   // One writer, one reader
+// Underneath: moodycamel::BlockingReaderWriterCircularBuffer<float>, try_ only
 
 m_input.try_push(sample);                 // audio thread: false if full
 m_input.available();                      // worker: a whole block there?
 m_input.pop(block, 2048);
-
 m_output.try_pop(sample);                 // audio thread: false if empty
 
 WorkerThread m_worker;
 m_worker.start([this] { process_model(); });  // over and over, until stop()
-
-// Underneath: moodycamel::BlockingReaderWriterCircularBuffer<float>, try_ only
 ```
 
-
-<div class="queue-demo">
+<div class="queue-demo" style="margin-top: var(--space-5)">
   <div class="q">
     <div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div>
   </div>

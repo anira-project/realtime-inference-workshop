@@ -1,49 +1,18 @@
-# The plugin: steps 1 to 7, inside JUCE. Solution only — there is nothing to
-# fill in here, the point is to hear it.
+# The plugin: step 7's processor inside JUCE, on the shell of steps/common/plugin.
+# Solution only: there is nothing to fill in here, the point is to hear it.
 workshop_setup_juce()
 workshop_setup_readerwriterqueue()
+include("${CMAKE_SOURCE_DIR}/steps/common/plugin/plugin.cmake")
 
 # ONNX Runtime, static, so the bundle carries the engine inside it instead of
 # looking for a shared library at load time.
 workshop_setup_onnxruntime(STATIC)
 
-juce_add_plugin(step08_plugin
-    VERSION 0.1.0
-    PRODUCT_NAME "Workshop Inference"
-    COMPANY_NAME "anira-project"
-    PLUGIN_MANUFACTURER_CODE Anir
-    PLUGIN_CODE Wsin
-    FORMATS VST3 Standalone
-    IS_SYNTH FALSE
-    NEEDS_MIDI_INPUT FALSE
-    COPY_PLUGIN_AFTER_BUILD FALSE
-)
+workshop_add_plugin(step08_plugin
+    NAME "Workshop Inference"
+    CODE Wsin
+    SOURCES solution/PluginProcessor.cpp)
 
-target_sources(step08_plugin PRIVATE source/PluginProcessor.cpp source/PluginEditor.cpp)
-
-# The three example slots of the file player, compiled in. Replace the files to
-# change what the slots start with.
-juce_add_binary_data(step08_examples SOURCES
-    assets/example_1.wav
-    assets/example_2.wav
-    assets/example_3.wav)
-
-target_compile_definitions(step08_plugin PUBLIC
-    JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0
-    JUCE_VST3_CAN_REPLACE_VST2=0
-    WORKSHOP_ONNX_MODEL_PATH="${WORKSHOP_ONNX_MODEL}"
-)
-
-target_include_directories(step08_plugin PRIVATE
-    "${CMAKE_SOURCE_DIR}/steps"
-    "${CMAKE_CURRENT_LIST_DIR}/source")
-
-target_link_libraries(step08_plugin PRIVATE
-    workshop::onnxruntime_static
-    readerwriterqueue
-    step08_examples
-    juce::juce_audio_utils
-    PUBLIC
-    juce::juce_recommended_config_flags
-    juce::juce_recommended_lto_flags)
+target_compile_definitions(step08_plugin PRIVATE WORKSHOP_ONNX_MODEL_PATH="${WORKSHOP_ONNX_MODEL}")
+target_include_directories(step08_plugin PRIVATE "${CMAKE_CURRENT_LIST_DIR}/solution")
+target_link_libraries(step08_plugin PRIVATE workshop::onnxruntime_static readerwriterqueue)

@@ -24,11 +24,35 @@ Note:
 
 ---
 
-## Teaser
+<div class="tag">Teaser · A</div>
 
-- FFT comparison
-- Neural networks typically work in fixed buffer sizes, and their runtimes are often not real-time safe.
-- How can we reconcile this with the callback inside an audio plugin or software, which can take different buffer sizes and needs to adhere to real-time principle?
+## Fighting the clock<br><span class="then">Fixed model blocks, and a runtime that is not real-time safe.</span>
+
+<div class="teaser" data-teaser="clock"><canvas></canvas></div>
+
+Note:
+- What you see: one turn of the clock is one callback. The host gives us 512 samples, and the next 512 are due one turn later
+- The model needs 2048 samples: three callbacks only collect, the 4th runs the network
+- Problem 1: the block sizes don't match. The host decides its block size, the model has its own
+- Problem 2: the forward pass takes about 570 samples' worth of time, sometimes far more. It doesn't fit into 512, and by how much it misses changes every time: the runtime is not deterministic
+- The question: how do we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline? That is today's workshop
+
+---
+
+<div class="tag">Teaser · B</div>
+
+## Fighting the clock<br><span class="then">An FFT costs the same for every block. A neural network does not.</span>
+
+<div class="teaser" data-teaser="codec" data-in="assets/audio/demo_input.wav" data-out="assets/audio/demo_output.wav"><canvas></canvas></div>
+
+Note:
+- What you see: the host calls us with 512 samples. An FFT and our neural network both need 2048, so four callbacks fill one block
+- The FFT is fine in a callback: it does the same operations for every block, so it always takes the same time
+- The network looks the same from the outside: encoder, latent, decoder, 2048 in and 2048 out
+- Problem 1: the block sizes don't match, 512 from the host, 2048 for the model
+- Problem 2: the forward pass varies from call to call, around 570 samples, sometimes far more. Above the 512 line, the callback is late
+- Times are illustrative, after step 3's measurements; the latent shading is illustrative too
+- The question: how do we fit that into a callback with varying block sizes and a hard deadline? That is today's workshop
 
 ---
 
@@ -196,6 +220,33 @@ Note:
 - The slides are linked there too, top right on the GitHub page.
 - If you cannot read the screen well, click through them on your own machine.
 - If you have not built the code yet, clone it and start the configure step now, so it runs while we talk.
+
+---
+
+<div class="tag">Setup</div>
+
+## Set up now<br><span class="then">Clone, configure and build while we talk.</span>
+
+```bash
+git clone https://github.com/anira-project/realtime-inference-workshop.git
+cd realtime-inference-workshop
+cmake --preset release           # downloads about 500 MB: models, ONNX Runtime, JUCE, anira
+cmake --build --preset release   # builds every step
+```
+
+<div class="cards-note">Release, because we benchmark the model later.</div>
+
+<div class="cards-note">Cloned it at home already? <code>git pull</code> and configure again: only what changed is fetched.</div>
+
+Note:
+- We sent the setup instructions by email. If you did it at home: thank you, just pull and configure again.
+- If not: please start now. Clone, configure, build.
+- Configuring downloads about 500 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
+- It runs while we talk. Building every step takes a while too, so start the build right after.
+- Why release: the benchmark in step 3 measures how long a forward pass takes, and those timings only mean something in a release build.
+- Debugging works too: `cmake --preset debug` builds into `build-debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so do that later, not now on the shared network.
+- If configuring fails, raise your hand and we come to you.
+- Do not wait for the first exercise: that is the worst moment to start a download.
 
 ---
 

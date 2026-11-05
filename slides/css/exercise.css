@@ -698,8 +698,9 @@ html.tanh .run-silence {
 html.tanh .run-step.is-on .run-out .run-reveal { animation: run-reveal 2.6s steps(5, end) both; }
 
 /*********************************************
- * Step 7 · dry against wet: the wet path is late; it either wanders with the
- * load or sits at one fixed offset, and the dry path is delayed to meet it
+ * Step 7 · two pictures of the delay. On the beat grid, a latency that wanders
+ * never matches the number the host was told. Dry against wet, the wet path is
+ * late and the dry path is delayed to meet it
  *********************************************/
 
 html.tanh .align {
@@ -716,11 +717,21 @@ html.tanh .align-row {
   gap: var(--space-5);
 }
 
+html.tanh .align.beat-grid { gap: var(--space-5); }
+html.tanh .align.beat-grid .align-row { grid-template-columns: 220px 1fr 170px; }
+
 html.tanh .align-label {
   font-family: var(--fs-heading-font);
   font-size: 0.55em;
   font-weight: 600;
   text-align: right;
+}
+
+html.tanh .align-label small {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 400;
+  opacity: 0.6;
 }
 
 html.tanh .align-track {
@@ -730,6 +741,99 @@ html.tanh .align-track {
   border-bottom: var(--hairline) solid var(--fs-border);
 }
 
+/* The beats: the rest of the session, which the host has already lined up */
+html.tanh .align-beats {
+  position: relative;
+  height: 1.2em;
+  font-size: 0.45em;
+  opacity: 0.6;
+}
+
+html.tanh .align-beats span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+html.tanh .align-beat {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--fs-border-strong);
+}
+
+html.tanh .align-hits {
+  position: absolute;
+  inset: 0;
+}
+
+html.tanh .align-hit {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  width: 10px;
+  margin-left: -5px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* What the row comes to: stacked, one shown at a time */
+html.tanh .align-readout {
+  position: relative;
+  height: 2.6em;
+  font-family: var(--fs-heading-font);
+  font-size: 0.55em;
+  font-weight: 600;
+}
+
+html.tanh .align-readout small {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+html.tanh .align-readout > span {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+/* Shown without the animation, too */
+html.tanh .align-readout > span.rest { opacity: 1; }
+
+/* Beat grid: 512 samples late or early is a shift of 5 % here */
+html.tanh .align-hits.wanders { transform: translateX(5%); }
+
+html.tanh .reveal section.present .align-hits.wanders { animation: align-wander 4.5s steps(1, end) infinite; }
+html.tanh .reveal section.present .align-readout > span.first { animation: align-first 4.5s steps(1, end) infinite; }
+html.tanh .reveal section.present .align-readout > span.second { animation: align-second 4.5s steps(1, end) infinite; }
+html.tanh .reveal section.present .align-readout > span.third { animation: align-third 4.5s steps(1, end) infinite; }
+
+@keyframes align-wander {
+  0% { transform: translateX(5%); }
+  33.33% { transform: translateX(-5%); }
+  66.67%, 100% { transform: translateX(15%); }
+}
+
+@keyframes align-first {
+  0% { opacity: 1; }
+  33.33%, 100% { opacity: 0; }
+}
+
+@keyframes align-second {
+  0% { opacity: 0; }
+  33.33% { opacity: 1; }
+  66.67%, 100% { opacity: 0; }
+}
+
+@keyframes align-third {
+  0% { opacity: 0; }
+  66.67%, 100% { opacity: 1; }
+}
+
+/* Dry against wet: the dry wave is delayed to meet the wet one */
 html.tanh .align-wave {
   position: absolute;
   inset: 0;
@@ -744,16 +848,7 @@ html.tanh .align-wave.wet .waveform path { stroke-width: 2.4; }
 
 html.tanh .align-wave.wet.fixed { transform: translateX(18%); }
 
-html.tanh .reveal section.present .align-wave.jitter { animation: align-jitter 4s steps(1, end) infinite; }
 html.tanh .reveal section.present .align-wave.delayed { animation: align-meet 5s var(--ease) infinite; }
-
-@keyframes align-jitter {
-  0% { transform: translateX(12%); }
-  20% { transform: translateX(27%); }
-  40% { transform: translateX(16%); }
-  60% { transform: translateX(31%); }
-  80% { transform: translateX(9%); }
-}
 
 @keyframes align-meet {
   0%, 25% { transform: translateX(0); }
@@ -838,6 +933,20 @@ html.tanh .lat-term strong {
 
 html.tanh .lat-term.total strong { font-weight: 700; }
 
+/* Four terms and the code below them: the same sum, a little smaller */
+html.tanh .lat-add.with-code {
+  gap: var(--space-5);
+  margin: var(--space-6) 0;
+}
+
+html.tanh .lat-add.with-code .lat-term strong,
+html.tanh .lat-add.with-code .lat-op {
+  font-size: 110px;
+}
+
+/* Equal columns keep the numbers evenly spaced; a longer label reaches over the signs */
+html.tanh .lat-add.with-code .lat-term { width: 340px; }
+
 html.tanh .lat-op {
   font-weight: 300;
   color: var(--fs-text-muted-color);
@@ -867,17 +976,21 @@ html.tanh .reveal .output-full.large pre code {
   font-size: 26px;
 }
 
-/* Task card 1: the two parts arrive, the sum stays a question */
+/* Task card 1: three blank parts arrive, what they are stays a question */
 html.tanh .run-latency {
   gap: var(--space-3);
 }
 
-html.tanh .run-latency .lat-part { opacity: 0; }
-html.tanh .run-latency .run-size { left: 50%; bottom: -10px; }
+html.tanh .run-latency .lat-part { min-width: 96px; }
+html.tanh .run-latency .lat-part,
+html.tanh .run-latency .lat-plus { opacity: 0; white-space: nowrap; }
 
-html.tanh .run-step.is-on .run-latency .lat-part { animation: lat-in 0.5s var(--ease) 0.3s both; }
-html.tanh .run-step.is-on .run-latency .lat-part + .lat-part { animation-delay: 1s; }
-html.tanh .run-step.is-on .run-latency .run-size { animation: run-appear 0.3s var(--ease) 1.7s both; }
+html.tanh .run-step.is-on .run-latency .lat-part,
+html.tanh .run-step.is-on .run-latency .lat-plus { animation: lat-in 0.5s var(--ease) 0.3s both; }
+html.tanh .run-step.is-on .run-latency > :nth-child(3),
+html.tanh .run-step.is-on .run-latency > :nth-child(4) { animation-delay: 0.7s; }
+html.tanh .run-step.is-on .run-latency > :nth-child(5),
+html.tanh .run-step.is-on .run-latency > :nth-child(6) { animation-delay: 1.1s; }
 
 @keyframes lat-in {
   from { opacity: 0; transform: translateY(10px); }

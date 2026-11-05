@@ -4,57 +4,25 @@
 <!-- kind: exercise -->
 
 Note:
-- Ask: who reports latency in their plugins? Where does the number come from?
 - Our output is late: by how much, and what do we do about it?
+- Ask: What kind of latency do we want?
+- Not the smallest, a **fixed** one
+- A latency that changes with load is a guess
+- Pick the number the design can always hold, pad up to it
 - Also the dry/wet mix: common use case, has implications for latency
+
 
 **Script:**
 
 *Ask the room: "Who reports latency in their plugins today? And where does the number come from?"*
 "Our output is late. In this step we'll find out by how much exactly, and what we have to do about it. We will also talk about the dry/wet mix, which is a common use case for audio plugins and has some implications for latency."
 
----
-
-<div class="tag">Motivation</div>
-
-## Fixed latency over small latency
-
-<div class="align">
-  <div class="align-row">
-    <div class="align-label">changes with load</div>
-    <div class="align-track">
-      <div class="align-wave dry">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=100|from=2|to=3}}</div>
-      <div class="align-wave wet jitter">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=100|from=2|to=3}}</div>
-    </div>
-  </div>
-  <div class="align-row">
-    <div class="align-label">fixed</div>
-    <div class="align-track">
-      <div class="align-wave dry">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=100|from=2|to=3}}</div>
-      <div class="align-wave wet fixed">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=100|from=2|to=3}}</div>
-    </div>
-  </div>
-</div>
-
-Note:
-- What kind of latency do we want? Not the smallest, a **fixed** one
-- Picture is stylised: same sine in two colours, real wet is much quieter
-- Top: changes with CPU load. Bottom: always the same
-- Host asks once, aligns the whole session to that number
-- If it changes: track out of time, at best a click
-- A latency that changes with load is a guess
-- Pick the number the design can always hold, pad up to it
-
-**Script:**
-
-"Before we calculate anything: what kind of latency do we want? You might think as small as possible. But more important is that it's **fixed/predictable**. Here you see two cases, and the picture is stylised: it's the same sine in two colours, the real wet signal is much quieter. At the top the latency changes with the CPU load, at the bottom it's always the same.
-The host asks our plugin for its latency once, and then aligns the whole session to that number. If our latency changes while it's running, our track is suddenly out of time, and at best we get a click. A latency that changes with load isn't really a latency, it's a guess. So we pick the number our design can always hold, and we pad up to it."
 
 ---
 
 <div class="tag">Motivation</div>
 
-## Dry and wet align<br><span class="then">Now we can crossfade.</span>
+## Fixed latency<br><span class="then">Dry and wet align.</span>
 
 <div class="align meet">
   <div class="align-row">
@@ -164,10 +132,12 @@ cmake --build --preset release --target step07_exercise
   <div class="run-step" data-seconds="2.6">
     <div class="run-title"><span>1</span>Work out the latency</div>
     <div class="run-visual run-latency">
-      <div class="lat-part">buffer adaptation</div>
-      <div class="lat-part">the worker's time</div>
-      <div class="lat-part">the model itself</div>
-      <div class="run-size">? samples</div>
+      <div class="lat-plus">latency =</div>
+      <div class="lat-part">?</div>
+      <div class="lat-plus">+</div>
+      <div class="lat-part">?</div>
+      <div class="lat-plus">+</div>
+      <div class="lat-part">?</div>
     </div>
   </div>
   <div class="run-step" data-seconds="2.6">
@@ -182,13 +152,13 @@ cmake --build --preset release --target step07_exercise
 
 Note:
 - `main.cpp` in steps/07_latency/exercise
-- TODO 1: where does the delay come from? Buffer adaptation, the worker's time, the model
+- TODO 1: where does the delay come from? Everything between a sample going in and coming out
 - TODO 2: delay the dry signal by that number
 - 5 minutes, don't worry if you don't finish, we solve it together
 
 **Script:**
 
-"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: the buffer adaptation from step 3, the time we give the worker from step 6, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
+"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`. For the first TODO, think about where the delay comes from: everything between a sample going in and coming out. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
 
 *Timebox.*
 
@@ -198,20 +168,24 @@ Note:
 
 ## TODO 1: Work out the latency
 
-<div class="lat-sum" style="margin-bottom: 5rem">
-  <div class="lat-part">buffer adaptation<small>2048 − 512</small><strong>1536</strong></div>
-  <div class="lat-plus">+</div>
-  <div class="lat-part">rounded max inference time<small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
-  <div class="lat-plus">+</div>
-  <div class="lat-part">the model itself<small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
-  <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>4784</strong></div>
+<div class="lat-add with-code">
+  <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
+  <div class="lat-op fragment">+</div>
+  <div class="lat-term fragment"><span>rounded max inference time</span><small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
+  <div class="lat-op fragment">+</div>
+  <div class="lat-term fragment"><span>the model itself</span><small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
+  <div class="lat-op fragment">=</div>
+  <div class="lat-term total fragment"><span>latency</span><small>samples</small><strong>4784</strong></div>
 </div>
+
+<div class="fragment">
 
 ```cpp
 // in prepare(), after step 6's prefill: buffer adaptation + the worker's time
 m_latency = m_prefill + k_model.m_latency;  // <- fill out: 4784
 ```
+
+</div>
 
 Note:
 - Buffer adaptation: the model needs a whole block, the host brings 512 at a time: 2048 − 512 = 1536 (step 3)

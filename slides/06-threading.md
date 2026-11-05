@@ -181,7 +181,8 @@ cmake --build --preset release --target step06_exercise
 
 <div class="run">
   <div class="run-step" data-seconds="2.4">
-    <div class="run-title"><span>1</span>The ring buffer sizes</div>
+    <div class="run-title"><span>1</span>Give the ring buffer a sizes
+  </div>
     <div class="run-visual run-setup">
       <div class="q small appear"><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div></div>
       <div class="q small appear"><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div></div>
@@ -229,16 +230,15 @@ Note:
 ## TODO 1: The ring buffer sizes
 
 ```cpp
-// given: your number from step 4
-const size_t rounded_max_inference_time = k_max_inference_samples_rounded;
+// given: how much silence m_output starts with
+m_prefill = (k_model.m_input_size - max_block_size)
+    + k_max_inference_samples_rounded;
 
 const size_t input_capacity = k_model.m_input_size;  // <- fill out
 const size_t output_capacity =
-    rounded_max_inference_time + k_model.m_input_size;  // <- fill out
+    k_max_inference_samples_rounded + k_model.m_input_size;  // <- fill out
 
-// given: the silence m_output starts with, and the worker thread
-m_prefill = compute_prefill(k_model.m_input_size, max_block_size,
-                            rounded_max_inference_time);
+// given: the silence goes in, and the worker thread starts
 m_output.push(silence.data(), m_prefill);
 m_worker.start([this] { process_model(); });
 ```
@@ -246,7 +246,7 @@ m_worker.start([this] { process_model(); });
 Note:
 - `m_input`: one model block, as in step 3
 - `m_output`: the worker's time plus one model block
-- Given: your worst case from step 4, in samples, rounded up to whole callbacks: the worker's time
+- Given: `k_max_inference_samples_rounded`, your worst case from step 4, in samples, rounded up to whole callbacks: the worker's time
 - Given: the prefill, the silence `m_output` starts with, so the worker has time. How much that is: step 7
 - Then the worker starts, given
 - All in `prepare`: the ring buffers and the thread allocate here, once, so the callback never has to

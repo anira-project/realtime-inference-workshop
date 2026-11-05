@@ -22,7 +22,7 @@ Note:
 - On the left your app: the three files and the three calls.
 - The dashed line is the C ABI: right of it is the library, and the handler is all you touch.
 - The session is private to each handler: the state pairs from create; the plans, the latency, the rings and the slots from prepare.
-- On the right the context, one per process: the pool, the queue and the loaded models, shared by every handler.
+- On the right what anira keeps once per process: the pool, the queue and the loaded models, shared by every handler.
 - A block crosses it in process and comes back the same way, in place, in the same buffer.
 - Nothing on the audio side allocates or locks: the rules from steps 5 to 7, kept by the library.
 
@@ -61,17 +61,17 @@ Note:
 
 ```cpp
 contract.hard_host_blocks(1, block, sample_rate);   // up to the announced block
-m_handler.prepare(contract);
-setLatencySamples(static_cast<int>(m_handler.get_latency(0)));
+m_handler->prepare(contract);
+setLatencySamples(static_cast<int>(m_handler->get_latency(0)));
 ```
 
-**`processBlock`** — one tensor over the channel pointers, in place
+**`processBlock`** — the mono mix-down, then one tensor over it, in place
 
 ```cpp
-const int64_t shape[2] = {buffer.getNumChannels(), buffer.getNumSamples()};
-const std::span channels(buffer.getArrayOfWritePointers(), size_t(shape[0]));
-const auto block = anira::Tensor::from_host_planar<float>(channels, shape);
-m_handler.process(block, 0, block, 0);
+float* mono = to_mono(buffer);   // the model is mono, as in step 8
+const int64_t shape[2] = {1, buffer.getNumSamples()};
+const auto block = anira::Tensor::from_host(mono, ANIRA_DTYPE_F32, shape);
+m_handler->process(block, 0, block, 0);
 ```
 
 **`releaseResources`** — nothing: the `InferenceHandler` frees itself when the plugin goes
@@ -81,10 +81,10 @@ Note:
 - In prepareToPlay the host's blocks go into the contract, 1 up to the block size it announces, we prepare the handler, and we report its latency to the host.
 - Prepare runs again whenever the host changes its blocks.
 - Everything is anira.hpp, as in steps 9 to 11: the model config, the contract and the InferenceHandler.
-- In processBlock we put one tensor over the channel pointers JUCE hands out: planar float32, with the sample count as its shape.
+- In processBlock we mix down to mono, as in step 8, because the model has one channel, and put one tensor over that buffer: float32, one channel, the sample count as its shape.
 - process then runs it in place.
 - releaseResources does nothing: the InferenceHandler destroys itself when the plugin goes.
-- The threads are not ours to stop any more: the context keeps the pool while any handler exists.
+- The threads are not ours to stop any more: anira keeps the pool while any handler is prepared.
 
 ---
 

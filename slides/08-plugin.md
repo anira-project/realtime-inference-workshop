@@ -35,9 +35,9 @@ Only 44.1 or 48 kHz and 512-sample buffers: anything else is bypassed, and the w
 
 Note:
 - What did we add? Not much: the host talks to us in three places
-- `prepareToPlay`: load the model, size buffers, start worker threads, report latency
+- `prepareToPlay`: load the model, size buffers, start the worker thread, report latency
 - `processBlock`: callback from step 7, unchanged
-- `releaseResources`: stop the threads
+- `releaseResources`: stop the worker thread
 - Everything else: JUCE boilerplate
 - Only 44.1 or 48 kHz and 512: our prefill and latency are only right for that block size. Anything else: bypassed, the input goes out unprocessed, with an overlay that says why
 - Takeaway: arbitrary buffer sizes need a different design, part 2
@@ -45,7 +45,7 @@ Note:
 
 **Script:**
 
-"So what did we have to add to turn our processor into a plugin? Not much, actually. The host talks to us in three places. In `prepareToPlay` we load the model, size the buffers, start the worker threads, and tell the host our latency. `processBlock` is our callback from step 7, unchanged. And in `releaseResources` we stop the threads again. Everything else in the plugin is JUCE boilerplate.
+"So what did we have to add to turn our processor into a plugin? Not much, actually. The host talks to us in three places. In `prepareToPlay` we load the model, size the buffers, start the worker thread, and tell the host our latency. `processBlock` is our callback from step 7, unchanged. And in `releaseResources` we stop the worker thread again. Everything else in the plugin is JUCE boilerplate.
 
 There's one limit, and it's on purpose: our prefill and our latency are only right for a buffer of 512 samples. Our processor is also built for 44.1 or 48 kHz. If the host asks for anything else, the plugin bypasses itself and tells you why. Supporting any buffer size needs a different design, and that's what part 2 is about.
 

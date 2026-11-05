@@ -3,6 +3,7 @@
 - Signs between tanh lab slide and scope shall be consistent..
   - (Valentin) Not clear what is meant here: the icons (chip = Research there, Inference in C++ here), the layout, or something else?
 - Change the audio example
+  - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
 - The integration process: Rectangle over Train and Export
 - After QR-code -> slide how to clone and configure, also tell the audience to do it now!
 - Shipping the engine, leave it out...

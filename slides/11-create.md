@@ -284,12 +284,12 @@ Note:
   <div class="policy-name"><code>SPIN_BACKOFF</code></div>
   <div class="wait-bar spin"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div class="policy-cell ok">an atomic, nothing else</div>
-  <div class="policy-cell warn">polls: spin, yield, sleep 100 µs</div>
+  <div class="policy-cell warn">polls: 4 retries, 32 with a CPU pause, then yield and sleep 100 µs</div>
 
   <div class="policy-name"><code>BLOCKING</code></div>
   <div class="wait-bar block"><i></i></div>
-  <div class="policy-cell warn">an atomic, plus one wake syscall when a thread sleeps</div>
-  <div class="policy-cell ok">no CPU, woken at once</div>
+  <div class="policy-cell warn">an atomic, plus one wake syscall when a thread is blocked</div>
+  <div class="policy-cell ok">spins up to 10,000 tries, then blocks on a semaphore</div>
 </div>
 
 <div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
@@ -297,8 +297,10 @@ Note:
 Note:
 - In anira the pool waits for work, either spinning with backoff or blocking.
 - SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool pays by polling.
-- BLOCKING parks idle threads on a semaphore: no CPU while idle.
-- The price is on the audio thread: if a pool thread is asleep, the enqueue makes one wake syscall.
+- Its backoff: 4 retries at once, 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry. So an idle thread picks up new work within about 100 µs.
+- BLOCKING waits in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
+- It wakes up every 5 ms on its own, only to check whether it should exit. While blocked, it uses no CPU.
+- The price is on the audio thread: if a pool thread is blocked, the enqueue makes one wake syscall.
 - Under load the threads rarely sleep, so that is rare; on an idle pool it is nearly every job.
 - The choice is made once per process, in context.threads.
 - [click] We recommend BLOCKING: one bounded wake instead of threads polling while idle.

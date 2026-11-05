@@ -6,15 +6,10 @@
   - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
 
 - Benchmark -> convert to samples (todo-lina)
+- window not necessary (todo-fares): anira should not require `"window"` on a streamed tensor whose time axis is fixed (today: `window_min must be positive (got 0)`). Afterwards, drop it from the model files of steps 9 and 10 and from the slides that show them
 
 - Step 10 (encoder/decoder split) declares a fixed 512: `hard_host_blocks(k_host.m_block_size, k_host.m_block_size, …)`. Step 9 declares 1 to the host's maximum; decide whether the split should do the same, and update slides/16-split.md
 
-
-
-
-- window not necessary (todo-fares): anira should not require `"window"` on a streamed tensor whose time axis is fixed (today: `window_min must be positive (got 0)`). Afterwards, drop it from the model files of steps 9 and 10 and from the slides that show them
-
-- Blocking is also unsing exponential backoff at the beginning...
 - An engine per channel?? in anira recap part 1 step 8
 
 - Plans are not outputted at create but at prepare, check this again

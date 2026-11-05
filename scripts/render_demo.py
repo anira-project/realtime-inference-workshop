@@ -25,6 +25,8 @@ import soundfile as sf
 
 SAMPLE_RATE = 44100
 BLOCK = 2048
+CLEAR_EVERY = 32         # blocks, about 1.5 s: long enough for the model to come back in between
+CLEARED_SECONDS = 4.8
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Slow chords, the way the magnetic resonator piano sounds: no hammer, a swell, a long ring.
@@ -72,18 +74,22 @@ def synthesize(passes):
     return out.astype(np.float32)
 
 
-def run_model(model_path, audio, carry_state=True):
-    """Block by block. carry_state=False starts every block from a zero state: what step 2 shows."""
+def run_model(model_path, audio, carry_state=True, clear_every=None):
+    """Block by block. carry_state=False starts every block from a zero state; clear_every=N
+    carries the state but zeroes it every N blocks: both are what step 2 shows."""
     session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
     inputs = session.get_inputs()
     out_names = [o.name for o in session.get_outputs()]
     # Batch size forced to 1; the first input is the audio, the rest is state
-    states = [np.zeros([d if isinstance(d, int) and d > 0 else 1 for d in i.shape], dtype=np.float32)
-              for i in inputs[1:]]
+    zeros = [np.zeros([d if isinstance(d, int) and d > 0 else 1 for d in i.shape], dtype=np.float32)
+             for i in inputs[1:]]
+    states = zeros
 
     padded = np.concatenate([audio, np.zeros((-len(audio)) % BLOCK, dtype=np.float32)])
     out = []
     for begin in range(0, len(padded), BLOCK):
+        if clear_every and begin % (clear_every * BLOCK) == 0:
+            states = zeros
         block = padded[begin:begin + BLOCK].reshape(1, 1, BLOCK)
         result = session.run(out_names, dict(zip([i.name for i in inputs], [block] + states)))
         out.append(result[0].reshape(-1))
@@ -134,6 +140,7 @@ def main():
     dry_all = synthesize(PASSES + 1)
     wet_all = run_model(args.model, dry_all)
     no_state_all = run_model(args.model, dry_all, carry_state=False)
+    cleared_all = run_model(args.model, dry_all, clear_every=CLEAR_EVERY)
     lag = latency(args.model)
 
     # The middle pass: the state has settled, and the output's tail from the pass before is in it
@@ -141,15 +148,25 @@ def main():
     dry = seamless(dry_all[begin:begin + loop + FADE])
     wet = seamless(wet_all[begin + lag:begin + lag + loop + FADE])
     no_state = seamless(no_state_all[begin + lag:begin + lag + loop + FADE])
+    # Played once, not looped, so no crossfade: three drop-outs' worth, starting and ending quiet
+    cleared = cleared_all[begin + lag:begin + lag + int(CLEARED_SECONDS * SAMPLE_RATE)]
+    # The same cut with the state carried, faded so it does not start or stop with a click
+    with_state = wet_all[begin + lag:begin + lag + len(cleared)].copy()
+    edge = np.linspace(0.0, 1.0, int(0.02 * SAMPLE_RATE), dtype=np.float32)
+    with_state[:len(edge)] *= edge
+    with_state[-len(edge):] *= edge[::-1]
     duration = loop / SAMPLE_RATE
 
     args.out.mkdir(parents=True, exist_ok=True)
     sf.write(args.out / "demo_input.wav", dry, SAMPLE_RATE, subtype="PCM_16")
     sf.write(args.out / "demo_output.wav", wet, SAMPLE_RATE, subtype="PCM_16")
     sf.write(args.out / "demo_output_no_state.wav", no_state, SAMPLE_RATE, subtype="PCM_16")
+    sf.write(args.out / "demo_output_state_cleared.wav", cleared, SAMPLE_RATE, subtype="PCM_16")
+    sf.write(args.out / "demo_output_with_state.wav", with_state, SAMPLE_RATE, subtype="PCM_16")
     print(f"{duration:.1f} s loop, latency {lag} samples ({1000 * lag / SAMPLE_RATE:.1f} ms), "
           f"peak in {np.abs(dry).max():.2f}, peak out {np.abs(wet).max():.2f}, "
-          f"peak out without state {np.abs(no_state).max():.2e}")
+          f"peak out without state {np.abs(no_state).max():.2e}, "
+          f"peak out with the state cleared {np.abs(cleared).max():.2f}")
 
 
 if __name__ == "__main__":

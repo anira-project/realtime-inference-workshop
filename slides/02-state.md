@@ -13,22 +13,57 @@ Note:
 
 ---
 
-<div class="tag">Listen</div>
+<div class="tag">Problem</div>
 
-## Passing only the audio<br><span class="then">Every block, with nothing else.</span>
+## Running every block<br><span class="then">Something sounds wrong.</span>
 
-<div class="spectro-player" data-a="assets/audio/demo_input.wav" data-b="assets/audio/demo_output_no_state.wav"
-     data-label-a="In" data-label-b="Out — only the audio passed"></div>
+<div class="wave-player" data-src="assets/audio/demo_output_state_cleared.wav"></div>
+
+<p class="wave-question fragment">Why does this happen?</p>
 
 Note:
-- The same call as in step 1, once per block, on the demo chords
-- Fade across: the output is practically silent, peak around -75 dB
-- Not clicks or dropouts: nothing comes out at all
-- Why? Next slide
+- Press the speaker: the demo chords, and the sound keeps cutting out and coming back
+- The clip is a simulation, to have something to hear: the state is cleared only now and then
+- 2224 samples > block 2048: the input can’t come out in the same call, it waits in the state
+- No state passed: cleared after every block, so the waiting audio is thrown away
+- The input never reaches the output: every block is the model’s answer to silence, identical each time
+- Clear it on every block, which is what passing only the audio does, and it never comes back: practically silent, peak around -75 dB
+- Why? Coming up
 
 **Script:**
 
-"Let's do exactly what we did in step 1, once per block, on the chords you heard earlier. Here's what goes in. And when I fade across to what comes out... nothing. It's practically silent, around minus 75 dB. You might expect clicks or dropouts, but there is simply nothing there. So why does the model stop working?"
+"Let's run the chords you heard earlier through the model, block by block, with the code from step 1. Listen... the sound keeps cutting out and coming back. This is exaggerated so that you can hear something: each time, the model has lost what it remembered, and it needs a moment to come back. With the code from step 1 as it is, that happens on every single block, and it never comes back: it's practically silent, around minus 75 dB. So why does this happen? Let's look at the numbers first."
+
+---
+
+<div class="tag">Problem</div>
+
+## Running every block<br><span class="then">Only the first one matches.</span>
+
+```cpp
+for (size_t i = 0; i < num_blocks; ++i) {
+    engine.process(audio.data() + i * process_size, process_size);
+}
+```
+
+```
+block 0    max abs diff 2.33e-10   OK
+block 1    max abs diff 0.0802     <-- FAILED
+block 2    max abs diff 0.0791     <-- FAILED
+block 3    max abs diff 0.053      <-- FAILED
+block 4    max abs diff 0.113      <-- FAILED
+...
+```
+
+Note:
+- The call from step 1, once per block, over the whole test signal
+- This is what the exercise prints before you change anything
+- Block 0 matches the reference, every block after it fails
+- Don't explain yet: why is next
+
+**Script:**
+
+"Let's take the call from step 1 and run it once per block, over the whole signal. The first block matches the reference, just like in step 1. But every block after it fails. So why is the first block right, and all the others wrong?"
 
 ---
 
@@ -119,12 +154,8 @@ ONNX can't hide the state inside the model, so the export moves it out. It's an 
 OnnxEngine engine(path);
 
 engine.process(samples, num_samples);          // without the state
-engine.process(samples, num_samples, state);   // with the state
+engine.process(samples, num_samples, state);   // with the state of 63488 floats
 ```
-
-- The block at `samples` is overwritten with the model's audio
-- `state` is overwritten with the new state
-- The state is 63488 floats, starting at zero
 
 Note:
 - One more argument: the state, after the audio, the same order as the model's inputs
@@ -143,19 +174,31 @@ Note:
 
 <div class="task-timer" data-minutes="12"></div>
 
-Create the state, then pass it to `process`, in `steps/02_state/exercise/main.cpp`
+Fill in the TODOs in `steps/02_state/exercise/main.cpp`
 
 ```bash
 cmake --build --preset release --target step02_exercise
 ./build/bin/step02_exercise
 ```
 
-The state is **63488** floats, starting at zero.
-
-```
-block 0     max abs diff 2.33e-10   OK
-block 1     max abs diff 0.0802     <-- FAILED
-```
+<div class="run" style="grid-template-columns: 1fr 1.5fr">
+  <div class="run-step" data-seconds="2.2">
+    <div class="run-title"><span>1</span>Create the state</div>
+    <div class="run-visual run-size-buffers">
+      <div class="mini-buf grow"></div>
+      <div class="run-size">? floats</div>
+    </div>
+  </div>
+  <div class="run-step" data-seconds="3.4">
+    <div class="run-title"><span>2</span>Pass it with the audio</div>
+    <div class="run-visual run-wave">
+      <div class="run-target">{{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=6}}</div>
+      <div class="run-reveal">{{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=6}}</div>
+      <div class="run-window"></div>
+      <div class="run-ok">✓ every block matches</div>
+    </div>
+  </div>
+</div>
 
 Note:
 - Two TODOs: create the state above the loop, pass it in the loop
@@ -165,7 +208,7 @@ Note:
 
 **Script:**
 
-"There are two TODOs. Above the loop, create the state. In the loop, pass the state to `process`. The state size is on the slide. It runs as it is, and you'll see block 0 pass, because a zero state is correct for the first block, and everything after it fail. You get 12 minutes."
+"There are two TODOs. Above the loop, create the state. In the loop, pass the state to `process`. The state size was on the engine slide. It runs as it is, and you'll see block 0 pass, because a zero state is correct for the first block, and everything after it fail. You get 12 minutes."
 
 *Timebox (12 min). Walk around.*
 
@@ -173,59 +216,69 @@ Note:
 
 <div class="tag">Solution</div>
 
-## The audio and the state
+## TODO 1: Create the state
 
 ```cpp
-std::vector<float> state(k_model.m_state_size, 0.0f);  // <- fill out
+std::vector<float> state(k_model.m_state_size, 0.0f); // <- fill out
+```
 
+Note:
+- 63488 floats, all zeros: a zero state is a new stream
+- Created above the loop: created per block, it would start at zero every time
+
+**Script:**
+
+"The state is 63488 floats, and zeros mean a new stream. Note that we create it above the loop: if you created it again for every block, it would start at zero every time, and you'd be back to where we started."
+
+---
+
+<div class="tag">Solution</div>
+
+## TODO 2: Pass it with the audio
+
+```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process(audio.data() + i * process_size, process_size, state);  // <- fill out
+    engine.process(audio.data() + i * process_size, process_size, state); // <- fill out
 }
 ```
 
 Note:
 - One more argument: the state
-- The state is created above the loop: created per block, it would start at zero every time
+- It is overwritten on every call, so the next block continues where this one ended
 - Every block now matches, to below 1e-6
 
 **Script:**
 
-"All it takes is one more argument. Note that the state is created above the loop: if you created it again for every block, it would start at zero every time, and you'd be back to where we started. Now every block matches the reference."
-
----
-
-<div class="tag">Listen</div>
-
-## The audio and the state<br><span class="then">Now the model answers.</span>
-
-<div class="spectro-player" data-a="assets/audio/demo_output_no_state.wav" data-b="assets/audio/demo_output.wav"
-     data-label-a="Without state" data-label-b="With state"></div>
-
-Note:
-- Fade across: from silence to the model's output
-- Same model, same audio, only the state is different
-
-**Script:**
-
-"Here's the same model with the same input. On one side only the audio is passed, and on the other side the audio and the state. Same model, and it's only the state that makes the difference."
+"All it takes is one more argument. The state comes back overwritten, so the next block continues where this one ended. And now every block matches the reference."
 
 ---
 
 <div class="tag">Done</div>
 
-## The model runs the whole signal
+## Running every block and passing a state<br><span class="then">Now it sounds right.</span>
 
-<div class="congrats">
-  <svg viewBox="0 0 120 120" aria-hidden="true">
+<div class="congrats fragment">
+  <svg viewBox="0 -70 120 120" aria-hidden="true">
     <circle cx="60" cy="60" r="52"/>
     <path d="M36 62 L53 78 L85 44"/>
   </svg>
 </div>
 
+<div class="wave-player" data-src="assets/audio/demo_output_with_state.wav"></div>
+
+<!-- <p class="wave-question fragment">Same model, same audio. Only the state is different.</p> -->
+
+
+
 Note:
+- Press the speaker: the same chords as at the start of this step, now with the state passed on every block
+- No more drop-outs: the sound runs through
+- Same model, same audio, only the state is different
 - Same output as Python, for every block
 - But a host doesn't always hand us 2048 samples: step 3
 
 **Script:**
+
+"Here are the same chords again, with the same model, and now we pass the state on every block. Listen... the sound runs through, with no more drop-outs. Same model, same audio, and it's only the state that makes the difference."
 
 "Same output as Python, for every block. But a host doesn't always hand us 2048 samples. Which brings us to step 3."

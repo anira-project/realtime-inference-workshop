@@ -376,6 +376,12 @@ html.tanh .reveal section.present .stream-lit {
   animation: stream-play var(--cycle) steps(var(--cells), end) infinite;
 }
 
+/* Plays a single time and holds the end, so it does not look like a stream starting over */
+html.tanh .reveal section.present .streams.once .stream-lit {
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
 @keyframes stream-play {
   0% { clip-path: inset(0 100% 0 0); }
   85%, 100% { clip-path: inset(0 0 0 0); }
@@ -788,6 +794,53 @@ html.tanh .lat-sum {
   gap: var(--space-4);
   margin-top: var(--space-7);
   font-size: 1.3em;
+}
+
+/* The same sum without boxes: where a number comes from, written above it */
+html.tanh .lat-add {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--space-7);
+  margin: var(--space-8) 0 var(--space-7);
+  font-family: var(--fs-heading-font);
+}
+
+html.tanh .lat-term {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+}
+
+html.tanh .lat-term span {
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+html.tanh .lat-term small {
+  margin-top: var(--space-1);
+  padding-bottom: var(--space-3);
+  font-size: 0.65em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .lat-term strong,
+html.tanh .lat-op {
+  font-size: 150px;
+  line-height: 1.1;
+}
+
+html.tanh .lat-term strong {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+html.tanh .lat-term.total strong { font-weight: 700; }
+
+html.tanh .lat-op {
+  font-weight: 300;
+  color: var(--fs-text-muted-color);
 }
 
 html.tanh .lat-plus {

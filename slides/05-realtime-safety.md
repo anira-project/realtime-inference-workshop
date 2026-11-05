@@ -83,11 +83,6 @@ If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Cl
 
 ## Running the model allocates<br><span class="then">Before the forward pass starts.</span>
 
-```bash
-./build/bin/step05_solution                  # Without RTSan: runs through, matches the reference
-  OK: max abs diff 3.87e-07, within 0.0001 of the reference.
-```
-
 ```text
 ERROR: RealtimeSanitizer: unsafe-library-call
 Intercepted call to real-time unsafe function `malloc`

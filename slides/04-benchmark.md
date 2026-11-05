@@ -337,17 +337,13 @@ Note:
   <div class="lat-part total fragment" data-fragment-index="2">rounded_max_inference_time<small>whole 512-sample callbacks</small><strong>1024</strong></div>
 </div>
 
-```cpp
-constexpr double k_max_inference_ms = 15.3;  // steps 6 and 7: your number from here
-```
-
 Note:
 - Your worst call after the warm-up, from the last lines of the output
 - Click: in samples, at 44.1 kHz: 15.3 ms are 675 samples
 - Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
 - Whole callbacks, because the audio thread only picks results up once per callback
 - That's how much time the worker gets in step 6, and part of the latency in step 7
-- Everyone has their own number: write it down
+- Everyone has their own number: it goes into a header, next slide
 - Measured warmed up, so the plugin has to warm up before the audio starts
 
 **Script:**
@@ -360,13 +356,66 @@ In samples that's 15.3 milliseconds times 44.1 kilohertz: 675 samples.
 
 *Click.*
 
-And we round that up to whole callbacks of 512 samples, so 1024: two callbacks. Whole callbacks, because the audio thread only picks results up once per callback. We call that the rounded max inference time. In step 6 it's the time the worker gets, and in step 7 it becomes part of our latency. Everyone has their own number here, so please write yours down. And because we measured after the warm-up, our plugin will have to warm up before the audio starts."
+And we round that up to whole callbacks of 512 samples, so 1024: two callbacks. Whole callbacks, because the audio thread only picks results up once per callback. We call that the rounded max inference time. In step 6 it's the time the worker gets, and in step 7 it becomes part of our latency. Everyone has their own number here, and on the next slide we put yours in. And because we measured after the warm-up, our plugin will have to warm up before the audio starts."
+
+---
+
+<div class="tag">Budget</div>
+
+## Your number goes into one header<br><span class="then">Steps 6, 7 and the plugin read it.</span>
+
+<div class="task-timer" data-minutes="1"></div>
+
+```cpp
+// steps/common/inference_time.h
+
+// One model block of time: 2048 samples at 44.1 kHz
+constexpr double k_worst_case_inference_ms = 46.4;
+
+// Your worst case after the warm-up, from step 4
+constexpr double k_max_inference_ms = 15.3;  // <- fill out after step 4
+```
+
+Until you fill it in, it is 46.4 ms: everything runs, with more latency.<br>
+Above 46.4 ms, the build stops.
+
+Note:
+- One place for your number: `steps/common/inference_time.h`
+- The last line of the output says which number to put there
+- Steps 6, 7 and the plugin read it from there
+- Above it: 46.4 ms, one model block of time, the largest worst case that can work at all
+- Until you put yours in, it is 46.4: everything runs, with more latency
+- Yours makes the latency smaller
+- Larger than 46.4: the build stops with a message
+
+**Script:**
+
+"Your number goes into one place: `steps/common/inference_time.h`. The last line of the program even tells you which number to put there. Steps 6, 7 and the plugin read it from there. Above it you see 46.4 milliseconds: that's one model block of time, 2048 samples at 44.1 kHz, the largest worst case that can work at all. Until you put your number in, it's 46.4, so everything runs, just with more latency. Your number makes the latency smaller. If you put in something larger than 46.4, the build stops and tells you. Please take a minute and put your number in now."
+
+---
+
+<div class="tag">Question</div>
+
+## Anyone above 46.4 ms?<br><span class="then">Then the model cannot keep up.</span>
+
+<div class="big-question">?</div>
+
+Note:
+- Ask the room: did anyone measure a worst case above 46.4 ms?
+- Then one forward pass takes longer than the audio it produces: no latency fixes that
+- Run it again with other apps closed and the laptop on power; a busy machine makes the worst case worse
+- Still above: tell us, we look at it together
+
+**Script:**
+
+*Ask the room.*
+"Did anyone measure a worst case above 46.4 milliseconds? Then one forward pass takes longer than the 2048 samples of audio it produces, and no latency in the world fixes that: the model can't keep up on this machine. Run it again with other apps closed and the laptop plugged in, because a busy machine makes the worst case worse. If it's still above, let us know and we'll look at it together."
 
 ---
 
 <div class="tag">Done</div>
 
-## You know your worst case</span>
+## You know your worst case
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

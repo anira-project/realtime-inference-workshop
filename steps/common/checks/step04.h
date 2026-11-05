@@ -13,6 +13,8 @@
 #include <numeric>
 #include <vector>
 
+#include "common/inference_time.h"
+
 // The first two forward passes of every engine are a warm-up: they are slower
 // than the rest, on LibTorch by far, because TorchScript optimises the model
 // while it runs it. A plugin makes them before the audio starts, so they do not
@@ -122,5 +124,13 @@ inline void report_forward_passes(const std::vector<std::vector<double>>& times,
     std::printf("  rounded_max_inference_time   %zu samples (whole %zu-sample callbacks)\n",
                 rounded_max_inference_time,
                 host_block_size);
-    std::printf("\nPut %.2f into k_max_inference_ms in steps 6 and 7.\n", max_inference_ms);
+    if (max_inference_ms > k_worst_case_inference_ms) {
+        std::printf(
+            "\nLonger than one model block (%.1f ms): this machine cannot keep up with the\n"
+            "model. Please tell us.\n",
+            k_worst_case_inference_ms);
+        return;
+    }
+    std::printf("\nPut %.2f into k_max_inference_ms in steps/common/inference_time.h.\n",
+                max_inference_ms);
 }

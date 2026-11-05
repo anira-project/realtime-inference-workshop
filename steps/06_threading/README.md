@@ -29,7 +29,7 @@ prefill = (2048 − 512)                  buffer adaptation, as in step 3
         + rounded_max_inference_time    the worker's time
 ```
 
-`rounded_max_inference_time` is your worst case from step 4 in samples, rounded up to whole 512-sample callbacks: the audio thread only picks results up once per callback. Put your milliseconds from step 4 into `k_max_inference_ms`.
+`rounded_max_inference_time` is your worst case from step 4 in samples, rounded up to whole 512-sample callbacks: the audio thread only picks results up once per callback. It comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), where you put your number from step 4. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
 
 ## What to do
 
@@ -47,7 +47,6 @@ Given, around your lines: the warm-up, and starting and stopping the worker.
 Each TODO says so while it is still open:
 
 ```
-FAILED: put your worst case from step 4 into k_max_inference_ms
 FAILED: TODO 1: round k_max_inference_ms up to whole callbacks, in samples
 FAILED: TODO 1: work out the prefill
 FAILED: TODO 1: give m_output room for the prefill and a callback more

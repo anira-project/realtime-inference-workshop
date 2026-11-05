@@ -212,7 +212,7 @@ cmake --build --preset release --target step06_exercise
 </div>
 
 Note:
-- First: your number from step 4 into `k_max_inference_ms`
+- First: your number from step 4 into `k_max_inference_ms` in `steps/common/inference_time.h`, if not done yet
 - Three TODOs: the prefill in `prepare`, the audio thread, the worker thread
 - `main.cpp` in steps/06_threading/exercise, build commands on the slide
 - The biggest task so far, one line at a time: 10 minutes
@@ -221,7 +221,7 @@ Note:
 
 **Script:**
 
-"Now it's your turn. First, put the number you wrote down in step 4 into `k_max_inference_ms`. Then there are three TODOs: the prefill in `prepare`, the audio thread, and the worker thread. You'll find the `main.cpp` in `steps/06_threading/exercise`, and the build commands are on the slide. This is the biggest task so far, but it's one line at a time, so you get 10 minutes. When it works, the host hears the model's stream, exactly the prefill late. And as always, the solution is in the `solution` folder."
+"Now it's your turn. First, if you haven't yet, put your number from step 4 into `k_max_inference_ms` in `steps/common/inference_time.h`. Then there are three TODOs: the prefill in `prepare`, the audio thread, and the worker thread. You'll find the `main.cpp` in `steps/06_threading/exercise`, and the build commands are on the slide. This is the biggest task so far, but it's one line at a time, so you get 10 minutes. When it works, the host hears the model's stream, exactly the prefill late. And as always, the solution is in the `solution` folder."
 
 *Timebox.*
 

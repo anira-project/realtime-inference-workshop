@@ -139,11 +139,11 @@ Note:
 - Step 6's processor, filled in, plus a dry path
 - Third ring buffer, step 3's: only the audio thread uses it, filled with silence in `prepare`, as many samples as our latency
 - Host still real time, 512 samples per call
-- `k_max_inference_ms` again: your number from step 4
+- `k_max_inference_ms`: still your number from step 4, in `steps/common/inference_time.h`
 
 **Script:**
 
-"We don't get any new files. This is step 6's processor, filled in, with one addition: a dry path. That's a third ring buffer, the plain one from step 3, because only the audio thread uses it. It gets filled with silence in `prepare`, as many samples as our latency. The host still runs in real time with 512 samples per call. And you need your number from step 4 again, for `k_max_inference_ms`."
+"We don't get any new files. This is step 6's processor, filled in, with one addition: a dry path. That's a third ring buffer, the plain one from step 3, because only the audio thread uses it. It gets filled with silence in `prepare`, as many samples as our latency. The host still runs in real time with 512 samples per call. And your number from step 4 is still in `inference_time.h`."
 
 ---
 
@@ -181,14 +181,14 @@ cmake --build --preset release --target step07_exercise
 </div>
 
 Note:
-- `main.cpp` in steps/07_latency/exercise, first your `k_max_inference_ms`
+- `main.cpp` in steps/07_latency/exercise
 - TODO 1: where does the delay come from? Buffer adaptation, the worker's time, the model
 - TODO 2: delay the dry signal by that number
 - 5 minutes, don't worry if you don't finish, we solve it together
 
 **Script:**
 
-"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`; first put your number from step 4 in again. For the first TODO, think about where the delay comes from. There are three parts: the buffer adaptation from step 3, the time we give the worker from step 6, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
+"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: the buffer adaptation from step 3, the time we give the worker from step 6, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
 
 *Timebox.*
 

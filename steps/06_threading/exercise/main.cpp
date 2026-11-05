@@ -21,6 +21,7 @@
 #include "common/helpers/onnx_engine.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
 #include "common/helpers/worker_thread.h"
+#include "common/inference_time.h"
 
 // Model settings taken from the export metadata, as in step 1.
 constexpr struct {
@@ -32,9 +33,6 @@ constexpr struct {
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
-
-// Your worst case after the warm-up, from the last lines of step 4, in ms.
-constexpr double k_max_inference_ms = 0.0;  // <- fill out: your number from step 4
 
 // The first calls are slow (step 4): made before the audio starts.
 constexpr size_t k_warm_up_calls = 2;
@@ -68,11 +66,11 @@ public:
         const size_t output_capacity = 0;             // <- 3. fill out
 
         check_todos(k_max_inference_ms,
-                     rounded_max_inference_time,
-                     m_prefill,
-                     output_capacity,
-                     max_block_size,
-                     k_model.m_sample_rate);  // Given: names a missing TODO
+                    rounded_max_inference_time,
+                    m_prefill,
+                    output_capacity,
+                    max_block_size,
+                    k_model.m_sample_rate);  // Given: names a missing TODO
 
         m_input = ThreadSafeRingBuffer(k_model.m_input_size);
         m_output = ThreadSafeRingBuffer(output_capacity);
@@ -202,10 +200,10 @@ int main() {
 
         // Silence for the prefill, then the model's stream.
         return report_with_prefill(output,
-                               k_target_output_signal,
-                               processor.prefill_samples(),
-                               k_host_block_size,
-                               k_model.m_sample_rate);
+                                   k_target_output_signal,
+                                   processor.prefill_samples(),
+                                   k_host_block_size,
+                                   k_model.m_sample_rate);
     } catch (const std::exception& error) {
         std::printf("FAILED: %s\n", error.what());
         return 1;

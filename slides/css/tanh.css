@@ -204,6 +204,11 @@ html.tanh .reveal .slides section > p {
   margin: var(--space-4) 0;
 }
 
+/* A full declaration that has to fit on one slide: smaller code */
+html.tanh .reveal .slides section.dense-code pre code {
+  font-size: 0.8em;
+}
+
 /* Labelled code blocks, one after another: each label sits with its code */
 html.tanh .reveal .slides section.tight-code > p,
 html.tanh .reveal .tight-code pre {

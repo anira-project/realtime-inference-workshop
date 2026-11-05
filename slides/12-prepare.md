@@ -8,8 +8,8 @@ Contract, latency, memory
 Note:
 - Prepare: the second row of the map.
 - This is what happens when the host announces its blocks.
-- Prepare checks the files again, now with the contract, loads the models, pooled, builds the plans, and starts the pool's threads with the first prepare in the process.
-- Then the rest: the latency, the rings and slots, the warm-up.
+- Prepare checks everything again, now with the contract, loads the models, pooled, and runs their warm-up as they load, builds the plans, and starts the pool's threads with the first prepare in the process.
+- Then the rest: the latency, the rings and the slots for the jobs in flight.
 - We look at the contract, the latency that follows from it, the memory it sizes, and the warm-up.
 
 ---
@@ -45,7 +45,7 @@ contract.hard_host_blocks(1, max_block_size, sample_rate);   // from prepareToPl
 <div class="statement-points">
   <div>Host blocks: the smallest and the largest the host may send, and the rate</div>
   <div>Budget: the worst case per inference; warm-up: model runs before the stream starts</div>
-  <div><code>on_miss</code> and <code>wait_ratio</code>: what a callback does when a result is late, in Process</div>
+  <div><code>on_miss</code> and <code>wait_ratio</code>: what a callback does when a result is late, and how long it may wait for one, in Process</div>
 </div>
 
 <div class="cards-note">Async, a job with a deadline instead of a stream, follows in a later release; today <code>prepare</code> refuses it.</div>
@@ -59,6 +59,7 @@ Note:
 - The block size from prepareToPlay is the largest, not the only one: we declare 1 up to it, and the latency covers the worst case.
 - The budget is the worst time of one inference, measured at prepare on the user's machine; the warm-up runs the model until its times are stable, before the stream starts.
 - on_miss and wait_ratio say what happens when a result is late; our file asks for bypass, the input block in place of the late one, and we come to the choices in Process.
+- wait_ratio also enters the latency: a callback that may wait part of a block needs less latency.
 - Async is not in this release, so prepare refuses it.
 
 ---
@@ -140,7 +141,8 @@ Note:
 - Logic is known for it: what prepare announces and what process delivers do not always match.
 - So we declare 1 up to the announced size, and anira's latency has to hold for the worst block in that range.
 - The block adaptation alone becomes P − 1 instead of P − gcd(b, P) (Rath & Geier, LAC 2026).
-- Step 9 declares 1 to the host's maximum and reports 6320, whatever the budget. The 4272 of the previous slide only holds if every block is exactly 512.
+- Step 9 declares 1 to the host's maximum and reports 6320, for every budget up to 37 ms. The 4272 of the previous slide only holds if every block is exactly 512.
+- One more rule behind both numbers: our model has two outputs, audio_out and state_out, and anira rounds the latency of such a model up to whole model blocks. 6320 is two blocks, 4096, plus the model's 2224.
 
 ---
 
@@ -151,13 +153,13 @@ Note:
 ## Every buffer sized by hand.<br><span class="then">From the worst moment we could think of.</span>
 
 ```cpp
-m_input  = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
-m_output = ThreadSafeRingBuffer(max_block_size + k_blocks_in_flight * k_model.m_input_size);
+m_input  = ThreadSafeRingBuffer(k_model.m_input_size);
+m_output = ThreadSafeRingBuffer(rounded_max_inference_time + k_model.m_input_size);
 ```
 
 Note:
 - In step 3 we sized the ring buffers by hand, by thinking through the worst moment.
-- Step 6 sized them for eight model blocks in flight: a guess.
+- Step 6 sized them from what we knew: one model block in, and the worker's time plus one block out.
 - All of it was allocated in prepare, none of it in the callback.
 - That rule was ours to keep, and every size was ours to get right.
 
@@ -170,9 +172,8 @@ Note:
 ## Allocated at <code>prepare</code>.<br><span class="then">Nothing after.</span>
 
 <div class="statement-points">
-  <div>A ring per streamed tensor, sized from the host blocks and the window, in the tensor's dtype</div>
+  <div>A ring per streamed tensor, sized from the host blocks and the window</div>
   <div>Slots: two per inference that can be in flight</div>
-  <div>State pairs: two buffers each, swapped, never copied</div>
   <div>After <code>prepare</code>: <code>process</code>, <code>push</code> and <code>pop</code> allocate nothing</div>
 </div>
 
@@ -181,10 +182,10 @@ Note:
 Note:
 - anira allocates at prepare, and nothing after.
 - What we sized by hand, anira sizes from what was declared: the host blocks from the contract, the window and the latency from the model file.
-- There is a ring per streamed tensor, in the tensor's own dtype, not only float.
+- There is a ring per streamed tensor, float32 unless the contract names another dtype for it.
 - Slots are the job records between the audio thread and the pool: two per inference that can be in flight, all preallocated.
 - The audio thread claims a free slot and leaves.
-- The state pairs get their two buffers here.
+- The state pairs got their two buffers at create; prepare sets both to zero, a new stream.
 - After prepare, process, push and pop allocate nothing.
 - When the host changes its blocks, we call prepare again: it is the one call that may allocate.
 
@@ -198,14 +199,14 @@ Note:
 
 | step 4 | |
 |---|---|
-| mean, p95, p99, max | over many runs, on our machine |
-| the max decides | about 12 ms after the warm-up, on our machine, for LibTorch |
+| mean, median, min, p99, max | over many runs, on our machine |
+| the max decides | our worst case, on our machine, for ONNX Runtime |
 
 Note:
 - In step 4 we measured the budget by hand.
-- Mean, p95, p99 and max, over many runs, on our machine.
-- The max decides: about 12 milliseconds after the warm-up, for the LibTorch model.
-- But it was a benchmark we ran on one machine, for one engine: the ONNX model of part 2 we never measured.
+- Mean, median, min, p99 and max, over many runs, on our machine.
+- The max decides: our worst case, on our machine, for ONNX Runtime.
+- But it was a benchmark we ran on one machine, for one engine.
 - It has to be repeated for every model, every engine, every machine the plugin runs on.
 
 ---

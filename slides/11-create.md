@@ -31,27 +31,17 @@ Note:
 
 <div class="tag">Part 1 · Steps 1 and 5</div>
 
-## Every engine has its own API.<br><span class="then">One class per engine, written by hand.</span>
-
-<div class="tradeoff ships">
-  <div class="tradeoff-name">LibTorch</div>
-  <div class="tradeoff-bar weight" style="--v:100%;--i:0"><span>318 MB</span></div>
-  <div class="tradeoff-name">ONNX Runtime</div>
-  <div class="tradeoff-bar weight" style="--v:7.5%;--i:1"><span>24 MB</span></div>
-  <div class="tradeoff-name">LiteRT</div>
-  <div class="tradeoff-bar weight" style="--v:3%;--i:2"><span>~ 3 MB</span></div>
-</div>
+## One engine, one class.<br><span class="then">Written by hand.</span>
 
 ```cpp
-class LibTorchEngine { … torch::jit::load … m_model.forward({input}) … };
-class OnnxEngine     { … Ort::Session … m_session.Run(…) … };
+class OnnxEngine { … Ort::Session … m_session.Run(…) … };   // step 1
 ```
 
 Note:
-- First the engines: in part 1 every engine has its own API, and we wrote one class per engine by hand.
-- ONNX Runtime came in step 1, LibTorch next to it in the benchmark of step 4, and each handled the state differently.
-- They also cost very different amounts to ship: LibTorch 318 MB, ONNX Runtime 24 MB, LiteRT about 3 MB.
-- The plugin picked one of them at compile time.
+- First the engines: in part 1 we wrote one class for one engine, ONNX Runtime, by hand.
+- It loads the session, owns the tensors, copies the state, and runs the model.
+- Another engine, LibTorch, ExecuTorch, LiteRT or your own code, would mean another class like it, with its own API and its own way of handling the state.
+- The plugin is built for that one engine, at compile time.
 
 ---
 
@@ -59,30 +49,86 @@ Note:
 
 <div class="tag">anira · Engines</div>
 
-## One model file names every export.<br><span class="then">The handler keeps a plan per engine.</span>
+## anira brings the engines.<br><span class="then">Prebuilt, static or shared. Or bring your own.</span>
+
+<div class="tradeoff ships">
+  <div class="tradeoff-name">LibTorch</div>
+  <div class="tradeoff-bar weight" style="--v:100%;--i:0"><span>318 MB</span></div>
+  <div class="tradeoff-name">ONNX Runtime</div>
+  <div class="tradeoff-bar weight" style="--v:8.2%;--i:1"><span>26 MB</span></div>
+  <div class="tradeoff-name">ExecuTorch</div>
+  <div class="tradeoff-bar weight" style="--v:5.3%;--i:2"><span>17 MB, static only</span></div>
+  <div class="tradeoff-name">LiteRT</div>
+  <div class="tradeoff-bar weight" style="--v:3.5%;--i:3"><span>11 MB</span></div>
+  <div class="tradeoff-name">TensorFlow Lite</div>
+  <div class="tradeoff-bar weight" style="--v:1.6%;--i:4"><span>5 MB</span></div>
+  <div class="tradeoff-name">Custom</div>
+  <div class="tradeoff-bar weight" style="--v:0.6%;--i:5"><span>depends on your engine</span></div>
+</div>
+
+<div class="cards-note">Behind anira's C ABI with hidden symbols: no clash with a host or another plugin that ships its own engine.</div>
+
+Note:
+- anira brings the engines: LibTorch, ONNX Runtime, ExecuTorch, LiteRT and TensorFlow Lite, prebuilt, static or shared, compiled in at build time.
+- Each one is an adapter behind the same interface: what we wrote by hand as OnnxEngine, once per engine.
+- Or bring your own: a custom engine is your own code behind the same descriptor, load, prepare and process, so a class like ours from part 1 fits there. Its size is whatever your engine weighs.
+- They cost very different amounts to ship: LibTorch 318 MB, ONNX Runtime 26 MB, ExecuTorch 17 MB, LiteRT 11 MB, TensorFlow Lite 5 MB.
+- Measured: the libraries unpacked from the anira-project/backends releases, macOS arm64 (LibTorch 2.12.0, ONNX Runtime 1.30.0, ExecuTorch 1.3.1, LiteRT 2.2.0, TensorFlow Lite 2.17.0). LibTorch ships only shared, ExecuTorch only static; less of a static library ends up in a linked plugin.
+- anira's public interface is a C ABI, and everything else is hidden: only the anira_ symbols are exported. So two plugins with different versions of anira, next to a host that ships its own ONNX Runtime, do not clash.
+- An entry for an engine the build does not have is skipped.
+
+---
+
+<!-- .slide: class="answer" -->
+
+<div class="tag">anira · Engines</div>
+
+## One model config for every engine.<br><span class="then">Each entry loads its own export.</span>
 
 ```json
 "models": [
+  { "engine": "onnxruntime", "path": "model_forward.onnx" },
   { "engine": "libtorch",    "path": "model.pt" },
-  { "engine": "onnxruntime", "path": "model_forward.onnx" }
+  { "engine": "executorch",  "path": "model.pte" },
+  { "engine": "litert",      "path": "model.tflite" }
 ],
 "default_engine": "onnxruntime"
 ```
 
 <div class="statement-points">
-  <div>LibTorch · ONNX Runtime · LiteRT · ExecuTorch: prebuilt, compiled in at build time</div>
-  <div>Custom engines: your own code behind the same descriptor</div>
-  <div>A plan is one entry on one engine and provider; <code>set_plan</code> switches between them</div>
+  <div>One entry per export; the default engine is the one that runs</div>
+  <div>Every entry takes the same tensors, the state included</div>
+  <div>An entry the build cannot run is skipped: one file for every build</div>
 </div>
 
 Note:
-- In anira one model file names every export, and the handler keeps a plan per engine.
-- LibTorch, ONNX Runtime, LiteRT and ExecuTorch come prebuilt and are compiled in at build time.
+- How to configure it: you list them in one model config, one entry per engine, each with its own export of the model.
+- Here four: ONNX Runtime, LibTorch, ExecuTorch and LiteRT, each loading its own file.
+- default_engine says which one runs. You can benchmark the model on each engine, from the same config.
+- Every entry has to take the same tensors, state included.
 - An entry for an engine the build does not have is skipped, so one file serves every build.
-- A plan is one entry on one engine and execution provider, and set_plan switches between them.
-- default_engine says which plan runs first.
-- The plans are built at prepare, when the models load: create only checks that the file names engines this build has.
-- A custom engine is your own code behind the same interface, load, prepare and process, so a class like ours from part 1 fits there.
+- The plans are built at prepare, when the models load. Create checks the model config's structure: the tensors, the axes, and which entries this build can run.
+
+---
+
+<!-- .slide: class="answer" -->
+
+<div class="tag">anira · Engines</div>
+
+## For our example, ONNX Runtime only.<br><span class="then">To keep it simple.</span>
+
+```json
+"models": [
+  { "engine": "onnxruntime", "path": "path/to/model_forward.onnx" }
+]
+```
+
+<div class="cards-note">Step 9's <code>model.json</code>: one entry, one export. A relative path is resolved against the folder of the config file.</div>
+
+Note:
+- For our example we use ONNX Runtime only, to keep it simple: one entry, one export.
+- The workshop builds only ONNX Runtime, so another entry would be skipped anyway.
+- And our model.pt keeps its state inside: next to this entry it would need an export with the state in and out.
 
 ---
 
@@ -93,15 +139,16 @@ Note:
 ## Float buffers, one shape.<br><span class="then">The engine's tensor stays inside its class.</span>
 
 ```cpp
-std::vector<float> output(input.begin(), input.end());   // step 1
-m_model_block.assign(m_model_input_size, 0.0f);         // step 3
-engine.process(m_model_block.data(), m_model_input_size);
+std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());   // step 1
+m_model_block.assign(k_model.m_input_size, 0.0f);                        // step 3
+m_state.assign(k_model.m_state_size, 0.0f);                              // the state, too
+m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
 ```
 
 Note:
 - Next, tensors: in part 1 every buffer is a float vector with one shape the code assumes, one channel and one model block.
-- That is step 1's output vector and step 3's model block.
-- torch::Tensor and Ort::Value exist only inside the engine classes.
+- That is step 1's audio vector, step 3's model block, and the state: 63,488 floats in one more vector.
+- Ort::Value exists only inside OnnxEngine.
 - A model with an int input, a second channel or an image does not fit through that call.
 
 ---
@@ -140,19 +187,19 @@ Note:
 ## 63,488 floats of state,<br><span class="then">carried by hand.</span>
 
 ```cpp
-// Carry the new state over to the next call. Hidden in LibTorch, ours here.
-std::copy_n(outputs[1].GetTensorData<float>(), m_state.size(), m_state.begin());
+// OnnxEngine::process: carry the new state over to the next call, every block.
+std::copy_n(m_state_out.begin(), m_state_out.size(), state.begin());
 ```
 
 Note:
 - Then state: 63,488 floats of state, carried by hand.
 - In the OnnxEngine from step 2 the state tensor comes out and we copy it into the state tensor going in, every call.
-- In LibTorch the state is hidden, here it is ours.
+- A TorchScript export can hide the state inside the model; an ONNX export cannot, so here it is ours.
 - That is one copy of 63,488 floats per block, and the ordering of the calls is ours to guarantee.
 
 ---
 
-<!-- .slide: class="answer" -->
+<!-- .slide: class="answer dense-code" -->
 
 <div class="tag">anira · State</div>
 
@@ -161,12 +208,14 @@ Note:
 ```json
 "inputs": [
   { "name": "audio",     "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]] },
-  { "name": "state_in",  "role": "state",    "axes": [["batch",1],["any",63488]],
-    "state_source": "state_out" }
+    "axes": [["batch",1],["channel",1],["time",2048]], "window": { "min": 2048, "max": 2048 } },
+  { "name": "state_in",  "role": "state",
+    "axes": [["batch",1],["any",63488]], "state_source": "state_out" }
 ], "outputs": [
-  { "name": "audio_out", "role": "streamed", …, "latency": 2224 },
-  { "name": "state_out", "role": "state",    "axes": [["batch",1],["any",63488]] }
+  { "name": "audio_out", "role": "streamed",
+    "axes": [["batch",1],["channel",1],["time",2048]], "window": { "min": 2048, "max": 2048 },
+    "latency": 2224 },
+  { "name": "state_out", "role": "state", "axes": [["batch",1],["any",63488]] }
 ]
 ```
 
@@ -178,12 +227,13 @@ Note:
 
 Note:
 - In anira every tensor has a role, and state is one of them.
+- This is the whole declaration of our model, nothing left out. The dtype is not written: float32 is the default.
 - Streamed has a time axis and is consumed window by window.
 - Static is one value per run, like a gain or a conditioning vector.
 - State is a pair, declared once: state_out feeds state_in.
 - anira binds two buffers to the pair and swaps them around every inference: what came out goes in next, with no copy and no code on your side.
 - Because the next run needs this run's state, a stateful model never has two runs in flight: anira runs its jobs one after another, in order.
-- The LibTorch export keeps its state inside the file, so its entry declares none, and the same model file carries both.
+- The tensors are declared once, for every entry of the file: each engine's export has to take the state in and give it out, like our ONNX file.
 
 ---
 
@@ -237,15 +287,17 @@ Note:
 
 ```cpp
 // once per process; the defaults: cores / 2, SPIN_BACKOFF
-context.threads(4, ANIRA_WAIT_BLOCKING);
+anira::ContextConfig config;
+config.threads(4, ANIRA_WAIT_BLOCKING);
+anira::Context context{config};
 ```
 
 Note:
 - In anira there is one pool per process, and every instance queues into it.
-- The first context sizes the pool, and every later one shares it. The threads start with the first prepare.
+- The first one sizes the pool, and every later one shares it; one asking for fewer threads shrinks it. The threads run while a handler is prepared.
 - Strictly, it is one pool per copy of anira: every instance of your plugin shares it, and another plugin that links its own anira has its own.
 - Here, ten instances, one pool, four threads.
-- All handlers share one lock-free queue: the audio thread enqueues a job and leaves, and a free thread takes the oldest.
+- All handlers share one lock-free queue: the audio thread enqueues a job and leaves, and a free thread takes the next one. The order holds within each handler.
 - In the animation, an instance flashes when it enqueues, and a thread is lit while its model runs.
 - The default is half the cores; the second argument is how the pool waits, which is the next slide.
 
@@ -255,22 +307,22 @@ Note:
 
 <div class="tag">Part 1 · Step 6</div>
 
-## The worker polls, the audio thread never waits.<br><span class="then">One fixed way to wait, on both sides.</span>
+## The worker spins, the audio thread never waits.<br><span class="then">One fixed way to wait, on both sides.</span>
 
 ```cpp
-// the worker
-if (m_input.available() < k_model.m_input_size) { sleep_for(100us); continue; }
+// the worker hot-spins: no block yet, it checks again at once, no sleep
+if (m_input.available() >= k_model.m_input_size) { /* pop, run the model, push */ }
 
-// the audio thread
-if (m_output.available() >= num_samples) { m_output.pop(samples, num_samples); }
-else                                     { std::fill_n(samples, num_samples, 0.0f); }
+// the audio thread: one sample at a time, never waits
+const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
+if (!popped) { /* zeros for the rest of the callback */ m_debt += num_samples - i; }
 ```
 
 Note:
-- Waiting: the worker polls, and the audio thread never waits.
+- Waiting: the worker spins, and the audio thread never waits.
 - These are two decisions we made in step 6 without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
-- If the output is not ready, the audio thread writes silence.
-- The 100 µs sleep is a compromise: responsive enough, and it burns a little CPU while idle.
+- The worker hot-spins: no sleep, no pause, one core at 100 percent, even while idle.
+- If a sample is not there yet, the audio thread writes zeros for the rest of the callback and owes them: the debt.
 
 ---
 
@@ -304,7 +356,7 @@ Note:
 - It wakes up every 5 ms on its own, only to check whether it should exit. While blocked, it uses no CPU.
 - The price is on the audio thread: if a pool thread is blocked, the enqueue makes one wake syscall.
 - Under load the threads rarely sleep, so that is rare; on an idle pool it is nearly every job.
-- The choice is made once per process, in context.threads.
+- The choice is made once per process, in ContextConfig::threads.
 - [click] We recommend BLOCKING: one bounded wake instead of threads polling while idle.
 - It takes no lock and never waits, but no OS documents the wake as real-time safe, RTSan does not check it, and we have not yet measured its worst case per platform.
 - SPIN_BACKOFF stays the default because the OS clocks a sleeping core down, and whatever runs next on it starts slow; spinning keeps the core warm.
@@ -319,7 +371,7 @@ Note:
 
 ```cpp
 if (m_engine == nullptr) {
-    m_engine = std::make_unique<OnnxEngine>(WORKSHOP_ONNX_MODEL_PATH);
+    m_engine = std::make_unique<OnnxEngine>(k_model.m_path);
     …
 }
 ```
@@ -335,27 +387,21 @@ Note:
 
 <div class="tag">anira · Memory</div>
 
-## Loaded models are pooled.<br><span class="then">The state stays with the instance.</span>
+## Our model: one instance per handler.<br><span class="then">Stateless models can run in parallel.</span>
 
-```json
-"models": [ { "engine": "onnxruntime", "path": "model_forward.onnx" } ],
-"max_instances": 4
-```
-
-<div class="statement-points">
-  <div>One load per model and provider, shared by every handler that runs it</div>
-  <div><code>max_instances</code> caps the engine instances; the default is one per pool thread</div>
-  <div>Every enabled plan stays loaded: a file with two engines holds both</div>
+<div class="cards">
+  <div class="card accent">{{ICON:model}}<div class="card-title">With state, like ours</div><div class="card-text">One instance per handler, whatever the config says. Its jobs run one at a time, in order; anira carries the state.</div></div>
+  <div class="card">{{ICON:threads}}<div class="card-title">Without state</div><div class="card-text">Loaded once for every handler. <code>"max_instances": 4</code> runs up to four inferences at once on the pool.</div></div>
 </div>
 
 Note:
-- In anira loaded models are pooled, and the state stays with the instance.
-- The model is loaded once per model and provider, and every handler that runs it shares that load.
-- Each handler then runs it through its own engine instances, and max_instances caps how many.
-- The default is one per pool thread, since more could never run at once.
-- A model with a state pair, like ours, gets exactly one instance per handler, because its runs must stay in order.
-- The declared state lives in the handler, not in the engine.
-- The cost to know: prepare loads the model of every enabled plan, so a file with two engines holds both until the handler goes.
+- What anira does for a model like ours, with state: one engine instance per handler, whatever max_instances says, and its jobs run one after another, in order, because each needs the state of the one before. That is anira 3's rule for every stateful model or declared state pair.
+- Compared to part 1: anira carries the state, keeps the order, and the threads come from the shared pool instead of one worker per instance.
+- The instance itself is not shared: with ONNX Runtime it is its own session with its own copy of the weights, so ten plugin instances still hold ten copies, as in step 8.
+- For a model without state anira can do more: it is loaded once and shared by every handler, and max_instances lets several inferences of it run at the same time on the pool. That multithreads stateless inference, which helps when a block has more work than one thread can do in time.
+- The default for max_instances is one per pool thread, since more could never run at once.
+- Shared means the whole load matches: engine, path, provider, options and instance count.
+- Prepare loads the model of every enabled plan, so a file with two engines holds both until the handler is destroyed or prepared again.
 
 ---
 
@@ -380,12 +426,12 @@ Note:
 <div class="statement-points">
   <div>Engines are entries in a file; a plan per engine and provider</div>
   <div>Every slot is a typed tensor; state is a role</div>
-  <div>One pool and one copy of each model, for every instance in the process</div>
+  <div>One pool for every instance in the process; models without state are shared</div>
 </div>
 
 Note:
 - Declare once, and share what can be shared.
 - Engines are entries in a file, with a plan per engine and provider.
 - Every slot is a typed tensor, and state is a role.
-- One pool and one copy of each model serve every instance in the process.
+- One pool serves every instance in the process, and a model without state is loaded once for all of them.
 - Next: prepare, when the host says which blocks it will deliver.

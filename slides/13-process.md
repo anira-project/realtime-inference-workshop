@@ -65,12 +65,12 @@ Note:
 
 ## Audio in, through the pool, audio out.<br><span class="then">Push, then pop, every callback.</span>
 
-<div class="pipeline" data-window="4" data-inference="5.5" data-threads="2" data-slots="4" data-ring="8" data-period="1400" data-loop="40">
-  <div class="pl-in"><div class="pl-label">audio in</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
+<div class="pipeline" data-window="4" data-inference="1.32" data-threads="2" data-slots="4" data-ring="12" data-period="1400" data-loop="40">
+  <div class="pl-in"><div class="pl-label">audio in · 512</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
   <div class="pl-arrow a1 fragment" data-fragment-index="1" data-stage="1"><span class="pl-push">push</span></div>
   <div class="pl-ring in fragment" data-fragment-index="1" data-stage="1"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
   <div class="pl-arrow a2 fragment" data-fragment-index="2" data-stage="2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots fragment" data-fragment-index="2" data-stage="2"><div class="pl-label">slots</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
+  <div class="pl-slots fragment" data-fragment-index="2" data-stage="2"><div class="pl-label">slots · 2048 each</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
   <div class="pl-arrow a3 both fragment" data-fragment-index="3" data-stage="3"></div>
   <div class="pl-threads fragment" data-fragment-index="3" data-stage="3"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
   <div class="pl-out fragment" data-fragment-index="5" data-stage="5"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
@@ -80,22 +80,23 @@ Note:
   <div class="pl-down fragment" data-fragment-index="4" data-stage="4"><span class="pl-then"></span></div>
 </div>
 
-<div class="cards-note fragment" data-fragment-index="5">At the start, silence goes out until the first result is back: that is the latency.</div>
+<div class="cards-note fragment" data-fragment-index="5">The output ring starts with 2560 samples of silence, step 7's prefill: 1536 + 1024. Then every block is on time.</div>
 
 Note:
 - Audio in, through the pool, audio out: push, then pop, every callback.
-- We build it up click by click while it runs; it is simplified, not to scale.
+- We build it up click by click while it runs, with our numbers from part 1: 512 samples per callback, 2048 per model run, and a worst case of 15.3 ms, about 1.3 callbacks.
 - First only the audio coming in: a block per callback, at a steady rate.
 - [click] The push: the audio thread writes every block into the ring buffer, and with nothing taking it out, the ring fills up.
 - [click] The enqueue: whenever the ring holds enough for one model run, that part goes into a free slot, at a different rate than the blocks.
 - With no one running them, the slots fill up.
 - [click] The inference threads: a free thread takes the oldest waiting slot, runs the model and writes the result back.
-- One run takes longer than the time between two windows here, so the two threads take turns.
+- One run takes about 1.3 callbacks, far less than the four callbacks between two windows. Our model has state, so its runs go one at a time anyway.
 - [click] The dequeue: the audio thread's path in one callback is push, enqueue when the ring holds enough, straight down, dequeue.
 - The inference threads on the right run on their own.
 - The slot just handed over is still running, so the dequeue takes an older result, or none yet.
 - [click] The pop: once a slot is done, the dequeue moves its result into the output ring buffer, and every pop plays one block out of it.
-- Until the first result is back, silence goes out: that silence is the latency, which anira computes at prepare and reports to the host.
+- The output ring starts primed with silence, as in step 6: 2560 samples, 1536 for the block adaptation and 1024 for the worker's two callbacks. It plays out first, and the first result arrives just as it runs out.
+- That silence plus the model's own 2224 is the latency, which anira computes at prepare and reports to the host: 4784, as in step 7.
 
 ---
 
@@ -106,11 +107,11 @@ Note:
 ## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
 
 ```cpp
-m_input.push(samples, num_samples);                         // host block in
+m_input.try_push(samples[i]);                             // host in, sample by sample
 …
-m_input.pop(m_model_block.data(), k_model.m_input_size);    // model block out, on the worker
+m_input.pop(m_model_block.data(), k_model.m_input_size);  // a model block, on the worker
 …
-m_output.pop(m_wet_block.data(), num_samples);              // host block out
+m_output.try_pop(samples[i]);                             // host out, sample by sample
 ```
 
 Note:
@@ -171,7 +172,7 @@ Note:
   <g class="fragment" data-fragment-index="3">
     <path class="ov-flow state" d="M880 444 V482 H760 V444" marker-end="url(#st-arrow)"/>
     <text x="820" y="470" class="st-caption">state_out → state_in</text>
-    <text x="820" y="530" class="st-caption">the declared pair swaps around the engine, no copy</text>
+    <text x="820" y="530" class="st-caption">the declared pair swaps around each inference, no copy</text>
   </g>
 </svg>
 
@@ -183,7 +184,7 @@ Note:
 - The tensor goes into a slot with a stamp, a running number that keeps the results in order, and the callback returns.
 - [click] Bottom lane: a pool thread runs before_inference, the engine and after_inference on the tensor, and hands the slot back.
 - In a later callback the audio thread takes the next stamp in line, and post_process writes the result into the output ring.
-- [click] The state pair from the create chapter swaps around the engine itself, not around the stage.
+- [click] The state pair from the create chapter is bound before before_inference and swapped after after_inference: both hooks see the state, and nothing is copied.
 - The default stage is what step 3 did by hand, with before and after empty.
 - You write your own stage only when the model needs another shape than audio in, audio out.
 
@@ -212,7 +213,8 @@ Note:
 
 Note:
 - Between enqueue and dequeue, the audio thread may wait: wait_ratio says how long.
-- process itself never waits; only its waiting twin, process_wait, does, and only up to wait_ratio of a block.
+- process itself never waits; only its waiting twin, process_wait, does: with ANIRA_WAIT_CONTRACT up to wait_ratio of a block, otherwise as long as you pass it.
+- get_latency already counts on that wait: with wait_ratio above 0, a host that calls plain process gets the lower latency and more misses.
 - Why wait at all: if the model is fast, a short wait gets the result out in the same callback, one block earlier.
 - This is the same pipeline with a fast model: a window of two blocks, and one run takes about a third of a block; simplified, not to scale.
 - With wait_ratio 0, the default, the audio thread goes straight from the enqueue to the dequeue.
@@ -281,7 +283,6 @@ Note:
 ---
 
 <!-- .slide: class="recap miss" -->
-<!-- TODO: update the code once the step 6 and 7 examples use try_push / try_pop -->
 
 <div class="tag">Part 1 · Step 7</div>
 
@@ -349,19 +350,18 @@ Note:
 ---
 
 <!-- .slide: class="recap miss" -->
-<!-- TODO: update the code once the step 6 and 7 examples use try_push / try_pop -->
 
 <div class="tag">Part 1 · Step 7</div>
 
 ## What happens if an inference is too late?<br><span class="then">Zeros, then the late samples are dropped.</span>
 
 ```cpp
-float late;
-while (m_missing > 0 && m_output.try_pop(late)) { --m_missing; }  // drop what came too late
-for (size_t i = 0; i < num_samples; ++i) {
-    if (!m_output.try_pop(samples[i])) {                    // the result is late
-        std::fill(samples + i, samples + num_samples, 0.0f);
-        m_missing += num_samples - i;                       // dropped when it arrives
+while (m_debt > 0) { if (m_output.try_pop(late)) { --m_debt; } else { break; } }  // drop the late
+for (size_t i = zeros; i < num_samples; ++i) {
+    const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
+    if (!popped) {                                          // the result is late
+        std::fill_n(samples + i, num_samples - i, 0.0f);
+        m_debt += num_samples - i;                          // dropped when it arrives
         break;
     }
 }
@@ -386,7 +386,7 @@ for (size_t i = 0; i < num_samples; ++i) {
 Note:
 - And on the output side: what happens if an inference is too late?
 - The output side pops sample by sample, and when the ring is empty, the result is late.
-- The rest of the block goes out as zeros, and the processor counts them in m_missing.
+- The rest of the block goes out as zeros, and the processor counts them in m_debt.
 - [click] Into the zeros and out of them: two clicks.
 - [click] In the next callbacks, before anything is played, as many samples are popped and thrown away as soon as they have arrived: the late part of the result.
 - So the audio after the miss is exactly where it belongs: the dashed line and the signal are the same.
@@ -459,7 +459,7 @@ Note:
 - With a callback you can continue the waveform from before the miss and aim for where the next block starts.
 - The next block is usually not computed yet, so that start is a guess: close, but a small step remains.
 - [click] A late result that arrives after the miss is dropped, and no input is skipped, so the audio after the miss is where it belongs: the dashed line and the signal are the same.
-- If the queue is full, the window is dropped and its block is filled the same way, at its place in the stream.
+- If every slot is busy, the window is dropped and its block is filled the same way, at its place in the stream. If the shared queue itself refuses the job, the block goes out as zeros, whatever the policy.
 - The edges of the filled block can still be heard, depending on the policy. A full queue no longer shifts the audio: the fill sits where the dropped hop belongs.
 
 ---
@@ -491,7 +491,7 @@ Note:
 - process reports the block as missed, and that is not an error: the buffer holds what the policy chose.
 - A late result that arrives after a miss is dropped, so the stream stays aligned, without the counters of step 7.
 - If every slot is busy, the window is dropped and filled the same way: that is overload, and rt_error tells you so.
-- After a miss the pool catches up, and the next block is on time again.
+- After a miss the pool catches up: the next block is on time again once the late result has arrived, otherwise that callback is another miss.
 
 ---
 
@@ -522,15 +522,15 @@ Note:
 ## We checked real-time safety by hand.<br><span class="then">Once, on our machine.</span>
 
 ```cpp
-void audio_callback(Engine& engine, float* samples, size_t num_samples)
+void process_block(float* samples, size_t num_samples)
     [[clang::nonblocking]] { … }
 ```
 
-<div class="cards-note">RTSan on both engines, one run: what it caught, and what it could not see.</div>
+<div class="cards-note">RTSan on our engine, one run: what it caught, and what it could not see.</div>
 
 Note:
 - In step 5 we checked real-time safety by hand, once, on our machine.
-- We tagged the callback nonblocking, built with -fsanitize=realtime, and ran RTSan once per engine.
+- We tagged the callback nonblocking, built with -fsanitize=realtime, and ran RTSan once, on ONNX Runtime.
 - That showed us what it caught, and what it could not see.
 - And it has to be repeated for every change, every model, every engine.
 
@@ -544,7 +544,7 @@ Note:
 
 <div class="threads">
   <div class="threads-label">main</div>
-  <div class="threads-lane"><span>from_file</span><span>create</span><span>prepare</span><span>get_latency</span><span>destroy</span></div>
+  <div class="threads-lane"><span>from_file</span><span>create</span><span>prepare</span><span>destroy</span></div>
   <div class="threads-label">audio</div>
   <div class="threads-lane audio"><span>process</span><span class="stage">pre_process</span><span class="stage">post_process</span></div>
   <div class="threads-label">pool</div>
@@ -556,11 +556,11 @@ Note:
 Note:
 - In anira every entry names its thread, and the audio-thread entries are nonblocking.
 - The thread tags are part of the API, as in CLAP: main for setup, audio for the host's callback, pool for inference.
-- from_file, create, prepare, get_latency and destroy are main; process, pre_process and post_process are audio; before_inference, the engine and after_inference are pool.
+- from_file, create, prepare and destroy are main; get_latency may be called from any thread; process, pre_process and post_process are audio; before_inference, the engine and after_inference are pool.
 - ANIRA_NONBLOCKING is clang's nonblocking attribute on every audio-thread entry, so the compiler checks what each one calls.
 - The exceptions are the waiting twins like process_wait: they are tagged blocking, and calling one in the callback is your decision.
 - And the whole test suite runs under RTSan in CI.
-- That includes your own stage: allocate in pre_process and RTSan reports it.
+- Your own stage is different: anira cannot check it. Under a Hard contract your processor promises with a flag that pre_process and post_process are real-time safe; mark them ANIRA_NONBLOCKING and run RTSan in your own build to hold that promise.
 - Logging from the audio thread needs no lock: a fixed record goes into a queue, and a drain thread prints it.
 - A failed audio-thread call says why in rt_error.
 

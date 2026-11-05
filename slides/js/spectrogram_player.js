@@ -339,9 +339,85 @@
         });
     }
 
+    // A speaker to press and the waveform of what it plays:
+    // <div class="wave-player" data-src="clip.wav"></div>
+    async function setupWavePlayer(player) {
+        player.innerHTML = `
+          <button class="wave-play" aria-label="Play">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+              <path class="wave-speaker" d="M8 25h10l15-13v40L18 39H8z"/>
+              <path class="wave-sound" d="M42 24a11 11 0 0 1 0 16M49 16a22 22 0 0 1 0 32"/>
+            </svg>
+          </button>
+          <div class="wave-track">
+            <canvas width="1600" height="260"></canvas>
+            <div class="wave-playhead"></div>
+          </div>`;
+
+        const buffer = await load(player.dataset.src);
+        const canvas = player.querySelector('canvas');
+        const playhead = player.querySelector('.wave-playhead');
+        const button = player.querySelector('.wave-play');
+        const redraw = () => drawWave(canvas, buffer.getChannelData(0));
+        redraw();
+        new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        let context = null;
+        let source = null;
+        let gain = null;
+        let startedAt = 0;
+
+        const stop = () => {
+            if (!source) return;
+            // A short fade, so stopping mid-sound does not click
+            gain.gain.setTargetAtTime(0, context.currentTime, 0.01);
+            source.onended = null;
+            source.stop(context.currentTime + 0.05);
+            source = null;
+            player.classList.remove('playing');
+            playhead.style.left = '0';
+        };
+
+        const tick = () => {
+            if (!source) return;
+            const fraction = Math.max(0, (context.currentTime - startedAt) / buffer.duration);
+            playhead.style.left = `${Math.min(1, fraction) * 100}%`;
+            requestAnimationFrame(tick);
+        };
+
+        button.addEventListener('click', () => {
+            if (source) {
+                stop();
+            } else {
+                context = context || new AudioContext();
+                context.resume();
+                source = context.createBufferSource();
+                source.buffer = buffer;
+                gain = context.createGain();
+                source.connect(gain).connect(context.destination);
+                source.onended = stop;
+                startedAt = context.currentTime;
+                source.start(startedAt);
+                player.classList.add('playing');
+                tick();
+            }
+            // Give the keyboard back to Reveal, for the arrow keys and the presenter's clicker
+            button.blur();
+        });
+
+        // Leaving the slide stops the sound
+        Reveal.on('slidechanged', stop);
+    }
+
     window.addEventListener('reveal-ready', () => {
         document.querySelectorAll('.reveal .slides .spectro-player').forEach(player => {
             setup(player).catch(error => {
+                player.textContent = `Could not load the audio: ${error.message}`;
+            });
+        });
+
+        document.querySelectorAll('.reveal .slides .wave-player').forEach(player => {
+            setupWavePlayer(player).catch(error => {
                 player.textContent = `Could not load the audio: ${error.message}`;
             });
         });

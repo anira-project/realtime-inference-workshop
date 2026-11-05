@@ -171,7 +171,7 @@ for (size_t start = 0; start < output.size(); start += 512) {
 }
 ```
 
-<div class="streams">
+<div class="streams once">
   {{STREAM:host=512|model=0|length=4096|seconds=5}}
 </div>
 
@@ -245,7 +245,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 1: Size the ring buffers
+## TODO 1: Give the ring buffers their size
 
 ```cpp
 const size_t capacity = k_model.m_input_size; // <- fill out
@@ -318,16 +318,16 @@ hears its own input."
 
 ---
 
-<div class="tag">Latency</div>
+<div class="tag">Bonus question</div>
 
 ## How late is the host's output?
 
-<div class="lat-sum" style="margin-bottom: 5rem">
-  <div class="lat-part fragment">buffer adaptation<small>2048 − 512</small><strong>1536</strong></div>
-  <div class="lat-plus fragment">+</div>
-  <div class="lat-part fragment">the model itself<small>in this case?</small><strong class="fragment">2224</strong></div>
-  <div class="lat-plus fragment">=</div>
-  <div class="lat-part total fragment">latency<strong>3760</strong></div>
+<div class="lat-add">
+  <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
+  <div class="lat-op fragment">+</div>
+  <div class="lat-term fragment"><span>the model itself</span><small>in this case?</small><strong>2224</strong></div>
+  <div class="lat-op fragment">=</div>
+  <div class="lat-term total fragment"><span>latency</span><small>samples</small><strong>3760</strong></div>
 </div>
 
 <div class="lat-why fragment">For 512 into 2048. Other host block sizes give other numbers: part 2.</div>
@@ -352,7 +352,7 @@ So in total the host hears our output 3760 samples late, about 85 milliseconds. 
 
 <div class="tag">Done</div>
 
-## The model runs on the host's 512-sample blocks
+## The model runs on the host's 512-sample blocks <span class="then">But is it real-time capable?</span>
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

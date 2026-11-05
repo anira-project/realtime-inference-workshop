@@ -4,9 +4,8 @@
   - (Valentin) Not clear what is meant here: the icons (chip = Research there, Inference in C++ here), the layout, or something else?
 - Change the audio example
   - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
-- Shipping the engine, leave it out...
 
-- Benchmark -> convert to samples
+- Benchmark -> convert to samples (Lina: slides and exercise)
 
 - All 512 hostsample examples
 - synchronious ringbuffer example:

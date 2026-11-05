@@ -46,13 +46,8 @@ public:
     void prepare(size_t max_block_size) {
         m_worker.stop();
 
-        const double max_inference_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
-        const size_t rounded_max_inference_time =
-            static_cast<size_t>(
-                std::ceil(max_inference_samples / static_cast<double>(max_block_size))) *
-            max_block_size;
-        m_prefill = (k_model.m_input_size - max_block_size) + rounded_max_inference_time;
-        const size_t output_capacity = rounded_max_inference_time + k_model.m_input_size;
+        m_prefill = (k_model.m_input_size - max_block_size) + k_max_inference_samples_rounded;
+        const size_t output_capacity = k_max_inference_samples_rounded + k_model.m_input_size;
 
         // The latency: the prefill, and the model's own delay on top.
         m_latency = m_prefill + k_model.m_latency;

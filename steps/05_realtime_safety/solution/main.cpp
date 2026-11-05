@@ -2,207 +2,120 @@
 //
 // Goal:  show that the engine is not real-time safe. Not a question of being
 //        fast enough: it allocates, locks and calls into the system.
-// Given: the ONNX Runtime engine and a RealtimeSanitizer (clang -fsanitize=realtime).
-// Check: RTSan stops at the first violation inside the audio callback.
+// Given: step 3's processor, with its callback marked [[clang::nonblocking]],
+//        and RealtimeSanitizer (clang -fsanitize=realtime).
+// Check: RTSan stops at the first violation inside the callback.
 //
 // There is no exercise here. Build it with -DWORKSHOP_RTSAN=ON and a clang that
 // has RTSan, run it, and read what comes out.
 
 #include <algorithm>
-#include <atomic>
 #include <cstddef>
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <stdexcept>
-#include <string>
 #include <vector>
 
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/helpers/onnx_engine.h"
+#include "common/helpers/ring_buffer.h"
 #include "common/helpers/support.h"
 
-// Disable RTSan while counting so it does not stop at the first violation or
-// symbolize every stack trace. The allocation counter records the violations
-// directly and keeps the run fast.
-#if defined(__has_feature)
-#if __has_feature(realtime_sanitizer)
-#define WORKSHOP_HAS_RTSAN 1
-extern "C" void __rtsan_disable();
-extern "C" void __rtsan_enable();
-#endif
-#endif
-
-// Count allocations independently of RTSan so this measurement works in both
-// sanitized and unsanitized builds. The counter records only new/delete calls
-// that occur while the audio callback is running.
-namespace {
-std::atomic<bool> g_in_callback{false};
-std::atomic<long> g_allocations{0};
-}  // namespace
-
-void* operator new(size_t size) {
-    if (g_in_callback.load(std::memory_order_relaxed)) {
-        g_allocations.fetch_add(1, std::memory_order_relaxed);
-    }
-    void* memory = std::malloc(size == 0 ? 1 : size);
-    if (memory == nullptr) { throw std::bad_alloc(); }
-    return memory;
-}
-
-void operator delete(void* memory) noexcept {
-    if (g_in_callback.load(std::memory_order_relaxed)) {
-        g_allocations.fetch_add(1, std::memory_order_relaxed);
-    }
-    std::free(memory);
-}
-
-void operator delete(void* memory, size_t) noexcept {
-    operator delete(memory);
-}
-
-// Model settings taken from the export metadata.
-// @m_path: the ONNX model, state in and out
-// @m_input_size: samples the model takes per forward pass
-// @m_state_size: floats in the model's state
+// Model settings taken from the export metadata, as in step 1.
 constexpr struct {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
 } k_model{};
 
+// What the host hands over per callback: four callbacks make one model block.
+constexpr size_t k_host_block_size = 512;
+
 // What an audio callback promises: it returns in bounded time, so it must not
-// allocate, lock, or call the kernel. RTSan checks that promise and reports the
-// first thing that breaks it.
+// allocate, lock, or call the kernel. RTSan checks that promise at runtime and
+// reports the first thing that breaks it.
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
 #define WORKSHOP_AUDIO_CALLBACK [[clang::nonblocking]]
 #else
 #define WORKSHOP_AUDIO_CALLBACK
 #endif
 
-namespace {
+// Whether this build has RealtimeSanitizer (clang -fsanitize=realtime).
+#if defined(__has_feature)
+#if __has_feature(realtime_sanitizer)
+#define WORKSHOP_HAS_RTSAN
+#endif
+#endif
 
-// OnnxEngine with the state carried here, as in step 2. The state is allocated
-// once, up front: anything the callback then reports comes from the engine.
-class OnnxStream {
+// Step 3's processor, unchanged except for two things: the callback makes the
+// promise, and prepare() warms the engine up, so what RTSan finds is not a
+// first-call effect.
+class ProcessorExample {
 public:
-    explicit OnnxStream(const char* model_path)
-        : m_engine(model_path), m_state(k_model.m_state_size, 0.0f) {}
+    explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
 
-    void reset() { std::fill(m_state.begin(), m_state.end(), 0.0f); }
+    void prepare(size_t max_block_size) {
+        const size_t capacity = k_model.m_input_size;
 
-    void process(float* samples, size_t num_samples) {
-        m_engine.process(samples, num_samples, m_state);
+        m_input = RingBuffer(capacity);
+        m_output = RingBuffer(capacity);
+        m_model_block.assign(k_model.m_input_size, 0.0f);
+        m_state.assign(k_model.m_state_size, 0.0f);
+
+        // The warm-up, before the audio starts. The state starts at zero again.
+        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+        std::fill(m_state.begin(), m_state.end(), 0.0f);
+    }
+
+    void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
+        m_input.push(samples, num_samples);
+
+        const bool has_block = m_input.available() >= k_model.m_input_size;
+
+        if (has_block) {
+            m_input.pop(m_model_block.data(), k_model.m_input_size);
+            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+            m_output.push(m_model_block.data(), k_model.m_input_size);
+        }
+
+        if (m_output.available() >= num_samples) {
+            m_output.pop(samples, num_samples);
+        } else {
+            std::fill_n(samples, num_samples, 0.0f);
+        }
     }
 
 private:
-    OnnxEngine m_engine;
+    OnnxEngine& m_engine;
+    RingBuffer m_input{0};
+    RingBuffer m_output{0};
+    std::vector<float> m_model_block;
     std::vector<float> m_state;
 };
 
-// The audio thread, as far as this example goes: one block in, one block out,
-// nothing else. Marking it is what turns RTSan on for everything it calls.
-void audio_callback(OnnxStream& engine,
-                    float* samples,
-                    size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
-    engine.process(samples, num_samples);
-}
-
-std::vector<float> one_block() {
-    return {k_input_signal.data(), k_input_signal.data() + k_model.m_input_size};
-}
-
-// Runs several blocks through the callback and counts what the engine does on
-// the way. The audio thread would have to survive every one of these.
-// @engine: the engine under test
-// @blocks: how many callbacks to run
-void count_violations(OnnxStream& engine, int blocks) {
-    std::vector<float> block = one_block();
-
-    engine.reset();
-    engine.process(block.data(), block.size());  // Warm up outside the callback
-
-    std::printf("ONNX Runtime, %d blocks through the callback:\n", blocks);
-#ifdef WORKSHOP_HAS_RTSAN
-    __rtsan_disable();
-#endif
-
-    long total = 0;
-    for (int i = 0; i < blocks; ++i) {
-        g_allocations.store(0, std::memory_order_relaxed);
-        g_in_callback.store(true, std::memory_order_relaxed);
-
-        audio_callback(engine, block.data(), block.size());
-
-        g_in_callback.store(false, std::memory_order_relaxed);
-        const long count = g_allocations.load(std::memory_order_relaxed);
-        total += count;
-        std::printf("  block %2d   %6ld allocations and frees\n", i, count);
-    }
-
-#ifdef WORKSHOP_HAS_RTSAN
-    __rtsan_enable();
-#endif
-
-    std::printf("  total      %6ld over %d blocks, %ld per block\n\n",
-                total,
-                blocks,
-                total / blocks);
-}
-
-// The engine has to produce the reference output. Worth checking before
-// claiming anything about it.
-void verify(OnnxStream& engine) {
-    std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
-
-    engine.reset();
-    for (size_t offset = 0; offset < audio.size(); offset += k_model.m_input_size) {
-        engine.process(audio.data() + offset, k_model.m_input_size);
-    }
-
-    report_line("onnx", max_abs_diff(audio.data(), k_target_output_signal.data(), audio.size()));
-}
-
-}  // namespace
-
-int main(int argc, char** argv) {
-    const std::string which = argc > 1 ? argv[1] : "";
-
-    try {
-        OnnxStream engine(k_model.m_path);
-
-        if (which == "count") {
-            count_violations(engine, 10);
-            return 0;
-        }
-
-        if (which == "verify") {
-            verify(engine);
-            return 0;
-        }
-
-        std::printf("Calling ONNX Runtime inference from a [[clang::nonblocking]] function.\n");
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::nonblocking)
-        std::printf(
-            "Built with the attribute. With -fsanitize=realtime this stops at the\n"
-            "first allocation, lock or syscall the engine makes.\n\n");
-#else
-        std::printf(
-            "This compiler does not know [[clang::nonblocking]], so nothing is\n"
-            "checked. Use a clang with RTSan; see the README.\n\n");
-#endif
-
-        std::vector<float> block = one_block();
-        engine.process(block.data(), block.size());  // Warm up outside the callback
-        audio_callback(engine, block.data(), block.size());
-    } catch (const std::runtime_error& error) {
-        std::fprintf(stderr, "%s\n", error.what());
-        return 2;
-    }
-
+int main() {
+#ifndef WORKSHOP_HAS_RTSAN
     std::printf(
-        "Returned without a report. Either RTSan is not enabled, or this\n"
-        "engine really did nothing unsafe — check how it was built.\n");
-    return 0;
+        "WARNING: built without RealtimeSanitizer, so nothing is checked.\n"
+        "It needs clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux)\n"
+        "and -DWORKSHOP_RTSAN=ON. See the README.\n\n");
+#endif
+
+    OnnxEngine engine(k_model.m_path);
+
+    ProcessorExample processor(engine);
+    processor.prepare(k_host_block_size);
+
+    // The host, as in step 3. With RTSan, the run stops in the fourth callback,
+    // the first one that runs the model.
+    std::vector<float> output(k_input_signal.begin(), k_input_signal.end());
+    for (size_t start = 0; start < output.size(); start += k_host_block_size) {
+        processor.process_block(output.data() + start, k_host_block_size);
+    }
+
+    // Without RTSan the run gets here: the engine is still correct, just not safe.
+    const size_t latency = k_model.m_input_size - k_host_block_size;
+    return report_with_latency(output.data(),
+                               k_target_output_signal.data(),
+                               output.size(),
+                               latency);
 }

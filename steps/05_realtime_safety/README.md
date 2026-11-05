@@ -2,24 +2,20 @@
 
 **No exercise here** — this one is a demonstration. Build it, run it, read the report.
 
-**Goal:** show that the engine is not real-time safe. Not "too slow": they allocate, take locks and call into the system, and any one of those can block for an unbounded time.
+**Goal:** show that the engine is not real-time safe. Not "too slow": it allocates, takes locks and calls into the system, and any one of those can block for an unbounded time.
 
 ## What it does
 
-`solution/main.cpp` calls the engine from a function marked `[[clang::nonblocking]]` — the promise an audio callback makes. [RealtimeSanitizer](https://clang.llvm.org/docs/RealtimeSanitizer.html) checks that promise at runtime and reports the first thing that breaks it.
+[`solution/main.cpp`](solution/main.cpp) is step 3's processor with two changes: its callback, `process_block`, is marked `[[clang::nonblocking]]` — the promise an audio callback makes — and `prepare()` warms the engine up before the audio starts. [RealtimeSanitizer](https://clang.llvm.org/docs/RealtimeSanitizer.html) checks that promise at runtime and reports the first thing that breaks it.
 
-```bash
-./build/bin/step05_solution          # One block from the callback
-./build/bin/step05_solution verify   # The engine produces the reference output
-./build/bin/step05_solution count    # Ten blocks, counted
-```
-
-Every mode runs in well under a second.
-
-The engine runs the model of the previous steps and agrees with the Python reference:
+The host loop is step 3's. Without RTSan nothing is checked, so the program warns, runs through, and shows that the engine still matches the Python reference:
 
 ```
-  onnx                     max abs diff 3.87e-07   OK
+WARNING: built without RealtimeSanitizer, so nothing is checked.
+It needs clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux)
+and -DWORKSHOP_RTSAN=ON. See the README.
+
+OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 ```
 
 ## Building with RTSan
@@ -37,57 +33,40 @@ cmake --build build-rtsan -j
 ./build-rtsan/bin/step05_solution
 ```
 
-Without `-DWORKSHOP_RTSAN=ON` the program still runs; it just checks nothing, and says so.
-
 ## What comes out
 
-`OrtApis::Run`, on its way into the model. Our engine creates its tensors once, up front, and hands `Run` the outputs too, and it still allocates:
+The run stops in the fourth callback, the first one that runs the model, in `OrtApis::Run`, on its way into the model. Our engine creates its tensors once, up front, hands `Run` the outputs too, and was warmed up, and it still allocates:
 
 ```
-==57170==ERROR: RealtimeSanitizer: unsafe-library-call
+==64590==ERROR: RealtimeSanitizer: unsafe-library-call
 Intercepted call to real-time unsafe function `malloc` in real-time context!
-    #1 operator new(unsigned long)
-    #2 OrtApis::Run(...)
-    #3 Ort::detail::SessionImpl<OrtSession>::Run(...)
+    #2 operator new(unsigned long)
+    #3 OrtApis::Run(...)
     #4 OnnxEngine::run(float*, unsigned long)
     #5 OnnxEngine::process(float*, unsigned long, std::vector<float>&)
-    #6 audio_callback(OnnxStream&, float*, unsigned long)
+    #6 ProcessorExample::process_block(float*, unsigned long)
+    #7 main
 ```
 
-The report is not about the forward pass. The engine allocates *on the way in*, and there is no flag that turns that off. Behind that first call are more allocations, an arena, thread pools and locks.
+The report is not about the forward pass. The engine allocates *on the way in*, and there is no flag that turns that off.
 
-## Counting, over ten blocks
+## Every violation, not just the first
 
-RTSan stops at the first violation, which says *that* it happens, not *how
-often*. The counting mode runs ten callbacks and counts every allocation and
-free the engine makes inside them — with its own `operator new`, so it works
-without RTSan as well:
-
-```
-ONNX Runtime, 10 blocks through the callback:
-  block  9     2154 allocations and frees
-  total       21541 over 10 blocks, 2154 per block
-```
-
-**Two thousand allocations and frees per callback**, every block. Not one slip — the engine is built that way.
-
-RTSan can list what kind of violations they are, if you tell it not to stop at
-the first one:
+RTSan stops at the first violation, which says *that* it happens, not *how often*. Tell it not to stop, and it reports every one, for the whole test signal: 32 callbacks, 8 forward passes.
 
 ```bash
 RTSAN_OPTIONS=halt_on_error=false ./build-rtsan/bin/step05_solution 2>&1 >/dev/null \
   | grep -oE 'unsafe function `[a-z_]+`' | sort | uniq -c | sort -rn
 ```
 
-One block through ONNX Runtime:
-
 ```
-  82 malloc      38 free      8 pthread_mutex_lock      8 pthread_mutex_unlock
+ 649 unsafe function `malloc`
+ 304 unsafe function `free`
+  64 unsafe function `pthread_mutex_unlock`
+  64 unsafe function `pthread_mutex_lock`
 ```
 
-Locks, on the audio thread.
-
-Keep this to a single block: RTSan symbolizes every report, and the counting mode above is the fast way to see the scale.
+About 80 allocations, 40 frees and 8 locks in every forward pass. Not one slip — the engine is built that way. Locks, on the audio thread.
 
 ## Why you cannot fix this from the outside
 

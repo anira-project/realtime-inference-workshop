@@ -27,10 +27,13 @@ void BypassOverlay::paint(juce::Graphics& g) {
     g.drawText("Bypassed", area.removeFromTop(30), juce::Justification::centred);
     g.setColour(palette::k_text);
     g.setFont(font(13.0f));
-    g.drawFittedText(m_reason, area, juce::Justification::centredTop, 6);
+    g.drawFittedText(m_reason, area.removeFromTop(70), juce::Justification::centredTop, 4);
+    g.setColour(palette::k_muted);
+    g.setFont(font(12.0f));
+    g.drawFittedText(m_host, area, juce::Justification::centredTop, 1);
 }
 
-void SlotTile::paintButton(juce::Graphics& g, bool highlighted, bool down) {
+void SourceTile::paintButton(juce::Graphics& g, bool highlighted, bool down) {
     const auto area = getLocalBounds().toFloat();
     const bool on = getToggleState();
 
@@ -42,32 +45,14 @@ void SlotTile::paintButton(juce::Graphics& g, bool highlighted, bool down) {
     }
 
     const auto ink = on ? palette::k_background : palette::k_text;
-    g.setColour(ink.withAlpha(0.5f));
-    g.setFont(font(12.0f));
-    g.drawText(m_number, area.reduced(12.0f, 10.0f), juce::Justification::topLeft);
-
-    // Play triangle or stop square, in the middle
-    const auto centre = area.getCentre().translated(0.0f, down ? 1.0f : 0.0f);
-    const float size = area.getWidth() * 0.11f;
     g.setColour(ink);
-    if (on) {
-        g.fillRoundedRectangle(juce::Rectangle<float>(1.6f * size, 1.6f * size).withCentre(centre),
-                               3.0f);
-    } else {
-        juce::Path triangle;
-        triangle.addTriangle(centre.x - 0.7f * size,
-                             centre.y - size,
-                             centre.x - 0.7f * size,
-                             centre.y + size,
-                             centre.x + size,
-                             centre.y);
-        g.fillPath(triangle);
-    }
+    g.setFont(font(15.0f, true));
+    g.drawText(m_title, area.translated(0.0f, down ? 1.0f : 0.0f), juce::Justification::centred);
 
     g.setColour(ink.withAlpha(on ? 0.8f : 0.6f));
     g.setFont(font(12.0f));
     g.drawFittedText(getButtonText(),
-                     area.reduced(12.0f, 10.0f).toNearestInt(),
+                     area.reduced(10.0f, 10.0f).toNearestInt(),
                      juce::Justification::centredBottom,
                      1);
 }
@@ -104,22 +89,28 @@ void WorkshopLookAndFeel::drawLinearSlider(juce::Graphics& g,
     g.fillEllipse(juce::Rectangle<float>(22.0f, 22.0f).withCentre({position, centre}));
 }
 
-WorkshopPluginEditor::WorkshopPluginEditor(WorkshopPluginProcessor& processor)
+PluginEditor::PluginEditor(PluginBase& processor)
     : juce::AudioProcessorEditor(processor), m_processor(processor) {
     setLookAndFeel(&m_look);
 
-    for (int slot = 0; slot < ExamplePlayer::k_num_slots; ++slot) {
-        auto& row = m_slots[static_cast<size_t>(slot)];
-        row.m_tile.m_number = juce::String(slot + 1);
-        row.m_tile.onClick = [this, slot] {
-            auto& player = m_processor.player();
-            player.play(player.playing() == slot ? -1 : slot);
-            refresh();
-        };
-        row.m_load.onClick = [this, slot] { choose_file(slot); };
-        addAndMakeVisible(row.m_tile);
-        addAndMakeVisible(row.m_load);
-    }
+    m_example.m_title = "Example";
+    m_file.m_title = "Your file";
+    m_input.m_title = "Input";
+    m_example.onClick = [this] { select(SourcePlayer::Source::example); };
+    // Selects your file; once it plays, or before there is one, a click
+    // chooses another.
+    m_file.onClick = [this] {
+        const auto& player = m_processor.player();
+        if (player.has_file() && player.selected() != SourcePlayer::Source::file) {
+            select(SourcePlayer::Source::file);
+        } else {
+            choose_file();
+        }
+    };
+    m_input.onClick = [this] { select(SourcePlayer::Source::input); };
+    m_load.onClick = [this] { choose_file(); };
+    for (auto* component : {&m_example, &m_file, &m_input}) { addAndMakeVisible(component); }
+    addAndMakeVisible(m_load);
 
     m_mix_attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         m_processor.parameters(),
@@ -130,26 +121,26 @@ WorkshopPluginEditor::WorkshopPluginEditor(WorkshopPluginProcessor& processor)
 
     addChildComponent(m_overlay);  // Last, so it lies over everything
 
-    const int tile = (k_width - 2 * k_margin - 2 * k_gap) / ExamplePlayer::k_num_slots;
+    const int tile = (k_width - 2 * k_margin - 2 * k_gap) / 3;
     setSize(k_width, k_header + tile + k_load + k_mix + k_status + k_margin / 2);
     refresh();
     startTimerHz(10);
 }
 
-WorkshopPluginEditor::~WorkshopPluginEditor() {
+PluginEditor::~PluginEditor() {
     setLookAndFeel(nullptr);
 }
 
-void WorkshopPluginEditor::paint(juce::Graphics& g) {
+void PluginEditor::paint(juce::Graphics& g) {
     g.fillAll(palette::k_background);
 
     auto header = getLocalBounds().reduced(k_margin, 0).withTrimmedTop(k_margin).removeFromTop(40);
     g.setColour(palette::k_text);
     g.setFont(font(17.0f, true));
-    g.drawText("Workshop Inference", header.removeFromTop(22), juce::Justification::centredLeft);
+    g.drawText(m_processor.title(), header.removeFromTop(22), juce::Justification::centredLeft);
     g.setColour(palette::k_muted);
     g.setFont(font(12.0f));
-    g.drawText("Realtime Audio Variational autoEncoder", header, juce::Justification::centredLeft);
+    g.drawText(m_processor.subtitle(), header, juce::Justification::centredLeft);
 
     const auto labels = m_mix_area.withHeight(16);
     g.setFont(font(12.0f));
@@ -170,16 +161,16 @@ void WorkshopPluginEditor::paint(juce::Graphics& g) {
     }
 }
 
-void WorkshopPluginEditor::resized() {
+void PluginEditor::resized() {
     auto area = getLocalBounds().reduced(k_margin, 0).withTrimmedTop(k_header);
-    const int tile = (area.getWidth() - 2 * k_gap) / ExamplePlayer::k_num_slots;
+    const int tile = (area.getWidth() - 2 * k_gap) / 3;
 
     auto tiles = area.removeFromTop(tile + k_load);
-    for (auto& row : m_slots) {
+    for (auto* source : {&m_example, &m_file, &m_input}) {
         auto column = tiles.removeFromLeft(tile);
         tiles.removeFromLeft(k_gap);
-        row.m_tile.setBounds(column.removeFromTop(tile));
-        row.m_load.setBounds(column.withSizeKeepingCentre(60, k_load));
+        source->setBounds(column.removeFromTop(tile));
+        if (source == &m_file) { m_load.setBounds(column.withSizeKeepingCentre(60, k_load)); }
     }
 
     area.removeFromTop(16);
@@ -188,70 +179,78 @@ void WorkshopPluginEditor::resized() {
     m_overlay.setBounds(getLocalBounds());
 }
 
-void WorkshopPluginEditor::timerCallback() {
-    const int playing = m_processor.player().playing();
-    if (playing != m_playing || m_processor.bypass_reason() != m_overlay.m_reason) { refresh(); }
+void PluginEditor::timerCallback() {
+    if (m_processor.player().selected() != selected() ||
+        juce::String(m_processor.bypass_reason()) != m_overlay.m_reason) {
+        refresh();
+    }
 }
 
-void WorkshopPluginEditor::refresh() {
-    m_playing = m_processor.player().playing();
+SourcePlayer::Source PluginEditor::selected() const {
+    if (m_file.getToggleState()) { return SourcePlayer::Source::file; }
+    if (m_input.getToggleState()) { return SourcePlayer::Source::input; }
+    return SourcePlayer::Source::example;
+}
+
+void PluginEditor::refresh() {
+    const auto& player = m_processor.player();
+    const auto source = player.selected();
+    m_example.setToggleState(source == SourcePlayer::Source::example, juce::dontSendNotification);
+    m_file.setToggleState(source == SourcePlayer::Source::file, juce::dontSendNotification);
+    m_input.setToggleState(source == SourcePlayer::Source::input, juce::dontSendNotification);
+    m_example.setButtonText("example_1");
+    m_file.setButtonText(player.has_file()
+                             ? player.file_name().upToLastOccurrenceOf(".", false, false)
+                             : "load or drop one");
+    m_input.setButtonText("host or microphone");
+
     m_overlay.m_reason = m_processor.bypass_reason();
+    m_overlay.m_host = "The host: " + juce::String(m_processor.getSampleRate(), 0) + " Hz, " +
+                       juce::String(m_processor.getBlockSize()) + " samples per buffer";
     m_overlay.setVisible(m_overlay.m_reason.isNotEmpty());
     m_overlay.repaint();
-    for (int slot = 0; slot < ExamplePlayer::k_num_slots; ++slot) {
-        auto& tile = m_slots[static_cast<size_t>(slot)].m_tile;
-        tile.setToggleState(m_playing == slot, juce::dontSendNotification);
-        tile.setButtonText(m_processor.player().name(slot).upToLastOccurrenceOf(".", false, false));
-    }
     repaint();
 }
 
-void WorkshopPluginEditor::choose_file(int slot) {
-    m_chooser = std::make_unique<juce::FileChooser>("Audio file for slot " + juce::String(slot + 1),
-                                                    juce::File{},
+void PluginEditor::select(SourcePlayer::Source source) {
+    m_processor.player().select(source);
+    refresh();
+}
+
+void PluginEditor::choose_file() {
+    // Opens where the last file came from.
+    m_chooser = std::make_unique<juce::FileChooser>("Your audio file",
+                                                    m_processor.player().file(),
                                                     "*.wav;*.aif;*.aiff;*.flac");
     m_chooser->launchAsync(
         juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-        [this, slot](const juce::FileChooser& chooser) {
+        [this](const juce::FileChooser& chooser) {
             const juce::File file = chooser.getResult();
-            if (file != juce::File{}) { load(slot, file); }
+            if (file != juce::File{}) { load(file); }
         });
 }
 
-void WorkshopPluginEditor::load(int slot, const juce::File& file) {
-    const bool loaded = m_processor.load_example(slot, file);
+void PluginEditor::load(const juce::File& file) {
+    const bool loaded = m_processor.load_file(file);
     m_status = loaded ? juce::String() : "cannot read " + file.getFileName();
     refresh();
 }
 
-int WorkshopPluginEditor::slot_at(int x, int y) const {
-    for (int slot = 0; slot < ExamplePlayer::k_num_slots; ++slot) {
-        if (m_slots[static_cast<size_t>(slot)].m_tile.getBounds().contains(x, y)) { return slot; }
-    }
-    return -1;
-}
-
-bool WorkshopPluginEditor::isInterestedInFileDrag(const juce::StringArray& files) {
+bool PluginEditor::isInterestedInFileDrag(const juce::StringArray& files) {
     return files.size() == 1 && is_audio_file(files[0]);
 }
 
-void WorkshopPluginEditor::fileDragMove(const juce::StringArray&, int x, int y) {
-    const int target = slot_at(x, y);
-    for (int slot = 0; slot < ExamplePlayer::k_num_slots; ++slot) {
-        auto& tile = m_slots[static_cast<size_t>(slot)].m_tile;
-        if (tile.m_drop_target != (slot == target)) {
-            tile.m_drop_target = slot == target;
-            tile.repaint();
-        }
-    }
+void PluginEditor::fileDragEnter(const juce::StringArray&, int, int) {
+    m_file.m_drop_target = true;
+    m_file.repaint();
 }
 
-void WorkshopPluginEditor::fileDragExit(const juce::StringArray& files) {
-    fileDragMove(files, -1, -1);
+void PluginEditor::fileDragExit(const juce::StringArray&) {
+    m_file.m_drop_target = false;
+    m_file.repaint();
 }
 
-void WorkshopPluginEditor::filesDropped(const juce::StringArray& files, int x, int y) {
+void PluginEditor::filesDropped(const juce::StringArray& files, int, int) {
     fileDragExit(files);
-    const int slot = slot_at(x, y);
-    if (slot >= 0) { load(slot, juce::File(files[0])); }
+    load(juce::File(files[0]));
 }

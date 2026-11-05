@@ -4,7 +4,7 @@
 
 ## What you have
 
-- `models/model_forward.onnx` — the model from the slides (magnetic resonator piano) as ONNX: graph and weights in one file. 2048 samples per call, 44.1 kHz, one channel.
+- `steps/common/assets/models/rave/model_forward.onnx` — the model from the slides (magnetic resonator piano) as ONNX: graph and weights in one file. 2048 samples per call, 44.1 kHz, one channel.
 - [`common/helpers/onnx_engine.h`](../common/helpers/onnx_engine.h) — the engine, written for you. Read it first.
 - [`common/assets/test_signal.h`](../common/assets/test_signal.h) — `k_input_signal`: a 220 Hz sine, 8 blocks of 2048 samples.
 - `common/assets/target_signal.h` — `k_target_output_signal`: what the model produced for it in Python.

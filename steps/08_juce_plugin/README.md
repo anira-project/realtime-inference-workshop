@@ -6,19 +6,21 @@
 
 ## Building it
 
-JUCE is cloned and built, which takes a few minutes, so it is off by default:
+The first build of JUCE takes a few minutes:
 
 ```bash
-cmake -S . -B build-juce -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
-cmake --build build-juce --config Release --parallel --target step08_plugin_Standalone   # or step08_plugin_VST3
-open "build-juce/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/Workshop Inference.app"
+cmake --preset release
+cmake --build --preset release --target step08_plugin_Standalone   # or step08_plugin_VST3
+open "build/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/Workshop Inference.app"
 ```
 
 The VST3 passes `pluginval --strictness-level 5`.
 
 ## The processor is step 7's
 
-[`source/ProcessorExample.h`](source/ProcessorExample.h) is step 7's `ProcessorExample`, filled in, one-to-one: the same constants, the same `prepare`, `process_block` and `process_model`, with its `WorkerThread` inside. `WorkshopPluginProcessor` owns the engine and that one processor, as step 7's `main` does. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
+[`solution/ProcessorExample.h`](solution/ProcessorExample.h) is step 7's `ProcessorExample`, filled in, one-to-one: the same constants, the same `prepare`, `process_block` and `process_model`, with its `WorkerThread` inside. [`solution/PluginProcessor`](solution/PluginProcessor.cpp) owns the engine and that one processor, as step 7's `main` does, and writes only the places where the host talks to us.
+
+Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), shared with step 9: `PluginBase` (buses, the dry/wet parameter, the host boilerplate), the window in `ui/`, and the source player in `dsp/`. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
 
 ## The three places the host talks to us
 
@@ -44,7 +46,13 @@ The model is mono and stateful, so the plugin runs it once: the input channels a
 
 ## What it sounds like
 
-The window has three example slots. Clicking a tile plays its slot in a loop in place of the plugin's input, so the standalone needs no microphone and no DAW; **load** under a tile, or dropping an audio file on it, replaces the slot. The slots start with the files in [`assets/`](assets/), compiled into the plugin — replace `example_1.wav` to `example_3.wav` there to change what they start with. The files play at their own sample rate; the model expects 44.1 kHz.
+The window has three sources:
+
+- **Example**, selected at the start: [`common/assets/audio/example_1.wav`](../common/assets/audio/), compiled into the plugin, in a loop. The standalone needs no microphone and no DAW.
+- **Your file**: **load** under the tile, or drop an audio file on the window. It plays in a loop; load another one at any time.
+- **Input**: passed through, the host's track, or in the standalone the microphone (unmute it under *Options*).
+
+Files play at their own sample rate; the model expects 44.1 kHz.
 
 The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by the reported latency and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
 

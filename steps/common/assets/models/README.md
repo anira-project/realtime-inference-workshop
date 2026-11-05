@@ -1,17 +1,15 @@
 # Models
 
 The model files are **not in git**. They are downloaded from this repository's
-own release at configure time, into this folder:
+own release at configure time, into this folder, next to the audio in
+[`../audio/`](../audio/):
 
 ```
-model.pt             127 MB   TorchScript, for LibTorch: audio in, audio out,
-                              state kept inside the model, reset_state();
-                              any length but 2048 is refused
-model_forward.onnx   126 MB   the same model for ONNX Runtime: audio plus the
-                              state in, audio plus the new state out — here the
-                              state is the caller's job
-model_encoder.onnx    64 MB   audio + state in, 8 latents + state out
-model_decoder.onnx    62 MB   8 latents + state in, audio + state out
+rave/model_forward.onnx   126 MB   audio plus the state in, audio plus the new
+                                   state out: the state is the caller's job
+rave/model_encoder.onnx    64 MB   audio + state in, 8 latents + state out
+rave/model_decoder.onnx    62 MB   8 latents + state in, audio + state out
+handtracking/              the four hand tracking models of step 11
 ```
 
 All take 2048 samples (or one latent frame) per call, 44.1 kHz, one channel.
@@ -39,7 +37,7 @@ The Intelligent Instruments Lab's magnetic resonator piano model,
 ([huggingface.co/Intelligent-Instruments-Lab/rave-models](https://huggingface.co/Intelligent-Instruments-Lab/rave-models),
 CC BY-NC 4.0). [`scripts/export_model.py`](../scripts/export_model.py) re-runs it
 from the TorchScript weights with every cache passed in and out, exports the
-four files, and checks them against each other:
+files, and checks them against each other:
 
 ```bash
 uv run scripts/export_model.py path/to/mrp_strengjavera_b2048_r44100_z16.ts
@@ -48,8 +46,8 @@ uv run scripts/make_test_data.py   # steps/common/assets, from model_forward.onn
 
 The exports are deterministic: the encoder takes the posterior mean and the
 decoder fills the cropped latent dimensions with zeros, where the Realtime
-Audio Variational autoEncoder samples noise. So LibTorch, ONNX Runtime and the
-Python reference give the same output, and the steps can check against it.
+Audio Variational autoEncoder samples noise. So ONNX Runtime and the Python
+reference give the same output, and the steps can check against it.
 
 ## Why not in git
 
@@ -59,29 +57,21 @@ hour. Release assets have neither problem.
 
 ## How the download works
 
-`cmake/models.cmake` fetches the files as three archives from the release
-tagged `workshop-model`, one per set of steps, and only those the enabled steps
-need:
+[`cmake/models.cmake`](../../../../cmake/models.cmake) fetches the files as
+three archives from the release tagged `workshop-model`, one per set of steps,
+and only those the enabled steps need:
 
 ```
-workshop-models-forward-2.zip model.pt, model_forward.onnx           steps 1 to 9
-workshop-models-split.zip     model_encoder.onnx, model_decoder.onnx  steps 10, 11
-workshop-models-hands.zip     the four hand tracking models           step 11 (JUCE)
+workshop-models-forward-2.zip   rave/model_forward.onnx                     steps 1 to 9
+workshop-models-split.zip       rave/model_encoder.onnx, model_decoder.onnx steps 10, 11
+workshop-models-hands.zip       handtracking/, four models                  step 11
 ```
 
-Each archive and each file in it is checked against its SHA-256. A failed
-download is retried a few times (`cmake/download.cmake`); the archives are kept
-in `downloads/`, and files that are already here and intact are left alone, so
-a second configure run needs no network.
-
-A build directory configured against an older release still has the old file
-names cached; on its next configure (which `cmake --build` triggers by itself
-after a pull) it downloads the new files and switches to them.
-
-If the download still fails, take the archives from a mirror
-(`-DWORKSHOP_MIRROR_URL`, see the main README). To use model files from
-somewhere else:
+Each archive and each file in it is checked against its SHA-256, and a failed
+download is retried. The archive goes to the build folder and is deleted once
+its files are here. Files that are already here and intact are left alone, so a
+second configure needs no network. To use a model file from somewhere else:
 
 ```bash
-cmake -S . -B build -DWORKSHOP_ONNX_MODEL=/path/to/model_forward.onnx
+cmake --preset release -DWORKSHOP_ONNX_MODEL=/path/to/model_forward.onnx
 ```

@@ -1,13 +1,13 @@
-// The plugin's window: three example tiles, the dry/wet mix, and what went
-// wrong if the model did not load. Colours from the slides.
+// The plugin's window: what to process (the example, your file, or the
+// input), the dry/wet mix, and an overlay while the plugin is bypassed.
+// Colours from the slides.
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
 
-#include <array>
 #include <memory>
 
-#include "PluginProcessor.h"
+#include "PluginBase.h"
 
 namespace palette {
 const juce::Colour k_background{0xff1c1d21};
@@ -24,15 +24,16 @@ public:
     void paint(juce::Graphics& g) override;
 
     juce::String m_reason;
+    juce::String m_host;  // The host's sample rate and buffer size
 };
 
-// One example slot: the whole tile plays and stops it.
-class SlotTile : public juce::Button {
+// One source: the whole tile selects it.
+class SourceTile : public juce::Button {
 public:
-    SlotTile() : juce::Button({}) {}
+    SourceTile() : juce::Button({}) {}
     void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
 
-    juce::String m_number;
+    juce::String m_title;
     bool m_drop_target = false;
 };
 
@@ -57,44 +58,42 @@ public:
                           juce::Slider&) override;
 };
 
-class WorkshopPluginEditor : public juce::AudioProcessorEditor,
-                             public juce::FileDragAndDropTarget,
-                             private juce::Timer {
+class PluginEditor : public juce::AudioProcessorEditor,
+                     public juce::FileDragAndDropTarget,
+                     private juce::Timer {
 public:
-    explicit WorkshopPluginEditor(WorkshopPluginProcessor& processor);
-    ~WorkshopPluginEditor() override;
+    explicit PluginEditor(PluginBase& processor);
+    ~PluginEditor() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // An audio file dropped on a tile replaces that slot.
+    // An audio file dropped on the window becomes your file.
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
-    void fileDragMove(const juce::StringArray& files, int x, int y) override;
+    void fileDragEnter(const juce::StringArray& files, int x, int y) override;
     void fileDragExit(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
 
 private:
-    struct Slot {
-        SlotTile m_tile;
-        juce::TextButton m_load{"load"};
-    };
-
     void timerCallback() override;
-    void choose_file(int slot);
-    void load(int slot, const juce::File& file);
-    int slot_at(int x, int y) const;
+    void select(SourcePlayer::Source source);
+    SourcePlayer::Source selected() const;  // What the tiles show
+    void choose_file();
+    void load(const juce::File& file);
     void refresh();
 
-    WorkshopPluginProcessor& m_processor;
+    PluginBase& m_processor;
     WorkshopLookAndFeel m_look;
-    std::array<Slot, ExamplePlayer::k_num_slots> m_slots;
+    SourceTile m_example;
+    SourceTile m_file;
+    SourceTile m_input;
+    juce::TextButton m_load{"load"};
     juce::Slider m_mix{juce::Slider::LinearHorizontal, juce::Slider::NoTextBox};
     juce::Rectangle<int> m_mix_area;
     juce::String m_status;  // A file that could not be read
     BypassOverlay m_overlay;
-    int m_playing = -1;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> m_mix_attachment;
     std::unique_ptr<juce::FileChooser> m_chooser;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WorkshopPluginEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

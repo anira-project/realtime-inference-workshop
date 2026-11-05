@@ -39,14 +39,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The archives download.cmake fetches (engines, models, JUCE) never change
-      # for a given hash, so they are worth caching: about 500 MB per run
-      # otherwise. The engines differ per platform.
-      - name: Cache downloads
+      # The models never change for a given hash, so they are worth caching:
+      # about 400 MB per run otherwise.
+      - name: Cache models
         uses: actions/cache@v4
         with:
-          path: downloads
-          key: downloads-${{ matrix.name }}-${{ hashFiles('cmake/backends.cmake', 'cmake/models.cmake', 'cmake/juce.cmake') }}
+          path: steps/common/assets/models
+          key: models-${{ hashFiles('cmake/models.cmake') }}
 
       # The unpacked engines and JUCE.
       - name: Cache dependencies

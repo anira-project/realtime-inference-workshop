@@ -8,6 +8,12 @@ The input is a sine, the output is what the model makes of it on the reference
 path: model_forward.onnx in ONNX Runtime, the state carried by hand from a zero
 start. Embedding both keeps the C++ steps free of file IO.
 
+Step 10 gets a reference of its own (target_split_signal.h): the encoder and the
+decoder run as anira's encoder/decoder example runs them. The encoder's first
+latent frame is its latency priming, zeros, and it goes to the decoder like every
+other frame; that frame changes the decoder's state, so the output differs from
+the forward model's after it.
+
 Usage:
     uv run scripts/make_test_data.py [--model steps/common/assets/models/rave/model_forward.onnx] [--blocks 8] [--out steps/common/assets]
 """
@@ -50,6 +56,12 @@ TARGET_DOC = """\
 // steps are checked against."""
 
 
+SPLIT_DOC = """\
+// The output step 10 should produce for the sine in test_signal.h: {blocks} blocks of
+// {block} samples. The encoder, then the decoder, as anira's encoder/decoder example runs
+// them: the encoder's priming frame (zeros) reaches the decoder first. Generated in Python."""
+
+
 def sine(length, amplitude=0.5):
     t = np.arange(length, dtype=np.float64) / SAMPLE_RATE
     return (amplitude * np.sin(2 * np.pi * FREQUENCY * t)).astype(np.float32)
@@ -66,6 +78,33 @@ def run_reference(model_path, signal):
         audio, state = session.run(None, {"audio": block, "state_in": state})
         out.append(audio.ravel())
     return np.concatenate(out).astype(np.float32)
+
+
+def run_split_reference(encoder_path, decoder_path, signal, priming_frames=1):
+    """Encoder, then decoder, as step 10 runs them on anira.
+
+    The decoder first gets the encoder's priming frames (zeros: anira's encoder
+    latency, one frame here), then one encoded frame per block. The audio the
+    priming frames make lies inside the latency the host is told, so it is cut
+    off: what is left lines up with the input like the forward model's output.
+    """
+    encoder = ort.InferenceSession(str(encoder_path), providers=["CPUExecutionProvider"])
+    decoder = ort.InferenceSession(str(decoder_path), providers=["CPUExecutionProvider"])
+    encoder_state = np.zeros(encoder.get_inputs()[1].shape, dtype=np.float32)
+    decoder_state = np.zeros(decoder.get_inputs()[1].shape, dtype=np.float32)
+    latent_shape = encoder.get_outputs()[0].shape
+
+    frames = [np.zeros(latent_shape, dtype=np.float32) for _ in range(priming_frames)]
+    for begin in range(0, len(signal), BLOCK):
+        block = signal[begin:begin + BLOCK].reshape(1, 1, BLOCK)
+        latents, encoder_state = encoder.run(None, {"audio": block, "state_in": encoder_state})
+        frames.append(latents)
+
+    out = []
+    for latents in frames:
+        audio, decoder_state = decoder.run(None, {"latents": latents, "state_in": decoder_state})
+        out.append(audio.ravel())
+    return np.concatenate(out)[priming_frames * BLOCK:][:len(signal)].astype(np.float32)
 
 
 def as_float_literal(value):
@@ -110,6 +149,16 @@ def main():
     for i in range(args.blocks):
         block = audio_out[i * BLOCK:(i + 1) * BLOCK]
         print(f"  target block {i}: peak {np.abs(block).max():.4f} rms {np.sqrt((block ** 2).mean()):.4f}")
+
+    models = args.model.parent
+    split_out = run_split_reference(models / "model_encoder.onnx", models / "model_decoder.onnx", audio_in)
+    path = args.out / "target_split_signal.h"
+    path.write_text(HEADER.format(doc=SPLIT_DOC.format(**common), name="k_target_split_signal",
+                                  samples=as_rows(split_out),
+                                  extra_include='\n#include "common/assets/test_signal.h"  // k_signal_length\n',
+                                  length_constant=""))
+    print(f"{args.blocks} blocks of {BLOCK} samples -> {path}")
+    print(f"  split vs forward: max abs diff {np.abs(split_out - audio_out).max():.4g}")
 
 
 if __name__ == "__main__":

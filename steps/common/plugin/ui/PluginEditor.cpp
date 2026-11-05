@@ -1,5 +1,8 @@
 #include "PluginEditor.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace {
 constexpr int k_width = 420;
 constexpr int k_margin = 28;
@@ -8,6 +11,7 @@ constexpr int k_gap = 12;
 constexpr int k_load = 28;
 constexpr int k_mix = 76;
 constexpr int k_status = 24;
+constexpr int k_knobs = 168;  // Only with knobs: value, slider, label
 
 juce::Font font(float height, bool bold = false) {
     return juce::Font(juce::FontOptions(height, bold ? juce::Font::bold : juce::Font::plain));
@@ -74,8 +78,25 @@ void WorkshopLookAndFeel::drawLinearSlider(juce::Graphics& g,
                                            float position,
                                            float,
                                            float,
-                                           juce::Slider::SliderStyle,
-                                           juce::Slider&) {
+                                           juce::Slider::SliderStyle style,
+                                           juce::Slider& slider) {
+    if (style == juce::Slider::LinearVertical) {
+        // Filled from 0 when the range holds it, else from the bottom
+        const float middle = static_cast<float>(x) + static_cast<float>(width) / 2.0f;
+        const auto track = juce::Rectangle<float>(middle - 4.0f,
+                                                  static_cast<float>(y),
+                                                  8.0f,
+                                                  static_cast<float>(height));
+        const bool bipolar = slider.getMinimum() < 0.0 && slider.getMaximum() > 0.0;
+        const float from = bipolar ? slider.getPositionOfValue(0.0) : track.getBottom();
+        g.setColour(palette::k_tile);
+        g.fillRoundedRectangle(track, 4.0f);
+        g.setColour(palette::k_accent);
+        g.fillRoundedRectangle(track.withTop(std::min(from, position)).withBottom(std::max(from, position)), 4.0f);
+        g.setColour(palette::k_text);
+        g.fillEllipse(juce::Rectangle<float>(18.0f, 18.0f).withCentre({middle, position}));
+        return;
+    }
     const float centre = static_cast<float>(y) + static_cast<float>(height) / 2.0f;
     const auto track = juce::Rectangle<float>(static_cast<float>(x),
                                               centre - 4.0f,
@@ -119,10 +140,23 @@ PluginEditor::PluginEditor(PluginBase& processor)
     m_mix.onValueChange = [this] { repaint(m_mix_area); };
     addAndMakeVisible(m_mix);
 
+    for (const auto& knob : m_processor.knobs()) {
+        auto& slider = *m_knobs.emplace_back(
+            std::make_unique<juce::Slider>(juce::Slider::LinearVertical, juce::Slider::NoTextBox));
+        m_knob_attachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            m_processor.parameters(),
+            knob.m_id,
+            slider));
+        slider.setDoubleClickReturnValue(true, knob.m_default);  // A double-click resets it
+        slider.onValueChange = [this] { repaint(m_knobs_area); };
+        addAndMakeVisible(slider);
+    }
+
     addChildComponent(m_overlay);  // Last, so it lies over everything
 
     const int tile = (k_width - 2 * k_margin - 2 * k_gap) / 3;
-    setSize(k_width, k_header + tile + k_load + k_mix + k_status + k_margin / 2);
+    setSize(k_width,
+            k_header + tile + k_load + k_mix + (m_knobs.empty() ? 0 : k_knobs) + k_status + k_margin / 2);
     refresh();
     startTimerHz(10);
 }
@@ -152,6 +186,19 @@ void PluginEditor::paint(juce::Graphics& g) {
                labels,
                juce::Justification::centred);
 
+    // Each knob: its value above, its name below
+    const auto& knobs = m_processor.knobs();
+    for (size_t i = 0; i < m_knobs.size(); ++i) {
+        const auto column = m_knobs[i]->getBounds().withY(m_knobs_area.getY()).withHeight(m_knobs_area.getHeight());
+        g.setColour(palette::k_text);
+        const double value = m_knobs[i]->getValue();
+        g.drawText(juce::String(std::abs(value) < 0.005 ? 0.0 : value, 2),  // No "-0.00"
+                   column.withHeight(16),
+                   juce::Justification::centred);
+        g.setColour(palette::k_muted);
+        g.drawText(knobs[i].m_id, column.withTrimmedTop(column.getHeight() - 16), juce::Justification::centred);
+    }
+
     if (m_status.isNotEmpty()) {
         g.setColour(palette::k_warning);
         g.drawText(m_status,
@@ -176,6 +223,13 @@ void PluginEditor::resized() {
     area.removeFromTop(16);
     m_mix_area = area.removeFromTop(k_mix - 16);
     m_mix.setBounds(m_mix_area.withTrimmedTop(20).withHeight(40));
+
+    if (!m_knobs.empty()) {
+        m_knobs_area = area.removeFromTop(k_knobs).withTrimmedTop(8);
+        auto row = m_knobs_area.reduced(0, 22);  // Room for the value and the name
+        const int column = row.getWidth() / static_cast<int>(m_knobs.size());
+        for (auto& slider : m_knobs) { slider->setBounds(row.removeFromLeft(column).reduced(0, 9)); }
+    }
     m_overlay.setBounds(getLocalBounds());
 }
 

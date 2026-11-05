@@ -1,11 +1,13 @@
 // The plugin's window: what to process (the example, your file, or the
-// input), the dry/wet mix, and an overlay while the plugin is bypassed.
+// input), the dry/wet mix, a row of the step's own knobs if it has any, and an
+// overlay while the plugin is bypassed.
 // Colours from the slides.
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
 
 #include <memory>
+#include <vector>
 
 #include "PluginBase.h"
 
@@ -37,7 +39,8 @@ public:
     bool m_drop_target = false;
 };
 
-// Text-only buttons and a thin mix slider.
+// Text-only buttons, a thin mix slider, and thin vertical knob sliders,
+// filled from 0 when the range holds it.
 class WorkshopLookAndFeel : public juce::LookAndFeel_V4 {
 public:
     void drawButtonBackground(juce::Graphics&,
@@ -90,9 +93,12 @@ private:
     juce::TextButton m_load{"load"};
     juce::Slider m_mix{juce::Slider::LinearHorizontal, juce::Slider::NoTextBox};
     juce::Rectangle<int> m_mix_area;
+    std::vector<std::unique_ptr<juce::Slider>> m_knobs;  // The step's own, in PluginBase's order
+    juce::Rectangle<int> m_knobs_area;
     juce::String m_status;  // A file that could not be read
     BypassOverlay m_overlay;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> m_mix_attachment;
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> m_knob_attachments;
     std::unique_ptr<juce::FileChooser> m_chooser;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)

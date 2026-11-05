@@ -5,25 +5,34 @@
 namespace {
 constexpr const char* k_mix_id = "mix";
 
-juce::AudioProcessorValueTreeState::ParameterLayout make_layout() {
+juce::AudioProcessorValueTreeState::ParameterLayout make_layout(const std::vector<PluginBase::Knob>& knobs) {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{k_mix_id, 1},
                                                            "Dry/Wet",
                                                            0.0f,
                                                            1.0f,
                                                            1.0f));
+    for (const auto& knob : knobs) {
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{knob.m_id, 1},
+                                                               knob.m_id,
+                                                               knob.m_min,
+                                                               knob.m_max,
+                                                               knob.m_default));
+    }
     return layout;
 }
 }  // namespace
 
-PluginBase::PluginBase(juce::String title, juce::String subtitle)
+PluginBase::PluginBase(juce::String title, juce::String subtitle, std::vector<Knob> knobs)
     : juce::AudioProcessor(BusesProperties()
                                .withInput("Input", juce::AudioChannelSet::stereo(), true)
                                .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , m_title(std::move(title))
     , m_subtitle(std::move(subtitle))
-    , m_parameters(*this, nullptr, "state", make_layout()) {
+    , m_knobs(std::move(knobs))
+    , m_parameters(*this, nullptr, "state", make_layout(m_knobs)) {
     m_mix = m_parameters.getRawParameterValue(k_mix_id);
+    for (const auto& knob : m_knobs) { m_knob_values.push_back(m_parameters.getRawParameterValue(knob.m_id)); }
 }
 
 PluginBase::~PluginBase() = default;

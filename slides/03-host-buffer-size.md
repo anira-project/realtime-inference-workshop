@@ -337,7 +337,7 @@ Note:
 - Buffer adaptation: the model needs 2048, the host brings 512 at a time
 - First block complete in the fourth callback; the host hears sample 0 1536 samples after it went in
 - In general: model block minus the largest block that divides both, here 2048 − 512
-- Plus the model itself: ask the room. Here 2224 (convolutions and the filter bank, from the export script, not visible from C++)
+- Plus the model itself: ask the room. Here 2224: 1696 from the decoder's transposed convolutions, 528 from the PQMF filter bank (from the export script, not visible from C++)
 - Total 3760 samples, about 85 ms at 44.1 kHz
 - Only for 512: other host block sizes give other numbers, part 2
 
@@ -345,7 +345,7 @@ Note:
 
 *Ask the room: "The host got silence at the start. How late is what it hears?"*
 "First, the buffer adaptation. The model needs 2048 samples, but the host brings them 512 at a time. The first block is complete in the fourth callback, and from then on every sample the host hears went in 1536 samples earlier: 2048 minus 512.
-But that's not all. The model itself is late too. *Ask: "How late, in this case?"* For our model it's 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
+But that's not all. The model itself is late too. *Ask: "How late, in this case?"* For our model it's 2224 samples: 1696 from the transposed convolutions in the decoder, and 528 from the PQMF filter bank. We can't see that from C++, it comes from the export script.
 So in total the host hears our output 3760 samples late, about 85 milliseconds. And this number is only right for 512: other host block sizes give other numbers, and part 2 shows how."
 
 ---

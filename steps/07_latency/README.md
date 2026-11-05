@@ -12,7 +12,7 @@ Nothing here is the engine being slow. It is the design, and the model:
 |---|---|---|
 | buffer adaptation | 2048 − 512 = 1536 | the model cannot run before a whole block has arrived, and the host brings 512 at a time (step 3) |
 | rounded max inference time | your step 4 number, rounded up to whole 512-sample callbacks: 1024 for 11.6 to 23.2 ms | the time the worker is given (step 6) |
-| the model itself | 2224 | its output answers its input this much later: `k_model.m_latency`, computed by `scripts/export_model.py` |
+| the model itself | 2224 | its output answers its input this much later: 1696 from the decoder's transposed convolutions, 528 from the PQMF filter bank. `k_model.m_latency`, computed by `scripts/export_model.py` |
 | **total** | **4784** with 11.6 to 23.2 ms | 108.5 ms at 44.1 kHz |
 
 The first two are step 6's prefill. The second is a choice: it buys the worker the time of your worst case, and in exchange the latency is a **fixed number** instead of whatever the worker managed today. A number that changes with the weather is useless to the host. And it only holds for a host block of 512: other block sizes give other numbers, which is part 2.

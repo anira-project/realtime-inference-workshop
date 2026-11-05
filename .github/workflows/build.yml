@@ -48,8 +48,7 @@ jobs:
           path: downloads
           key: downloads-${{ matrix.name }}-${{ hashFiles('cmake/backends.cmake', 'cmake/models.cmake', 'cmake/juce.cmake') }}
 
-      # The unpacked engines and JUCE, and the benchmark library built from
-      # source.
+      # The unpacked engines and JUCE.
       - name: Cache dependencies
         uses: actions/cache@v4
         with:

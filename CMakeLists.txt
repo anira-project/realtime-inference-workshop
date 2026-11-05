@@ -8,21 +8,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # for clangd, see .clangd
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(backends)
-include(benchmark)
 include(readerwriterqueue)
 include(juce)
 include(models)
 include(anira)
 
-# Fetch the engines once, so every step links the same build.
-workshop_setup_libtorch()
-workshop_setup_benchmark()
-
-set(WORKSHOP_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model.pt"
-    CACHE FILEPATH "TorchScript model to run")
 set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model_forward.onnx"
     CACHE FILEPATH "ONNX model to run")
-workshop_use_current_model(WORKSHOP_MODEL model.pt)
 workshop_use_current_model(WORKSHOP_ONNX_MODEL model_forward.onnx)
 
 # RealtimeSanitizer for step 5; needs a clang that has it, see that step's README.

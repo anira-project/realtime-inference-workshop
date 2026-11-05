@@ -48,7 +48,7 @@ class OnnxEngine     { … Ort::Session … m_session.Run(…) … };
 
 Note:
 - First the engines: in part 1 every engine has its own API, and we wrote one class per engine by hand.
-- ONNX Runtime came in step 1, LibTorch next to it in the real-time safety demo of step 5, and each handled the state differently.
+- ONNX Runtime came in step 1, LibTorch next to it in the benchmark of step 4, and each handled the state differently.
 - They also cost very different amounts to ship: LibTorch 318 MB, ONNX Runtime 24 MB, LiteRT about 3 MB.
 - The plugin picked one of them at compile time.
 

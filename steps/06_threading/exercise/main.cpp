@@ -144,7 +144,7 @@ public:
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
         for (size_t i = 0; i < k_warm_up_calls; ++i) {
-            m_engine.process({m_model_block, m_state}, {k_model.m_input_size, k_model.m_state_size});
+            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
         }
         std::fill(m_state.begin(), m_state.end(), 0.0f);  // The warm-up is not part of the stream
 
@@ -240,7 +240,7 @@ private:
             if (!has_block) { continue; }
 
             // m_input.pop(?, ?);  // <- 2. fill out
-            // m_engine.process({?, ?}, {?, ?});  // <- 2. fill out
+            // m_engine.process(?, ?, ?);  // <- 2. fill out
 
             size_t pushed = 0;
             while (pushed < k_model.m_input_size && m_running.load(std::memory_order_acquire)) {

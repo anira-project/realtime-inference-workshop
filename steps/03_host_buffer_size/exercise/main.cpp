@@ -38,7 +38,7 @@ class ProcessorExample {
 public:
     explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
 
-    void prepare([[maybe_unused]] size_t max_block_size) {
+    void prepare(size_t max_block_size) {
         // ---- TODO 1 --------------------------------------------------------
         // Choose a ring buffer size: a capacity that can hold everything that
         // is in flight at the worst moment. Think about the input side just
@@ -70,7 +70,7 @@ public:
 
         if (has_block) {
             // m_input.pop(?, ?);  // <- 3. fill out
-            m_engine.process({m_model_block, m_state}, {k_model.m_input_size, k_model.m_state_size});
+            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
             // m_output.push(?, ?);  // <- 3. fill out
         }
 
@@ -112,7 +112,10 @@ int main() {
 
         // Silence first, then the model's stream.
         const size_t latency = k_model.m_input_size - k_host_block_size;
-        return report_with_latency(output.data(), k_target_output_signal.data(), output.size(), latency);
+        return report_with_latency(output.data(),
+                                   k_target_output_signal.data(),
+                                   output.size(),
+                                   latency);
     } catch (const std::exception& error) {
         std::printf("FAILED: %s\n", error.what());
         return 1;

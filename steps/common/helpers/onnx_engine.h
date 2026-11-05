@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -86,44 +85,38 @@ public:
         }
     }
 
-    // One block, with everything the model takes passed in, processed in place.
-    // @data: {audio} or {audio, state}: your vectors themselves, not copies of them.
-    //        Without the state the model gets a zero state on this call, as if the
-    //        stream had just started. The block in audio is overwritten with the
-    //        model's output, and state with the new state.
-    // @sizes: sizes[0] is the samples in this block, sizes[1] the size of the state
-    // @start: where the block starts in data[0]
-    void process(const std::vector<std::reference_wrapper<std::vector<float>>>& data,
-                 const std::vector<size_t>& sizes,
-                 size_t start = 0) {
-        if (data.empty() || data.size() > 2 || data.size() != sizes.size()) {
-            throw std::runtime_error("got " + std::to_string(data.size()) + " buffers but " +
-                                     std::to_string(sizes.size()) +
-                                     " sizes: pass the audio, and optionally the state, with one size per buffer");
+    // One block without the state, processed in place. The model gets a zero
+    // state on this call, as if the stream had just started.
+    // @samples: the block, overwritten with the model's output
+    // @num_samples: samples in the block; the model takes exactly one model block
+    void process(float* samples, size_t num_samples) {
+        reset();
+        run(samples, num_samples);
+    }
+
+    // One block with the state, processed in place: the model continues where
+    // the last call stopped.
+    // @samples: the block, overwritten with the model's output
+    // @num_samples: samples in the block; the model takes exactly one model block
+    // @state: the model's state, zeros for a new stream; overwritten with the new state
+    void process(float* samples, size_t num_samples, std::vector<float>& state) {
+        if (state.size() != m_state[0].size()) {
+            throw std::runtime_error("the state is exactly " + std::to_string(m_state[0].size()) +
+                                     " floats, got " + std::to_string(state.size()));
         }
-        const size_t num_samples = sizes[0];
-        if (num_samples != elements(m_input_shapes[0])) {
-            throw std::runtime_error("the model takes exactly " + std::to_string(elements(m_input_shapes[0])) +
+        std::copy_n(state.begin(), state.size(), m_state[0].begin());
+        run(samples, num_samples);
+        std::copy_n(m_state_out.begin(), m_state_out.size(), state.begin());
+    }
+
+private:
+    // The forward pass: the block in, through the model, the result back in place.
+    void run(float* samples, size_t num_samples) {
+        if (num_samples != m_audio_in.size()) {
+            throw std::runtime_error("the model takes exactly " + std::to_string(m_audio_in.size()) +
                                      " samples per call, got " + std::to_string(num_samples));
         }
-        if (start + num_samples > data[0].get().size()) {
-            throw std::runtime_error("the block at sample " + std::to_string(start) +
-                                     " runs past the end of the audio");
-        }
-        const bool has_state = data.size() == 2;
-        if (has_state && (sizes[1] != m_state[0].size() || data[1].get().size() != m_state[0].size())) {
-            throw std::runtime_error("the state is exactly " + std::to_string(m_state[0].size()) + " floats, got size " +
-                                     std::to_string(sizes[1]) + " and a buffer of " + std::to_string(data[1].get().size()));
-        }
-
-        float* samples = data[0].get().data() + start;
-
         std::copy_n(samples, num_samples, m_audio_in.begin());
-        if (has_state) {
-            std::copy_n(data[1].get().begin(), m_state[0].size(), m_state[0].begin());
-        } else {
-            reset();
-        }
 
         m_session.Run(Ort::RunOptions{nullptr},
                       m_input_name_pointers.data(),
@@ -134,12 +127,8 @@ public:
                       m_outputs.size());
 
         std::copy_n(m_audio_out.begin(), num_samples, samples);
-
-        // The new state goes back to the caller, for the next call.
-        if (has_state) { std::copy_n(m_state_out.begin(), m_state_out.size(), data[1].get().begin()); }
     }
 
-private:
     Ort::Value create_tensor(std::vector<float>& buffer, const std::vector<int64_t>& shape) {
         return Ort::Value::CreateTensor<float>(m_memory, buffer.data(), buffer.size(), shape.data(), shape.size());
     }

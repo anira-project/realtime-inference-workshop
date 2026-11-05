@@ -310,8 +310,7 @@ while (m_running.load(std::memory_order_acquire)) {
     if (!has_block) { continue; }                                         // no sleep
 
     m_input.pop(m_model_block.data(), k_model.m_input_size);              // <- fill out
-    m_engine.process({m_model_block, m_state},                            // <- fill out
-                     {k_model.m_input_size, k_model.m_state_size});
+    m_engine.process(m_model_block.data(), k_model.m_input_size, m_state); // <- fill out
 
     size_t pushed = 0;  // wait for room, but do not hang at stop
     while (pushed < k_model.m_input_size && m_running.load(std::memory_order_acquire)) {

@@ -3,13 +3,13 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include <handtracking/HandTracker.h>
-
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "CameraInput.h"
 #include "HandControls.h"
+#include "HandTracker.h"
 #include "LatentDecoder.h"
 
 namespace hands {
@@ -40,7 +40,7 @@ private:
     void paintLatents(juce::Graphics& g, juce::Rectangle<int> area) const;
 
     // Tracker before camera: the camera's capture thread calls into it and stops first.
-    std::unique_ptr<ht::HandTracker> m_tracker;
+    std::unique_ptr<HandTracker> m_tracker;
     std::unique_ptr<LatentDecoder> m_decoder;
     juce::String m_decoder_error;
     juce::String m_camera_error;
@@ -53,7 +53,7 @@ private:
     juce::Image m_frame;          // message thread
 
     HandControls m_controls;
-    ht::Result m_result;
+    std::vector<Hand> m_hands;
     double m_last_tick = 0.0;
 
     // The pad: the mouse as the lead hand while there is no camera frame

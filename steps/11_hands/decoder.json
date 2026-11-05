@@ -1,6 +1,6 @@
 {
   "models": [
-    { "engine": "onnxruntime", "path": "../common/assets/models/rave/model_decoder.onnx" }
+    { "engine": "onnxruntime", "path": "../common/assets/models/rave/model_decoder_noise.onnx" }
   ],
   "anchor": "audio",
   "inputs": [

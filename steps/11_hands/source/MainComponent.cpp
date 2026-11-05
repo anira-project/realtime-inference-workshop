@@ -19,21 +19,6 @@ juce::Colour role_colour(Role role) {
     return role == Role::Lead ? k_accent : juce::Colour(0xff7fa592);
 }
 
-// The tracker may keep the frame beyond the call: keep_alive holds the image's refcount.
-ht::Frame to_frame(const juce::Image& image) {
-    auto retained = std::make_shared<juce::Image>(image);
-    const juce::Image::BitmapData data(*retained, juce::Image::BitmapData::readOnly);
-    ht::Frame frame;
-    frame.pixels = data.data;
-    frame.width = data.width;
-    frame.height = data.height;
-    frame.stride = data.lineStride;
-    frame.pixel_stride = data.pixelStride;
-    frame.format = ht::PixelFormat::BGRA;  // JUCE ARGB on little-endian
-    frame.keep_alive = std::move(retained);
-    return frame;
-}
-
 void setup_slider(juce::Slider& slider, juce::Label& label, const juce::String& name,
                   double min, double max, double value, const juce::String& suffix) {
     slider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -48,10 +33,7 @@ void setup_slider(juce::Slider& slider, juce::Label& label, const juce::String& 
 }  // namespace
 
 MainComponent::MainComponent() {
-    m_tracker = ht::createHandTracker(ht::Engine::Streamed);
-    auto options = m_tracker->getOptions();
-    options.num_hands = 2;
-    m_tracker->setOptions(options);
+    m_tracker = std::make_unique<HandTracker>();
 
     try {
         m_decoder = std::make_unique<LatentDecoder>(WORKSHOP_STEP_DIR);
@@ -111,7 +93,7 @@ MainComponent::~MainComponent() {
 }
 
 void MainComponent::onCameraFrame(const juce::Image& image) {
-    m_tracker->processFrame(to_frame(image));
+    m_tracker->pushFrame(image);
     const juce::SpinLock::ScopedLockType lock(m_frame_lock);
     m_pending_frame = image;
 }
@@ -126,7 +108,7 @@ void MainComponent::timerCallback() {
         if (m_pending_frame.isValid())
             m_frame = std::exchange(m_pending_frame, {});
     }
-    m_result = m_tracker->getLatestResult();
+    m_hands = m_tracker->hands();
 
     HandControls::Settings settings;
     settings.smoothing_ms = static_cast<float>(m_smoothing.getValue());
@@ -136,9 +118,7 @@ void MainComponent::timerCallback() {
     if (m_pad) {
         m_controls.updateFeatures(m_pad_features, std::nullopt, dt, settings);
     } else {
-        const float aspect = m_frame.isValid() ? static_cast<float>(m_frame.getWidth()) / static_cast<float>(m_frame.getHeight())
-                                               : 16.0F / 9.0F;
-        m_controls.update(m_result, aspect, dt, settings);
+        m_controls.update(m_hands, dt, settings);
     }
 
     if (m_decoder != nullptr) {
@@ -234,8 +214,8 @@ void MainComponent::paintVideo(juce::Graphics& g, juce::Rectangle<float> area) c
 
     // Status line.
     juce::String status;
-    status << "camera " << juce::roundToInt(m_result.camera_fps) << " fps   tracking "
-           << juce::roundToInt(m_result.tracking_fps) << " fps (" << ht::backend_name(m_tracker->getBackend()) << ")";
+    status << "camera " << juce::roundToInt(m_tracker->cameraFps()) << " fps   tracking "
+           << juce::roundToInt(m_tracker->trackingFps()) << " fps (" << m_tracker->engine() << ")";
     if (m_decoder != nullptr)
         status << "   decoder latency " << juce::roundToInt(1000.0 * m_decoder->getLatencySamples() / k_model_sample_rate) << " ms";
     g.setFont(13.0F);
@@ -246,8 +226,10 @@ void MainComponent::paintVideo(juce::Graphics& g, juce::Rectangle<float> area) c
     g.drawText(status, bar.reduced(10.0F, 0.0F), juce::Justification::centredLeft);
 
     juce::String banner = m_decoder_error;
+    if (banner.isEmpty() && !m_pad && !m_hands.empty() && m_controls.handIdForRole(Role::Lead) < 0)
+        banner = "TODO 1: the tracker sees a hand, but no hand plays (HandControls.cpp)";
     if (banner.isEmpty() && mappings_are_empty())
-        banner = "TODO 1: every range in the mapping table is empty, the hand changes nothing (HandControls.cpp)";
+        banner = "TODO 2: every range in the mapping table is empty, the hand changes nothing (HandControls.cpp)";
     if (banner.isNotEmpty()) {
         const auto strip = area.removeFromBottom(30.0F);
         g.setColour(juce::Colour(0xfffe938c).withAlpha(0.85F));
@@ -259,32 +241,31 @@ void MainComponent::paintVideo(juce::Graphics& g, juce::Rectangle<float> area) c
 
 void MainComponent::paintHands(juce::Graphics& g, juce::Rectangle<float> video) const {
     if (m_pad) return;
-    const auto to_screen = [video](ht::Vec2 p) {
-        return juce::Point<float>(video.getRight() - p.x * video.getWidth(), video.getY() + p.y * video.getHeight());
+    const auto to_screen = [video](juce::Point<float> p) {
+        return juce::Point<float>(video.getX() + p.x * video.getWidth(), video.getY() + p.y * video.getHeight());
     };
 
-    for (size_t i = 0; i < m_result.num_hands; ++i) {
-        const auto& hand = m_result.hands[i];
+    for (const auto& hand : m_hands) {
         juce::Colour colour = k_dim_text;
         const char* label = "";
         for (const Role role : {Role::Lead, Role::Texture}) {
-            if (m_controls.slotForRole(role) == hand.slot) {
+            if (m_controls.handIdForRole(role) == hand.id) {
                 colour = role_colour(role);
                 label = role == Role::Lead ? "LEAD" : "TEXTURE";
             }
         }
 
         g.setColour(colour.withAlpha(0.9F));
-        for (const auto& edge : ht::k_hand_connections)
-            g.drawLine(juce::Line<float>(to_screen(hand.landmarks[static_cast<size_t>(edge[0])]),
-                                         to_screen(hand.landmarks[static_cast<size_t>(edge[1])])),
+        for (const auto& [from, to] : k_skeleton)
+            g.drawLine(juce::Line<float>(to_screen(hand.landmarks[static_cast<size_t>(from)]),
+                                         to_screen(hand.landmarks[static_cast<size_t>(to)])),
                        2.5F);
         for (const auto& landmark : hand.landmarks)
             g.fillEllipse(juce::Rectangle<float>(7.0F, 7.0F).withCentre(to_screen(landmark)));
 
         juce::String text(label);
-        if (hand.gesture > 0)
-            text << "  " << ht::k_gesture_labels[static_cast<size_t>(hand.gesture)];
+        if (*hand.gesture != '\0')
+            text << "  " << hand.gesture;
         const auto wrist = to_screen(hand.landmarks[0]);
         g.setFont(juce::FontOptions(15.0F, juce::Font::bold));
         g.drawText(text, juce::Rectangle<float>(220.0F, 22.0F).withCentre(wrist.translated(0.0F, 26.0F)), juce::Justification::centred);

@@ -54,17 +54,21 @@ jobs:
           path: build/_deps
           key: deps-${{ matrix.name }}-${{ hashFiles('cmake/*.cmake') }}
 
-      # What JUCE needs on a bare Ubuntu runner.
+      # What JUCE needs on a bare Ubuntu runner, and OpenCV for step 11's camera.
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2-dev libx11-dev libxext-dev libxrandr-dev \
             libxinerama-dev libxcursor-dev libfreetype6-dev libcurl4-openssl-dev \
-            libwebkit2gtk-4.1-dev
+            libwebkit2gtk-4.1-dev libopencv-dev
 
+      # On Linux, a missing OpenCV fails the configure instead of a warning.
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON
+        shell: bash
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON \
+            ${{ runner.os == 'Linux' && '-DWORKSHOP_OPENCV_CAMERA=ON' || '' }}
 
       # A bare --parallel is an unbounded make -j: on the smaller runners the
       # compilers of anira and JUCE together run out of memory, and the runner

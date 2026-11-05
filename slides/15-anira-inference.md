@@ -17,7 +17,7 @@ Note:
 <div class="state-demo">
   <div class="state-row was">
     <div class="state-label">step 2</div>
-    <code>std::copy_n(outputs[1].GetTensorData&lt;float&gt;(), m_state.size(), m_state.begin());</code>
+    <code>std::copy_n(m_state_out.begin(), m_state_out.size(), state.begin());</code>
   </div>
   <div class="state-row is">
     <div class="state-label">step 9</div>
@@ -46,7 +46,7 @@ Note:
 - The goal: the same output and the same check as in part 1, now with two files and three calls.
 - First, the model file: which tensors the model has, what role each one plays, and which output feeds which state.
 - Second, the contract: the time budget, the warm-up, and what happens on a miss.
-- Third, the calls in main.cpp, and the check against the reference, shifted by the latency anira reports.
+- Third, the calls in AniraProcessor.cpp, and the check against the reference, shifted by the latency anira reports.
 
 ---
 
@@ -74,7 +74,7 @@ Note:
     <div class="given-label">Exercise</div>
     <div class="given-folder">09_anira/exercise/</div>
     {{FILE:model.json|new}}
-    {{FILE:main.cpp}}
+    {{FILE:AniraProcessor.cpp}}
   </div>
 </div>
 
@@ -82,9 +82,11 @@ Note:
 - CMake fetches anira, pinned to a v3 pre-release with ONNX Runtime built in.
 - The contract is complete.
 - The model file is given with gaps: the tensors are named, and their shapes and roles are your task.
-- Your other file is main.cpp.
+- Your other file is AniraProcessor.cpp.
 
 ---
+
+<!-- .slide: class="dense-code" -->
 
 <div class="tag">Helpers: <code>model.json</code></div>
 
@@ -92,18 +94,22 @@ Note:
 
 ```json
 {
-  "models":  [ { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_forward.onnx" } ],
+  "models":  [ { "engine": "onnxruntime",
+                 "path": "../../common/assets/models/rave/model_forward.onnx" } ],
   "inputs":  [ { "name": "audio",     "role": "streamed",
                  "axes": [["batch",1],["channel",1],["time",2048]],
                  "window": { "min": 2048, "max": 2048 } },
-               { "name": "state_in",  "role": "state", … } ],
-  "outputs": [ { "name": "audio_out", "role": "streamed", …, "latency": 2224 },
-               { "name": "state_out", "role": "state", … } ]
+               { "name": "state_in",  "role": "state",
+                 "axes": [["batch",1],["any",63488]], "state_source": "state_out" } ],
+  "outputs": [ { "name": "audio_out", "role": "streamed",
+                 "axes": [["batch",1],["channel",1],["time",2048]],
+                 "window": { "min": 2048, "max": 2048 }, "latency": 2224 },
+               { "name": "state_out", "role": "state", "axes": [["batch",1],["any",63488]] } ]
 }
 ```
 
 Note:
-- We provide this model.json; it describes the model to anira.
+- We provide this model.json; it describes the model to anira. This is all of it, only the dtype is left out: float32 is the default.
 - Under models: the engine, ONNX Runtime, and the path to our ONNX file.
 - Under inputs: the model's input tensors. The first is audio, and it is streamed: audio comes in continuously, and anira cuts it into blocks for the model.
 - Its axes are its shape, each with a name: batch 1, channel 1, time 2048, so a tensor of 1 by 1 by 2048.
@@ -135,17 +141,20 @@ Note:
 
 ---
 
-<div class="tag">Task: <code>model.json</code> · <code>main.cpp</code></div>
+<div class="tag">Task: <code>model.json</code> · <code>AniraProcessor.cpp</code></div>
 
 ## Task
 
 <div class="task-timer" data-minutes="10"></div>
 
-Fill in the TODOs in `steps/09_anira/exercise/model.json` and `main.cpp`
+Fill in the TODOs in `steps/09_anira/exercise/model.json` and `AniraProcessor.cpp`
 
 ```bash
-cmake --build --preset release --target step09_exercise
-./build/bin/step09_exercise
+# validate: the check against the reference
+cmake --build --preset release --target step09_exercise_check
+./build/bin/step09_exercise_check
+# play: the same processor as a plugin (or step09_exercise_VST3)
+cmake --build --preset release --target step09_exercise_Standalone
 ```
 
 <div class="run">
@@ -175,7 +184,8 @@ cmake --build --preset release --target step09_exercise
 
 Note:
 - You have ten minutes.
-- Fill in the TODOs in model.json and main.cpp, then build step09_exercise and run it.
+- Fill in the TODOs in model.json and AniraProcessor.cpp, then build step09_exercise_check and run it.
+- Once it passes, build the same processor as a plugin: step09_exercise_Standalone or step09_exercise_VST3, in build/steps/09_anira/step09_exercise_artefacts/Release/.
 - You are done when it says it matches the reference.
 
 ---
@@ -233,7 +243,7 @@ Note:
 ```cpp
 const auto model = anira::ModelConfig::from_file(step_dir + "/model.json");
 auto contract    = anira::ContractHandle::from_file(step_dir + "/contract.json");
-contract.hard_host_blocks(1, max_block_size, sample_rate);   // any block up to the host's largest
+contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the host's largest
 
 anira::Pipeline pipeline;
 pipeline.add_inference(model);
@@ -266,5 +276,5 @@ Note:
 
 Note:
 - That is Steps 3, 6 and 7 in two files.
-- There is no ring buffer, no worker, no queue, no state copy and no latency arithmetic in main.cpp, and the check from Step 7 passes.
+- There is no ring buffer, no worker, no queue, no state copy and no latency arithmetic in AniraProcessor.cpp, and the check from Step 7 passes.
 - Next we take the model apart.

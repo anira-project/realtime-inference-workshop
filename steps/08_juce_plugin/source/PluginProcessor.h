@@ -11,8 +11,8 @@
 #include <memory>
 
 #include "ExamplePlayer.h"
+#include "ProcessorExample.h"
 #include "common/helpers/onnx_engine.h"
-#include "common/helpers/threaded_processor.h"
 
 class WorkshopPluginProcessor : public juce::AudioProcessor {
 public:
@@ -42,9 +42,10 @@ public:
 
     juce::AudioProcessorValueTreeState& parameters() { return m_parameters; }
     ExamplePlayer& player() { return m_player; }
-    // What the editor shows: a model that did not load, a block size or a
-    // sample rate the processor is not built for. Message thread.
-    juce::String status() const;
+    // Why the plugin passes its input through unprocessed, for the editor's
+    // overlay: a model that did not load, or a sample rate or buffer size the
+    // processor is not built for. Empty while it processes. Message thread.
+    juce::String bypass_reason() const;
 
     // Replaces an example slot with a file, with the audio thread held off
     // while the slot changes. Message thread only.
@@ -58,15 +59,20 @@ private:
 
     // ONNX Runtime, not LibTorch: it is the one with a static build, so the
     // plugin is a single self-contained bundle.
-    // One engine and one processor: the model is mono, so the input is mixed
-    // down to one signal, and the result goes out on every channel.
+    // One engine and one processor, as in step 7's main: the model is mono, so
+    // the input is mixed down to one signal, and the result goes out on every
+    // channel. The processor runs its own worker thread.
     std::unique_ptr<OnnxEngine> m_engine;
-    std::unique_ptr<LatencyProcessor<OnnxEngine>> m_processor;
-    juce::String m_status;  // Written in prepareToPlay, read by the editor
+    std::unique_ptr<ProcessorExample> m_processor;
 
-    // The processor from steps 6 and 7 is built for 512-sample blocks only.
-    std::atomic<bool> m_prepared{false};     // prepareToPlay got a block size it supports
+    // The processor is built for 44.1 or 48 kHz and 512-sample buffers only.
+    // Anything else is bypassed: the input goes out unprocessed.
+    enum class Bypass { none, not_prepared, model, sample_rate, block_size };
+    std::atomic<Bypass> m_bypass{Bypass::not_prepared};  // Set in prepareToPlay
     std::atomic<bool> m_wrong_block{false};  // processBlock was called with another size
+    std::atomic<double> m_host_sample_rate{0.0};
+    std::atomic<int> m_host_block_size{0};
+    juce::String m_model_error;  // Written before m_bypass says Bypass::model
 
     ExamplePlayer m_player;
 

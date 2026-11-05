@@ -16,21 +16,27 @@ open "build-juce/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone
 
 The VST3 passes `pluginval --strictness-level 5`.
 
+## The processor is step 7's
+
+[`source/ProcessorExample.h`](source/ProcessorExample.h) is step 7's `ProcessorExample`, filled in, one-to-one: the same constants, the same `prepare`, `process_block` and `process_model`, with its `WorkerThread` inside. `WorkshopPluginProcessor` owns the engine and that one processor, as step 7's `main` does. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
+
 ## The three places the host talks to us
 
-**`prepareToPlay`** — everything that allocates: load the model, size the ring buffers, warm up, start the worker threads. Then the number from step 7:
+**`prepareToPlay`**: everything that allocates. Load the model once, `prepare` the processor, which sizes the ring buffers, warms up and starts the worker thread. Then the number from step 7:
 
 ```cpp
-setLatencySamples(static_cast<int>(LatencyProcessor<OnnxEngine>::latency_samples()));
+setLatencySamples(static_cast<int>(m_processor->latency_samples()));
 ```
 
-That one line is what lets the host line our track up with every other track: 1536 + the rounded max inference time + 2224, 4784 samples with `k_max_inference_ms` from 11.6 to 23.2 ms. Put your step 4 number into `k_max_inference_ms` in [`threaded_processor.h`](../common/helpers/threaded_processor.h).
+That one line is what lets the host line our track up with every other track: 1536 + the rounded max inference time + 2224, 4784 samples with `k_max_inference_ms` from 11.6 to 23.2 ms.
 
-**`processBlock`** — the audio callback from step 7, unchanged: ring buffer in, ring buffer out, mix, out. No engine, no allocation, no lock.
+**`processBlock`**: the mono mix-down, then step 7's `process_block`, unchanged. No engine, no allocation, no lock.
 
-**Only 512 samples.** The prefill and the latency from steps 6 and 7 are only right for a host block of 512. If the host asks for another buffer size in `prepareToPlay`, or calls `processBlock` with another block size, the plugin outputs silence and the window says so. Arbitrary buffer sizes need a different design; that is part 2.
+**`releaseResources`**: stop the worker thread.
 
-**`releaseResources`** — stop the worker threads.
+## Only 44.1 or 48 kHz, only 512 samples
+
+The prefill and the latency from steps 6 and 7 are only right for a host block of 512, and the model is trained at 44.1 kHz (at 48 kHz it runs, a little higher). For anything else the plugin is **bypassed**: the input goes out unprocessed, the latency is 0, and the window shows an overlay that says why. The same happens to a block of another size in the middle of playback. Arbitrary rates and buffer sizes need a different design; that is part 2.
 
 ## One engine, mono
 
@@ -42,24 +48,14 @@ The window has three example slots. Clicking a tile plays its slot in a loop in 
 
 The `Dry/Wet` parameter is the mix from step 7. At 0 you hear the input, delayed by the reported latency and nothing else — which is also how you check the latency is right: in a DAW, with delay compensation on, a fully dry instance has to null against the original track.
 
-## Which engine, and why it matters here
+## One bundle
 
-The plugin runs **ONNX Runtime, linked statically**, where the steps before it
-use it as a shared library. The reason is what has to ship:
-
-| | what ships |
-|---|---|
-| LibTorch | the binary plus 318 MB of dylibs that have to be found at load time |
-| ONNX Runtime, static | **one 28 MB bundle**, nothing to find |
-
-LibTorch has no static build in the backends release, so the choice is made for
-you.
+The plugin links **ONNX Runtime statically**, where the steps before it use it as a shared library. The bundle carries the engine inside it and needs no library next to it: copy the VST3 wherever you like.
 
 ## Known rough edges, on purpose
 
 - **The model path is absolute**, baked in at compile time. A real plugin ships `model_forward.onnx` inside the bundle.
-- **The sample rate is fixed at 44.1 kHz** by the export. At another rate the plugin says so and still runs; it is a different instrument then, not a broken one.
-- **The buffer size is fixed at 512 samples.** At any other size the plugin is silent and says so: set the audio device or the DAW to 512.
+- **44.1 or 48 kHz and 512 samples only.** Anything else is bypassed, and the window says so: set the audio device or the DAW to match.
 - **The worker busy-waits.** It checks for a new block without sleeping, which keeps one core busy.
 
 ## Slides

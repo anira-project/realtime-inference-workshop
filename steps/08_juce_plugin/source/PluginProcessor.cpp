@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 
+#include <cmath>
 #include <cstdio>
 
 #include "PluginEditor.h"
@@ -29,96 +30,102 @@ juce::AudioProcessorValueTreeState::ParameterLayout WorkshopPluginProcessor::mak
 }
 
 // The host says how it will call us. Everything that allocates belongs here,
-// including loading the model and starting the worker threads.
+// including loading the model and starting the worker thread.
 void WorkshopPluginProcessor::prepareToPlay(double sample_rate, int samples_per_block) {
-    m_status.clear();
-    m_prepared.store(false, std::memory_order_release);
+    m_bypass.store(Bypass::not_prepared, std::memory_order_release);
     m_wrong_block.store(false, std::memory_order_relaxed);
+    m_host_sample_rate.store(sample_rate, std::memory_order_relaxed);
+    m_host_block_size.store(samples_per_block, std::memory_order_relaxed);
+    setLatencySamples(0);
+    if (m_processor != nullptr) { m_processor->stop(); }
 
     // Loading takes a second and the host may call this often: once is
     // enough. The model is mono, so one engine serves every channel.
     try {
         if (m_engine == nullptr) {
-            m_engine = std::make_unique<OnnxEngine>(WORKSHOP_ONNX_MODEL_PATH);
-            m_processor = std::make_unique<LatencyProcessor<OnnxEngine>>(*m_engine);
+            m_engine = std::make_unique<OnnxEngine>(k_model.m_path);
+            m_processor = std::make_unique<ProcessorExample>(*m_engine);
         }
     } catch (const std::exception& error) {
         std::fprintf(stderr, "plugin: %s\n", error.what());
-        m_status = error.what();
+        m_model_error = error.what();
         m_engine.reset();
         m_processor.reset();
-        setLatencySamples(0);
+        m_bypass.store(Bypass::model, std::memory_order_release);
         return;
     }
 
-    // The prefill and the latency of steps 6 and 7 are only right for one host
-    // block size. Any other one needs a different design: that is part 2.
-    const auto block_size = static_cast<size_t>(samples_per_block);
-    if (!LatencyProcessor<OnnxEngine>::supports_block_size(block_size)) {
-        m_processor->stop();
-        m_status = "Only a " + juce::String(static_cast<int>(k_host_block_size)) +
-                   "-sample buffer is supported, the host asks for " +
-                   juce::String(samples_per_block) +
-                   ". Arbitrary buffer sizes need a different design: part 2, anira.";
-        setLatencySamples(0);
+    // The processor is built for one buffer size, and for the model's rate
+    // or 48 kHz. Anything else needs a different design: that is part 2.
+    const bool supported_rate =
+        std::abs(sample_rate - 44100.0) < 1.0 || std::abs(sample_rate - 48000.0) < 1.0;
+    if (!supported_rate) {
+        m_bypass.store(Bypass::sample_rate, std::memory_order_release);
+        return;
+    }
+    if (static_cast<size_t>(samples_per_block) != k_host_block_size) {
+        m_bypass.store(Bypass::block_size, std::memory_order_release);
         return;
     }
 
-    // Buffers and the thread do get rebuilt.
-    m_processor->prepare(block_size);
-    m_prepared.store(true, std::memory_order_release);
+    // As in step 7's main: prepare, and the worker thread starts.
+    m_processor->prepare(k_host_block_size);
 
     // The number from step 7, now where it belongs: the host delays every other
     // track by this much, so our output lines up with the rest of the session.
     setLatencySamples(static_cast<int>(m_processor->latency_samples()));
-
-    // The model was trained at one rate. Running it at another is a different
-    // instrument, not a bug — worth hearing, worth knowing.
-    if (std::abs(sample_rate - k_model.m_sample_rate) > 1.0) {
-        m_status = "running at " + juce::String(sample_rate, 0) + " Hz, the model expects " +
-                   juce::String(k_model.m_sample_rate, 0) + " Hz";
-    }
+    m_bypass.store(Bypass::none, std::memory_order_release);
 }
 
-juce::String WorkshopPluginProcessor::status() const {
-    juce::String status = m_status;
-    if (m_wrong_block.load(std::memory_order_relaxed)) {
-        if (status.isNotEmpty()) { status += " · "; }
-        status += "The host sent a block that is not " +
-                  juce::String(static_cast<int>(k_host_block_size)) +
-                  " samples: it went out as silence. Arbitrary buffer sizes need a different "
-                  "design: part 2, "
-                  "anira.";
+juce::String WorkshopPluginProcessor::bypass_reason() const {
+    const juce::String part_2 = "Arbitrary sample rates and buffer sizes: part 2, anira.";
+    switch (m_bypass.load(std::memory_order_acquire)) {
+        case Bypass::none: break;
+        case Bypass::not_prepared: return {};
+        case Bypass::model: return "The model did not load: " + m_model_error;
+        case Bypass::sample_rate:
+            return "The host runs at " +
+                   juce::String(m_host_sample_rate.load(std::memory_order_relaxed), 0) +
+                   " Hz. This plugin is built for 44100 or 48000 Hz. " + part_2;
+        case Bypass::block_size:
+            return "The host asks for buffers of " +
+                   juce::String(m_host_block_size.load(std::memory_order_relaxed)) +
+                   " samples. This plugin is built for 512: set the audio device or the DAW "
+                   "to 512. " +
+                   part_2;
     }
-    return status;
+    if (m_wrong_block.load(std::memory_order_relaxed)) {
+        return "The host sent buffers that are not 512 samples: those go out unprocessed. "
+               "This plugin is built for 512 only. " +
+               part_2;
+    }
+    return {};
 }
 
 void WorkshopPluginProcessor::releaseResources() {
     if (m_processor != nullptr) { m_processor->stop(); }
 }
 
-// The audio callback. Everything in here comes from steps 6 and 7: no engine,
-// no allocation, no lock — only the hand-over.
+// The audio callback. The processing is step 7's process_block(): no engine,
+// no allocation, no lock, only the hand-over.
 void WorkshopPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals no_denormals;
 
     const int num_samples = buffer.getNumSamples();
     const int channels = getTotalNumInputChannels();
 
-    if (!m_prepared.load(std::memory_order_acquire) || m_processor == nullptr || channels == 0) {
-        buffer.clear();  // The model did not load, or the block size is not supported: silence
-                         // beats garbage
-        return;
-    }
-    if (num_samples == 0) { return; }
-    if (!LatencyProcessor<OnnxEngine>::supports_block_size(static_cast<size_t>(num_samples))) {
-        m_wrong_block.store(true, std::memory_order_relaxed);  // The editor says so
-        buffer.clear();
-        return;
-    }
-
-    // A playing example slot replaces the input.
+    // A playing example slot replaces the input, also when bypassed.
     m_player.render(buffer);
+
+    // Bypassed: the input goes out unprocessed.
+    if (m_bypass.load(std::memory_order_acquire) != Bypass::none || channels == 0 ||
+        num_samples == 0) {
+        return;
+    }
+    if (static_cast<size_t>(num_samples) != k_host_block_size) {
+        m_wrong_block.store(true, std::memory_order_relaxed);  // The editor says so
+        return;
+    }
 
     // The model is mono: the channels mixed down into the first one, in place
     float* mono = buffer.getWritePointer(0);

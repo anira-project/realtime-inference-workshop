@@ -18,6 +18,18 @@ bool is_audio_file(const juce::String& path) {
 }
 }  // namespace
 
+void BypassOverlay::paint(juce::Graphics& g) {
+    g.fillAll(palette::k_background.withAlpha(0.94f));
+    auto area = getLocalBounds().reduced(k_margin * 2, 0);
+    area = area.withSizeKeepingCentre(area.getWidth(), 140);
+    g.setColour(palette::k_warning);
+    g.setFont(font(17.0f, true));
+    g.drawText("Bypassed", area.removeFromTop(30), juce::Justification::centred);
+    g.setColour(palette::k_text);
+    g.setFont(font(13.0f));
+    g.drawFittedText(m_reason, area, juce::Justification::centredTop, 6);
+}
+
 void SlotTile::paintButton(juce::Graphics& g, bool highlighted, bool down) {
     const auto area = getLocalBounds().toFloat();
     const bool on = getToggleState();
@@ -116,6 +128,8 @@ WorkshopPluginEditor::WorkshopPluginEditor(WorkshopPluginProcessor& processor)
     m_mix.onValueChange = [this] { repaint(m_mix_area); };
     addAndMakeVisible(m_mix);
 
+    addChildComponent(m_overlay);  // Last, so it lies over everything
+
     const int tile = (k_width - 2 * k_margin - 2 * k_gap) / ExamplePlayer::k_num_slots;
     setSize(k_width, k_header + tile + k_load + k_mix + k_status + k_margin / 2);
     refresh();
@@ -171,17 +185,19 @@ void WorkshopPluginEditor::resized() {
     area.removeFromTop(16);
     m_mix_area = area.removeFromTop(k_mix - 16);
     m_mix.setBounds(m_mix_area.withTrimmedTop(20).withHeight(40));
+    m_overlay.setBounds(getLocalBounds());
 }
 
 void WorkshopPluginEditor::timerCallback() {
     const int playing = m_processor.player().playing();
-    const juce::String status = m_processor.status();
-    if (playing != m_playing || status != m_status) { refresh(); }
+    if (playing != m_playing || m_processor.bypass_reason() != m_overlay.m_reason) { refresh(); }
 }
 
 void WorkshopPluginEditor::refresh() {
     m_playing = m_processor.player().playing();
-    m_status = m_processor.status();
+    m_overlay.m_reason = m_processor.bypass_reason();
+    m_overlay.setVisible(m_overlay.m_reason.isNotEmpty());
+    m_overlay.repaint();
     for (int slot = 0; slot < ExamplePlayer::k_num_slots; ++slot) {
         auto& tile = m_slots[static_cast<size_t>(slot)].m_tile;
         tile.setToggleState(m_playing == slot, juce::dontSendNotification);
@@ -204,11 +220,8 @@ void WorkshopPluginEditor::choose_file(int slot) {
 
 void WorkshopPluginEditor::load(int slot, const juce::File& file) {
     const bool loaded = m_processor.load_example(slot, file);
+    m_status = loaded ? juce::String() : "cannot read " + file.getFileName();
     refresh();
-    if (!loaded) {
-        m_status = "cannot read " + file.getFileName();
-        repaint();
-    }
 }
 
 int WorkshopPluginEditor::slot_at(int x, int y) const {

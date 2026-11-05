@@ -98,11 +98,11 @@ Note:
 - Goal: a fixed latency number, wet and dry aligned
 - Define the latency
 - Tell the host, use it to delay the dry path
-- Write the mix: easy once both sides are equally late
+- The mix is given: easy once both sides are equally late
 
 **Script:**
 
-"So our goal is: work out a fixed latency number, so that we have a predictable delay and wet and dry are aligned. First we define the latency. We tell it to the host, and we use it to delay the dry path. And then we write the mix, which is easy once both sides are equally late."
+"So our goal is: work out a fixed latency number, so that we have a predictable delay and wet and dry are aligned. First we define the latency. We tell it to the host, and we use it to delay the dry path. The mix itself is given: it's easy once both sides are equally late."
 
 ---
 
@@ -125,6 +125,7 @@ Note:
     {{FILE:ring_buffer.h}}
     {{FILE:host.h}}
     {{FILE:threadsafe_ring_buffer.h}}
+    {{FILE:worker_thread.h}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
@@ -135,14 +136,14 @@ Note:
 
 Note:
 - No new files
-- Step 6's processor plus a dry path
-- Third ring buffer, filled with silence in `prepare`: as many samples as our latency
+- Step 6's processor, filled in, plus a dry path
+- Third ring buffer, step 3's: only the audio thread uses it, filled with silence in `prepare`, as many samples as our latency
 - Host still real time, 512 samples per call
-- `k_max_inference_ms` again: your number from step 4
+- `k_max_inference_ms`: still your number from step 4, in `steps/common/inference_time.h`
 
 **Script:**
 
-"We don't get any new files. This is step 6's processor with one addition: a dry path. That's a third ring buffer, which gets filled with silence in `prepare`, as many samples as our latency. The host still runs in real time with 512 samples per call. And you need your number from step 4 again, for `k_max_inference_ms`."
+"We don't get any new files. This is step 6's processor, filled in, with one addition: a dry path. That's a third ring buffer, the plain one from step 3, because only the audio thread uses it. It gets filled with silence in `prepare`, as many samples as our latency. The host still runs in real time with 512 samples per call. And your number from step 4 is still in `inference_time.h`."
 
 ---
 
@@ -180,14 +181,14 @@ cmake --build --preset release --target step07_exercise
 </div>
 
 Note:
-- `main.cpp` in steps/07_latency/exercise, first your `k_max_inference_ms`
+- `main.cpp` in steps/07_latency/exercise
 - TODO 1: where does the delay come from? Buffer adaptation, the worker's time, the model
 - TODO 2: delay the dry signal by that number
 - 5 minutes, don't worry if you don't finish, we solve it together
 
 **Script:**
 
-"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`; first put your number from step 4 in again. For the first TODO, think about where the delay comes from. There are three parts: the buffer adaptation from step 3, the time we give the worker from step 6, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
+"Your turn. You'll find the `main.cpp` in `steps/07_latency/exercise`. For the first TODO, think about where the delay comes from. There are three parts: the buffer adaptation from step 3, the time we give the worker from step 6, and the model itself. In the second TODO you delay the dry signal by that number. You get 5 minutes, and again, don't worry if you don't make it, we'll go through it together."
 
 *Timebox.*
 
@@ -208,11 +209,8 @@ Note:
 </div>
 
 ```cpp
-size_t latency_samples() const {
-    size_t latency = (k_model.m_input_size - k_host_block_size) + rounded_max_inference_time() +
-                     k_model.m_latency;  // <- fill out
-    return latency;                      // 4784
-}
+// in prepare(), after step 6's prefill: buffer adaptation + the worker's time
+m_latency = m_prefill + k_model.m_latency;  // <- fill out: 4784
 ```
 
 Note:
@@ -221,14 +219,15 @@ Note:
 - Smaller: the worker might not be done, latency no longer fixed
 - 15.3 ms don't fit in one callback of 11.6 ms, they take two: 1024. Yours may differ
 - The model itself: 2224, convolutions and filter bank, from the export script, not visible from C++
-- Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host
+- Step 6's prefill already holds the first two: `m_prefill + k_model.m_latency`
+- Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE
 - Only for 512: other block sizes give other numbers, part 2
 - Honest: fine for mixing, can't play through it live. Part 2 comes back to it
 
 **Script:**
 
 "Let's add it up. First the buffer adaptation from step 3: the model needs a whole block before it can run, and the host brings 512 samples at a time, so that's 2048 minus 512, 1536 samples. Second, the time we give the worker: your worst case from step 4, rounded up to whole callbacks, like in step 6. That one is a choice. We could make it smaller, but then the worker might not be done in time, and the latency wouldn't be fixed anymore. My 15.3 milliseconds don't fit into one callback of 11.6 milliseconds, they take two, so that's 1024; yours may differ. And third, the model itself is late by 2224 samples, because of its convolutions and the filter bank. We can't see that from C++, it comes from the export script.
-So in total: 4784 samples, that's about 108 milliseconds at 44.1 kHz. In a plugin, this is the number we report to the host. It only holds for 512, though: other block sizes give other numbers, and that's part 2. And let's be honest: 108 milliseconds is fine for mixing, but you can't play through it live. In part 2 we come back to how low it can go."
+The first two are exactly step 6's prefill, so in code it's the prefill plus the model's latency. In total: 4784 samples, that's about 108 milliseconds at 44.1 kHz. In a plugin, this is the number we report to the host, in JUCE with `setLatencySamples`. It only holds for 512, though: other block sizes give other numbers, and that's part 2. And let's be honest: 108 milliseconds is fine for mixing, but you can't play through it live. In part 2 we come back to how low it can go."
 
 ---
 
@@ -238,19 +237,19 @@ So in total: 4784 samples, that's about 108 milliseconds at 44.1 kHz. In a plugi
 
 ```cpp
 // in prepare(): the wet path gets a prefill of silence, and so does the dry one
-m_output.push(silence.data(), prefill_samples());   // given: step 6's prefill
-m_dry.push(silence.data(), latency_samples());      // <- fill out
+m_output.push(silence.data(), m_prefill);       // given: the prefill
+m_dry.push(dry_silence.data(), m_latency);      // <- fill out
 ```
 
 Note:
 - Host aligns everything to the number we report
-- Prefill the dry ring buffer with `latency_samples()` of silence before the first callback
+- Prefill the dry ring buffer with `m_latency` of silence before the first callback
 - Every sample comes out 4784 samples later, like the wet one
 - Wet only gets step 6's prefill, 2560: the model's 2224 are already in what it returns
 
 **Script:**
 
-"The host aligns everything to the number we report. So the dry signal has to start exactly that much later: we prefill the dry ring buffer with latency_samples() of silence before the first callback. Then every sample we push in comes out 4784 samples later, just like the wet one. The wet path only gets step 6's prefill, because the model's own 2224 samples are already inside what it returns."
+"The host aligns everything to the number we report. So the dry signal has to start exactly that much later: we prefill the dry ring buffer with `m_latency` samples of silence before the first callback. Then every sample we push in comes out 4784 samples later, just like the wet one. The wet path only gets step 6's prefill, because the model's own 2224 samples are already inside what it returns."
 
 ---
 
@@ -268,8 +267,8 @@ Note:
 Note:
 - Correct, real-time safe, late by a known, fixed amount
 - Host can line it up, dry and wet crossfade cleanly
-- One decision left before the plugin: which engine do we ship?
+- Next: all of this in a JUCE plugin, where the host asks for exactly these numbers
 
 **Script:**
 
-"So now our processor is correct, it's real-time safe, and it's late by a known, fixed amount. The host can line it up with the other tracks, and dry and wet crossfade cleanly. Before we put all of this into a plugin, we have one decision left: which engine do we ship?"
+"So now our processor is correct, it's real-time safe, and it's late by a known, fixed amount. The host can line it up with the other tracks, and dry and wet crossfade cleanly. Next, we put all of this into a JUCE plugin, where the host asks for exactly these numbers."

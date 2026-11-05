@@ -49,10 +49,15 @@ The important point is: these things aren't necessarily slow. Most of the time t
 ## Sets the promise in the type system <span class="then">The sanitizer catches what breaks it.</span>
 
 ```cpp
-void audio_callback(Engine& engine, float* samples, size_t n)
-    [[clang::nonblocking]]
-{
-    engine.process(samples, n);
+// Step 3's processor: the callback makes the promise
+void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
+    m_input.push(samples, num_samples);
+    if (m_input.available() >= k_model.m_input_size) {
+        m_input.pop(m_model_block.data(), k_model.m_input_size);
+        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+        m_output.push(m_model_block.data(), k_model.m_input_size);
+    }
+    …
 }
 ```
 
@@ -62,14 +67,14 @@ Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang.
 
 Note:
 - Since Clang 20 there's a tool for this
-- `[[clang::nonblocking]]`: a promise in the type system
+- `[[clang::nonblocking]]`: a promise in the type system, here on step 3's `process_block`
 - Build with RealtimeSanitizer: checks every call underneath at runtime, also in libraries
 - Reports the first thing that breaks the promise
 - On a Mac: LLVM from Homebrew, not Apple's Clang
 
 **Script:**
 
-"So how do we find out whether our code breaks these rules? Since Clang 20 there's a tool for it. We mark our callback with `[[clang::nonblocking]]`, which is a promise in the type system: nothing in here blocks. Then we build with the RealtimeSanitizer. At runtime it checks every call underneath that function, also inside libraries, and reports the first thing that breaks the promise.
+"So how do we find out whether our code breaks these rules? Since Clang 20 there's a tool for it. We take our processor from step 3 and mark its callback with `[[clang::nonblocking]]`, which is a promise in the type system: nothing in here blocks. Then we build with the RealtimeSanitizer. At runtime it checks every call underneath that function, also inside libraries, and reports the first thing that breaks the promise.
 If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Clang doesn't have it yet."
 
 ---
@@ -79,8 +84,8 @@ If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Cl
 ## Running the model allocates<br><span class="then">Before the forward pass starts.</span>
 
 ```bash
-./build/bin/step05_solution verify           # Matches the Python reference
-  onnx                     max abs diff 3.87e-07   OK
+./build/bin/step05_solution                  # Without RTSan: runs through, matches the reference
+  OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 ```
 
 ```text
@@ -90,23 +95,23 @@ Intercepted call to real-time unsafe function `malloc`
     OrtApis::Run(...)              ← on the way into the model
     OnnxEngine::run(...)
     OnnxEngine::process(...)
-    audio_callback(...)
+    ProcessorExample::process_block(...)   ← the fourth callback
 ```
 
 One thread. Our buffers and tensors preallocated. **Still allocates.**
 
 Note:
-- Run `step05_solution verify` and the sanitizer live if possible
+- Run `step05_solution`, without and with the sanitizer, live if possible
 - Correct: matches the Python reference
-- With the sanitizer it stops immediately, before the model has run
-- Stack from the bottom: callback → `process` → `Run` → `malloc`
-- Even with one thread and our own buffers and tensors preallocated
+- With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has run
+- Stack from the bottom: `process_block` → `process` → `Run` → `malloc`
+- Even warmed up in `prepare()`, with one thread and our own buffers and tensors preallocated
 - Even a small `malloc` can take too long on the audio thread
 
 **Script:**
 
-*Run `step05_solution verify` and the sanitizer live if possible.*
-"First, is our engine correct? Yes, it gives us the same output as the Python reference. But is it safe? If we run it with the sanitizer, it stops immediately, before the model has even run. If we read the stack from the bottom up: our audio callback calls `process`, `process` calls ONNX Runtime's `Run`, and `Run` calls `malloc` on its way into the model. And this is on one thread, with our own buffers and tensors preallocated. It's only a small allocation, but even a small `malloc` can take too long on the audio thread."
+*Run `step05_solution`, without and with the sanitizer, live if possible.*
+"First, is it still correct? Yes, without the sanitizer it runs through and gives us the same output as the Python reference. But is it safe? With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has even run. If we read the stack from the bottom up: our callback calls `process`, `process` calls ONNX Runtime's `Run`, and `Run` calls `malloc` on its way into the model. And this is warmed up, on one thread, with our own buffers and tensors preallocated. It's only a small allocation, but even a small `malloc` can take too long on the audio thread."
 
 ---
 
@@ -114,21 +119,27 @@ Note:
 
 ## Not once<br><span class="then">Every callback.</span>
 
-| allocations + frees, ten callbacks | per block | first block |
+```bash
+RTSAN_OPTIONS=halt_on_error=false ./build-rtsan/bin/step05_solution
+```
+
+| the whole test signal, 8 forward passes | total | per forward pass |
 |---|---|---|
-| ONNX Runtime | 2,154 | 2,155 |
+| `malloc` | 649 | 81 |
+| `free` | 304 | 38 |
 
 
 Not a slip. The engine is built this way.
 
 Note:
-- Not just once: allocations and frees counted over ten callbacks
-- About two thousand per block, every block
+- `halt_on_error=false`: RTSan reports every violation instead of stopping at the first
+- Over the whole test signal: 8 forward passes, 649 mallocs and 304 frees
+- About 80 mallocs and 40 frees in every forward pass
 - Not a small mistake: built for throughput, not for real-time
 
 **Script:**
 
-"And it doesn't happen just once. Here we counted the allocations and frees over ten callbacks: about two thousand per block, every block.
+"And it doesn't happen just once. If we tell the sanitizer not to stop at the first violation, it reports all of them. Over the whole test signal, eight forward passes, that's 649 mallocs and 304 frees: about 80 and 40 in every single forward pass.
 So this isn't a small mistake we can fix. The engine is built this way: it's made for throughput, not for real-time."
 
 
@@ -138,23 +149,23 @@ So this isn't a small mistake we can fix. The engine is built this way: it's mad
 
 ## Locks<br><span class="then">On the audio thread.</span>
 
-One block, as RTSan reports it:
+The same run, as RTSan reports it:
 
-| | mutex locks |
-|---|---|
-| ONNX Runtime | 8 |
+| | total | per forward pass |
+|---|---|---|
+| `pthread_mutex_lock` | 64 | 8 |
 
 A slow allocation is bad. <br>
 A lock is worse: it can wait on another thread.
 
 Note:
-- Not only allocations: one block as the sanitizer reports it
-- Mutex locks: 8 in one block
+- Not only allocations: the same run, as the sanitizer reports it
+- Mutex locks: 64, eight in every forward pass
 - A lock is worse: our thread can wait for a completely different thread
 
 **Script:**
 
-"And it's not only allocations. Here's one single block, as the sanitizer reports it: there are also mutex locks, eight of them. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
+"And it's not only allocations. In the same run the sanitizer also reports mutex locks: 64 of them, eight in every forward pass. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
 
 
 ---

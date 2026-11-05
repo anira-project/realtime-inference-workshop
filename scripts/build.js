@@ -225,6 +225,7 @@ const LINE_ICONS = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   wave: '<path d="M2 12c1.5-6 3-6 4.5 0s3 6 4.5 0 3-6 4.5 0 3 6 4.5 0 1.5-3 2-3"/>',
   sliders: '<path d="M6 3v18M12 3v18M18 3v18"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="6" width="4" height="3" rx="1"/><rect x="16" y="10" width="4" height="3" rx="1"/>',
+  flask: '<path d="M9 3h6M10 3v6l-5.2 9.1A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.9L14 9V3"/><path d="M7.4 15h9.2"/>',
   gauge: '<path d="M3 18a9 9 0 1 1 18 0"/><path d="M12 18l4.5-6.5"/><circle cx="12" cy="18" r="1"/>',
   threads: '<path d="M3 6h14M3 12h18M3 18h10"/><path d="M15 4l2 2-2 2M19 10l2 2-2 2M11 16l2 2-2 2"/>',
   flag: '<path d="M5 21V4M5 4h12l-2.5 4 2.5 4H5"/>',

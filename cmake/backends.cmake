@@ -1,11 +1,7 @@
 # Prebuilt inference engines, downloaded from the anira-project/backends release.
 #
-# Nothing is built in the room: each engine is a zip with include/ and lib/ (and
-# share/ for LibTorch), unpacked into the build tree.
-#
-#   workshop_setup_libtorch()  -> target Torch::Torch (from LibTorch's own config)
-#
-# Bring your own build instead with -DWORKSHOP_LIBTORCH_ROOTDIR=/path/to/libtorch.
+# Nothing is built in the room: each engine is a zip with include/ and lib/,
+# unpacked into the build tree.
 
 include_guard(GLOBAL)
 include(FetchContent)
@@ -15,18 +11,10 @@ include(download)
 # can ask for, pinned: no GitHub API call at configure, and a broken download
 # never passes. A new release replaces all of them together.
 set(WORKSHOP_BACKENDS_VERSION "v2.4.0")
-set(WORKSHOP_LIBTORCH_VERSION "2.12.0")
 set(WORKSHOP_ONNXRUNTIME_VERSION "1.26.0")
-set(WORKSHOP_LIBTORCH_ROOTDIR "" CACHE PATH "Use this prebuilt LibTorch tree instead of downloading")
 set(WORKSHOP_ONNXRUNTIME_ROOTDIR "" CACHE PATH "Use this prebuilt ONNX Runtime tree instead of downloading")
 
 set(_workshop_backend_archives
-    "libtorch-2.12.0-Linux-aarch64-shared.zip|2f1631ed9fa94b8053440e9409814c3abbe59e292f47bf56e5b434e23bfab3c3"
-    "libtorch-2.12.0-Linux-x86_64-shared.zip|599e65521e91da1a0e11021020ee233b9bcaf20b87c6d001e6c96bbe267cd674"
-    "libtorch-2.12.0-macOS-arm64-shared.zip|f4b67b83bb078baecaf78dd80487590d848b0abbe0181b4d26730e126f468c86"
-    "libtorch-2.12.0-macOS-x86_64-shared.zip|b5769e39d980db8d6c242c500b284a061e217c8ce55be8e0daad00c6b1949e95"
-    "libtorch-2.12.0-Windows-arm64-shared.zip|18b253fc93af3721f9aaa3c9b927a66d9fcdf6a0769803e3561ebac9a0d06647"
-    "libtorch-2.12.0-Windows-x86_64-shared.zip|776610e52750e59cf879a3d8607466d2511da839dab5156fe2690381a26eccf2"
     "onnxruntime-1.26.0-Linux-aarch64-shared.zip|d569ceb3b865763bb2ce445176d57989f7bc0454c2d041285a1abfe4b2cd594f"
     "onnxruntime-1.26.0-Linux-aarch64-static.zip|053517f97c7749c574c8eef4e02ef151e64625b5e17b2e7646a5927c9c177374"
     "onnxruntime-1.26.0-Linux-x86_64-shared.zip|060a5baa102327aa3d0e0a2c0a23472284569784c8ad3295da6fb19e587d32e7"
@@ -97,52 +85,6 @@ function(_workshop_platform out)
     set(${out} "${os}-${arch}" PARENT_SCOPE)
 endfunction()
 
-# A macro, not a function: find_package() sets TORCH_INCLUDE_DIRS and friends in
-# the calling scope, and a function would keep them to itself.
-macro(workshop_setup_libtorch)
-    if(WORKSHOP_LIBTORCH_ROOTDIR)
-        set(root "${WORKSHOP_LIBTORCH_ROOTDIR}")
-    else()
-        _workshop_platform(platform)
-        _workshop_fetch_backend(workshop_libtorch
-            "libtorch-${WORKSHOP_LIBTORCH_VERSION}-${platform}-shared.zip" root)
-    endif()
-
-    # LibTorch ships its own CMake config; it defines the `torch` target and
-    # TORCH_LIBRARIES, and needs the shared libraries on the runtime path.
-    set(Torch_DIR "${root}/share/cmake/Torch" CACHE PATH "" FORCE)
-    find_package(Torch REQUIRED CONFIG)
-    set(WORKSHOP_LIBTORCH_LIB_DIR "${root}/lib" CACHE PATH "" FORCE)
-
-    # On Windows the DLLs live in bin/ and only the import libraries in lib/,
-    # so copying lib/ alone leaves the executables without torch.dll.
-    if(EXISTS "${root}/bin")
-        set(WORKSHOP_LIBTORCH_BIN_DIR "${root}/bin" CACHE PATH "" FORCE)
-    else()
-        set(WORKSHOP_LIBTORCH_BIN_DIR "" CACHE PATH "" FORCE)
-    endif()
-endmacro()
-
-# Copy the engine's shared libraries next to an executable, so it runs from the
-# build tree without DYLD_/LD_LIBRARY_PATH.
-function(workshop_copy_libtorch_runtime target)
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${WORKSHOP_LIBTORCH_LIB_DIR}" "$<TARGET_FILE_DIR:${target}>"
-        COMMENT "Copying LibTorch runtime next to ${target}"
-        VERBATIM
-    )
-
-    if(WORKSHOP_LIBTORCH_BIN_DIR)
-        add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${WORKSHOP_LIBTORCH_BIN_DIR}" "$<TARGET_FILE_DIR:${target}>"
-            COMMENT "Copying the LibTorch DLLs next to ${target}"
-            VERBATIM
-        )
-    endif()
-endfunction()
-
 # ONNX Runtime: the same release, unpacked to include/ + lib/. It ships no CMake
 # config, so the imported target is built here.
 #
@@ -150,8 +92,7 @@ endfunction()
 #   workshop_setup_onnxruntime(STATIC)    -> workshop::onnxruntime_static
 #
 # The plugin links the static one: one self-contained bundle instead of a
-# shared library that has to be found at load time. LibTorch has no static
-# build in the release.
+# shared library that has to be found at load time.
 macro(workshop_setup_onnxruntime)
     set(ort_linkage "shared")
     set(ort_target "workshop::onnxruntime")

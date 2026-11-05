@@ -7,22 +7,12 @@
 #include <cstddef>
 #include <cstdio>
 #include <limits>
-#include <string>
 #include <vector>
 
 // Everything below this counts as the same signal. The reference comes from a
 // different runtime (ONNX Runtime in Python), so the numbers are close but not
 // bit-identical.
 constexpr float k_tolerance = 1e-4f;
-
-// The last line of an exception message: LibTorch wraps the actual error in a
-// whole TorchScript traceback, and the reason is at the bottom of it.
-inline std::string error_summary(const std::string& message) {
-    const size_t end = message.find_last_not_of("\n ");
-    if (end == std::string::npos) { return message; }
-    const size_t start = message.rfind('\n', end);
-    return start == std::string::npos ? message : message.substr(start + 1, end - start);
-}
 
 inline float max_abs_diff(const float* a, const float* b, size_t num_samples) {
     float worst = 0.0f;

@@ -52,11 +52,12 @@ int main() {
         std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
 
         // ---- TODO 3 --------------------------------------------------------
-        // Run the first block through the engine: pass `audio` and
-        // `process_size`. It is processed in place, so afterwards the first
-        // process_size samples of `audio` hold the model's output.
+        // Run the first block through the engine: pass where it starts,
+        // audio.data(), and process_size. It is processed in place, so
+        // afterwards the first process_size samples of `audio` hold the
+        // model's output.
         // --------------------------------------------------------------------
-        // engine.process({?}, {?});  // <- fill out
+        // engine.process(?, ?);  // <- fill out
 
         return report_first_block(audio, k_input_signal, k_target_output_signal, process_size);
     } catch (const std::exception& error) {

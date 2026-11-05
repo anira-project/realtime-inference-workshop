@@ -113,29 +113,27 @@ ONNX can't hide the state inside the model, so the export moves it out. It's an 
 
 <div class="tag">Helpers: <code>onnx_engine.h</code></div>
 
-## The engine<br><span class="then">The same call, with one more buffer.</span>
+## The engine<br><span class="then">The same call, with one more argument.</span>
 
 ```cpp
 OnnxEngine engine(path);
 
-// {audio, state}:          the two buffers
-// {samples, state size}:  their sizes
-engine.process({audio, state}, {num_samples, state_size}, start);
+engine.process(samples, num_samples);          // without the state
+engine.process(samples, num_samples, state);   // with the state
 ```
 
-- The block at `start` in `audio` is overwritten with the model's audio
+- The block at `samples` is overwritten with the model's audio
 - `state` is overwritten with the new state
 - The state is 63488 floats, starting at zero
 
 Note:
-- This is why `process` takes lists
-- Same order as the model's inputs, and as in step 9
-- The state comes back in the same buffer, so the next call continues
+- One more argument: the state, after the audio, the same order as the model's inputs
+- The state comes back in the same vector, so the next call continues
 - 63488 floats: every convolution cache in the model
 
 **Script:**
 
-"This is why `process` takes lists. The first buffer is the audio, and the second one can be the state. The state is overwritten on every call, so the next call continues where this one ended. The second list has one size per buffer: the block size and the size of the state. The state is 63488 floats, every convolution cache in the model, and it starts at zero."
+"It's the same call as in step 1, with one more argument: the state, after the audio, in the same order as the model's inputs. The state is overwritten on every call, so the next call continues where this one ended. The state is 63488 floats, every convolution cache in the model, and it starts at zero."
 
 ---
 
@@ -145,7 +143,7 @@ Note:
 
 <div class="task-timer" data-minutes="12"></div>
 
-Create the state, then pass the audio, the state and their sizes, in `steps/02_state/exercise/main.cpp`
+Create the state, then pass it to `process`, in `steps/02_state/exercise/main.cpp`
 
 ```bash
 cmake --build --preset release --target step02_exercise
@@ -167,7 +165,7 @@ Note:
 
 **Script:**
 
-"There are two TODOs. Above the loop, create the state. In the loop, pass the audio and the state, and their sizes. The state size is on the slide. It runs as it is, and you'll see block 0 pass, because a zero state is correct for the first block, and everything after it fail. You get 12 minutes."
+"There are two TODOs. Above the loop, create the state. In the loop, pass the state to `process`. The state size is on the slide. It runs as it is, and you'll see block 0 pass, because a zero state is correct for the first block, and everything after it fail. You get 12 minutes."
 
 *Timebox (12 min). Walk around.*
 
@@ -181,20 +179,18 @@ Note:
 std::vector<float> state(k_model.m_state_size, 0.0f);  // <- fill out
 
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process({audio, state},  // <- fill out
-                   {process_size, k_model.m_state_size},
-                   i * process_size);
+    engine.process(audio.data() + i * process_size, process_size, state);  // <- fill out
 }
 ```
 
 Note:
-- One more buffer, one more size
+- One more argument: the state
 - The state is created above the loop: created per block, it would start at zero every time
 - Every block now matches, to below 1e-6
 
 **Script:**
 
-"All it takes is one more buffer and one more size. Note that the state is created above the loop: if you created it again for every block, it would start at zero every time, and you'd be back to where we started. Now every block matches the reference."
+"All it takes is one more argument. Note that the state is created above the loop: if you created it again for every block, it would start at zero every time, and you'd be back to where we started. Now every block matches the reference."
 
 ---
 

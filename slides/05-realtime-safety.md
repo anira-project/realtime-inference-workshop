@@ -76,45 +76,7 @@ If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Cl
 
 <div class="tag">RealtimeSanitizer</div>
 
-## Wrapping our buffer allocates<br><span class="then">The model hasn't run yet.</span>
-
-```
-ERROR: RealtimeSanitizer: unsafe-library-call
-Intercepted call to real-time unsafe function `malloc`
-    operator new(unsigned long)
-    c10::intrusive_ptr<c10::StorageImpl, ...>::make<...>
-    at::TensorMaker::make_tensor()
-    torch::from_blob(...)          ← only wraps our buffer
-    LibTorchEngine::process(...)
-    audio_callback(...)
-```
-
-`from_blob`: No copy, but a new tensor object: that's the **malloc**.
-
- <!-- copies nothing, but it still allocates the tensor object around our buffer. -->
-
-Note:
-- Run the sanitizer live
-- LibTorch: stops immediately, before the model has run
-- Stack from the bottom: callback → `process` → `from_blob` → `malloc`
-- `from_blob` doesn't copy our samples
-- But it creates a new tensor object that describes them, for example their shape
-- That object needs memory: that's the `malloc`
-- Even a small `malloc` can take too long on the audio thread
-
-**Script:**
-
-*Run the sanitizer live.*
-"If we run the LibTorch engine with the sanitizer, it stops immediately, before the model has even run. If we read the stack from the bottom up: our audio callback calls `process`, `process` calls `from_blob`, and `from_blob` calls `malloc`.
-`from_blob` doesn't copy our samples. That's true. But it does create a new tensor object that describes them, for example their shape, and that object needs memory. So there is no copy, but there is still an allocation. It's only a small one, but even a small `malloc` can take too long on the audio thread."
-
----
-
-<div class="tag">ONNX Runtime</div>
-
-## ONNX Runtime <br><span class="then">Different engine, same story.</span>
-
-Same model, exported to an open file format, run by a much smaller engine.
+## Running the model allocates<br><span class="then">Before the forward pass starts.</span>
 
 ```bash
 ./build/bin/step05_solution verify           # Matches the Python reference
@@ -122,8 +84,11 @@ Same model, exported to an open file format, run by a much smaller engine.
 ```
 
 ```text
+ERROR: RealtimeSanitizer: unsafe-library-call
 Intercepted call to real-time unsafe function `malloc`
-    OrtApis::Run(...)   ← on the way into the model
+    operator new(unsigned long)
+    OrtApis::Run(...)              ← on the way into the model
+    OnnxEngine::run(...)
     OnnxEngine::process(...)
     audio_callback(...)
 ```
@@ -132,16 +97,16 @@ One thread. Our buffers and tensors preallocated. **Still allocates.**
 
 Note:
 - Run `step05_solution verify` and the sanitizer live if possible
-- ONNX: an open file format, same model exported to it; ONNX Runtime is a much smaller engine that runs it
 - Correct: matches the Python reference
-- Same story: `Run` allocates on its way into the model
+- With the sanitizer it stops immediately, before the model has run
+- Stack from the bottom: callback → `process` → `Run` → `malloc`
 - Even with one thread and our own buffers and tensors preallocated
-- Both correct, neither real-time safe
+- Even a small `malloc` can take too long on the audio thread
 
 **Script:**
 
 *Run `step05_solution verify` and the sanitizer live if possible.*
-"So maybe another engine is better? ONNX is an open file format for models, so we exported the same model to it. ONNX Runtime is a much smaller engine that runs that file. First, is it correct? Yes, it gives us the same output as the Python reference. But is it safe? Not really. It's the same story: calling Run allocates on its way into the model. And this is on one thread, with our own buffers and tensors preallocated. So both engines are correct, but neither of them is real-time safe."
+"First, is our engine correct? Yes, it gives us the same output as the Python reference. But is it safe? If we run it with the sanitizer, it stops immediately, before the model has even run. If we read the stack from the bottom up: our audio callback calls `process`, `process` calls ONNX Runtime's `Run`, and `Run` calls `malloc` on its way into the model. And this is on one thread, with our own buffers and tensors preallocated. It's only a small allocation, but even a small `malloc` can take too long on the audio thread."
 
 ---
 
@@ -151,23 +116,20 @@ Note:
 
 | allocations + frees, ten callbacks | per block | first block |
 |---|---|---|
-| LibTorch | 8,904 | **600,629** |
 | ONNX Runtime | 2,154 | 2,155 |
 
 
-Not a slip. The engines are built this way.
+Not a slip. The engine is built this way.
 
 Note:
 - Not just once: allocations and frees counted over ten callbacks
-- LibTorch: about nine thousand per block
-- First block: more than half a million, even after a warm-up block, TorchScript still optimising
-- ONNX Runtime: much better, still about two thousand per block
+- About two thousand per block, every block
 - Not a small mistake: built for throughput, not for real-time
 
 **Script:**
 
-"And it doesn't happen just once. Here we counted the allocations and frees over ten callbacks. LibTorch does about nine thousand per block, and in the very first block more than half a million, even though we already ran one block as a warm-up, because TorchScript is still optimising the model while it runs. ONNX Runtime is much better, but still about two thousand per block.
-So this isn't a small mistake we can fix. The engines are built this way: they're made for throughput, not for real-time."
+"And it doesn't happen just once. Here we counted the allocations and frees over ten callbacks: about two thousand per block, every block.
+So this isn't a small mistake we can fix. The engine is built this way: it's made for throughput, not for real-time."
 
 
 ---
@@ -181,19 +143,18 @@ One block, as RTSan reports it:
 | | mutex locks |
 |---|---|
 | ONNX Runtime | 8 |
-| LibTorch | 180 |
 
 A slow allocation is bad. <br>
 A lock is worse: it can wait on another thread.
 
 Note:
 - Not only allocations: one block as the sanitizer reports it
-- Mutex locks: 8 for ONNX Runtime, 180 for LibTorch
+- Mutex locks: 8 in one block
 - A lock is worse: our thread can wait for a completely different thread
 
 **Script:**
 
-"And it's not only allocations. Here's one single block, as the sanitizer reports it: there are also mutex locks. Eight for ONNX Runtime, 180 for LibTorch. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
+"And it's not only allocations. Here's one single block, as the sanitizer reports it: there are also mutex locks, eight of them. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
 
 
 ---

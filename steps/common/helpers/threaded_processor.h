@@ -11,7 +11,6 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
-#include <functional>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -46,8 +45,8 @@ constexpr size_t k_warm_up_calls = 2;
 
 // Step 7's processor: step 6's hand-over between the audio thread and a worker,
 // with a dry path and a mix control.
-// @Engine: anything with the process({audio, state}, {sizes}) of OnnxEngine. The
-//          state is carried here, one per processor.
+// @Engine: anything with the process(samples, num_samples, state) of OnnxEngine.
+//          The state is carried here, one per processor.
 template <typename Engine>
 class LatencyProcessor {
 public:
@@ -99,12 +98,9 @@ public:
 
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
-        // Built once, so the worker does not allocate them on every block.
-        m_buffers = {m_model_block, m_state};
-        m_sizes = {k_model.m_input_size, k_model.m_state_size};
 
         for (size_t i = 0; i < k_warm_up_calls; ++i) {
-            m_engine.process(m_buffers, m_sizes);
+            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
         }
         std::fill(m_state.begin(), m_state.end(), 0.0f);  // The warm-up is not part of the stream
 
@@ -179,7 +175,7 @@ private:
             if (m_input.available() < k_model.m_input_size) { continue; }
 
             m_input.pop(m_model_block.data(), k_model.m_input_size);
-            m_engine.process(m_buffers, m_sizes);
+            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
 
             // Wait for room, but keep watching the stop flag: the audio thread
             // may have stopped calling us, and then this would never return —
@@ -197,8 +193,6 @@ private:
     RingBuffer m_dry{0};               // The audio thread's own
     std::vector<float> m_model_block;  // The worker's block, sized in prepare()
     std::vector<float> m_state;        // The worker's state, sized in prepare()
-    std::vector<std::reference_wrapper<std::vector<float>>> m_buffers;  // What the engine gets
-    std::vector<size_t> m_sizes;
     std::thread m_worker;
     std::atomic<bool> m_running{false};
     std::vector<float> m_dry_block;  // Scratch, sized in prepare()

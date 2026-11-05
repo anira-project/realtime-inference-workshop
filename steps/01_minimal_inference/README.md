@@ -17,7 +17,7 @@ The engine loads the model and processes the data:
 ```cpp
 OnnxEngine engine(model_path);            // Loads the model, throws if it cannot
 
-engine.process({audio}, {num_samples});   // Overwrites the block in audio
+engine.process(samples, num_samples);     // Overwrites the block in place
 ```
 
 ## What to do

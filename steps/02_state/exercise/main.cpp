@@ -43,9 +43,9 @@ int main() {
 
         for (size_t i = 0; i < num_blocks; ++i) {
             // ---- TODO 2 ----------------------------------------------------
-            // What should be passed to process()?
+            // What should be passed next to audio in process()?
             // ----------------------------------------------------------------
-            engine.process({audio}, {process_size}, i * process_size);  // <- fill out
+            engine.process(audio.data() + i * process_size, process_size);  // <- fill out
         }
 
         return report_blocks(audio, k_target_output_signal, process_size);

@@ -7,13 +7,13 @@ Note:
 - Ask: who measures worst case rather than average? What do you measure with?
 - No code to write this step: a demo, run on your own machine
 - Measure how long a forward pass takes
-- Google Benchmark: gives the average, but also the worst case
+- One forward pass at a time, timed with `std::chrono`: the average, but also the worst case
 - The worst case is what we care about
 
 **Script:**
 
 *Ask the room: "Who measures worst case rather than average? What do you measure with?"*
-"To know whether we can run the model in time, we need to measure how long a forward pass takes. We will do that with Google Benchmark, which is a library for measuring code performance. It will give us the average time, but also the worst case, which is what we care about. There is no code to write in this step: you just run it and read the numbers from your own machine."
+"To know whether we can run the model in time, we need to measure how long a forward pass takes. We time one forward pass at a time with `std::chrono`. That gives us the average time, but also the worst case, which is what we care about. There is no code to write in this step: you just run it and read the numbers from your own machine."
 
 ---
 
@@ -103,22 +103,19 @@ Note:
 
 <div class="tag">Given</div>
 
-## What we get <span class="then">A second engine, 1 new library, nothing to edit.</span>
+## What we get <span class="then">Nothing new, nothing to edit.</span>
 
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
     <div class="given-folder">models/ & common/assets/</div>
     {{FILE:model_forward.onnx}}
-    {{FILE:model.pt|new}}
     {{FILE:test_signal.h}}
   </div>
   <div class="given-column">
     <div class="given-label">Helpers</div>
-    <div class="given-folder">common/helpers/ & CMake</div>
+    <div class="given-folder">common/helpers/</div>
     {{FILE:onnx_engine.h}}
-    {{FILE:libtorch_engine.h|new}}
-    {{FILE:Google Benchmark|new}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Ready to run</div>
@@ -128,44 +125,45 @@ Note:
 </div>
 
 Note:
-- Google Benchmark, fetched by CMake, anira benchmarks with it too
-- Both engines side by side: ONNX Runtime, which we use, and LibTorch to compare it with
-- Models are loaded before timing: loading isn't what we measure
+- The ONNX Runtime engine and its state from step 2, timed with `std::chrono`
+- Model is loaded before timing: loading isn't what we measure
 
 **Script:**
 
-"For this we will use Google Benchmark, fetched by CMake. It's what anira benchmarks with too. We measure two engines side by side: ONNX Runtime, which we've been using, and LibTorch, to compare it with. The models are loaded before timing, because loading isn't what we want to measure."
+"We take the engine from step 2, with its state, and time the forward pass with `std::chrono` from the standard library. The model is loaded before timing, because loading isn't what we want to measure."
 
 ---
 
-<div class="tag">Helpers: Google Benchmark</div>
+<div class="tag">Timing: <code>std::chrono</code></div>
 
-## Google Benchmark <span class="then">Only the loop is timed.</span>
+## Timing <span class="then">Only the call is timed.</span>
 
 ```cpp
-void forward_pass_onnx(benchmark::State& state) {
-    for (auto _ : state) {                            // only this is timed
-        onnx().process(buffers, sizes);
-        benchmark::DoNotOptimize(block.data());
+constexpr size_t k_repetitions = 5;   // 5 fresh engines, as in anira's benchmarks
+constexpr size_t k_iterations = 200;  // 200 forward passes each, every one timed
+
+for (size_t repetition = 0; repetition < k_repetitions; ++repetition) {
+    OnnxEngine engine(k_model.m_path);  // not timed
+
+    for (size_t iteration = 0; iteration < k_iterations; ++iteration) {
+        const auto begin = std::chrono::steady_clock::now();
+        engine.process(model_block.data(), model_block.size(), state);  // only this is timed
+        const auto end = std::chrono::steady_clock::now();
+        times_ms[repetition][iteration] = std::chrono::duration<double, std::milli>(end - begin).count();
     }
 }
-
-BENCHMARK(forward_pass_onnx)
-    ->Iterations(1)      // one call per repetition, otherwise an average
-    ->Repetitions(200);  // 200 single calls
-// forward_pass_libtorch: the same, with LibTorchEngine
 ```
 
 Note:
-- Only the loop body is timed, so only the call stands in it
-- `DoNotOptimize`: stops the compiler deleting our work
-- Default: runs it as often as it likes, gives the average
-- `Iterations(1)`: otherwise an average, which can't show a worst case
-- `Repetitions(200)`: 200 single calls, so the statistics are over real calls
+- Only the forward pass between the two clock reads: that's what the worker in step 6 runs
+- `steady_clock`: a monotonic clock, made for measuring intervals
+- Every forward pass timed on its own: an average can't show a worst case
+- Repetitions: a fresh engine each time, so we see whether the slow passes come back with every engine
+- Same structure as anira's benchmarks: a fresh `InferenceHandler` per repetition, every `process()` timed
 
 **Script:**
 
-"Only the body of the loop is timed, so only the call stands in it. We need `DoNotOptimize` to keep the compiler from deleting our work. By default Google Benchmark runs that body as often as it likes and gives you the average. We want the opposite: one call per repetition, because an average can't show a worst case, and 200 repetitions, so that our statistics are over real calls."
+"Only the forward pass stands between the two clock reads, because that's what the worker in step 6 will run. We use the steady clock, because it's monotonic and made for measuring intervals. Every forward pass is timed on its own: an average can't show a worst case. And we do it five times, with a fresh engine each time, 200 forward passes each. That way we see which slow passes come back with every engine. That's the same structure anira's benchmarks use."
 
 ---
 
@@ -184,19 +182,21 @@ cmake --build --preset release --target step04_solution
 
 Note:
 - Nothing to edit: build it and run it
-- Look at the first calls, then at the list of the 5 slowest
-- The last lines: your worst case on ONNX Runtime after the warm-up. Write it down, steps 6 and 7 need it
+- Look at the first forward passes of every engine, then at the list of the 5 slowest
+- The last lines: your worst case after the warm-up. Write it down, steps 6 and 7 need it
 - Run it three times
 - 2 minutes
 
 **Script:**
 
 *Timebox.*
-"So, there's nothing to edit here. Please build it and run it. Have a look at which calls are slow, and at the list of the 5 slowest calls. The last lines print your worst ONNX Runtime call after the warm-up: please write that number down, you'll need it in steps 6 and 7. Then run it three times and see what changes. You have 2 minutes."
+"So, there's nothing to edit here. Please build it and run it. Have a look at which forward passes are slow in every engine, and at the list of the 5 slowest. The last lines print your worst forward pass after the warm-up: please write that number down, you'll need it in steps 6 and 7. Then run it three times and see what changes. You have 2 minutes."
 
 ---
 
 <div class="tag">Solution</div>
+
+<!-- TODO: replace the output below with a run of the current step04_solution (ONNX Runtime only, 5 engines x 200 passes). LibTorch is no longer in the program. -->
 
 ## What it prints
 
@@ -226,7 +226,7 @@ Note:
 **Script:**
 
 *Run it live.*
-"Let's run it together. Here's the table from Google Benchmark, and below it the first 10 calls. Look at the first calls: they're slower than the rest, and much slower on LibTorch. And in the list of the 5 slowest calls, you'll find those same calls. Let's run it again and see what stays the same."
+"Let's run it together. Here are the first forward passes of every engine. Look at the first calls: they're slower than the rest, and much slower on LibTorch. And in the list of the 5 slowest calls, you'll find those same calls. Let's run it again and see what stays the same."
 
 ---
 
@@ -280,6 +280,7 @@ Now let's add our two thresholds. It fits easily into the 46 milliseconds of a m
 
 Note:
 - The same run, the same scale, on LibTorch
+- LibTorch is not in the program any more: this is one earlier run, for comparison
 - First call 80 ms, second 38 ms: TorchScript optimises the model while it runs it
 - It's the first calls every time, not random
 - Click: from the third call on about 7.7 ms, faster than ONNX Runtime

@@ -275,8 +275,7 @@ const bool has_block = m_input.available() >= k_model.m_input_size; // <- 2. fil
 
 if (has_block) {
     m_input.pop(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
-    m_engine.process({m_model_block, m_state},
-                     {k_model.m_input_size, k_model.m_state_size});
+    m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
     m_output.push(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
 }
 ```

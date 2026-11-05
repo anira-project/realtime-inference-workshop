@@ -83,6 +83,5 @@ If the download still fails, take the archives from a mirror
 somewhere else:
 
 ```bash
-cmake -S . -B build -DWORKSHOP_MODEL=/path/to/model.pt \
-                    -DWORKSHOP_ONNX_MODEL=/path/to/model_forward.onnx
+cmake -S . -B build -DWORKSHOP_ONNX_MODEL=/path/to/model_forward.onnx
 ```

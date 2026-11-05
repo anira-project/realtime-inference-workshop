@@ -100,18 +100,18 @@ Note:
 ```cpp
 OnnxEngine engine(path);                  // Loads the model
 
-engine.process({audio}, {num_samples});   // Overwrites the block in audio
+engine.process(samples, num_samples);     // Overwrites the block in place
 ```
 
 Note:
 - Constructor loads the model
-- `process` takes a list of buffers and a list of their sizes
+- `process` takes where the block starts and how many samples it has
 - The audio is processed in place
-- Lists, because the model can take more than audio: step 2
+- The model takes more than audio: step 2
 
 **Script:**
 
-"Let's take a look at our helper file. The constructor loads the model. `process` takes a list of buffers and a list of their sizes. It works in place, so the model's output overwrites the block in `audio`. You may wonder why these are lists when we only pass one buffer. We will come back to that in step 2."
+"Let's take a look at our helper file. The constructor loads the model. `process` takes where the block starts and how many samples it has, just like an audio callback. It works in place, so the model's output overwrites the block. The model actually takes more than audio, and we will come back to that in step 2."
 
 ---
 
@@ -256,7 +256,7 @@ Note:
 ```cpp
 std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
 
-engine.process({audio}, {process_size}); // <- fill out
+engine.process(audio.data(), process_size); // <- fill out
 
 return report_first_block(audio, k_input_signal, k_target_output_signal, process_size);
 ```

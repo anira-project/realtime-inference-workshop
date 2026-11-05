@@ -7,7 +7,7 @@
 // whatever the latency.
 constexpr double k_worst_case_inference_ms = 46.4;
 
-// Your worst case after the warm-up, from the last line of step 4, in ms. It
+// Your worst case, from the last line of step 4, in ms. It
 // starts at the worst case above, so everything runs; your number makes the
 // latency smaller.
 constexpr double k_max_inference_ms = k_worst_case_inference_ms;  // <- fill out after step 4

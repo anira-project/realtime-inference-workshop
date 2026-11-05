@@ -24,13 +24,17 @@ numbers: 64, 128, 256, 441...*
   {{STREAM:host=512|model=2048|length=4096|seconds=7}}
 </div>
 
+<div class="cards-note">Part 1 assumes a constant host block that divides 2048: 512. Every other case comes in part 2.</div>
+
 Note:
 - Two owners, two block sizes
 - Model: fixed at export
 - Host: device and user, can change while running
 - 512: three callbacks nothing, the fourth runs the whole model
 - They can match by coincidence, we can't count on it
-- Sizes that don't divide 2048 (441, …): part 2
+- Part 1 assumes the host block is constant and divides 2048: our 512
+- A multiple of 2048 would work in principle too, adaptation 2048 − gcd = 0, but our ring buffers are sized for 512
+- Blocks that change while running, or don't divide 2048 (441, …): part 2, with anira
 
 **Script:**
 

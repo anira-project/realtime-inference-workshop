@@ -12,7 +12,7 @@
 
 
 
-- window not necessary
+- window not necessary (todo-fares): anira should not require `"window"` on a streamed tensor whose time axis is fixed (today: `window_min must be positive (got 0)`). Afterwards, drop it from the model files of steps 9 and 10 and from the slides that show them
 
 - Blocking is also unsing exponential backoff at the beginning...
 - An engine per channel?? in anira recap part 1 step 8

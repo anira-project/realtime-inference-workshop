@@ -10,6 +10,8 @@
 
 - Step 10 (encoder/decoder split) declares a fixed 512: `hard_host_blocks(k_host.m_block_size, k_host.m_block_size, …)`. Step 9 declares 1 to the host's maximum; decide whether the split should do the same, and update slides/16-split.md
 
+- anira latency fix for examples after fix in library
+
 - Better handling of ... in   { "name": "audio_out", "role": "streamed", …, "latency": 2224 },
 - We do not use the sleep anymore in the part 1 step 6 example..
 - Add latency to blocking ratio plots

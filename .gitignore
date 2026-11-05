@@ -10,3 +10,5 @@ steps/common/assets/models/*/
 build-*/
 __pycache__/
 presenter-notes/
+downloads/
+models/

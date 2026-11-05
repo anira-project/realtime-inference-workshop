@@ -1455,6 +1455,8 @@ html.tanh .pl-seg {
 
 html.tanh .pl-seg.full { stroke: var(--mark-exercise); }
 html.tanh .pl-ring.out .pl-seg.full { stroke: var(--mark-check); }
+/* The latency the output ring is primed with: silence, before the first result */
+html.tanh .pl-ring.out .pl-seg.full.silent { stroke: var(--fs-text-subtle-color); }
 
 /* Arrows: forward on top, back below */
 html.tanh .pl-arrow {

@@ -12,6 +12,11 @@
  * data-wait: the wait ratio; data-period: ms per block period on screen;
  * data-threads, data-slots, data-ring: sizes; data-loop: callbacks per loop.
  *
+ * The output ring starts primed with silence, as anira primes its receive ring: the
+ * latency in blocks, from anira's formula (LatencyCalculator.h) for a fixed host block,
+ * (window - 1) + max over m of [ceil((m + 1) * inference - wait) - m * threads * window].
+ * Those blocks go out first, silent, and the first result follows right after them.
+ *
  * Built up on fragments: data-stage 1 to 5 on the fragments inside .pipeline switch on
  * push, enqueue, the threads, dequeue and pop, one after another, while the
  * simulation keeps running; without fragments everything is on.
@@ -90,10 +95,23 @@
             this.waitFill = this.root.querySelector('.pl-wait-fill');
         }
 
+        // The latency in host blocks, as anira computes it for a fixed host block
+        latencyBlocks() {
+            let worst = 0;
+            for (let m = 0; m < 64; ++m) {
+                const d = Math.max(0, Math.ceil((m + 1) * this.inference - this.wait - 1e-9));
+                worst = Math.max(worst, d - m * this.numThreads * this.window);
+            }
+            return this.window - 1 + worst;
+        }
+
         reset() {
             this.time = 0;
             this.inRing = [];                       // blocks waiting for a full window
-            this.outRing = [];                      // processed blocks waiting to be played
+            // Processed blocks waiting to be played, primed with the latency in silence
+            // (negative ids: silent blocks, played before block 0)
+            const latency = this.latencyBlocks();
+            this.outRing = Array.from({ length: latency }, (_, i) => i - latency);
             this.slots = Array.from({ length: this.numSlots }, () => ({ state: 'free' }));
             this.threads = Array.from({ length: this.numThreads }, () => null);
             this.nextStamp = 0;
@@ -207,8 +225,9 @@
             this.dequeue.classList.toggle('on', lit(c ? c.dequeueAt : 0, this.level >= 4));
             this.pop.classList.toggle('on', lit(c ? c.dequeueAt + POP_AFTER : 0, this.level >= 5));
             this.inBlock.classList.toggle('on', lit(c ? c.k : 0));
-            this.outBlock.classList.toggle('on', lit(c ? c.dequeueAt + POP_AFTER : 0) && this.played !== null);
-            this.outBlock.classList.toggle('silence', !c || this.played === null);
+            const audible = this.played !== null && this.played >= 0;
+            this.outBlock.classList.toggle('on', lit(c ? c.dequeueAt + POP_AFTER : 0) && audible);
+            this.outBlock.classList.toggle('silence', !c || !audible);
 
             // The way down from enqueue to dequeue, lit while the audio thread is on it
             this.then.classList.toggle('on', Boolean(this.level >= 4 && c && t >= c.waitFrom - 0.05 && t < c.dequeueAt + 0.05));
@@ -220,8 +239,13 @@
 
             const filled = new Set(this.inRing.map(b => b % this.ringSize));
             this.inSegments.forEach((seg, i) => seg.classList.toggle('full', filled.has(i)));
-            const out = new Set(this.outRing.map(b => b % this.ringSize));
-            this.outSegments.forEach((seg, i) => seg.classList.toggle('full', out.has(i)));
+            const slot = b => ((b % this.ringSize) + this.ringSize) % this.ringSize;
+            const out = new Set(this.outRing.map(slot));
+            const silent = new Set(this.outRing.filter(b => b < 0).map(slot));
+            this.outSegments.forEach((seg, i) => {
+                seg.classList.toggle('full', out.has(i));
+                seg.classList.toggle('silent', silent.has(i));
+            });
 
             this.slotCells.forEach((cell, i) => { cell.className = `pl-slot ${this.slots[i].state}`; });
 

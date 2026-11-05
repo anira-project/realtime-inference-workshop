@@ -1801,9 +1801,9 @@ html.tanh .tradeoff.ships {
   padding-left: 0;
 }
 
-/* Step 8: the one-line engine swap under the size bars */
+/* The engine classes under the size bars (create chapter) */
 html.tanh .reveal .tradeoff.ships + pre {
-  margin-top: calc(var(--space-9) * 2);
+  margin-top: var(--space-9);
 }
 
 /* Step 8: one engine, one worker per channel */

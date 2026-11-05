@@ -76,11 +76,13 @@ Note:
 
 Note:
 - Both models carry their own state pair, as in Step 9.
-- Their configs, encoder.json and decoder.json, are given, and the contract is the one from Step 9.
+- Their configs, encoder.json and decoder.json, are given, and so is the contract: like Step 9's, but on_miss zeros, because bypass needs an input of the same shape as the output.
 - Between the two handlers you write no buffer: anira's queues are the only ones.
 - You edit only main.cpp.
 
 ---
+
+<!-- .slide: class="dense-code" -->
 
 <div class="tag">Helpers: <code>decoder.json</code></div>
 
@@ -88,21 +90,23 @@ Note:
 
 ```json
 {
-  "models":  [ { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_decoder.onnx" } ],
+  "models":  [ { "engine": "onnxruntime",
+                 "path": "../../common/assets/models/rave/model_decoder.onnx" } ],
   "anchor":  "audio",
   "inputs":  [ { "name": "latents", "role": "streamed",
                  "axes": [["batch",1],["channel",8],["time",1]],
                  "window": { "min": 1, "max": 1 } },
-               { "name": "state_in", "role": "state", … } ],
+               { "name": "state_in", "role": "state",
+                 "axes": [["batch",1],["any",29184]], "state_source": "state_out" } ],
   "outputs": [ { "name": "audio", "role": "streamed", "latency": 2224,
                  "axes": [["batch",1],["channel",1],["time",2048]],
                  "window": { "min": 2048, "max": 2048 } },
-               … ]
+               { "name": "state_out", "role": "state", "axes": [["batch",1],["any",29184]] } ]
 }
 ```
 
 Note:
-- The decoder has no audio input: it generates audio from latent frames.
+- The decoder has no audio input: it generates audio from latent frames. This is the whole decoder.json, only the dtype is left out: float32 is the default.
 - So its anchor, the tensor whose time the host's blocks count in, is the audio output.
 - The latent input follows at one frame per 2048 samples.
 - The model's own delay, 2224, is declared once, where the audio comes out.
@@ -189,7 +193,7 @@ Note:
 ## TODO 2 · Bias and scale on z
 
 ```cpp
-for (size_t i = 0; i < 8; ++i) {
+for (size_t i = 0; i < k_num_latents; ++i) {
     frame_data[i] = frame_data[i] * scale[i].load() + bias[i].load();
 }
 ```
@@ -208,7 +212,7 @@ Note:
 anira::InferenceHandler decoder = create(context, step_dir + "/decoder.json");
 const size_t decoder_latency = prepare(decoder, contract);   // in samples, on its own
 const size_t latency = encoder_latency_frames * 2048 + decoder_latency;   // 2048 + 6320
-contract.hard_latency("audio", latency);                     // the frame arrives late
+contract.hard_latency("audio", static_cast<uint32_t>(latency));  // the frame arrives late
 prepare(decoder, contract);                                  // reports 8368 now
 
 // The callback: every real frame in, then the audio for this callback out

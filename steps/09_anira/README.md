@@ -15,7 +15,7 @@
 
 ## What to do
 
-Open [`exercise/model.json`](exercise/model.json) and [`exercise/main.cpp`](exercise/main.cpp).
+Open [`exercise/model.json`](exercise/model.json) and [`exercise/AniraProcessor.cpp`](exercise/AniraProcessor.cpp).
 
 1. **Declare the tensors** (`model.json`). The sizes: `"time"` of the audio in and out is the model's block, 2048 (step 1). The state's length, 63488 floats, is given. The audio output carries the model's own delay: `"latency": 2224` (step 7).
 2. **Pair the state** (`model.json`). `state_in` is fed from `state_out`: `"state_source": "state_out"`. That is the whole state loop from step 2.
@@ -27,9 +27,17 @@ Open [`exercise/model.json`](exercise/model.json) and [`exercise/main.cpp`](exer
 Build and run from the repository root:
 
 ```bash
-cmake --build --preset release --target step09_exercise
-./build/bin/step09_exercise
+cmake --build --preset release --target step09_exercise_check
+./build/bin/step09_exercise_check
 ```
+
+Once it passes, the same `AniraProcessor` runs as a plugin:
+
+```bash
+cmake --build --preset release --target step09_exercise_Standalone   # or step09_exercise_VST3
+```
+
+The result is in `build/steps/09_anira/step09_exercise_artefacts/Release/`.
 
 ## Expected output
 

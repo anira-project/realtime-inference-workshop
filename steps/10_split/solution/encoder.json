@@ -1,6 +1,6 @@
 {
   "models": [
-    { "engine": "onnxruntime", "path": "../../../models/model_encoder.onnx" }
+    { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_encoder.onnx" }
   ],
   "inputs": [
     {

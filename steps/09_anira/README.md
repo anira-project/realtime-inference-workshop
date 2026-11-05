@@ -6,7 +6,7 @@
 
 ## What you have
 
-- `models/model_forward.onnx` — the model as in step 1: audio plus a state tensor in, audio plus the new state out.
+- `steps/common/assets/models/rave/model_forward.onnx` — the model as in step 1: audio plus a state tensor in, audio plus the new state out.
 - [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named, their roles and windows given. Every `"TODO 1"` and `"TODO 2"` is a blank: replace it with the value.
 - [`exercise/contract.json`](exercise/contract.json) — how it runs: a budget of 20 ms per inference, with headroom (anira will measure it at prepare, `"budget": "measured"`, from the next alpha on; this pre-release needs a number), three warm-up runs, zeros on a miss. Complete.
 - [`common/helpers/host.h`](../common/helpers/host.h) — the fake host from step 6, pacing its callbacks.

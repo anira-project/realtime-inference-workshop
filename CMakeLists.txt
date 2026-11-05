@@ -13,22 +13,29 @@ include(juce)
 include(models)
 include(anira)
 
-set(WORKSHOP_ONNX_MODEL "${CMAKE_CURRENT_LIST_DIR}/models/model_forward.onnx"
+set(WORKSHOP_ONNX_MODEL "${WORKSHOP_MODELS_DIR}/rave/model_forward.onnx"
     CACHE FILEPATH "ONNX model to run")
-workshop_use_current_model(WORKSHOP_ONNX_MODEL model_forward.onnx)
+# A build directory configured before the models moved still points at models/
+string(FIND "${WORKSHOP_ONNX_MODEL}" "${CMAKE_CURRENT_LIST_DIR}/models/" _workshop_old_model)
+if(_workshop_old_model EQUAL 0)
+    set(WORKSHOP_ONNX_MODEL "${WORKSHOP_MODELS_DIR}/rave/model_forward.onnx"
+        CACHE FILEPATH "ONNX model to run" FORCE)
+endif()
 
 # RealtimeSanitizer for step 5; needs a clang that has it, see that step's README.
 option(WORKSHOP_RTSAN "Build the real-time safety step with -fsanitize=realtime" OFF)
 
-# The plugin step clones and builds JUCE, which takes minutes — off by default.
-option(WORKSHOP_JUCE "Build the JUCE plugin step" OFF)
+# JUCE, for the plugins of steps 8 and 9 and the app of step 11. The workshop
+# relies on it, so it is on; JUCE only compiles when one of those is built.
+option(WORKSHOP_JUCE "Build the JUCE plugin and app steps" ON)
 
 # Part 2 builds anira from source, which takes a couple of minutes once.
 option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
 
-# The models are downloaded from the repository's own release, unless they are
-# already in models/: only those the enabled steps load. The test signal and the
-# expected output are compiled in (steps/common/assets/test_signal.h).
+# The models are downloaded from the repository's own release into
+# steps/common/assets/models/, unless they are already there: only those the
+# enabled steps load. The test signal and the expected output are compiled in
+# (steps/common/assets/test_signal.h).
 workshop_fetch_models()
 
 # Build one step (-DWORKSHOP_STEP=01) or all of them.

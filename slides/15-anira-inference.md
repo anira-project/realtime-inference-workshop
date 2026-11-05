@@ -57,7 +57,7 @@ Note:
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/ · common/assets/</div>
+    <div class="given-folder">common/assets/</div>
     {{FILE:model_forward.onnx}}
     {{FILE:test_signal.h}}
     {{FILE:target_signal.h}}
@@ -92,7 +92,7 @@ Note:
 
 ```json
 {
-  "models":  [ { "engine": "onnxruntime", "path": "../../models/model_forward.onnx" } ],
+  "models":  [ { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_forward.onnx" } ],
   "inputs":  [ { "name": "audio",     "role": "streamed",
                  "axes": [["batch",1],["channel",1],["time",2048]],
                  "window": { "min": 2048, "max": 2048 } },

@@ -55,7 +55,7 @@ Note:
 <div class="given">
   <div class="given-column">
     <div class="given-label">Assets</div>
-    <div class="given-folder">models/</div>
+    <div class="given-folder">common/assets/models/</div>
     {{FILE:model_encoder.onnx|new}}
     {{FILE:model_decoder.onnx|new}}
   </div>
@@ -88,7 +88,7 @@ Note:
 
 ```json
 {
-  "models":  [ { "engine": "onnxruntime", "path": "../../models/model_decoder.onnx" } ],
+  "models":  [ { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_decoder.onnx" } ],
   "anchor":  "audio",
   "inputs":  [ { "name": "latents", "role": "streamed",
                  "axes": [["batch",1],["channel",8],["time",1]],

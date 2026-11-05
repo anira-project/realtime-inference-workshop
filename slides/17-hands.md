@@ -47,7 +47,7 @@ Note:
 <div class="given">
   <div class="given-column">
     <div class="given-label">Models</div>
-    <div class="given-folder">models/</div>
+    <div class="given-folder">common/assets/models/</div>
     {{FILE:model_decoder.onnx}}
     {{FILE:hand_detector.onnx|new}}
     {{FILE:hand_landmarks_detector.onnx|new}}
@@ -84,7 +84,6 @@ Note:
 Fill in the TODO in `steps/11_hands/exercise/HandControls.cpp`
 
 ```bash
-cmake --preset release -DWORKSHOP_JUCE=ON      # once, with JUCE
 cmake --build --preset release --target step11_exercise
 open build/steps/11_hands/step11_exercise_artefacts/Release/*.app
 ```
@@ -101,7 +100,7 @@ open build/steps/11_hands/step11_exercise_artefacts/Release/*.app
 
 Note:
 - This is the task for at home, sized at ten minutes.
-- Configure with WORKSHOP_JUCE on, build step11_exercise, and open the app; the README has the commands.
+- Build step11_exercise and open the app; the README has the commands.
 - Openness goes to z0, height to z2, and the rest you set by ear.
 - It works when the piano follows the hand.
 

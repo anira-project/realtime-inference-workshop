@@ -19,7 +19,7 @@ The first two are step 6's prefill. The second is a choice: it buys the worker t
 
 ## What to do
 
-Open [`exercise/main.cpp`](exercise/main.cpp). It is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses. First put your number from step 4 into `k_max_inference_ms`, as in step 6. Then fill in the two TODO banners, both in `prepare()`:
+Open [`exercise/main.cpp`](exercise/main.cpp). It is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses. Your number from step 4 comes from [`common/inference_time.h`](../common/inference_time.h), as in step 6. Fill in the two TODO banners, both in `prepare()`:
 
 1. **`m_latency`**: the number above, what the host is told. Step 6's prefill already holds the first two parts. The wet path only gets that prefill: the model's own delay is already inside what it returns.
 2. **The dry delay**: prefill `m_dry` with the full latency in silence.
@@ -29,7 +29,6 @@ The mix in `process_block()` is given: both paths are equally late, so it is a p
 Each TODO says so while it is still open:
 
 ```
-FAILED: put your worst case from step 4 into k_max_inference_ms
 FAILED: TODO 1: work out the latency
 FAILED: TODO 2: delay the dry signal: m_dry has to start with the latency in silence
 ```

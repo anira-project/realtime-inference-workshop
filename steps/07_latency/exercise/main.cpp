@@ -23,6 +23,7 @@
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
 #include "common/helpers/worker_thread.h"
+#include "common/inference_time.h"
 
 // Model settings taken from the export metadata, as in step 1.
 // @m_latency: the model's own delay, how much later its output answers its input
@@ -36,9 +37,6 @@ constexpr struct {
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
-
-// Your worst case after the warm-up, from the last lines of step 4, in ms.
-constexpr double k_max_inference_ms = 0.0;  // <- fill out: your number from step 4
 
 // The mix the host sets: half dry, half wet.
 constexpr float k_mix = 0.5f;
@@ -98,7 +96,7 @@ public:
         m_dry.push(dry_silence.data(), 0);  // <- fill out
 
         // Given: names a missing TODO
-        check_todos(k_max_inference_ms, m_latency, k_model.m_latency, m_dry);
+        check_todos(m_latency, k_model.m_latency, m_dry);
 
         // The warm-up: the first calls are slow (step 4), so they are made
         // here, before the audio starts. Then the state starts at zero again.

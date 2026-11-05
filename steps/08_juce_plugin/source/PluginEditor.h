@@ -18,6 +18,14 @@ const juce::Colour k_accent{0xffbf85fc};
 const juce::Colour k_warning{0xfffe938c};
 }  // namespace palette
 
+// Over the whole window while the plugin is bypassed: why, and what to change.
+class BypassOverlay : public juce::Component {
+public:
+    void paint(juce::Graphics& g) override;
+
+    juce::String m_reason;
+};
+
 // One example slot: the whole tile plays and stops it.
 class SlotTile : public juce::Button {
 public:
@@ -31,10 +39,22 @@ public:
 // Text-only buttons and a thin mix slider.
 class WorkshopLookAndFeel : public juce::LookAndFeel_V4 {
 public:
-    void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour&, bool, bool) override {}
+    void drawButtonBackground(juce::Graphics&,
+                              juce::Button&,
+                              const juce::Colour&,
+                              bool,
+                              bool) override {}
     void drawButtonText(juce::Graphics&, juce::TextButton&, bool, bool) override;
-    void drawLinearSlider(juce::Graphics&, int x, int y, int width, int height, float position,
-                          float, float, juce::Slider::SliderStyle, juce::Slider&) override;
+    void drawLinearSlider(juce::Graphics&,
+                          int x,
+                          int y,
+                          int width,
+                          int height,
+                          float position,
+                          float,
+                          float,
+                          juce::Slider::SliderStyle,
+                          juce::Slider&) override;
 };
 
 class WorkshopPluginEditor : public juce::AudioProcessorEditor,
@@ -70,7 +90,8 @@ private:
     std::array<Slot, ExamplePlayer::k_num_slots> m_slots;
     juce::Slider m_mix{juce::Slider::LinearHorizontal, juce::Slider::NoTextBox};
     juce::Rectangle<int> m_mix_area;
-    juce::String m_status;
+    juce::String m_status;  // A file that could not be read
+    BypassOverlay m_overlay;
     int m_playing = -1;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> m_mix_attachment;
     std::unique_ptr<juce::FileChooser> m_chooser;

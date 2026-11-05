@@ -15,21 +15,18 @@
 #include "common/helpers/support.h"
 
 // TODO 1, in prepare(), before anything is allocated.
-// @max_inference_ms: k_max_inference_ms, your number from step 4
+// @max_inference_ms: k_max_inference_ms, from common/inference_time.h
 // @rounded_max_inference_time: the worker's time, in samples
 // @prefill: the samples of silence m_output starts with
 // @output_capacity: the size of m_output
 // @max_block_size: the largest block the callback will be given
 // @sample_rate: in Hz
 inline void check_todos(double max_inference_ms,
-                         size_t rounded_max_inference_time,
-                         size_t prefill,
-                         size_t output_capacity,
-                         size_t max_block_size,
-                         double sample_rate) {
-    if (max_inference_ms <= 0.0) {
-        throw std::runtime_error("put your worst case from step 4 into k_max_inference_ms");
-    }
+                        size_t rounded_max_inference_time,
+                        size_t prefill,
+                        size_t output_capacity,
+                        size_t max_block_size,
+                        double sample_rate) {
     const double max_inference_samples = max_inference_ms * sample_rate / 1000.0;
     if (rounded_max_inference_time == 0 || rounded_max_inference_time % max_block_size != 0 ||
         static_cast<double>(rounded_max_inference_time) < max_inference_samples) {
@@ -49,10 +46,10 @@ inline void check_todos(double max_inference_ms,
 // @host_block_size: samples per callback
 // @sample_rate: in Hz
 inline int report_with_prefill(const std::vector<float>& host_output,
-                           const std::array<float, k_signal_length>& target,
-                           size_t prefill,
-                           size_t host_block_size,
-                           double sample_rate) {
+                               const std::array<float, k_signal_length>& target,
+                               size_t prefill,
+                               size_t host_block_size,
+                               double sample_rate) {
     if (std::all_of(host_output.begin(), host_output.end(), [](float x) { return x == 0.0f; })) {
         throw std::runtime_error(
             "TODO 2 or 3: the host only got silence. Does the audio thread push into m_input,\n"
@@ -73,8 +70,8 @@ inline int report_with_prefill(const std::vector<float>& host_output,
                                             host_block_size);
     if (result != 0) {
         std::printf(
-            "Dropouts or wrong samples mean the worker was late: raise k_max_inference_ms to\n"
-            "the worst case of a few step 4 runs. If it is already that, the machine is busy.\n");
+            "Dropouts or wrong samples mean the worker was late: raise k_max_inference_ms in\n"
+            "common/inference_time.h to the worst case of a few step 4 runs.\n");
         return result;
     }
     std::printf(

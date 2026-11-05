@@ -15,19 +15,11 @@
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/support.h"
 
-// Your number from step 4, and both TODOs, in prepare().
-// @max_inference_ms: k_max_inference_ms, your number from step 4
+// Both TODOs, in prepare().
 // @latency: what the host is told
 // @model_latency: the model's own delay
 // @dry: the dry ring buffer, after TODO 2
-inline void check_todos(double max_inference_ms,
-                        size_t latency,
-                        size_t model_latency,
-                        const RingBuffer& dry) {
-    if (max_inference_ms <= 0.0) {
-        throw std::runtime_error(
-            "put your worst case from step 4 into k_max_inference_ms");
-    }
+inline void check_todos(size_t latency, size_t model_latency, const RingBuffer& dry) {
     if (latency == 0) { throw std::runtime_error("TODO 1: work out the latency"); }
     if (latency < model_latency) {
         throw std::runtime_error("TODO 1: the latency is shorter than the model's own");
@@ -103,7 +95,8 @@ inline int report_mix(const std::vector<float>& got,
     if (4 * dropouts > callbacks) {
         std::printf(
             "FAILED: the worker was late in more than a quarter of the callbacks: raise\n"
-            "k_max_inference_ms to the worst case of a few step 4 runs.\n");
+            "k_max_inference_ms in common/inference_time.h to the worst case of a few step 4 "
+            "runs.\n");
         return 1;
     }
     std::printf(

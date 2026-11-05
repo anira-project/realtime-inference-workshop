@@ -5,7 +5,7 @@
 - Change the audio example
   - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
 
-- Benchmark -> convert to samples (Lina: slides and exercise)
+- Benchmark -> convert to samples (todo-lina)
 
 - All 512 hostsample examples
 - synchronious ringbuffer example:

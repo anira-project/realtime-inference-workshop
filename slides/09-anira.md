@@ -244,7 +244,7 @@ Note:
   <div class="limit">
     {{ICON:model}}
     <div class="limit-v2"><span>v2</span>audio buffers, in float</div>
-    <div class="limit-v3 fragment"><span>v3</span><div class="chips"><b>audio</b><b>image</b><b>text</b></div>typed tensors, images as frames</div>
+    <div class="limit-v3 fragment"><span>v3</span><div class="chips"><b>audio</b><b>image</b><b>text</b></div>typed tensors: ten dtypes, an image is a tensor too</div>
   </div>
   <div class="limit">
     {{ICON:code}}
@@ -254,7 +254,7 @@ Note:
   <div class="limit">
     {{ICON:clock}}
     <div class="limit-v2"><span>v2</span>built around the audio stream</div>
-    <div class="limit-v3 fragment"><span>v3</span><div class="chips"><b>Hard · stream</b><b>Async · job</b></div>two contracts, both fast</div>
+    <div class="limit-v3 fragment"><span>v3</span><div class="chips"><b>Hard · stream</b><b>Async · job</b></div>Hard today, Async later</div>
   </div>
   <div class="limit">
     {{ICON:chip}}
@@ -266,8 +266,8 @@ Note:
 Note:
 - v2 was built for audio plugins on the desktop, and that is where it reached its limits.
 - [click] v3 takes any data: audio, images and text.
-- [click] One C ABI at the core, and C++ and TypeScript are generated from it.
-- [click] Two contracts: Hard for a stream, Async for jobs.
+- [click] One C ABI at the core, and C++ and TypeScript sit on top of it.
+- [click] Two contracts: Hard for a stream, Async for jobs. Async is refused in this pre-release and comes later; everything today is Hard.
 - [click] And one tensor type for CPU, GPU and NPU.
 
 ---
@@ -290,8 +290,6 @@ Note:
 
 Note:
 - Today you run a v3 pre-release, and v3.0 ships at the end of November.
-- After the release we want to go back to research: for real-time audio and video, is the CPU, the GPU or the NPU faster?
-- GPU and NPU inference is a whole talk of its own, so we cannot cover it here.
-- If you have already worked on this, come and talk to us, we would love to hear about your experience.
+- After the release we want to go back to research: for real-time audio and video, is the CPU, the GPU or the NPU faster? More on that in the outlook at the end.
 - Now Fares shows you how anira works inside.
 

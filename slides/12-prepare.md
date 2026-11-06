@@ -8,7 +8,7 @@ Contract, latency, memory
 Note:
 - Prepare: the second row of the map.
 - This is what happens when the host announces its blocks.
-- Prepare checks everything again, now with the contract, loads the models, pooled, and runs their warm-up as they load, builds the plans, and starts the pool's threads with the first prepare in the process.
+- Prepare checks everything again, now with the contract, loads the models, pooled, builds the plans, starts the pool's threads with the first prepare in the process, and then runs the warm-up for every plan.
 - Then the rest: the latency, the rings and the slots for the jobs in flight.
 - We look at the contract, the latency that follows from it, the memory it sizes, and the warm-up.
 
@@ -99,25 +99,26 @@ Note:
 <div class="lat-sum">
   <div class="lat-part">block adaptation<small>P − gcd(b, P)</small><strong>1536</strong></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">inference<small>⌈budget ÷ host block⌉ host blocks</small><strong>512</strong></div>
+  <div class="lat-part">inference<small>⌈budget ÷ host block⌉ host blocks</small><strong>1024</strong></div>
   <div class="lat-plus">+</div>
   <div class="lat-part">the model itself<strong>2224</strong></div>
   <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>4272</strong></div>
+  <div class="lat-part total">latency<strong>4784</strong></div>
 </div>
 
-<div class="lat-why">anira gives the inference ⌈budget ÷ host block⌉ host blocks: 8.2 ms fit in one of 11.6 ms.</div>
+<div class="lat-why">anira gives the inference ⌈budget ÷ host block⌉ host blocks: 12.7 ms, measured at prepare, take two of 11.6 ms.</div>
 
 Note:
 - anira computes the latency at prepare, for the block size the host actually uses.
-- Our example: the host delivers 512 samples, the model wants 2048, at 44.1 kHz, and say the measured budget is 8.2 ms.
+- Our example: the host delivers 512 samples, the model wants 2048, at 44.1 kHz, and prepare measured 12.7 ms on my machine.
 - In the animation, four host blocks fill one model block, and only then can the model run.
 - That wait is the block adaptation.
 - On the slide, P is the model block and b the host block, and the adaptation is P minus the largest block that divides both: 2048 minus 512, so 1536.
 - No block-size adapter can do better, because the model cannot start before its block is complete.
-- For the inference, by hand we waited a whole model block; anira waits as many host blocks as the budget needs.
-- 8.2 ms fit in one host block of 11.6 ms, so that is 512 samples.
-- Add the model's own 2224 from the model file: 4272 in total.
+- For the inference, anira does what we did by hand in step 7: it waits as many host blocks as the budget needs.
+- 12.7 ms do not fit in one host block of 11.6 ms, they take two: 1024 samples.
+- In step 4 we took the max over every timed pass, the first ones included: 15.3 ms. anira takes the max of the last four warm-up runs, once they are stable: 12.7 ms. Both are two callbacks, 1024 samples, so both give 4784.
+- Add the model's own 2224 from the model file: 4784 in total, the number we worked out by hand in step 7, now computed by anira.
 - The budget is measured on the user's machine, so the latency is that machine's too: a slower machine gets a larger number, not dropouts.
 
 ---
@@ -132,8 +133,12 @@ contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the anno
 
 | Host blocks | Latency |
 |---|---|
-| exactly 512, every callback | 4272 |
-| any block from 1 to 512: step 9 | 6320 |
+| exactly 512, every callback | 4784 |
+| any block from 1 to 512: step 9 | 5295 |
+
+<div class="lat-why">For the measured max inference time of 12.7 ms, as on the previous slide.</div>
+
+<div class="note-box">One fixed latency everywhere: <code>"latencies": {"audio_out": 6000}</code></div>
 
 Note:
 - prepareToPlay announces a block size, but that is the largest the host sends, not the only one.
@@ -141,8 +146,9 @@ Note:
 - Logic is known for it: what prepare announces and what process delivers do not always match.
 - So we declare 1 up to the announced size, and anira's latency has to hold for the worst block in that range.
 - The block adaptation alone becomes P − 1 instead of P − gcd(b, P) (Rath & Geier, LAC 2026).
-- Step 9 declares 1 to the host's maximum and reports 6320, for every budget up to 37 ms. The 4272 of the previous slide only holds if every block is exactly 512.
-- One more rule behind both numbers: our model has two outputs, audio_out and state_out, and anira rounds the latency of such a model up to whole model blocks. 6320 is two blocks, 4096, plus the model's 2224.
+- Step 9 declares 1 to the host's maximum: with the same 12.7 ms that is 5295, 511 samples more, the adaptation's P − 1 instead of P − gcd. The 4784 of the previous slide only holds if every block is exactly 512.
+- Both are my machine's: a slower machine measures more and reports a larger latency, not dropouts. The check prints yours.
+- And the box: if your host needs one fixed number, the same on every machine and for every block size, you declare it in the contract, per output. It replaces the computed figure, and anira primes the output with it. Below the model's own latency it cannot be delivered, so prepare refuses it. If it is less than the machine needs, the late blocks become misses, filled by the miss policy.
 
 ---
 
@@ -172,7 +178,7 @@ Note:
 ## Allocated at <code>prepare</code>.<br><span class="then">Nothing after.</span>
 
 <div class="statement-points">
-  <div>A ring per streamed tensor, sized from the host blocks and the window</div>
+  <div>A ring per streamed tensor, sized from the host blocks and the model block</div>
   <div>Slots: two per inference that can be in flight</div>
   <div>After <code>prepare</code>: <code>process</code>, <code>push</code> and <code>pop</code> allocate nothing</div>
 </div>
@@ -181,8 +187,8 @@ Note:
 
 Note:
 - anira allocates at prepare, and nothing after.
-- What we sized by hand, anira sizes from what was declared: the host blocks from the contract, the window and the latency from the model file.
-- There is a ring per streamed tensor, float32 unless the contract names another dtype for it.
+- What we sized by hand, anira sizes from what was declared: the host blocks from the contract, the model block and the latency from the model file.
+- There is a ring per streamed tensor, in the tensor's own dtype unless the contract names another: an int16 model takes int16 blocks.
 - Slots are the job records between the audio thread and the pool: two per inference that can be in flight, all preallocated.
 - The audio thread claims a free slot and leaves.
 - The state pairs got their two buffers at create; prepare sets both to zero, a new stream.
@@ -224,13 +230,48 @@ Note:
   <div>A benchmark fixture for your own model: real-time factor and underruns</div>
 </div>
 
+<div class="cards-note">Measured once per model: every further instance, and every re-prepare, reuses it. Identical plugins report identical latency.</div>
+
 Note:
 - anira runs the warm-up at prepare and takes the budget from the contract.
 - The first runs of a model are slow: the engine allocates, compiles and fills its caches, and that must not happen in the first callback.
-- With until_stable, prepare runs the model on the thread that calls it until the last runs agree, so prepareToPlay takes those runs longer.
+- With until_stable, prepare runs the model on the inference threads until the last four runs agree, at most 32; prepareToPlay waits for them, so it takes those runs longer.
 - With measured, anira benchmarks the model at prepare, on the user's machine, with this engine: step 4, done by the library.
 - Both can also be given by hand: a fixed number of runs, and a budget in milliseconds.
-- To measure your own model, the fixture behind step 4 is part of anira: it reports the real-time factor and underruns per block size and engine.
+- anira measures a model once per process: the second instance of your plugin, or a re-prepare at another block size, reuses the figure and runs no warm-up. So ten identical plugins report the same latency, and prepareToPlay is quick the second time.
+- To measure your own model, anira's examples have a benchmark fixture: it reports the real-time factor and underruns per block size and engine. You copy it into your project; the library itself does not link Google Benchmark.
+
+---
+
+<div class="tag">anira · Real-time verdict</div>
+
+## <code>prepare</code> says whether it keeps up.<br><span class="then">The host decides what to do.</span>
+
+<div class="rtv">
+  <div class="rtv-scale">
+    <div class="rtv-zone ok"><b>comfortable</b><small>load below 0.75</small></div>
+    <div class="rtv-zone marginal"><b>marginal</b><small>0.75 to 1</small></div>
+    <div class="rtv-zone not"><b>not real-time</b><small>1 or more</small></div>
+    <div class="rtv-mark" style="--x: 0.27"><span>our model, my machine<br><code>12.7 ms ÷ 46.4 ms = 0.27</code></span></div>
+  </div>
+  <div class="rtv-actions">
+    <div class="fragment"><b>comfortable</b>play</div>
+    <div class="fragment"><b>marginal</b>play, with a note: may drop out under load</div>
+    <div class="fragment"><b>not real-time</b>hold it, ask the user: “Try nonetheless”</div>
+  </div>
+</div>
+
+<div class="cards-note">An offline bounce does not run against the clock: never hold it.</div>
+
+Note:
+- prepare does not only measure, it tells you whether the model keeps up on this machine.
+- The real-time factor: the measured inference time over the time one model block of audio lasts. Ours: 12.7 ms over 46.4 ms, 0.27. Divided by the inferences that can run at once, one for our stateful model, that is the load.
+- Below 0.75 comfortable, up to 1 marginal, from 1 on not real-time: then misses are certain, and the miss policy fills them. prepare still succeeds.
+- [click] What the host does is its choice, anira only reports it: a comfortable plan plays.
+- [click] A marginal one plays with a note, because load the measurement could not see can push it over.
+- [click] A plan that is not real-time is held, bypassed or silent, and the user is asked: "Try nonetheless". anira's JUCE and CLAP examples do exactly that.
+- An offline bounce never runs against the clock, so it is never held.
+- The verdict is in the plan report that prepare returns, next to the measured time our checks print.
 
 ---
 

@@ -483,6 +483,8 @@ Note:
 
 <div class="cards-note">The stream stays aligned: a late result that arrives afterwards is dropped, never played shifted.</div>
 
+<div class="note-box">Transport jump: <code>reset()</code>, wait-free. Clears rings and state.</div>
+
 Note:
 - What a missed block delivers is the contract's choice: on_miss.
 - bypass, the default, passes the input through unchanged.
@@ -492,26 +494,92 @@ Note:
 - A late result that arrives after a miss is dropped, so the stream stays aligned, without the counters of step 7.
 - If every slot is busy, the window is dropped and filled the same way: that is overload, and rt_error tells you so.
 - After a miss the pool catches up: the next block is on time again once the late result has arrived, otherwise that callback is another miss.
+- And the box: on a transport jump you call reset, wait-free, from the audio thread. It clears the rings and refills the latency's zeros, drops the inferences still running, and the state pair starts at zero with the first block of the new stream. In part 1 we had no answer for that: the old samples and the old state would have carried on.
 
 ---
 
-<div class="tag">anira · Next</div>
+<!-- .slide: class="recap" -->
 
-## Inline execution.<br><span class="then">No inference term in the latency.</span>
+<div class="tag">Part 1 · Step 8</div>
 
-<div class="statement-points">
-  <div><code>execution</code> in the contract: <code>worker</code>, <code>inline</code> or <code>auto</code>, per plan, fixed at <code>prepare</code></div>
-  <div><code>inline</code> runs the model inside <code>process</code>, on the audio thread</div>
-  <div><code>auto</code> picks inline only if the host block matches the model block, the budget fits, and the engine declares itself real-time safe</div>
-</div>
+## Our plugin, bounced.<br><span class="then">The host calls as fast as it can.</span>
 
-<div class="cards-note">Coming in a later release, together with GPU and NPU accelerators. Until then every inference runs on the pool.</div>
+<svg class="offline-fig" viewBox="0 0 1600 380" aria-label="live and offline callbacks against one inference">
+<text class="lab" x="0" y="98">live</text>
+<rect class="cb" x="170" y="70" width="412" height="40" rx="4"/>
+<rect class="cb" x="588" y="70" width="412" height="40" rx="4"/>
+<rect class="cb" x="1005" y="70" width="412" height="40" rx="4"/>
+<rect class="cb" x="1423" y="70" width="412" height="40" rx="4"/>
+<text class="small" x="178" y="96">callback · 11.6 ms</text>
+<rect class="inf" x="170" y="122" width="457" height="28" rx="4"/>
+<text class="small inv" x="178" y="142">inference · 12.7 ms</text>
+<text class="ok" x="639" y="143">✓ back before the host needs it</text>
+<text class="lab" x="0" y="258">bounce</text>
+<rect class="cb miss" x="170" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="206" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="242" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="278" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="314" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="350" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="386" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="422" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="458" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="494" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="530" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="566" y="230" width="30" height="40" rx="3"/>
+<rect class="cb miss" x="602" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="638" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="674" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="710" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="746" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="782" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="818" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="854" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="890" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="926" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="962" y="230" width="30" height="40" rx="3"/>
+<rect class="cb" x="998" y="230" width="30" height="40" rx="3"/>
+<rect class="inf" x="170" y="282" width="457" height="28" rx="4"/>
+<text class="small inv" x="178" y="302">inference · 12.7 ms</text>
+<text class="bad" x="639" y="303">✗ the callbacks before it came back: missed</text>
+</svg>
+
+<div class="cards-note">Step 8 in a bounce: the output ring runs dry and goes out as silence, and the input ring fills up and drops samples.</div>
 
 Note:
-- Next: inline execution, with no inference term in the latency.
-- For a tiny model, the trip to the pool costs at least one host block of latency, more than the model itself.
-- A later release can run such a model inside process, on the audio thread, but only if three things hold: the host block matches the model block, the budget fits into one callback, and the engine declares itself real-time safe.
-- It comes together with GPU and NPU accelerators. Until then every inference runs on the pool.
+- Did anyone export a track with our plugin from step 8? Rendering offline, a bounce in the DAW.
+- Live, the host calls once per block period, 11.6 ms for 512 samples, and the latency covers our inference: the result is back before the host needs it.
+- In a bounce there is no clock. The host calls the next block as soon as the last one returns, a fraction of a millisecond later.
+- The inference still takes its 12 or so milliseconds. Our audio thread never waits, so in step 8 the output ring runs dry and those samples go out as silence, and the input ring fills up and drops what does not fit. The bounce has gaps.
+- Live, never waiting is right. Offline nothing runs against a deadline, so we can afford to wait. How does anira do that?
+
+---
+
+<!-- .slide: class="answer" -->
+
+<div class="tag">anira · Offline</div>
+
+## Offline: wait for the inference threads.<br><span class="then">A bounce misses no block.</span>
+
+```cpp
+if (isNonRealtime()) {   // a bounce: no deadline, nothing to miss
+    m_handler->process_wait(block, 0, block, 0, ANIRA_WAIT_FOREVER);
+} else {                 // live: never waits, a late block is a miss
+    m_handler->process(block, 0, block, 0);
+}
+```
+
+<div class="statement-points">
+  <div><code>process</code>: nonblocking, for the audio thread</div>
+  <div><code>process_wait</code>: blocks until the inference threads have delivered</div>
+  <div>No <code>sleep</code> in the callback to fake the clock</div>
+</div>
+
+Note:
+- So when the host says it renders offline, JUCE's isNonRealtime, we call process_wait instead: the same call, but it blocks until the inference threads have delivered this block's result. ANIRA_WAIT_FOREVER means as long as it takes.
+- That is exactly what v2's set_non_realtime did.
+- Live, process stays nonblocking: never wait on the audio thread.
+- What we do not do: sleep in the callback for as long as the block lasts, to give the pool time. That only imitates the clock, and is still a guess.
 
 ---
 

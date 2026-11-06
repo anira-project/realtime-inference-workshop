@@ -882,6 +882,12 @@ html.tanh .lat-part.total {
   color: var(--paper);
 }
 
+/* The term a slide is about */
+html.tanh .lat-part.focus {
+  background: var(--tint-exercise);
+  outline: 2px solid var(--ink);
+}
+
 html.tanh .lat-sum {
   display: flex;
   align-items: center;
@@ -2229,3 +2235,21 @@ html.tanh .reveal table.budget-table.rb-table td { padding: var(--space-5) var(-
 html.tanh .reveal table.budget-table.rb-table th { font-size: 0.85em; padding-bottom: var(--space-3); }
 html.tanh .reveal table.budget-table.rb-table th small { font-size: 0.9em; margin-left: var(--space-2); }
 html.tanh .reveal table.budget-table.rb-table td small { margin-left: var(--space-2); }
+/* Outlook · the step 4 deadline twice: host block 512 (too late) and 2048 (fits) */
+html.tanh .deadline-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8, 48px); }
+html.tanh .deadline-pair .deadline { margin-top: var(--space-8, 48px); }
+html.tanh .deadline.fits .deadline-bars i.runs { background: var(--ink); }
+html.tanh .deadline.fits .deadline-bars i.runs span { right: auto; left: 0; text-align: left; }
+
+/* A blank of an exercise file, in a code block (js/todo_marks.js) */
+html.tanh .reveal pre code .todo-mark {
+  background: var(--tint-exercise);
+  outline: 2px solid var(--ink);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+
+/* Task cards: which file a TODO is in, under its title */
+html.tanh .run-where { font-size: 0.6em; color: var(--fs-text-color); margin: 0 0 var(--space-3); }
+html.tanh .run-where code { font-size: 0.95em; }

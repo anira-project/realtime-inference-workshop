@@ -66,8 +66,8 @@ The steps so far:
 Part 2, on anira (fetched and built by CMake, `-DWORKSHOP_ANIRA=OFF` to skip):
 
 9. [The model with anira](steps/09_anira/README.md) — two JSON files and three calls replace steps 3, 6 and 7
-10. [Encoder, latents, decoder](steps/10_split/README.md) — two handlers on one context, eight numbers in between
-11. [Hands on the latents](steps/11_hands/README.md) — a camera and hand tracking drive the decoder; a JUCE app
+10. [Opening the model](steps/10_split/README.md) — encoder and decoder as two handlers, the latent space in between
+11. [The model as an instrument](steps/11_hands/README.md) — a camera and hand tracking drive the decoder; a JUCE app
 
 ## License
 

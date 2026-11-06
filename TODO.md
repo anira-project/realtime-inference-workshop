@@ -5,12 +5,16 @@
 - Change the audio example
   - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
 
-- Benchmark -> convert to samples (todo-lina)
-- window not necessary (todo-fares): anira should not require `"window"` on a streamed tensor whose time axis is fixed (today: `window_min must be positive (got 0)`). Afterwards, drop it from the model files of steps 9 and 10 and from the slides that show them
 
-- anira latency fix for examples after fix in library
-- Ab after process überarbeiten
 
+
+## Done (2026-11-06)
+
+- Ab after process überarbeiten: inline execution moved from Process into the Outlook, opened by the latency question and the step 4 deadline graph (512 ✗, 2048 ✓); the outlook also gets the restored "Which combination is fastest?" and a 4K zero-copy example. Slides corrected against alpha.3 (ABI 0.3, v2 shim, frames, Async, ring dtype, warm-up threads, pool lifetime).
+- Benchmark -> convert to samples (Lina, bdfeb70 and 0f27866): step 4 prints and shows the worst case in samples and rounded to whole callbacks; k_max_inference_samples_rounded feeds steps 6 to 8.
+- anira pinned to the head of M2b PR 4 (anira-project/anira#241, 131b75de: v3.0.0-alpha.3, ABI 0.3, tag not pushed yet; measured budget, until-stable warm-up, optional window, latency fixes); an old alpha.2 pin in a build cache moves along. Steps 9, 10 and 11 run "budget": "measured" and "warmup": "until_stable", the checks print the measured budget.
+- window not necessary: dropped from every model file of steps 9 to 11 and from the slides.
+- anira latency fix: a state output no longer rounds the latency to whole model blocks (#235). Step 9 on my machine: 5295 instead of 6320 (measured 12.7 ms; exactly 512 → 4784, step 7's number). Slides and READMEs give the new numbers as this machine's.
 
 ## Done (2026-11-05)
 
@@ -23,7 +27,7 @@
 - Host block constant and a divisor of 2048 / "say it on the slides" (8815ef3): notes on step 3 "What is the problem?" and step 7 "A fixed latency".
 - Async latency, worker without sleep, wait-for-room loop: already in the code (prefill = adaptation + rounded inference, model latency only reported; WorkerThread polls without sleep; output ring sized so the worker never waits for room, tested with a stalled worker).
 - m_debt rewritten, check: Fares' if/else behaves like the one-liner; steps 6 and 7 pass.
-- Part 2 latency for other host block sizes (45119aa): slides declare host blocks 1 up to the announced size; step 7 recap = 4784 for 512 only; new slide "Smaller blocks than announced" (4272 vs 6320); step 9 README explains 6320 by the 1…512 range (the 20 ms budget is a placeholder).
+- Part 2 latency for other host block sizes (45119aa, numbers since replaced by the measured 12.7 ms: 4784 / 5295): slides declare host blocks 1 up to the announced size; step 7 recap = 4784 for 512 only; new slide "Smaller blocks than announced" (4272 vs 6320); step 9 README explains 6320 by the 1…512 range (the 20 ms budget is a placeholder).
 - All examples 512, ring buffers 2048/2048, "What's the latency?" bonus slide: already in step 3.
 - Integration process: rectangle over Train and Export (18e29f9), plus a slide on the exported ONNX model after the audio example.
 - After QR code: clone and configure slide (0c155e8), release preset with the reason in the notes.

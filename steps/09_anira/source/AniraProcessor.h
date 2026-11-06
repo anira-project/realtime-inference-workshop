@@ -14,7 +14,8 @@
 
 class AniraProcessor {
 public:
-    // Reads model.json and contract.json from `step_dir`. Main thread.
+    // Reads model.json and contract.json from `step_dir` and creates the
+    // handler. Main thread.
     // @throws anira::Error with anira's reason
     explicit AniraProcessor(const std::string& step_dir);
 
@@ -25,18 +26,23 @@ public:
 
     // One callback, in place: one mono block in, the model's out. The model is
     // mono; the plugin mixes the host's channels down before and copies the
-    // result out after. Audio thread: no allocation, no lock, no wait.
-    // @return true if the miss policy filled the block
-    bool process(float* samples, size_t num_samples);
+    // result out after.
+    // @offline: the host renders offline, a bounce: wait for the result.
+    //           Live (false): audio thread, no allocation, no lock, no wait.
+    // @return anira's status: ANIRA_OK, or ANIRA_MISSED if the result was
+    // not back in time and the miss policy filled the block
+    anira_status process(float* samples, size_t num_samples, bool offline = false);
 
     // What the host is told, in samples. Valid after prepare.
     size_t latency() const { return m_latency; }
+    // The budget prepare measured on this machine, in ms. Valid after prepare.
+    double budget_ms() const { return m_budget_ms; }
 
 private:
     // In this order: the handlers run on the context and go before it
     anira::Context m_context{anira::ContextConfig{}};
-    anira::ModelConfig m_model;
     anira::ContractHandle m_contract;
-    std::optional<anira::InferenceHandler> m_handler;  // Created at the first prepare
+    std::optional<anira::InferenceHandler> m_handler;  // Created in the constructor
     size_t m_latency = 0;
+    double m_budget_ms = 0.0;
 };

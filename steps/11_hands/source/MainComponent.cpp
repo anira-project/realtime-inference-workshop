@@ -226,10 +226,6 @@ void MainComponent::paintVideo(juce::Graphics& g, juce::Rectangle<float> area) c
     g.drawText(status, bar.reduced(10.0F, 0.0F), juce::Justification::centredLeft);
 
     juce::String banner = m_decoder_error;
-    if (banner.isEmpty() && !m_pad && !m_hands.empty() && m_controls.handIdForRole(Role::Lead) < 0)
-        banner = "TODO 1: the tracker sees a hand, but no hand plays (HandControls.cpp)";
-    if (banner.isEmpty() && mappings_are_empty())
-        banner = "TODO 2: every range in the mapping table is empty, the hand changes nothing (HandControls.cpp)";
     if (banner.isNotEmpty()) {
         const auto strip = area.removeFromBottom(30.0F);
         g.setColour(juce::Colour(0xfffe938c).withAlpha(0.85F));
@@ -284,20 +280,18 @@ void MainComponent::paintLatents(juce::Graphics& g, juce::Rectangle<int> area) c
     const auto& latents = m_controls.latents();
     const auto& targets = m_controls.targets();
     for (size_t i = 0; i < k_num_latents; ++i) {
-        const auto& mapping = mappings()[i];
+        const auto& info = k_latent_info[i];
         auto row = area.removeFromTop(42);
-        const auto colour = role_colour(mapping.role);
-        const bool active = m_controls.rolePresent(mapping.role);
+        const auto colour = role_colour(info.role);
+        const bool active = m_controls.rolePresent(info.role);
 
         auto caption = row.removeFromTop(18);
         g.setFont(juce::FontOptions(13.0F, juce::Font::bold));
         g.setColour(k_text);
-        g.drawText("z" + juce::String(static_cast<int>(i)) + "  " + mapping.sound, caption, juce::Justification::centredLeft);
+        g.drawText("z" + juce::String(static_cast<int>(i)) + "  " + info.sound, caption, juce::Justification::centredLeft);
         g.setFont(12.0F);
         g.setColour(active ? colour : k_dim_text);
-        g.drawText(juce::String(role_name(mapping.role)) + " " + feature_name(mapping.feature) + "   "
-                       + juce::String(latents[i], 2),
-                   caption, juce::Justification::centredRight);
+        g.drawText(juce::String(latents[i], 2), caption, juce::Justification::centredRight);
 
         const auto track = row.removeFromTop(14).toFloat();
         g.setColour(juce::Colours::white.withAlpha(0.06F));
@@ -306,10 +300,7 @@ void MainComponent::paintLatents(juce::Graphics& g, juce::Rectangle<int> area) c
             const float t = (std::clamp(value, -k_latent_display_range, k_latent_display_range) + k_latent_display_range) / (2.0F * k_latent_display_range);
             return track.getX() + t * track.getWidth();
         };
-        // Mapped range, value bar from 0, target tick.
-        g.setColour(colour.withAlpha(0.12F));
-        g.fillRect(juce::Rectangle<float>::leftTopRightBottom(x_of(std::min(mapping.at_0, mapping.at_1)), track.getY(),
-                                                               x_of(std::max(mapping.at_0, mapping.at_1)), track.getBottom()));
+        // Value bar from 0, target tick.
         g.setColour(colour.withAlpha(active ? 0.85F : 0.35F));
         const float zero = x_of(0.0F);
         const float value = x_of(latents[i]);

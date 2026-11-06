@@ -1,7 +1,7 @@
-// Step 10 — Encoder, latents, decoder, reference implementation
+// Step 10 — Opening the model, reference implementation
 //
-// Goal:  the model cut in the middle: two handlers on one context, and an
-//        offset per latent dimension between them.
+// Goal:  the model cut in the middle: encoder and decoder as two handlers, and
+//        an offset per latent dimension between them.
 // Given: encoder.json, decoder.json and contract.json next to this file, the
 //        plugin around it.
 // Check: step10_solution_check: with zero offsets the output equals step 10's
@@ -9,85 +9,89 @@
 
 #include "SplitProcessor.h"
 
+#include "common/helpers/json_file.h"
+
 namespace {
 
-// One model as one handler, over a pipeline with one inference stage.
+// One model as one handler, over a pipeline with one inference stage. The
+// model file's path resolves against step_dir.
 void create(std::optional<anira::InferenceHandler>& handler,
             anira::Context& context,
-            const anira::ModelConfig& model) {
+            const std::string& model_json,
+            const std::string& step_dir) {
     anira::Pipeline pipeline;
-    pipeline.add_inference(model);
+    pipeline.add_inference(anira::ModelConfig::from_json(model_json, step_dir));
     handler.emplace(context, pipeline);
 }
 
 }  // namespace
 
 SplitProcessor::SplitProcessor(const std::string& step_dir)
-    : m_encoder_model(anira::ModelConfig::from_file(step_dir + "/encoder.json"))
-    , m_decoder_model(anira::ModelConfig::from_file(step_dir + "/decoder.json"))
-    , m_contract(anira::ContractHandle::from_file(step_dir + "/contract.json")) {
+    : m_contract(anira::ContractHandle::from_json(read_json(step_dir + "/contract.json"))) {
+    // Create: both model files, their // hints dropped, one handler each
+    create(m_encoder, m_context, read_json(step_dir + "/encoder.json"), step_dir);
+    create(m_decoder, m_context, read_json(step_dir + "/decoder.json"), step_dir);
+
     const int64_t frame_shape[2] = {k_num_latents, 1};
     m_frame = anira::Tensor::from_host(m_frame_data.data(), ANIRA_DTYPE_F32, frame_shape);
 }
 
 void SplitProcessor::prepare(double sample_rate, size_t max_block_size) {
-    // Both handlers on the same contract: any host block up to the largest
+    // Both handlers count in the host's audio samples, the encoder by its audio
+    // input, the decoder by its audio output: the same host blocks and rate
     m_contract.hard_host_blocks(1, max_block_size, sample_rate);
-    if (!m_encoder) {
-        create(m_encoder, m_context, m_encoder_model);
-        create(m_decoder, m_context, m_decoder_model);
-    }
-    // Warm-up and measurement run here: the budgets are this machine's
-    const anira::PlanReport encoder_report = m_encoder->prepare(m_contract);
-    const anira::PlanReport decoder_report = m_decoder->prepare(m_contract);
-    m_encoder_budget_ms = encoder_report.plans().front().measured_ms;
-    m_decoder_budget_ms = decoder_report.plans().front().measured_ms;
+    m_encoder->prepare(m_contract);
+    m_decoder->prepare(m_contract);
 
-    // The encoder's latency is in latent frames of 2048 samples.
+    // What the host is told: the encoder's latency comes in latent frames,
+    // k_frame_size samples each; the decoder's in samples
     m_encoder_latency_frames = m_encoder->get_latency(0);
-    const size_t decoder_latency = m_decoder->get_latency(0);   // In samples
+    m_latency = m_encoder_latency_frames * k_frame_size + m_decoder->get_latency(0);
 
-    // ---- TODO 1 ------------------------------------------------------------
-    // The latency the host is told, in samples. One latent frame is
-    // k_frame_size samples.
-    // ------------------------------------------------------------------------
-    m_latency = m_encoder_latency_frames * k_frame_size + decoder_latency;
-
-    // A new stream: the count towards the next latent frame starts over
+    // A new stream on both handlers: the count towards the next latent frame starts over
     m_input_samples = 0;
     m_frames = 0;
 }
 
-bool SplitProcessor::process(float* samples, size_t num_samples) {
+anira_status SplitProcessor::process(float* samples,
+                                     size_t num_samples,
+                                     const std::array<float, k_num_latents>& offsets,
+                                     bool offline) {
     // One tensor over the host's block, [channels, samples]: no copy, no allocation
     const int64_t block_shape[2] = {1, static_cast<int64_t>(num_samples)};
     const anira::Tensor block = anira::Tensor::from_host(samples, ANIRA_DTYPE_F32, block_shape);
 
-    // ---- TODO 2 ------------------------------------------------------------
-    // The encoder: the block in, and one latent frame out into m_frame per
-    // k_frame_size input samples.
-    // ------------------------------------------------------------------------
+    // The encoder: audio in, and one latent frame out per k_frame_size input
+    // samples, 21.5 a second
     m_input_samples += num_samples;
     m_encoder->push_data(block, 0);
     while (m_input_samples >= k_frame_size) {
-        const anira_status popped = m_encoder->pop_data(m_frame, 0);
-        if (popped != ANIRA_OK && popped != ANIRA_MISSED) { break; }  // A missed frame keeps its place
+        anira_status popped = ANIRA_OK;
+        if (offline) {   // a bounce: wait for the frame
+            popped = m_encoder->pop_data_wait(m_frame, 0, ANIRA_WAIT_FOREVER);
+        } else {         // live: never waits, a late frame is a miss
+            popped = m_encoder->pop_data(m_frame, 0);
+        }
+        if (popped != ANIRA_OK && popped != ANIRA_MISSED) { break; }  // A miss keeps its place
         m_input_samples -= k_frame_size;
         ++m_frames;
 
-        // ---- TODO 3 --------------------------------------------------------
-        // An offset on z: each dimension's knob, m_offset[i], on its latent.
-        // --------------------------------------------------------------------
+        // ---- TODO 2: an offset on z --------------------------------------
+        // Each latent plus its dimension's offset
         for (size_t i = 0; i < k_num_latents; ++i) {
-            m_frame_data[i] += m_offset[i].load();
+            m_frame_data[i] = m_frame_data[i] + offsets[i];
         }
+        // ------------------------------------------------------------------
 
-        // ---- TODO 4 --------------------------------------------------------
-        // The decoder: every frame in, and below, the audio for this callback
-        // out into the block.
-        // --------------------------------------------------------------------
+        // The decoder: the frame in
         m_decoder->push_data(m_frame, 0);
     }
-    const anira_status status = m_decoder->pop_data(block, 0);
-    return status == ANIRA_MISSED;  // The miss policy filled the block
+    // The decoder: this callback's audio out
+    anira_status status = ANIRA_OK;
+    if (offline) {   // a bounce: wait for the audio
+        status = m_decoder->pop_data_wait(block, 0, ANIRA_WAIT_FOREVER);
+    } else {         // live: never waits
+        status = m_decoder->pop_data(block, 0);
+    }
+    return status;  // ANIRA_MISSED: the miss policy filled the block
 }

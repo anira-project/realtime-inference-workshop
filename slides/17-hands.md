@@ -323,12 +323,12 @@ Note:
 </div>
 
 Note:
-- [First show two or three mappings live: classic, steps, two hands. Ask who wrote their own, and let one or two play.]
-- Now all of us together: open your step 11 app.
-- Use the laptop speakers, half volume.
-- Both hands: the right one plays, the left one adds texture.
-- Listen to the room, and to how fifty decoders sound together.
-- [After about two minutes:] Hands down, and the room fades out.
+- [First show two or three mappings live: classic, steps, two hands. Ask who wrote their own, and let one or two play theirs.]
+- "Now all of us, together. Open your step 11 app, with open or a double-click, so macOS asks for the camera."
+- "Laptop speakers, half volume. Your right hand plays: open is loud, high is bright. Your left hand adds texture."
+- "Fifty decoders in one room. Listen to the room, not only to your laptop."
+- [Let it run for about two minutes.]
+- "And now: hands down." The latents glide to rest, and the room fades out.
 
 ---
 

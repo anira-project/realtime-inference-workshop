@@ -23,7 +23,8 @@ void AniraProcessor::prepare(double sample_rate, size_t max_block_size) {
         pipeline.add_inference(m_model);
         m_handler.emplace(m_context, pipeline);
     }
-    m_handler->prepare(m_contract);              // Warm-up runs here, on this thread
+    const anira::PlanReport report = m_handler->prepare(m_contract);  // Warm-up and measurement run here
+    m_budget_ms = report.plans().front().measured_ms;                  // This machine's
     m_latency = m_handler->get_latency(0);       // Output slot 0: audio_out
     // ------------------------------------------------------------------------
 }

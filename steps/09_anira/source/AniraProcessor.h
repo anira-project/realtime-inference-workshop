@@ -31,6 +31,8 @@ public:
 
     // What the host is told, in samples. Valid after prepare.
     size_t latency() const { return m_latency; }
+    // The budget prepare measured on this machine, in ms. Valid after prepare.
+    double budget_ms() const { return m_budget_ms; }
 
 private:
     // In this order: the handlers run on the context and go before it
@@ -39,4 +41,5 @@ private:
     anira::ContractHandle m_contract;
     std::optional<anira::InferenceHandler> m_handler;  // Created at the first prepare
     size_t m_latency = 0;
+    double m_budget_ms = 0.0;
 };

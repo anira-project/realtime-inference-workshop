@@ -99,25 +99,26 @@ Note:
 <div class="lat-sum">
   <div class="lat-part">block adaptation<small>P − gcd(b, P)</small><strong>1536</strong></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">inference<small>⌈budget ÷ host block⌉ host blocks</small><strong>512</strong></div>
+  <div class="lat-part">inference<small>⌈budget ÷ host block⌉ host blocks</small><strong>1024</strong></div>
   <div class="lat-plus">+</div>
   <div class="lat-part">the model itself<strong>2224</strong></div>
   <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>4272</strong></div>
+  <div class="lat-part total">latency<strong>4784</strong></div>
 </div>
 
-<div class="lat-why">anira gives the inference ⌈budget ÷ host block⌉ host blocks: 8.2 ms fit in one of 11.6 ms.</div>
+<div class="lat-why">anira gives the inference ⌈budget ÷ host block⌉ host blocks: 12.7 ms, measured at prepare, take two of 11.6 ms.</div>
 
 Note:
 - anira computes the latency at prepare, for the block size the host actually uses.
-- Our example: the host delivers 512 samples, the model wants 2048, at 44.1 kHz, and say the measured budget is 8.2 ms.
+- Our example: the host delivers 512 samples, the model wants 2048, at 44.1 kHz, and prepare measured 12.7 ms on my machine.
 - In the animation, four host blocks fill one model block, and only then can the model run.
 - That wait is the block adaptation.
 - On the slide, P is the model block and b the host block, and the adaptation is P minus the largest block that divides both: 2048 minus 512, so 1536.
 - No block-size adapter can do better, because the model cannot start before its block is complete.
-- For the inference, by hand we waited a whole model block; anira waits as many host blocks as the budget needs.
-- 8.2 ms fit in one host block of 11.6 ms, so that is 512 samples.
-- Add the model's own 2224 from the model file: 4272 in total.
+- For the inference, anira does what we did by hand in step 7: it waits as many host blocks as the budget needs.
+- 12.7 ms do not fit in one host block of 11.6 ms, they take two: 1024 samples.
+- In step 4 we took the max over every timed pass, the first ones included: 15.3 ms. anira takes the max of the last four warm-up runs, once they are stable: 12.7 ms. Both are two callbacks, 1024 samples, so both give 4784.
+- Add the model's own 2224 from the model file: 4784 in total, the number we worked out by hand in step 7, now computed by anira.
 - The budget is measured on the user's machine, so the latency is that machine's too: a slower machine gets a larger number, not dropouts.
 
 ---
@@ -132,8 +133,10 @@ contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the anno
 
 | Host blocks | Latency |
 |---|---|
-| exactly 512, every callback | 4272 |
-| any block from 1 to 512: step 9 | 6320 |
+| exactly 512, every callback | 4784 |
+| any block from 1 to 512: step 9 | 5295 |
+
+<div class="lat-why">For the measured max inference time of 12.7 ms, as on the previous slide.</div>
 
 Note:
 - prepareToPlay announces a block size, but that is the largest the host sends, not the only one.
@@ -141,8 +144,8 @@ Note:
 - Logic is known for it: what prepare announces and what process delivers do not always match.
 - So we declare 1 up to the announced size, and anira's latency has to hold for the worst block in that range.
 - The block adaptation alone becomes P − 1 instead of P − gcd(b, P) (Rath & Geier, LAC 2026).
-- Step 9 declares 1 to the host's maximum and reports 6320, for every budget up to 37 ms. The 4272 of the previous slide only holds if every block is exactly 512.
-- One more rule behind both numbers: our model has two outputs, audio_out and state_out, and anira rounds the latency of such a model up to whole model blocks. 6320 is two blocks, 4096, plus the model's 2224.
+- Step 9 declares 1 to the host's maximum: with the same 12.7 ms that is 5295, 511 samples more, the adaptation's P − 1 instead of P − gcd. The 4784 of the previous slide only holds if every block is exactly 512.
+- Both are my machine's: a slower machine measures more and reports a larger latency, not dropouts. The check prints yours.
 
 ---
 

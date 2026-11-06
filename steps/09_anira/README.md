@@ -7,8 +7,8 @@
 ## What you have
 
 - `steps/common/assets/models/rave/model_forward.onnx` — the model as in step 1: audio plus a state tensor in, audio plus the new state out.
-- [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named, their roles and windows given. Every `"TODO 1"` and `"TODO 2"` is a blank: replace it with the value.
-- [`exercise/contract.json`](exercise/contract.json) — how it runs: a budget of 20 ms per inference, with headroom (anira will measure it at prepare, `"budget": "measured"`, from the next alpha on; this pre-release needs a number), three warm-up runs, zeros on a miss. Complete.
+- [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named and their roles given. Every `"TODO 1"` and `"TODO 2"` is a blank: replace it with the value.
+- [`exercise/contract.json`](exercise/contract.json) — how it runs: the budget measured at prepare on this machine (`"budget": "measured"`), warm-up runs until their times are stable (`"warmup": "until_stable"`), the input block on a miss (`"on_miss": "bypass"`). Complete.
 - [`common/helpers/host.h`](../common/helpers/host.h) — the fake host from step 6, pacing its callbacks.
 - [`common/helpers/support.h`](../common/helpers/support.h) — `report_with_latency`: the step 7 comparison, with the late callbacks left out.
 - anira, fetched and built by CMake ([`cmake/anira.cmake`](../../cmake/anira.cmake)), with ONNX Runtime built in. The first configure clones it and builds it once; a couple of minutes.
@@ -42,12 +42,13 @@ The result is in `build/steps/09_anira/step09_exercise_artefacts/Release/`.
 ## Expected output
 
 ```
-Reported latency: 6320 samples (143.3 ms at 44100 Hz)
+Measured budget:  12.7 ms per inference, at prepare
+Reported latency: 5295 samples (120.1 ms at 44100 Hz)
 
 OK: max abs diff 2.79e-07, within 0.0001 of the reference.
 ```
 
-6320, because the contract declares host blocks from 1 to 512: the host may call with any block up to its largest, so the latency covers the worst one, whatever the budget. The 20 ms budget in `contract.json` is a placeholder until anira measures the budget at prepare.
+Both numbers are this machine's: prepare measures the budget while it warms the model up, and the latency follows from it. Yours differ; a slower machine gets a larger latency, not dropouts. 5295 covers host blocks from 1 to 512, as the contract declares: the host may call with any block up to its largest, so the latency covers the worst one. With every block exactly 512 it would be 4784, the number of step 7.
 
 The check is step 7's: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. A callback whose block was not back in time went out as the miss policy's fill, here the input itself (`"on_miss": "bypass"`, `ANIRA_MISSED`); those are listed and left out, and more than a quarter of them fails the run. On a busy machine a few are normal.
 
@@ -63,8 +64,7 @@ The check is step 7's: the output against the reference, shifted by the reported
 - **`TODO 1: audio_out declares no latency`** — `"latency"` in `model.json` is 0.
 - **`TODO 3: the output is the input`** — TODO 3.3: the block goes out untouched; nothing processed it.
 - **`FAILED: max abs diff 0.158`** with the latency reported — the state is not carried: block 0 matches, every block after it does not. Same failure as a fresh engine per block in step 1. Check `state_source`.
-- **`prepare: not supported in this build: contract: a MEASURED budget ...`** — this anira build needs an explicit budget; keep `{"ms": 20}`.
-- **Many late callbacks** — the machine is busy, or 20 ms is below its worst case. Raise the budget; the latency grows with it.
+- **Many late callbacks** — the machine was busier during the stream than while prepare measured. Close what else runs, or give the budget headroom by hand, `"budget": {"ms": 20}`; the latency grows with it.
 
 Compare with [`solution/`](solution/) when you want to.
 

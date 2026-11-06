@@ -40,6 +40,9 @@ public:
 
     // What the host is told, in samples. Valid after prepare.
     size_t latency() const { return m_latency; }
+    // The budgets prepare measured on this machine, in ms. Valid after prepare.
+    double encoder_budget_ms() const { return m_encoder_budget_ms; }
+    double decoder_budget_ms() const { return m_decoder_budget_ms; }
     // The encoder's latency, in latent frames. Valid after prepare.
     size_t encoder_latency_frames() const { return m_encoder_latency_frames; }
     // Latent frames popped from the encoder since prepare.
@@ -63,4 +66,6 @@ private:
     size_t m_frames = 0;
     size_t m_encoder_latency_frames = 0;
     size_t m_latency = 0;
+    double m_encoder_budget_ms = 0.0;
+    double m_decoder_budget_ms = 0.0;
 };

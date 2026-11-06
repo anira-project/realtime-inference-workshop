@@ -161,8 +161,7 @@ Note:
 
 ```json
 { "name": "audio", "dtype": "float32", "role": "streamed",
-  "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
-  "window": { "min": 2048, "max": 2048 } }
+  "axes": [["batch", 1], ["channel", 1], ["time", 2048]] }
 ```
 
 <div class="statement-points">
@@ -208,13 +207,12 @@ Note:
 ```json
 "inputs": [
   { "name": "audio",     "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]], "window": { "min": 2048, "max": 2048 } },
+    "axes": [["batch",1],["channel",1],["time",2048]] },
   { "name": "state_in",  "role": "state",
     "axes": [["batch",1],["any",63488]], "state_source": "state_out" }
 ], "outputs": [
   { "name": "audio_out", "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]], "window": { "min": 2048, "max": 2048 },
-    "latency": 2224 },
+    "axes": [["batch",1],["channel",1],["time",2048]], "latency": 2224 },
   { "name": "state_out", "role": "state", "axes": [["batch",1],["any",63488]] }
 ]
 ```

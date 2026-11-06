@@ -60,6 +60,9 @@ int main() try {
             return 2;
         }
 
+        std::printf("Measured budgets: encoder %.1f ms, decoder %.1f ms per inference, at prepare\n",
+                    processor.encoder_budget_ms(),
+                    processor.decoder_budget_ms());
         std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
                     latency,
                     1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,

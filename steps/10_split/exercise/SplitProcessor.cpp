@@ -39,9 +39,14 @@ void SplitProcessor::prepare(double sample_rate, size_t max_block_size) {
         create(m_encoder, m_context, m_encoder_model);
         create(m_decoder, m_context, m_decoder_model);
     }
-    m_encoder->prepare(m_contract);
-    m_decoder->prepare(m_contract);
-    m_encoder_latency_frames = m_encoder->get_latency(0);       // In latent frames
+    // Warm-up and measurement run here: the budgets are this machine's
+    const anira::PlanReport encoder_report = m_encoder->prepare(m_contract);
+    const anira::PlanReport decoder_report = m_decoder->prepare(m_contract);
+    m_encoder_budget_ms = encoder_report.plans().front().measured_ms;
+    m_decoder_budget_ms = decoder_report.plans().front().measured_ms;
+
+    // The encoder's latency is in latent frames of 2048 samples.
+    m_encoder_latency_frames = m_encoder->get_latency(0);
     const size_t decoder_latency = m_decoder->get_latency(0);   // In samples
 
     // ---- TODO 1 ------------------------------------------------------------

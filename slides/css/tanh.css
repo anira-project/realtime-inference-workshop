@@ -1145,6 +1145,15 @@ html.tanh .wave-player.playing .wave-speaker { fill: var(--ink); }
 html.tanh .wave-track { position: relative; }
 html.tanh .wave-track canvas { display: block; width: 100%; height: 260px; }
 
+/* Where each block starts: data-blocks on the player */
+html.tanh .wave-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed var(--fs-text-subtle-color);
+  pointer-events: none;
+}
+
 html.tanh .wave-playhead {
   position: absolute;
   top: 0;

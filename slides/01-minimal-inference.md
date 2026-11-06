@@ -85,7 +85,7 @@ Note:
 Note:
 - Input: 220 Hz sine
 - Reference: what the model makes of it in Python
-- Much quieter, not a sine anymore: a piano model's take on a sine
+
 
 **Script:**
 
@@ -104,10 +104,10 @@ engine.process(samples, num_samples);     // Overwrites the block in place
 ```
 
 Note:
-- Constructor loads the model
+- The onnx engine wrapper has only 1 methods
+- Constructor loads the model using the model_path
 - `process` takes where the block starts and how many samples it has
 - The audio is processed in place
-- The model takes more than audio: step 2
 
 **Script:**
 
@@ -134,8 +134,9 @@ std::copy_n(m_audio_out.begin(), num_samples, samples);
 ```
 
 Note:
-- `Ort::Session`: structure + weights, no rebuilding in C++
-- 126 MB, so load once and keep the engine
+- The constructor creates an ONNX Runtime session `Ort::Session`. 
+- That file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++.
+- Model is 126 MB, so load once and keep the engine
 - Tensors created once, each wrapping a buffer of the engine. Shape: 1 batch, 1 channel, N samples
 - Every block: copy in, `Run`, copy out
 - `Run` writes into the output tensors we already have
@@ -145,7 +146,7 @@ Note:
 
 "Let's take a quick look inside the engine. The constructor creates an ONNX Runtime session. That file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++. Loading it takes a moment, it's 126 megabytes, so we do it once and keep the engine around.
 
-The constructor also creates the tensors, once. Each one wraps a buffer owned by the engine. The audio shape is one batch, one channel, and our number of samples. There is a second pair of tensors too, not shown here, and we will get to that in step 2.
+The constructor also creates the tensors, once. A tensor here doesn’t hold its own data. It’s just a view with a shape onto a buffer the engine already owns. So filling that buffer fills the tensor, and nothing is allocated per block.
 
 Then for every block we copy the samples into the input buffer and call Run, which writes into the output tensors we already have. And finally we copy the result back into our buffer, so from the outside it's processed in place, just like an audio callback."
 
@@ -194,6 +195,7 @@ Note:
 - Three TODOs: set the model path, pick the block size, run the first block
 - Build commands are on the slide
 - 8 minutes, don't worry if you don't finish
+- to build and run, use commands on the slide
 - We solve it together, solutions are in the solution's main.cpp
 - Walk around: most problems are build problems, not code problems
 
@@ -284,8 +286,8 @@ Note:
 </div>
 
 Note:
-- Same output as Python: it works, for one block
-- Next: the whole signal, step 2
+- Same output as Python within 1e-06 difference to the reference: it works, for one block
+- Next: let's see what happens if we run the whole signal
 
 **Script:**
 

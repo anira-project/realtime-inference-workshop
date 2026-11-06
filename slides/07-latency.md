@@ -7,6 +7,7 @@ Note:
 - Our output is late: by how much, and what do we do about it?
 - Ask: What kind of latency do we want?
 - Not the smallest, a **fixed** one
+- For that we need to talk about the latency
 - A latency that changes with load is a guess
 - Pick the number the design can always hold, pad up to it
 - Also the dry/wet mix: common use case, has implications for latency
@@ -56,10 +57,9 @@ If we mix a dry signal that isn't delayed with a wet signal that is, we don't ge
 
 ## The goal<br><span class="then">One latency number, dry and wet line up.</span>
 
-<div class="statement-points">
+<div class="statement-points centered-two">
   <div><small>1</small>Work out the latency and pass it to the host</div>
   <div><small>2</small>Delay the dry signal so both sides align</div>
-  <div><small>3</small>Crossfade dry and wet</div>
 </div>
 
 Note:
@@ -181,8 +181,10 @@ Note:
 <div class="fragment">
 
 ```cpp
-// in prepare(), after step 6's prefill: buffer adaptation + the worker's time
-m_latency = m_prefill + k_model.m_latency;  // <- fill out: 4784
+// in prepare(): step 6's prefill, given
+adaptation = (k_model.m_input_size - max_block_size);
+m_prefill = adaptation + k_max_inference_samples_rounded;
+m_latency = m_prefill + k_model.m_latency;  // <- fill out
 ```
 
 </div>
@@ -217,10 +219,9 @@ m_dry.push(dry_silence.data(), m_latency);      // <- fill out
 ```
 
 Note:
-- Host aligns everything to the number we report
-- Prefill the dry ring buffer with `m_latency` of silence before the first callback
+- First the wet signal is filled with prefill amount of samples (adaptive + model latency)
+- Then dry should line up to the wet signal, adding the rounded_max_inference_time_samples.
 - Every sample comes out 4784 samples later, like the wet one
-- Wet only gets step 6's prefill, 2560: the model's 2224 are already in what it returns
 
 **Script:**
 
@@ -239,7 +240,7 @@ Note:
   </svg>
 </div>
 
-<div class="cards-note">For a constant 512. anira handles any host block size, smaller blocks than announced included, and computes the latency for it: part 2.</div>
+<div class="cards-note corner-note">For a constant 512. anira handles any host block size, smaller blocks than announced included, and computes the latency for it: part 2.</div>
 
 Note:
 - Correct, real-time safe, late by a known, fixed amount

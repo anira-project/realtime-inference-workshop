@@ -66,7 +66,9 @@ The check runs twice. First offline, like a bounce: the host calls as fast as it
 - **`state_source 'TODO2' names no output tensor`** (or `'audio'`) — TODO 2: no output has that name.
 - **`state_source 'audio_out' is a Streamed output`** — TODO 2: a state input is fed from the state output, not from the audio.
 - **`TODO 1: audio_out declares no latency`** — `"latency"` in `model.json` is 0.
-- **`TODO 3: the output is the input`** — TODO 3.3: the block goes out untouched; nothing processed it.
+- **`TODO 3: offline, the output is the input`** — TODO 3.3: the block goes out untouched; `process_wait` is still commented out.
+- **`TODO 3: offline, N blocks were missed`** — TODO 3.3: the offline call does not wait; give it `ANIRA_WAIT_FOREVER`.
+- **`TODO 3: live, the output is the input`** — TODO 3.4: `process` is still commented out.
 - **`FAILED: max abs diff 0.158`** with the latency reported — the state is not carried: block 0 matches, every block after it does not. Same failure as a fresh engine per block in step 1. Check `state_source`.
 - **Many late callbacks** — the machine was busier during the stream than while prepare measured. Close what else runs, or give the budget headroom by hand, `"budget": {"ms": 20}`; the latency grows with it.
 

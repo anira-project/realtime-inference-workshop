@@ -16,7 +16,7 @@
 ## What to do
 
 1. **Declare the tensors** (`encoder.json`, `decoder.json`). Replace every `TODO1` with its number: the encoder takes one model block of audio (`time` 2048, as in step 9) and gives the latents (`channel` 8, `time` 1: eight latents, one frame per inference); the decoder takes those latents and gives 2048 samples back.
-2. **An offset on z** (`SplitProcessor.cpp`). One line: `m_frame_data[i] = m_frame_data[i] + offsets[i];` — each latent plus its dimension's offset, before the frame goes on to the decoder. `offsets` is a parameter of `process`: the plugin hands in its eight knobs.
+2. **An offset on z** (`SplitProcessor.cpp`). One line, marked `fill out`: add each dimension's offset to its latent, before the frame goes on to the decoder. `offsets` is a parameter of `process`: the plugin hands in its eight knobs.
 
 Build and run from the repository root:
 

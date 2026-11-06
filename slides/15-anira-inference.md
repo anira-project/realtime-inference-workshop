@@ -248,12 +248,11 @@ cmake --build --preset release --target step09_exercise_Standalone
 </div>
 
 Note:
-- In model.json, replace every TODO1 and TODO2 with its value. A number goes in as it is, 2048, without quotes; a name in quotes, like "audio". The comments next to each blank tell you where the value comes from.
-- If you write a number in quotes, the check tells you, with the line.
-- You have ten minutes.
-- Fill in the TODOs in model.json and AniraProcessor.cpp, then build step09_exercise_check and run it.
-- Once it passes, build the same processor as a plugin: step09_exercise_Standalone or step09_exercise_VST3, in build/steps/09_anira/step09_exercise_artefacts/Release/.
-- You are done when it says it matches the reference.
+- Ten minutes.
+- TODO 1 and 2 are in model.json: replace every TODO1 and TODO2 with its value. A number as it is, 2048, without quotes; a name in quotes. The comment next to each blank says where the value comes from.
+- TODO 3 is in AniraProcessor.cpp: four blanks, marked fill out.
+- Then build step09_exercise_check and run it. It names what is still missing, with the line.
+- You are done when it matches the reference. Then the same processor runs as a plugin: step09_exercise_Standalone.
 
 ---
 
@@ -306,11 +305,6 @@ Note:
 ## TODO 3 · Prepare and process
 
 ```cpp
-// Constructor, given: the contract, a pipeline with the model, the handler
-anira::Pipeline pipeline;
-pipeline.add_inference(anira::ModelConfig::from_file(step_dir + "/model.json"));
-m_handler.emplace(m_context, pipeline);
-
 // prepare()
 m_contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the largest
 m_handler->prepare(m_contract);                                 // warm-up runs here
@@ -322,11 +316,12 @@ else         { status = m_handler->process(block, 0, block, 0); }
 ```
 
 Note:
-- Given: in the constructor the contract, a pipeline with the model, and the handler, all from anira.hpp, the way anira's own plugin example does it. prepare itself was given too; the warm-up runs inside it.
-- First blank: give the contract the host's blocks, any size from 1 up to its largest, and its sample rate.
-- Second: ask for the latency of output 0. On my machine it is 5295: the budget prepare measured, about 12.7 ms, for any host block up to 512. Yours depends on your machine.
-- Third: in the audio callback, one call over the block, in place: the same block is input and output.
-- And the offline case: when the host bounces, the same call waits for the result, process_wait with ANIRA_WAIT_FOREVER, as in the process chapter. The check runs offline first, so its comparison misses nothing, and then once live.
+- Given: the constructor reads the model file, drops its comments, and builds the pipeline and the handler. The prepare call is given too; the warm-up and the measurement run inside it.
+- Blank 1: give the contract the host's blocks, any size from 1 up to its largest, and its sample rate.
+- Blank 2: ask for the latency of output 0. On my machine it is 5295: the budget prepare measured, about 12.7 ms, for any host block up to 512. Yours depends on your machine.
+- Blank 3, offline: when the host bounces, process_wait with ANIRA_WAIT_FOREVER waits for every result, so nothing is missed.
+- Blank 4, live: in the audio callback, process over the block, in place. It never waits.
+- The same four values in both calls. The check runs offline first, so its comparison is exact, and then once live.
 
 ---
 

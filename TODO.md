@@ -5,13 +5,13 @@
 - Change the audio example
   - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
 
-- Benchmark -> convert to samples (todo-lina)
 
 - Ab after process überarbeiten
 
 
 ## Done (2026-11-06)
 
+- Benchmark -> convert to samples (Lina, bdfeb70 and 0f27866): step 4 prints and shows the worst case in samples and rounded to whole callbacks; k_max_inference_samples_rounded feeds steps 6 to 8.
 - anira pinned to the head of M2b PR 4 (anira-project/anira#241, 131b75de, alpha.2 + measured budget, until-stable warm-up, optional window, latency fixes); an old alpha.2 pin in a build cache moves along. Steps 9, 10 and 11 run "budget": "measured" and "warmup": "until_stable", the checks print the measured budget.
 - window not necessary: dropped from every model file of steps 9 to 11 and from the slides.
 - anira latency fix: a state output no longer rounds the latency to whole model blocks (#235). Step 9 on my machine: 5295 instead of 6320 (measured 12.7 ms; exactly 512 → 4784, step 7's number). Slides and READMEs give the new numbers as this machine's.

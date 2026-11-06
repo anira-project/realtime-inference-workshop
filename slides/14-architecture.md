@@ -35,8 +35,8 @@ Note:
 <div class="statement-points">
   <div><code>anira/abi/*.h</code>, C11: the only binary contract, the same on every platform and in WebAssembly</div>
   <div><code>anira.hpp</code>, header-only C++20, and the TypeScript package: one layer, two languages</div>
-  <div>Versioned: append-only inside a major, stable from v3.0; alpha.2 is ABI 0.2</div>
-  <div><code>compat/v2.hpp</code>: v2 code on the v3 library, unchanged</div>
+  <div>Versioned: append-only inside a major, stable from v3.0; alpha.3 is ABI 0.3</div>
+  <div><code>compat/v2.hpp</code>: v2 code on the v3 library: one include, one namespace; deprecated</div>
 </div>
 
 Note:
@@ -47,7 +47,7 @@ Note:
 - anira.hpp, header-only C++20, and the TypeScript package sit on top of it.
 - Main-thread calls return a status and an error message naming the field; audio-thread calls return a status, and rt_error says why.
 - The ABI is append-only inside a major version and stable from v3.0; until then, rebuild against each pre-release.
-- compat/v2.hpp runs v2 code unchanged, and the hand tracker in step 11 is exactly that.
+- compat/v2.hpp runs v2 code with one include swapped and using namespace anira::v2. It is deprecated and goes one minor release after 3.0. The hand tracker in step 11 is exactly that.
 
 ---
 
@@ -84,7 +84,7 @@ Note:
 - In processBlock we mix down to mono, as in step 8, because the model has one channel, and put one tensor over that buffer: float32, one channel, the sample count as its shape.
 - process then runs it in place.
 - releaseResources does nothing: the InferenceHandler destroys itself when the plugin goes.
-- The threads are not ours to stop any more: anira keeps the pool while any handler is prepared.
+- The threads are not ours to stop any more: anira keeps the pool until the last handler is destroyed.
 
 ---
 

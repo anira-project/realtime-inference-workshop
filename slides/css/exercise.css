@@ -882,6 +882,12 @@ html.tanh .lat-part.total {
   color: var(--paper);
 }
 
+/* The term a slide is about */
+html.tanh .lat-part.focus {
+  background: var(--tint-exercise);
+  outline: 2px solid var(--ink);
+}
+
 html.tanh .lat-sum {
   display: flex;
   align-items: center;
@@ -2179,3 +2185,9 @@ html.tanh .lat-fig text { fill: var(--fs-text-color); font-size: 26px; text-anch
 html.tanh .lat-fig .dim { font-size: 22px; fill: var(--fs-text-muted-color); }
 html.tanh .lat-fig .muted { fill: var(--fs-text-muted-color); }
 html.tanh .lat-fig .small { font-size: 22px; }
+
+/* Outlook · the step 4 deadline twice: host block 512 (too late) and 2048 (fits) */
+html.tanh .deadline-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8, 48px); }
+html.tanh .deadline-pair .deadline { margin-top: var(--space-8, 48px); }
+html.tanh .deadline.fits .deadline-bars i.runs { background: var(--ink); }
+html.tanh .deadline.fits .deadline-bars i.runs span { right: auto; left: 0; text-align: left; }

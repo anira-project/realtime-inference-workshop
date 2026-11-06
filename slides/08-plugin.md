@@ -10,11 +10,6 @@ Note:
 - Everything from steps 1 to 7, in a plugin
 - Listen first: switch examples, dry/wet, your own audio files
 
-**Script:**
-
-*Run the standalone. The example plays from the start, move dry/wet. Drop an audio file on the window, or switch to the input.*
-"Here it is: everything from steps 1 to 7, in a plugin. Let's listen to it first. The example plays from the start. You can move the dry/wet, drop in your own audio file, or switch to your microphone."
-
 ---
 
 <div class="tag">Host</div>
@@ -40,16 +35,6 @@ Note:
 - Only 44.1 or 48 kHz and 512: our prefill and latency are only right for that block size. Anything else: bypassed, the input goes out unprocessed, with an overlay that says why
 - Takeaway: arbitrary buffer sizes need a different design, part 2
 - One change: ONNX Runtime is now linked statically: 28 MB + 126 MB model
-
-**Script:**
-
-"So what did we have to add to turn our processor into a plugin? Not much, actually. The host talks to us in three places. In `prepareToPlay` we load the model, size the buffers, start the worker thread, and tell the host our latency. `processBlock` is our callback from step 7, unchanged. And in `releaseResources` we stop the worker thread again. Everything else in the plugin is JUCE boilerplate.
-
-And every piece in there is something we built step by step. `prepareToPlay` loads the model from step 1, resets the state from step 2, sizes the ring buffers from step 3, puts your worst case from step 4 into the prefill, and reports the latency from step 7. `processBlock` moves the host's blocks like in step 3, stays real-time safe like we learned in step 5, hands the work to the worker from step 6, and mixes dry and wet from step 7. Every step is in here.
-
-There's one limit, and it's on purpose: our prefill and our latency are only right for a buffer of 512 samples. Our processor is also built for 44.1 or 48 kHz. If the host asks for anything else, the plugin bypasses itself and tells you why. Supporting any buffer size needs a different design, and that's what part 2 is about.
-
-One change: so far ONNX Runtime was a shared library next to our program, but the plugin links it statically, which is 28 MB of engine, plus the 126 MB model."
 
 --- 
 
@@ -79,10 +64,6 @@ Note:
 - Sample rate warning: model expects 44.1 kHz
 - At 48 kHz it runs but sounds different: set your device to 44.1
 
-**Script:**
-
-"If you want to try it yourself, the commands are on the slide, as a standalone app or as a VST3. Start the build now and it will be ready during the break. Play around with the dry/wet parameter and try your own sounds, with headphones please. Set your audio device or DAW to a buffer of 512 samples and to 44.1 or 48 kHz, otherwise the plugin bypasses itself and tells you so. The model was trained at 44.1 kHz, so that's where it sounds as intended."
-
 ---
 
 <div class="tag">Break</div>
@@ -96,7 +77,3 @@ Note:
 - You'd write all of it again for every new model
 - After the break: how anira does this for you
 - 15 minute break, we start again at 11:35
-
-**Script:**
-
-"Every one of these pieces is a place where things can go wrong. And you'd have to write all of it again for every new model. After the break, we'll look at how anira does all of this for you. Let's take a 15 minute break. We start again at 11:35, see you then."

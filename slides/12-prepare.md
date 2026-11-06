@@ -8,7 +8,7 @@ Contract, latency, memory
 Note:
 - Prepare: the second row of the map.
 - This is what happens when the host announces its blocks.
-- Prepare checks everything again, now with the contract, loads the models, pooled, and runs their warm-up as they load, builds the plans, and starts the pool's threads with the first prepare in the process.
+- Prepare checks everything again, now with the contract, loads the models, pooled, builds the plans, starts the pool's threads with the first prepare in the process, and then runs the warm-up for every plan.
 - Then the rest: the latency, the rings and the slots for the jobs in flight.
 - We look at the contract, the latency that follows from it, the memory it sizes, and the warm-up.
 
@@ -175,7 +175,7 @@ Note:
 ## Allocated at <code>prepare</code>.<br><span class="then">Nothing after.</span>
 
 <div class="statement-points">
-  <div>A ring per streamed tensor, sized from the host blocks and the window</div>
+  <div>A ring per streamed tensor, sized from the host blocks and the model block</div>
   <div>Slots: two per inference that can be in flight</div>
   <div>After <code>prepare</code>: <code>process</code>, <code>push</code> and <code>pop</code> allocate nothing</div>
 </div>
@@ -184,8 +184,8 @@ Note:
 
 Note:
 - anira allocates at prepare, and nothing after.
-- What we sized by hand, anira sizes from what was declared: the host blocks from the contract, the window and the latency from the model file.
-- There is a ring per streamed tensor, float32 unless the contract names another dtype for it.
+- What we sized by hand, anira sizes from what was declared: the host blocks from the contract, the model block and the latency from the model file.
+- There is a ring per streamed tensor, in the tensor's own dtype unless the contract names another: an int16 model takes int16 blocks.
 - Slots are the job records between the audio thread and the pool: two per inference that can be in flight, all preallocated.
 - The audio thread claims a free slot and leaves.
 - The state pairs got their two buffers at create; prepare sets both to zero, a new stream.
@@ -230,10 +230,10 @@ Note:
 Note:
 - anira runs the warm-up at prepare and takes the budget from the contract.
 - The first runs of a model are slow: the engine allocates, compiles and fills its caches, and that must not happen in the first callback.
-- With until_stable, prepare runs the model on the thread that calls it until the last runs agree, so prepareToPlay takes those runs longer.
+- With until_stable, prepare runs the model on the inference threads until the last four runs agree, at most 32; prepareToPlay waits for them, so it takes those runs longer.
 - With measured, anira benchmarks the model at prepare, on the user's machine, with this engine: step 4, done by the library.
 - Both can also be given by hand: a fixed number of runs, and a budget in milliseconds.
-- To measure your own model, the fixture behind step 4 is part of anira: it reports the real-time factor and underruns per block size and engine.
+- To measure your own model, anira's examples have a benchmark fixture: it reports the real-time factor and underruns per block size and engine. You copy it into your project; the library itself does not link Google Benchmark.
 
 ---
 

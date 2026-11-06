@@ -1,7 +1,8 @@
 # anira for part 2, fetched and built from source, pinned to one commit of the
-# v3 line: the head of M2b PR 4 (anira-project/anira#241, feat/v3-hard-budget),
-# alpha.2 plus the measured budget, the until-stable warm-up, the optional
-# window and the latency fixes; v3.0.0-alpha.3 once it is merged and tagged. ONNX Runtime only, static: the plugin's choice from
+# v3 line: v3.0.0-alpha.3 (ABI 0.3), the release commit on M2b PR 4
+# (anira-project/anira#241, feat/v3-hard-budget): the measured budget, the
+# until-stable warm-up, the optional window and the latency fixes. Move to the
+# v3.0.0-alpha.3 tag once it is pushed. ONNX Runtime only, static: the plugin's choice from
 # step 8, and the engine the model files of steps 9 to 11 name.
 #
 #   workshop_setup_anira()   -> target anira::anira

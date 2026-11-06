@@ -2128,3 +2128,26 @@ html.tanh .reveal .slides section.answer::before {
   border-color: var(--mark-check);
   color: var(--fs-text-muted-color);
 }
+
+/*********************************************
+ * Outlook: inline execution, three checks and two threads
+ *********************************************/
+html.tanh .inline-tree { margin-top: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+html.tanh .it-checks { display: flex; justify-content: center; gap: var(--space-5); }
+html.tanh .it-check { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: var(--hairline) solid var(--fs-border-strong); border-radius: var(--radius-main); font-size: 0.5em; }
+html.tanh .it-check b { display: block; font-weight: 600; }
+html.tanh .it-check small { display: block; color: var(--fs-text-muted-color); font-size: 0.85em; }
+html.tanh .it-box { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; border-radius: var(--radius-small); background: var(--tint-check); font-weight: 700; }
+html.tanh .it-branches { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+html.tanh .it-branch { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-main); background: var(--fs-surface-alt); }
+html.tanh .it-branch.yes { outline: 2px solid var(--ink); }
+html.tanh .it-label { font-size: 0.45em; color: var(--fs-text-muted-color); }
+html.tanh .it-thread { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.6em; }
+html.tanh .it-sum { margin-top: var(--space-2); font-size: 0.85em; gap: var(--space-2); }
+
+/* Outlook · zero copy: the data a second, with a copy and without */
+html.tanh .zc { display: flex; flex-direction: column; gap: var(--space-6); margin-top: var(--space-7); }
+html.tanh .zc-row { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: var(--space-5); }
+html.tanh .zc-label { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.6em; }
+html.tanh .zc-sum { margin-top: 0; justify-content: flex-start; font-size: 1.1em; }
+html.tanh .it-example { text-align: center; font-size: 0.5em; color: var(--fs-text-muted-color); margin-bottom: calc(-1 * var(--space-4)); }

@@ -483,6 +483,8 @@ Note:
 
 <div class="cards-note">The stream stays aligned: a late result that arrives afterwards is dropped, never played shifted.</div>
 
+<div class="note-box">Transport jump: <code>reset()</code>, wait-free. Clears rings and state.</div>
+
 Note:
 - What a missed block delivers is the contract's choice: on_miss.
 - bypass, the default, passes the input through unchanged.
@@ -492,6 +494,7 @@ Note:
 - A late result that arrives after a miss is dropped, so the stream stays aligned, without the counters of step 7.
 - If every slot is busy, the window is dropped and filled the same way: that is overload, and rt_error tells you so.
 - After a miss the pool catches up: the next block is on time again once the late result has arrived, otherwise that callback is another miss.
+- And the box: on a transport jump you call reset, wait-free, from the audio thread. It clears the rings and refills the latency's zeros, drops the inferences still running, and the state pair starts at zero with the first block of the new stream. In part 1 we had no answer for that: the old samples and the old state would have carried on.
 
 ---
 

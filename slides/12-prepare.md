@@ -138,6 +138,8 @@ contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the anno
 
 <div class="lat-why">For the measured max inference time of 12.7 ms, as on the previous slide.</div>
 
+<div class="note-box">One fixed latency everywhere: <code>"latencies": {"audio_out": 6000}</code></div>
+
 Note:
 - prepareToPlay announces a block size, but that is the largest the host sends, not the only one.
 - Loop a region in a DAW, and the callback at the loop point is shorter.
@@ -146,6 +148,7 @@ Note:
 - The block adaptation alone becomes P − 1 instead of P − gcd(b, P) (Rath & Geier, LAC 2026).
 - Step 9 declares 1 to the host's maximum: with the same 12.7 ms that is 5295, 511 samples more, the adaptation's P − 1 instead of P − gcd. The 4784 of the previous slide only holds if every block is exactly 512.
 - Both are my machine's: a slower machine measures more and reports a larger latency, not dropouts. The check prints yours.
+- And the box: if your host needs one fixed number, the same on every machine and for every block size, you declare it in the contract, per output. It replaces the computed figure, and anira primes the output with it. Below the model's own latency it cannot be delivered, so prepare refuses it. If it is less than the machine needs, the late blocks become misses, filled by the miss policy.
 
 ---
 
@@ -227,13 +230,48 @@ Note:
   <div>A benchmark fixture for your own model: real-time factor and underruns</div>
 </div>
 
+<div class="cards-note">Measured once per model: every further instance, and every re-prepare, reuses it. Identical plugins report identical latency.</div>
+
 Note:
 - anira runs the warm-up at prepare and takes the budget from the contract.
 - The first runs of a model are slow: the engine allocates, compiles and fills its caches, and that must not happen in the first callback.
 - With until_stable, prepare runs the model on the inference threads until the last four runs agree, at most 32; prepareToPlay waits for them, so it takes those runs longer.
 - With measured, anira benchmarks the model at prepare, on the user's machine, with this engine: step 4, done by the library.
 - Both can also be given by hand: a fixed number of runs, and a budget in milliseconds.
+- anira measures a model once per process: the second instance of your plugin, or a re-prepare at another block size, reuses the figure and runs no warm-up. So ten identical plugins report the same latency, and prepareToPlay is quick the second time.
 - To measure your own model, anira's examples have a benchmark fixture: it reports the real-time factor and underruns per block size and engine. You copy it into your project; the library itself does not link Google Benchmark.
+
+---
+
+<div class="tag">anira · Real-time verdict</div>
+
+## <code>prepare</code> says whether it keeps up.<br><span class="then">The host decides what to do.</span>
+
+<div class="rtv">
+  <div class="rtv-scale">
+    <div class="rtv-zone ok"><b>comfortable</b><small>load below 0.75</small></div>
+    <div class="rtv-zone marginal"><b>marginal</b><small>0.75 to 1</small></div>
+    <div class="rtv-zone not"><b>not real-time</b><small>1 or more</small></div>
+    <div class="rtv-mark" style="--x: 0.27"><span>our model, my machine<br><code>12.7 ms ÷ 46.4 ms = 0.27</code></span></div>
+  </div>
+  <div class="rtv-actions">
+    <div class="fragment"><b>comfortable</b>play</div>
+    <div class="fragment"><b>marginal</b>play, with a note: may drop out under load</div>
+    <div class="fragment"><b>not real-time</b>hold it, ask the user: “Try nonetheless”</div>
+  </div>
+</div>
+
+<div class="cards-note">An offline bounce does not run against the clock: never hold it.</div>
+
+Note:
+- prepare does not only measure, it tells you whether the model keeps up on this machine.
+- The real-time factor: the measured inference time over the time one model block of audio lasts. Ours: 12.7 ms over 46.4 ms, 0.27. Divided by the inferences that can run at once, one for our stateful model, that is the load.
+- Below 0.75 comfortable, up to 1 marginal, from 1 on not real-time: then misses are certain, and the miss policy fills them. prepare still succeeds.
+- [click] What the host does is its choice, anira only reports it: a comfortable plan plays.
+- [click] A marginal one plays with a note, because load the measurement could not see can push it over.
+- [click] A plan that is not real-time is held, bypassed or silent, and the user is asked: "Try nonetheless". anira's JUCE and CLAP examples do exactly that.
+- An offline bounce never runs against the clock, so it is never held.
+- The verdict is in the plan report that prepare returns, next to the measured time our checks print.
 
 ---
 

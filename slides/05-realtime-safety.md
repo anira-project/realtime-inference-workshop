@@ -10,10 +10,6 @@ Note:
 - No code this step: a demo
 - We will have a look at what actually happens on the audio thread when we call our engine?
 
-**Script:**
-
-"In step 4 we saw that the forward pass doesn't fit into one small callback. But even if it did, it wouldn't be safe. In this step we won't write code, we'll run a demo and look at what actually happens on the audio thread when we call our engine."
-
 ---
 <div class="tag">Promise</div>
 
@@ -36,11 +32,6 @@ Note:
 - No loops without a bound: we can't know how long they take in the worst case
 - On average we're not necessarily slow, but **unbounded**
 - As we learned in the last step: the average doesn't matter, the worst case does: one stall is an audible dropout
-
-**Script:**
-
-"You probably know these rules already. Inside the audio callback we never allocate memory, because the allocator might lock or need a new page from the operating system. We never lock, because whoever holds the lock might be paused by the scheduler. We don't call the OS, so no files, no logging. And we don't run loops without a bound.
-The important point is: these things aren't necessarily slow. Most of the time they're fast. The problem is that they're **unbounded**: we can't know how long they take in the worst case. And as we saw in step 4, the average doesn't matter. The worst case does. One stall is enough for an audible dropout."
 
 ---
 
@@ -70,11 +61,6 @@ Note:
 - Reports the first thing that breaks the promise
 <!-- - On a Mac: LLVM from Homebrew, not Apple's Clang -->
 
-**Script:**
-
-"So how do we find out whether our code breaks these rules? Since Clang 20 there's a tool for it. We take our processor from step 3 and mark its callback with `[[clang::nonblocking]]`, which is a promise in the type system: nothing in here blocks. Then we build with the RealtimeSanitizer. At runtime it checks every call underneath that function, also inside libraries, and reports the first thing that breaks the promise.
-If you want to try this on a Mac, you'll need the LLVM from Homebrew, Apple's Clang doesn't have it yet."
-
 ---
 
 <div class="tag">RealtimeSanitizer</div>
@@ -101,16 +87,11 @@ Note:
 - Even with one thread and our own buffers and tensors preallocated
 - Even a small `malloc` can take too long on the audio thread
 
-**Script:**
-
-*Run `step05_solution`, without and with the sanitizer, live if possible.*
-"First, is it still correct? Yes, without the sanitizer it runs through and gives us the same output as the Python reference. But is it safe? With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has even run. If we read the stack from the bottom up: our callback calls `process`, `process` calls ONNX Runtime's `Run`, and `Run` calls `malloc` on its way into the model. And this is on one thread, with our own buffers and tensors preallocated. It's only a small allocation, but even a small `malloc` can take too long on the audio thread."
-
 ---
 
 <div class="tag">Allocation</div>
 
-## Not once<br><span class="then">Every callback.</span>
+## Not once<br><span class="then">Every forward pass.</span>
 
 ```bash
 RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false ./build-rtsan/bin/step05_solution
@@ -118,8 +99,8 @@ RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false ./build-rtsan/bin/
 
 | | per forward pass | total |
 |---|---|---|
-| `malloc` | 1078 | 8620 |
-| `free` | 1077 | 8619 |
+| `malloc` | ~1130 | 9019 |
+| `free` | ~1130 | 9014 |
 
 
 Not a slip. The engine is built this way.
@@ -127,16 +108,10 @@ Not a slip. The engine is built this way.
 Note:
 - If we build it again with `halt_on_error=false`: RTSan reports every violation instead of stopping at the first
 - `suppress_equal_stacks=false`: also when the call stack is one it has seen before
-- Over the whole test signal: 8 forward passes, 8,620 mallocs and as many (matching) frees
-- About 1,080 of each in every forward pass
+- Over the whole test signal: 8 forward passes, 9,019 mallocs and almost as many (matching) frees
+- About 1,130 of each in every forward pass
 - These are mostly small bookkeeping objects, not audio data
 - Not a small mistake: built for throughput, not for real-time
-
-**Script:**
-
-"And it doesn't happen just once. If we tell the sanitizer not to stop at the first violation, it reports all of them. Over the whole test signal, eight forward passes, that's 8,620 mallocs and as many frees: about 1,080 of each in every single forward pass.
-So this isn't a small mistake we can fix. The engine is built this way: it's made for throughput, not for real-time."
-
 
 ---
 
@@ -148,7 +123,7 @@ The same run, as RTSan reports it:
 
 | | per forward pass | total |
 |---|---|---|
-| `pthread_mutex_lock` | 76 | 608 |
+| `pthread_mutex_lock` | ~145 | 1164 |
 
 An allocation is bad. <br>
 A lock is worse! 
@@ -156,14 +131,9 @@ A lock is worse!
 Note:
 - On the same run
 - Not only allocations: the same run, as the sanitizer reports it
-- Mutex locks: 76 in every forward pass, 608 in total
+- Mutex locks: about 145 in every forward pass, 1,164 in total
 - Allocations were already bad, but
 - A lock is worse: our thread can wait for a completely different thread
-
-**Script:**
-
-"And it's not only allocations. In the same run the sanitizer also reports mutex locks: 608 of them, 76 in every forward pass. A slow allocation is bad. But a lock is worse: it can make our audio thread wait for a completely different thread."
-
 
 ---
 
@@ -185,11 +155,6 @@ Note:
 - Preallocating: moves our allocations, not the ones in onnx runtime
 - On the audio thread: we're hoping the allocator stays fast. Hoping is not a strategy
 
-**Script:**
-
-"So can we fix this? Not really. The allocations happen inside the engine, in a library we don't control. A custom allocator only changes where the memory comes from, not whether a lock is taken. Running the engine with one thread removes its thread pool, but not its allocations. And preallocating everything on our side only moves *our* allocations, not theirs.
-So if we ship this on the audio thread, we're basically hoping the allocator stays fast. And hoping is not a strategy."
-
 ---
 
 <div class="tag">Solution</div>
@@ -202,9 +167,4 @@ So if we ship this on the audio thread, we're basically hoping the allocator sta
 Note:
 - Can't make the engine safe: 
 - the obvious solution: the model has to leave the audio thread
-- Where does the model go? 
-
-**Script:**
-
-"So if we can't make the engine safe, there's only one option left: the model has to leave the audio thread. The audio thread keeps doing what it's good at, moving samples. But running the model is not its job anymore.
-So where does it go? And how do we get the audio there and back, without breaking the rules we just talked about? That's what the next step is about."
+- Where does the model go?

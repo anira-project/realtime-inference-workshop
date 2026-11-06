@@ -29,7 +29,7 @@ cmake --build --preset release --target step02_exercise
 ./build/bin/step02_exercise
 ```
 
-Then open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO banners: create the state above the loop, and pass it to `process` in the loop. The state is 63488 floats, starting at zero.
+Then open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO banners: make a vector for the state above the loop, and pass it to `process` in the loop. The model writes the state on every call; the vector is only the memory it writes into: 63488 floats, starting at zero.
 
 ## Expected output
 

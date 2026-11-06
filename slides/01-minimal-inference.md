@@ -7,10 +7,6 @@ Note:
 - First step: a minimal C++ program that runs the model
 - One block, and ignore real-time for now
 
-**Script:**
-
-"The first step will be a minimal C++ program that loads the model and runs one block through it. We will ignore real-time concerns for now."
-
 ---
 
 <div class="tag">Goal</div>
@@ -28,10 +24,6 @@ Note:
 - Load it with ONNX Runtime
 - Run one block of a test signal through it
 - Compare with the Python output
-
-**Script:**
-
-"So the goal is to run the model in C++. First we load the model with ONNX Runtime. Then we run one block of a test signal through it. To make sure it worked, we compare the result with the output that we get in Python."
 
 ---
 
@@ -65,10 +57,6 @@ Note:
 - Helper: the engine wrapper
 - Only edit `main.cpp` in steps/01_minimal_inference
 
-**Script:**
-
-"To do this exercise we give you a few files you can work with. You'll get the model as an ONNX file, which holds the graph and the weights. We will also give you an input signal and a reference output from Python, compiled in as headers. So we won't have any audio files and no Python to worry about. As a helper you get an engine wrapper. To do the exercise you only need to edit the `main.cpp` under steps/01_minimal_inference."
-
 ---
 
 <div class="tag">Assets: <code>test_signal.h</code> & <code>target_signal.h</code></div>
@@ -86,11 +74,6 @@ Note:
 - Input: 220 Hz sine
 - Reference: what the model makes of it in Python
 
-
-**Script:**
-
-"First, let's have a look at the signals. The input is a 220 Hz sine. The reference is what the model made of it in Python. It's much quieter than the input and it isn't a sine anymore: this is what a model trained on a piano makes of a sine."
-
 ---
 
 <div class="tag">Helpers: <code>onnx_engine.h</code></div>
@@ -104,14 +87,10 @@ engine.process(samples, num_samples);     // Overwrites the block in place
 ```
 
 Note:
-- The onnx engine wrapper has only 1 methods
+- The onnx engine wrapper has a constructor and one method, `process`
 - Constructor loads the model using the model_path
 - `process` takes where the block starts and how many samples it has
 - The audio is processed in place
-
-**Script:**
-
-"Let's take a look at our helper file. The constructor loads the model. `process` takes where the block starts and how many samples it has, just like an audio callback. It works in place, so the model's output overwrites the block. The model actually takes more than audio, and we will come back to that in step 2."
 
 ---
 
@@ -135,20 +114,12 @@ std::copy_n(m_audio_out.begin(), num_samples, samples);
 
 Note:
 - The constructor creates an ONNX Runtime session `Ort::Session`. 
-- That file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++.
+- The `.onnx` file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++.
 - Model is 126 MB, so load once and keep the engine
 - Tensors created once, each wrapping a buffer of the engine. Shape: 1 batch, 1 channel, N samples
 - Every block: copy in, `Run`, copy out
 - `Run` writes into the output tensors we already have
 - From the outside still in place, like an audio callback
-
-**Script:**
-
-"Let's take a quick look inside the engine. The constructor creates an ONNX Runtime session. That file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++. Loading it takes a moment, it's 126 megabytes, so we do it once and keep the engine around.
-
-The constructor also creates the tensors, once. A tensor here doesn’t hold its own data. It’s just a view with a shape onto a buffer the engine already owns. So filling that buffer fills the tensor, and nothing is allocated per block.
-
-Then for every block we copy the samples into the input buffer and call Run, which writes into the output tensors we already have. And finally we copy the result back into our buffer, so from the outside it's processed in place, just like an audio callback."
 
 ---
 
@@ -199,19 +170,19 @@ Note:
 - We solve it together, solutions are in the solution's main.cpp
 - Walk around: most problems are build problems, not code problems
 
-**Script:**
-
-"So now we get to our first task. There are three TODOs in the exercise file. First set the model path, then pick the block size, and finally run the first block.
-The build commands are on the slide. You get 8 minutes to try and solve it. Don't worry if you don't make it. We will go through the solutions together and you can find the solutions in the solution's main.cpp too."
-
-*Timebox (8 min). Walk around. Most problems here are build problems,
-not code problems.*
-
 ---
 
 <div class="tag">Solution</div>
 
 ## TODO 1: Set the model path
+
+```cpp
+// given outside the function, in the global scope
+constexpr struct {
+    const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
+    size_t m_input_size = 2048;
+} k_model{};
+```
 
 ```cpp
 const std::string model_path = k_model.m_path; // <- fill out
@@ -220,10 +191,6 @@ const std::string model_path = k_model.m_path; // <- fill out
 Note:
 - Only the path to fill in
 - The engine loads it once: 126 MB, too slow to do per block
-
-**Script:**
-
-"Okay, let's look at the solutions together. All you had to fill in is the path. The engine loads this file once, because at 126 MB it's far too slow to do it per block."
 
 ---
 
@@ -245,10 +212,6 @@ Note:
 - 2048, set by the model at export
 - Try 512: the engine says the model takes exactly 2048 samples per call
 
-**Script:**
-
-"The correct block size is 2048, which is set by the model at export time. You can try to give the model 512, or 4096, and the engine will tell you that the model takes exactly 2048 samples per call."
-
 ---
 
 <div class="tag">Solution</div>
@@ -268,10 +231,6 @@ Note:
 - `process()` reads the block and overwrites it with the result
 - Only the first `process_size` samples are compared
 
-**Script:**
-
-"Well this was quite straightforward. `audio` starts out as a copy of the input, and process() works in place: it reads the samples from the buffer and overwrites them with the model's result. Then we compare that one block with the reference."
-
 ---
 
 <div class="tag">Done</div>
@@ -289,6 +248,47 @@ Note:
 - Same output as Python within 1e-06 difference to the reference: it works, for one block
 - Next: let's see what happens if we run the whole signal
 
-**Script:**
+---
 
-"The result shows us: we get the same output as Python. It works, for one block. But audio doesn't stop after one block. So let's run the whole signal, which brings us to step 2."
+<div class="tag">Listen</div>
+
+## Running every block<br><span class="then">Something sounds wrong.</span>
+
+<div class="wave-player" data-src="assets/audio/demo_output_state_cleared.wav" data-blocks="1.48608@1.39556"></div>
+
+<p class="wave-question fragment">Why does this happen?</p>
+
+Note:
+- Press the speaker: the demo chords, and the sound keeps cutting out and coming back
+- No memory passed: cleared after every block, so the waiting audio is thrown away and we start with silence at each block, instead of the audio from the memory of the last block.
+- The input never reaches the output: every block is the model’s answer to silence, identical each time
+- Why does this happen?
+
+- disclaimer: This is not exactly what you would hear in our case, since our model latency is bigger than the block size the model takes, so in reality in our case you would only hear silence. But if our model latency were shorter or our block size bigger you would hear gaps like in this example.
+
+---
+
+<div class="tag">Problem</div>
+
+## Running every block<br><span class="then">Only the first one matches.</span>
+
+```cpp
+for (size_t i = 0; i < num_blocks; ++i) {
+    engine.process(audio.data() + i * process_size, process_size);
+}
+```
+
+```
+block 0    max abs diff 2.33e-10   OK
+block 1    max abs diff 0.0802     <-- FAILED
+block 2    max abs diff 0.0791     <-- FAILED
+block 3    max abs diff 0.053      <-- FAILED
+block 4    max abs diff 0.113      <-- FAILED
+...
+```
+
+Note:
+- The call from step 1, once per block, over the whole test signal
+- This is what the exercise prints before you change anything
+- Block 0 matches the reference, every block after it fails
+- Don't explain yet: why is next

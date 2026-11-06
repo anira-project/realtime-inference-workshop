@@ -1,7 +1,7 @@
 // A ring buffer, given complete.
 //
 // Goal: hold samples between two sides that work in different block sizes. One
-//       writer, one reader, fixed capacity, no allocation after construction.
+//       thread, fixed capacity, no allocation after construction.
 //       Writing it is not the exercise; using it is.
 #pragma once
 

@@ -17,7 +17,7 @@
 
 class OnnxEngine {
 public:
-    // @model_path: the .onnx file; its weights sit next to it in a .data file
+    // @model_path: the .onnx file, graph and weights in one
     explicit OnnxEngine(const std::string& model_path)
         : m_env(ORT_LOGGING_LEVEL_WARNING, "workshop")
         , m_memory(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)) {

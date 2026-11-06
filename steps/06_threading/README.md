@@ -2,7 +2,7 @@
 
 **Goal:** get the engine off the audio thread and keep the latency fixed.
 
-**What it answers:** step 5 showed that neither engine may run in the callback. This is where the inference goes instead.
+**What it answers:** step 5 showed that the engine may not run in the callback. This is where the inference goes instead.
 
 ## The shape
 

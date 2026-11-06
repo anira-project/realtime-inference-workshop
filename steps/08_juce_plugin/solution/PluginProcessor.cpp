@@ -31,6 +31,8 @@ void PluginProcessor::prepareToPlay(double sample_rate, int samples_per_block) {
 
     // Built for 512-sample buffers at 44.1 or 48 kHz, nothing else: the
     // prefill and the latency are only right for those. Part 2 does the rest.
+    // The worker's time is rounded at 44.1 kHz: at 48 kHz the same samples last
+    // about 8% less, so a worst case close to the next callback may not fit.
     const bool supported_rate =
         std::abs(sample_rate - 44100.0) < 1.0 || std::abs(sample_rate - 48000.0) < 1.0;
     if (!supported_rate) {

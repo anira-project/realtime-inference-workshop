@@ -2169,3 +2169,37 @@ html.tanh .rtv-actions b { display: block; font-weight: 600; }
 
 /* A side remark in a framed box under a slide's content */
 html.tanh .note-box { margin-top: var(--space-5); padding: var(--space-3) var(--space-5); border: 1px solid var(--fs-border-strong); border-radius: var(--radius-main); font-size: 0.7em; text-align: center; }
+
+/* Step 9 · the six needs: declared by us, or handled by anira */
+html.tanh .need-how { margin-top: var(--space-3); padding: var(--space-1) var(--space-3); border-radius: var(--radius-small); font-size: 0.66em; align-self: flex-start; }
+html.tanh .reveal .need-how code { font-size: 0.9em; background: none; padding: 0; border: 0; box-shadow: none; }
+html.tanh .need-how.decl { background: var(--tint-exercise); }
+html.tanh .need-how.auto { background: var(--fs-surface-alt); color: var(--fs-text-muted-color); }
+html.tanh .cards .card .need-how { font-size: 0.62em; margin-top: auto; }
+
+/* Step 9 · the model file, with the keys explained beside it */
+html.tanh .mj { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-4); }
+html.tanh .mj pre { margin: 0; width: 100%; }
+html.tanh .mj-keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); font-size: 0.5em; }
+html.tanh .mj-keys > div { padding-left: var(--space-3); border-left: 3px solid var(--fs-border-strong); }
+html.tanh .mj-keys b { display: block; }
+
+/* The whole picture · four places in a plugin, two by two */
+html.tanh .places { display: grid; grid-template-columns: 1fr; gap: var(--space-4); margin-top: var(--space-5); }
+html.tanh .place { border: 1px solid var(--fs-border); border-radius: var(--radius-main); padding: var(--space-3) var(--space-4); min-width: 0; }
+html.tanh .place-head { font-size: 0.65em; margin-bottom: var(--space-2); }
+html.tanh .reveal .place pre { margin: 0; width: 100%; font-size: 0.58em; box-shadow: none; }
+html.tanh .reveal .place pre code { padding: var(--space-3); white-space: pre; overflow: hidden; }
+html.tanh .place-text { font-size: 0.6em; color: var(--fs-text-muted-color); }
+
+/* Process · offline: live and bounce callbacks against one inference */
+html.tanh .offline-fig { display: block; width: 100%; margin-top: var(--space-6); }
+html.tanh .offline-fig .cb { fill: var(--tint-model); }
+html.tanh .offline-fig .cb.miss { fill: var(--mark-over, #c0543f); opacity: 0.75; }
+html.tanh .offline-fig .inf { fill: var(--ink); }
+html.tanh .offline-fig text { font-size: 26px; fill: var(--fs-text-color); }
+html.tanh .offline-fig .lab { font-weight: 600; font-size: 30px; }
+html.tanh .offline-fig .small { font-size: 22px; }
+html.tanh .offline-fig .inv { fill: var(--paper); }
+html.tanh .offline-fig .ok, html.tanh .offline-fig .bad { font-size: 24px; }
+html.tanh .offline-fig .bad { fill: var(--mark-over, #c0543f); }

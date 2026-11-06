@@ -33,7 +33,6 @@ constexpr struct {
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
     size_t m_latency = 2224;
-    size_t rounded_max_inference = k_max_inference_samples_rounded;
 } k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
@@ -57,8 +56,8 @@ public:
         m_worker.stop();
 
         adaptation = (k_model.m_input_size - max_block_size);
-        m_prefill = adaptation + k_model.rounded_max_inference;
-        const size_t output_capacity = k_model.rounded_max_inference + k_model.m_input_size;
+        m_prefill = adaptation + k_max_inference_samples_rounded;
+        const size_t output_capacity = k_max_inference_samples_rounded + k_model.m_input_size;
 
         // ---- TODO 1 --------------------------------------------------------
         // How late is the wet signal? This is the number the host is told; in
@@ -170,7 +169,7 @@ private:
     std::vector<float> m_state;        // The worker's
     WorkerThread m_worker;
     size_t adaptation = 0;           // How many samples it takes for the worker to get the first block, to fill the output ring buffer
-    size_t m_prefill = 0;            // How many samples of silence the output ring buffer starts with, to line up dry and wet
+    size_t m_prefill = 0;            // Samples of silence m_output starts with: buffer adaptation + the worker's time
     size_t m_unpushed = 0;           // Samples that did not fit into m_input, owed as zeros
     size_t m_debt = 0;               // Samples that went out as zeros, thrown away when they arrive
     RingBuffer m_dry{0};             // The audio thread's own

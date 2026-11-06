@@ -1,56 +1,3 @@
-<div class="tag">Listen</div>
-
-## Running every block<br><span class="then">Something sounds wrong.</span>
-
-<div class="wave-player" data-src="assets/audio/demo_output_state_cleared.wav" data-blocks="1.48608@1.39556"></div>
-
-<p class="wave-question fragment">Why does this happen?</p>
-
-Note:
-- Press the speaker: the demo chords, and the sound keeps cutting out and coming back
-- No memory passed: cleared after every block, so the waiting audio is thrown away and we start with silence at each block, instead of the audio from the memory of the last block.
-- The input never reaches the output: every block is the model’s answer to silence, identical each time
-- Why does this happen?
-
-- disclaimer: This is not exactly what you would hear in our case, since our model latency is bigger than the block size the model takes, so in reality in our case you would only hear silence. But if our model latency were shorter or our block size bigger you would hear gaps like in this example.
-
-**Script:**
-
-"Let's run the chords you heard earlier through the model, block by block, with the code from step 1. Listen... the sound keeps cutting out and coming back. This is exaggerated so that you can hear something: each time, the model has lost what it remembered, and it needs a moment to come back. With the code from step 1 as it is, that happens on every single block, and it never comes back: it's practically silent, around minus 75 dB. So why does this happen? Let's look at the numbers first."
-
----
-
-<div class="tag">Problem</div>
-
-## Running every block<br><span class="then">Only the first one matches.</span>
-
-```cpp
-for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process(audio.data() + i * process_size, process_size);
-}
-```
-
-```
-block 0    max abs diff 2.33e-10   OK
-block 1    max abs diff 0.0802     <-- FAILED
-block 2    max abs diff 0.0791     <-- FAILED
-block 3    max abs diff 0.053      <-- FAILED
-block 4    max abs diff 0.113      <-- FAILED
-...
-```
-
-Note:
-- The call from step 1, once per block, over the whole test signal
-- This is what the exercise prints before you change anything
-- Block 0 matches the reference, every block after it fails
-- Don't explain yet: why is next
-
-**Script:**
-
-"Let's take the call from step 1 and run it once per block, over the whole signal. The first block matches the reference, just like in step 1. But every block after it fails. So why is the first block right, and all the others wrong?"
-
----
-
 <h1>Step 2<br>Stateless and stateful</h1>
 
 <!-- .slide: data-state="no-header" -->
@@ -60,15 +7,11 @@ Note:
 - To explain these silences at the beginning of each block we need to talk about the concept of state -> stateless and stateful models
 - Now the whole signal, and what the model needs for that
 
-**Script:**
-
-"In step 1 we ran one block, and it matched. Now we run the whole signal, block by block."
-
 ---
 
 <div class="tag">Concept</div>
 
-## Stateless vs. stateful<br><span class="then">Some models  read the past at every call, others remember.</span>
+## Stateless vs. stateful<br><span class="then">Some models read the past at every call, others remember.</span>
 
 <div class="state-compare">
   <div class="state-panel">
@@ -131,17 +74,9 @@ Our model is stateful, and ONNX keeps that state in the open:<br>
 Note:
 - Stateless: no memory, the past is handed in at every call
 - Stateful: only the new block, carries the past along (the dashed line). 
-- Our model is state full, so we need to pass our memory
+- Our model is stateful, so we need to pass our memory
 - ONNX can't hide state: the export moves it out, so we need an explicit input and output
 - Without passing the state, every block is the first block. Latency is 2224 samples and a block is 2048, so a first block is nearly silent
-
-**Script:**
-
-"A stateless model has no memory, so the past has to be handed in again at every call. A stateful model only gets the new block, and it carries the past along from one call to the next. That's the dashed line, and it's what our model does.
-
-That memory has consequences: the calls have to be in order, you need one state per stream, and a new stream starts with a zero state.
-
-ONNX can't hide the state inside the model, so the export moves it out. It's an explicit input and output: we hand it in with every block and get the updated state back. If we don't, every block is the first block of a new stream. And our model takes longer than one block to answer, so a first block is nearly silent. That is what you just heard."
 
 ---
 
@@ -157,15 +92,11 @@ engine.process(samples, num_samples, state);   // with the state of 63488 floats
 ```
 
 Note:
-- Let have one more look at the engine, as I skipped a detail in step 1
+- Let's have one more look at the engine, as I skipped a detail in step 1
 - There is a second process function that takes 3 arguments. 
 - Third argument: the state, after the audio, the same order as the model's inputs
 - The state is overwritten in the same vector, so the next call continues where this one ended
 - 63488 floats: every convolution cache in the model and starts with and defaults to zeros.
-
-**Script:**
-
-"It's the same call as in step 1, with one more argument: the state, after the audio, in the same order as the model's inputs. The state is overwritten on every call, so the next call continues where this one ended. The state is 63488 floats, every convolution cache in the model, and it starts at zero."
 
 ---
 
@@ -184,7 +115,7 @@ cmake --build --preset release --target step02_exercise
 
 <div class="run" style="grid-template-columns: 1fr 1.5fr">
   <div class="run-step" data-seconds="2.2">
-    <div class="run-title"><span>1</span>Create the state</div>
+    <div class="run-title"><span>1</span>A vector for the state</div>
     <div class="run-visual run-size-buffers">
       <div class="mini-buf grow"></div>
       <div class="run-size">? floats</div>
@@ -202,24 +133,28 @@ cmake --build --preset release --target step02_exercise
 </div>
 
 Note:
-- Two TODOs: create the state above the loop, pass it in the loop
+- Two TODOs: above the loop, a vector for the state; in the loop, pass it with the audio
+- We don't create the state ourselves: the model writes it on every call. We only give it the memory, zeros for the start
 - It runs as it is, and fails from block 1 on
 - Block 0 passes: a zero state is correct for the first block
 - 5 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
 - We solve it together, solutions are in the solution's main.cpp
 
-**Script:**
-
-"There are two TODOs. Above the loop, create the state. In the loop, pass the state to `process`. The state size was on the engine slide. It runs as it is, and you'll see block 0 pass, because a zero state is correct for the first block, and everything after it fail. You get 5 minutes."
-
-*Timebox (5 min). Walk around.*
-
 ---
 
 <div class="tag">Solution</div>
 
-## TODO 1: Create the state
+## TODO 1: A vector for the state
+
+```cpp
+// given outside the function, in the global scope
+constexpr struct {
+    const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
+    size_t m_input_size = 2048;
+    size_t m_state_size = 63488;
+} k_model{};
+```
 
 ```cpp
 std::vector<float> state(k_model.m_state_size, 0.0f); // <- fill out
@@ -227,11 +162,7 @@ std::vector<float> state(k_model.m_state_size, 0.0f); // <- fill out
 
 Note:
 - correct size: given in the struct or 63488 floats, all zeros: a zero state is a new stream
-- Created outside the loop: created per block, it would start at zero every time
-
-**Script:**
-
-"The state is 63488 floats, and zeros mean a new stream. Note that we create it above the loop: if you created it again for every block, it would start at zero every time, and you'd be back to where we started."
+- The vector lives outside the loop: made again per block, it would start at zero every time
 
 ---
 
@@ -249,10 +180,6 @@ Note:
 - Need to pass the third argument: the state
 - It is overwritten on every call, so the next block continues where this one ended
 - Every block now matches, to below 1e-6
-
-**Script:**
-
-"All it takes is one more argument. The state comes back overwritten, so the next block continues where this one ended. And now every block matches the reference."
 
 ---
 
@@ -273,9 +200,3 @@ Note:
 - Same output as Python, for every block
 
 - However this is in the case we always get blocks of 2048 samples. But a host doesn't always hand us 2048 samples. Which brings us to step 3
-
-**Script:**
-
-"Here are the same chords again, with the same model, and now we pass the state on every block. Listen... the sound runs through, with no more drop-outs. Same model, same audio, and it's only the state that makes the difference."
-
-"Same output as Python, for every block. But a host doesn't always hand us 2048 samples. Which brings us to step 3."

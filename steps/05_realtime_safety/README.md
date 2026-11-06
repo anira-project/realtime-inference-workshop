@@ -48,7 +48,7 @@ Intercepted call to real-time unsafe function `malloc` in real-time context!
     #7 main
 ```
 
-The report is not about the forward pass. The engine allocates *on the way in*, and there is no flag that turns that off.
+The first report comes on the way into the forward pass, before the model has run, and it's not the last: the engine keeps allocating during the pass, layer by layer. There is no flag that turns that off.
 
 ## Every violation, not just the first
 
@@ -61,13 +61,13 @@ RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false \
 ```
 
 ```
-8620 unsafe function `malloc`
-8619 unsafe function `free`
- 608 unsafe function `pthread_mutex_unlock`
- 608 unsafe function `pthread_mutex_lock`
+9019 unsafe function `malloc`
+9014 unsafe function `free`
+1164 unsafe function `pthread_mutex_unlock`
+1164 unsafe function `pthread_mutex_lock`
 ```
 
-About 1,080 allocations, as many frees and 76 locks in every forward pass. Not one slip — the engine is built that way. Locks, on the audio thread.
+About 1,130 allocations, almost as many frees and 145 locks in every forward pass. Not one slip — the engine is built that way. Locks, on the audio thread.
 
 ## Why you cannot fix this from the outside
 

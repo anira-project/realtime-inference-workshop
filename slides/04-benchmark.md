@@ -8,12 +8,6 @@ Note:
 - Measure how long a forward pass takes
 - No code to write in this step: run on your own machine
 
-
-**Script:**
-
-*Ask the room: "Who measures worst case rather than average? What do you measure with?"*
-"To know whether we can run the model in time, we need to measure how long a forward pass takes. We time one forward pass at a time with `std::chrono`. That gives us the average time, but also the worst case, which is what we care about. There is no code to write in this step: you just run it and read the numbers from your own machine."
-
 ---
 
 <div class="tag">Motivation</div>
@@ -55,7 +49,7 @@ Note:
 - Model: 2048 samples = threshold of 46 ms
 - Model block’s threshold says whether real-time is possible at all
 - 512 samples at 44.1 kHz: threshold of 11.6 ms per callback
-- The host callback’s threshold says whether this synchronous implementation actually makes it. So if we can manage one forward pass in one callback.
+- The host callback’s threshold says whether this synchronous implementation actually makes it. So if we can manage one forward pass in one callback from the host.
 - Click: real-time factor, how much of that time (our budget) we use; has to stay below 1
 - Forward pass on ONNX Runtime on my Mac: the average is about 13 ms
 - Against the model's threshold: 0.28, what a CPU meter shows. 
@@ -66,21 +60,6 @@ Note:
 - We are realtime capable, but not fast enough for one callback of the host. 
 - And this is only looking at the average, not the worst case.
 - The average doesn't decide, the worst case does: measure it
-
-
-**Script:**
-
-"Every callback has a deadline that we should not exceed. We call that the real-time threshold: how much time we have. It's the block size divided by the sample rate. Our host block of 512 samples at 44.1 kHz gives us 11.6 milliseconds per callback. The model takes 2048 samples, which is 46 milliseconds of audio.
-
-*Click: the real-time factor.*
-
-The real-time factor is how much of that time we use: the processing time divided by the threshold. It has to stay below 1, because above 1 we're too late. The forward pass on ONNX Runtime on my Mac takes about 13 milliseconds. Against the model's threshold that's a factor of 0.28, which is what a CPU meter shows. Against the callback's threshold it's 1.12: that's too long, even on average. And not every call takes 13 milliseconds: a slow one of 15.3 milliseconds is a factor of 1.32, and that's what you hear, a dropout.
-
-*Click: the bars.*
-
-Why does the callback count? The first three callbacks of the host just copy samples, which costs virtually no time. The fourth has to run the whole network, and it still only has 11.6 milliseconds. So the average doesn't decide whether we make it, the worst case does. That's why we need to measure the forward pass, every single call, and compare it to the threshold of the host."
-
-*Linger here. This is the key insight of the first half.*
 
 ---
 
@@ -98,10 +77,6 @@ Note:
 - Everything is written: you run it and read your own numbers
 - One call at a time, then the slowest time for a block
 - Run it again: what stays the same?
-
-**Script:**
-
-"So let's measure it properly. The program is ready: it runs the model one call at a time and shows you how long each call took on your machine. Then we run it again and see what stays the same."
 
 ---
 
@@ -134,10 +109,6 @@ Note:
 - We only measure our forward pass
 - Let's take a look
 
-**Script:**
-
-"We take the engine from step 2, with its state, and time the forward pass with `std::chrono` from the standard library. The model is loaded before timing, because loading isn't what we want to measure."
-
 ---
 
 <div class="tag">Timing: <code>std::chrono</code></div>
@@ -168,10 +139,6 @@ Note:
 - Iterations: how many forward passes will be measured in 
 - Repetitions: creates a new onnx runtime environment and loads the model into a new session -> fresh engine each time
 
-**Script:**
-
-"Only the forward pass stands between the two clock reads, because that's what the worker in step 6 will run. We use the steady clock, because it's monotonic and made for measuring intervals. Every forward pass is timed on its own: an average can't show a worst case. And we do it twice, with a fresh engine each time, 10 forward passes each. That way we see which slow passes come back with every fresh engine. That's the same structure anira's benchmarks use."
-
 ---
 
 <div class="tag">Run it</div>
@@ -191,11 +158,6 @@ Note:
 - Nothing to edit: build it and run it
 - You can change the amount of repetitions and iterations to see what happens
 - 2 minutes
-
-**Script:**
-
-*Timebox.*
-"So, there's nothing to edit here. Please build it and run it. Have a look at which forward passes are slow in every repetition, and at the list of the 5 slowest. The last lines print your worst forward pass: please write that number down, you'll need it in steps 6 and 7. Then run it three times and see what changes. You have 2 minutes."
 
 ---
 
@@ -245,16 +207,10 @@ Note:
 - Look at the passes of both repetitions, 
 - We also see some general statistics of our runs, mean, p99, max
 - Mean: is what your CPU meter shows
-- p99: one call in a hundred is slower, in my case slower then 18ms
+- p99: one call in a hundred is slower. With only 20 passes that is simply the slowest one, so here p99 = max = 18 ms
 - Then at bottom a list of the 5 slowest
 - The last lines: your worst case, over all the forward passes. 
 - Write it down, steps 6 and 7 need it
-
-
-**Script:**
-
-*Run it live.*
-"Let's run it together. Here are the first forward passes of both repetitions, and then the list of the 5 slowest. The statistics and your worst case cover all the passes. Let's run it again and see what stays the same."
 
 ---
 
@@ -266,35 +222,15 @@ Note:
   <div class="warmup-line model fragment" data-fragment-index="1" style="--at:0.516"><span>model block<br>46.4 ms</span></div>
   <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.129"><span>512-sample callback<br>11.6 ms</span></div>
   <div class="warmup-bars"><i class="warm" style="--h:20.0%;--i:0"><span>18.00 ms</span><em>1</em></i><i class="" style="--h:15.7%;--i:1"><span>14.14 ms</span><em>2</em></i><i class="" style="--h:14.7%;--i:2"><span>13.25 ms</span><em>3</em></i><i class="" style="--h:14.9%;--i:3"><span>13.40 ms</span><em>4</em></i><i class="" style="--h:14.4%;--i:4"><span>12.92 ms</span><em>5</em></i></div>
-  <div class="warmup-note fragment" data-fragment-index="1">worst: 18.00 ms</div>
   <div class="warmup-axis">call</div>
 </div>
 
 Note:
 - The run from the previous slide: repetition 1, the one with the worst pass
 - First pass 18 ms, second 14.1 ms, then about 13 ms
-- Click, the worst case and the two thresholds together: pass 1, 18.00 ms, factor 0.39 against a model block, 1.55 against a callback
-- The last lines of your output: the worst call
+- Click, the two thresholds together: pass 1, 18.00 ms, factor 0.39 against a model block, 1.55 against a callback
 - It fits the 46 ms of a model block easily
 - It doesn't fit the 11.6 ms of a callback, not even a typical call
-- The slower first passes are ONNX Runtime's warm-up: the first calls after loading do one-time setup
-- We leave it out in part 1: even the warm-up stays far below 46.4 ms, most likely on your machine too
-- Linger here
-
-- The slower first passes are ONNX Runtime’s warm-up: the first calls after loading do one-time setup
-- In the following steps of part 1 we leave it out: even the warm-up stays far below 46.4 ms, most likely on your machine too
-
-**Script:**
-
-"This is the first repetition of the run from the previous slide. The first pass takes 18 milliseconds, the second 14, and after that it's about 13.
-
-*Click: the worst case and the thresholds.*
-
-Now look at the last lines in your terminal: that's your worst case. In this run, mine was 18 milliseconds, in the first pass. That's a factor of 0.39 against a model block and 1.55 against a 512-sample callback.
-
-And here are our two thresholds. It fits easily into the 46 milliseconds of a model block. But it doesn't fit into the 11.6 milliseconds of a callback, not even a typical call.
-
-The slower first passes are ONNX Runtime's warm-up: the first calls after loading the model do some one-time setup. We won't deal with it in the first part. Even the warm-up is far below the 46 milliseconds of a model block, and that will most likely hold on your machine too."
 
 ---
 
@@ -306,28 +242,18 @@ The slower first passes are ONNX Runtime's warm-up: the first calls after loadin
   <div class="warmup-line model fragment" data-fragment-index="1" style="--at:0.516"><span>model block<br>46.4 ms</span></div>
   <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.129"><span>512-sample callback<br>11.6 ms</span></div>
   <div class="warmup-bars"><i class="warm" style="--h:88.5%;--i:0"><span>79.6 ms</span><em>1</em></i><i class="warm" style="--h:42.7%;--i:1"><span>38.4 ms</span><em>2</em></i><i class="" style="--h:8.7%;--i:2"><span>7.8 ms</span><em>3</em></i><i class="" style="--h:8.7%;--i:3"><span>7.9 ms</span><em>4</em></i><i class="" style="--h:9.2%;--i:4"><span>8.3 ms</span><em>5</em></i><i class="" style="--h:9.1%;--i:5"><span>8.2 ms</span><em>6</em></i><i class="" style="--h:8.4%;--i:6"><span>7.6 ms</span><em>7</em></i><i class="" style="--h:8.5%;--i:7"><span>7.6 ms</span><em>8</em></i><i class="" style="--h:8.5%;--i:8"><span>7.6 ms</span><em>9</em></i><i class="" style="--h:8.3%;--i:9"><span>7.5 ms</span><em>10</em></i></div>
-  <div class="warmup-note fragment" data-fragment-index="1">worst: 79.6 ms</div>
   <div class="warmup-axis">call</div>
 </div>
 
 Note:
-- However how long the warm up is and how fast the processing takes depends on the engine we use.
-- The same run, the same scale, on LibTorch
 - We don't use Libtorch in this workshop, but just for comparison
+- The same model, different engine on LibTorch
 - First call 80 ms, second 38 ms: TorchScript optimises the model while it runs it
-- It's the first calls every time, not random
 - Click: from the third call on about 7.7 ms, faster than ONNX Runtime
 - The two thresholds: after warm up a typical call fits the callback, with little room
-
-**Script:**
-
-"And here's the same run on LibTorch, on the same scale. The first call takes 80 milliseconds, the second 38. And that's not random: you should see the same on your machine, every time you run it. TorchScript optimises the model while it runs it, so the first calls are a warm-up.
-
-*Click: the worst case and the thresholds.*
-
-From the third call on it's about 7.7 milliseconds, so warmed up it's faster than ONNX Runtime here. But in this run its slowest call was 22.7 milliseconds, and on both engines that number changes from run to run.
-
-The very first call doesn't even fit a model block. A typical call does fit the callback, but with not much room to spare."
+- It's the first calls every time that are slower, not random
+- The slower first passes are warm-up: the first calls after loading do one-time setup
+- This also happens with onnx runtime, but the warm up time is much faster
 
 ---
 
@@ -347,10 +273,7 @@ Note:
 - LibTorch: long warm-up, faster typical call
 - The slowest call changes from run to run on both, and gets much worse when the machine is busy: run it again and compare
 - We continue with ONNX Runtime, so that's the number you write down
-
-**Script:**
-
-"Side by side: it's the same model on the same machine, but the shape is very different. ONNX Runtime has a short warm-up and a slower typical call. LibTorch has a long warm-up and a faster typical call. The slowest call changes from run to run on both engines, and it gets much worse when the machine is busy. These numbers are from one run of each, so run it again and compare. We continue with ONNX Runtime, so that's the number you write down."
+- We leave the warm up out in part 1: even the warm-up stays far below 46.4 ms, most likely on your machine too, so we don't consider it relevant.
 
 ---
 
@@ -362,14 +285,9 @@ Note:
 
 Note:
 - Ask the room: did anyone measure a worst case above 46.4 ms?
-- Then one forward pass takes longer than the audio it produces: no latency fixes that
+- That means one forward pass would take longer than the audio it produces: no latency fixes that
 - Run it again with other apps closed and the laptop on power; a busy machine makes the worst case worse
 - Still above: tell us, we look at it together
-
-**Script:**
-
-*Ask the room.*
-"Did anyone measure a worst case above 46.4 milliseconds? Then one forward pass takes longer than the 2048 samples of audio it produces, and no latency in the world fixes that: the model can't keep up on this machine. Run it again with other apps closed and the laptop plugged in, because a busy machine makes the worst case worse. If it's still above, let us know and we'll look at it together."
 
 ---
 
@@ -401,10 +319,6 @@ Note:
 - Yours makes the latency smaller
 - Larger than 46.4: the build stops with a message
 
-**Script:**
-
-"Your number goes into one place: `steps/common/inference_time.h`. The last line of the program even tells you which number to put there. Steps 6, 7 and the plugin read it from there. Above it you see 46.4 milliseconds: that's one model block of time, 2048 samples at 44.1 kHz, the largest worst case that can work at all. Until you put your number in, it's 46.4, so everything runs, just with more latency. Your number makes the latency smaller. If you put in something larger than 46.4, the build stops and tells you. Please take a minute and put your number in now."
-
 ---
 
 <div class="tag">Budget</div>
@@ -420,25 +334,12 @@ Note:
 </div>
 
 Note:
-- In the same inference_time header we calculate the max_inference in samples and rounded in samples. 
-- You don't need to do this, but you will need this variable later in step 6 and 7
+- `inference_time.h` (next slide) works this out from your number: in samples, and rounded to whole callbacks
 - Your worst call, from the last lines of the output
 - Click: in samples, at 44.1 kHz: 18 ms are 794 samples
 - Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
 - Whole callbacks, because the audio thread only picks results up once per callback
-
-
-**Script:**
-
-"Let's turn your worst case into the number we'll need. Mine was 18 milliseconds.
-
-*Click.*
-
-In samples that's 18 milliseconds times 44.1 kilohertz: 794 samples.
-
-*Click.*
-
-And we round that up to whole callbacks of 512 samples, so 1024: two callbacks. Whole callbacks, because the audio thread only picks results up once per callback. And it's the max, not the typical call, because the worker has to be done every single time: one slow call is already a dropout. We call that the rounded max inference time, and in the code it's `k_max_inference_samples_rounded`. In step 6 it's the time the worker gets, and in step 7 it becomes part of our latency. Everyone has their own number here, and on the next slide we put yours in."
+- You don't need to do this, but you will need this variable later in step 6 and 7
 
 ---
 
@@ -459,8 +360,3 @@ Note:
 - Measured on a quiet thread, nothing competing
 - So we are real-time capable, but we currently don't fit our hosts callback.
 - The next question is, are we even real-time safe?
-
-**Script:**
-
-"So what does this tell us? Typically, our computer is fast enough for a model block, but not for a 512-sample callback.
-If you ran it a few times, you may have seen something else: sometimes a later call is slow too. One of my LibTorch runs had 43 milliseconds, which is nearly the whole model block, and almost four callbacks. That's the rest of the system getting in the way, so the worst case has to fit with room to spare. Inside the callback it doesn't, and that's what the next steps solve. The mean is your CPU meter. p99 means one call in a hundred is slower than this, and at this block size that is about every 4.6 seconds. Also, this was measured on a quiet thread with nothing competing. On the audio thread, allocations and locks aren't just slow. They're fatal. We will talk more about this in the next step."

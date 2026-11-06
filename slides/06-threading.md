@@ -9,10 +9,6 @@ Note:
 - 2. It's not safe
 - So it gets its own thread: the worker thread
 
-**Script:**
-
-"In step 5 we found out that the engine can't run on the audio thread. The solution was to move the inference to a separate thread. In this step we'll give it its own thread, the worker thread."
-
 ---
 
 <div class="tag">Motivation</div>
@@ -32,7 +28,7 @@ Note:
 </div>
 
 <div class="statement-points two fragment">
-  <div><strong>Real-time capable</strong><br>The worker has its own budget: 46.4ms (step 4)</div>
+  <div><strong>Real-time capable</strong><br>The worker gets its own time: your worst case (step 4)</div>
   <div><strong>Real-time safe</strong><br>Allocations and locks leave the audio thread (step 5)</div>
 </div>
 
@@ -46,18 +42,8 @@ Note:
 - Worker may allocate. No per-callback deadline, but a budget: your rounded max inference time from step 4
 - The audio thread never waits for it
 - Click: this solves our two problems
-- Real-time capable, step 4: even a typical call of 13 ms is longer than a our host callback; the worker isn't inside any callback, it gets its own time
+- Real-time capable, step 4: even a typical call of 13 ms is longer than our host callback; the worker isn't inside any callback, it gets its own time
 - Real-time safe, step 5: the engine's allocations and locks leave the audio thread
-
-
-**Script:**
-
-"Here's the idea. We now have two threads. The audio thread keeps its pace: in every callback it only moves samples around, nothing else. It pushes the host's samples into the input ring buffer, `m_input` as in step 3, but now a thread-safe one. Once there are 2048 samples in it, the worker takes them out, runs the model and pushes the result into `m_output`, where the audio thread picks it up.
-The worker is allowed to allocate. It doesn't have a per-callback deadline. It does have a budget: the rounded max inference time you measured in step 4. The audio thread never waits for it.
-
-*Click: the two problems.*
-
-So with the worker thread we solve two problems at once. First, real-time safety from step 5: the engine's allocations and locks are no longer on the audio thread. And second, real-time capability from step 4: even a typical call of 13 milliseconds is longer than a callback. Now the forward pass no longer runs inside any callback, it gets its own time."
 
 ---
 
@@ -77,10 +63,6 @@ Note:
 - `prepare`: size `m_input` and `m_output`; and start the worker thread
 - Audio thread: samples into `m_input`, samples out of `m_output`, never waiting
 - Worker: take a block out of `m_input`, run the model, push it into `m_output`
-
-**Script:**
-
-"So our goal is to split our processor from step 3 over two threads, with a latency that stays fixed. First, in `prepare`, we give the ring buffers their sizes. Starting the thread is given. Then we write the audio thread's side: samples into `m_input`, samples out of `m_output`, and it never waits. And then the worker's side: take a block out of `m_input`, run the model, push it into `m_output`."
 
 ---
 
@@ -119,10 +101,6 @@ Note:
 - New: `ThreadSafeRingBuffer`, step 3's ring buffer safe between two threads, on moodycamel, fetched by CMake
 - New: `WorkerThread`, `start` and `stop` the worker thread
 
-**Script:**
-
-"We still have the model, the signals and the engine from the steps before. New is the `ThreadSafeRingBuffer`: it replaces the ring buffer from step 3, with the same functions, but safe between two threads. Underneath is a lock-free buffer from moodycamel, which CMake fetches for us. Our host loop from step 3 gets one line more: after every callback it sleeps for as long as one block of audio lasts, 11.6 milliseconds. With two threads, this only works if the audio thread is called at the audio rate, and the sleep simulates the audio device. `host.h` gives us that duration. The `WorkerThread` takes care of the thread: it calls one function over and over, from `start` until `stop`."
-
 ---
 
 <div class="tag">Helpers: <code>host.h</code></div>
@@ -147,15 +125,6 @@ Note:
 - Without it the loop calls the audio thread as fast as it can, the worker could never keep up
 - Block size is just a parameter: 512 for the whole first part
 
-
-**Script:**
-
-"And this is our host. It's a DAW without the DAW: the loop in `main` from step 3, that calls our callback block by block, just like an audio callback, so we overwrite the samples in place.
-
-New is one line: after every callback the loop sleeps for as long as one block of audio lasts, 11.6 milliseconds. `block_duration` from `host.h` works that out. Without it, the loop would call the audio thread as fast as it can, and the worker could never keep up. With the sleep, it behaves like a real audio device.
-
-The block size is just a parameter, and for the whole first part it is 512. The check at the end looks at whether the host gets the model's stream back, exactly the prefill later."
-
 ---
 
 <div class="tag">Helpers: <code>threadsafe_ring_buffer.h</code></div>
@@ -165,8 +134,8 @@ The block size is just a parameter, and for the whole first part it is 512. The 
 <table class="budget-table rb-table">
   <thead><tr><th></th><th>Audio thread <small>one sample, never waits</small></th><th>Worker <small>whole blocks</small></th></tr></thead>
   <tbody>
-    <tr><td><code>m_input</code></td><td><code>try_push(sample, num_samples)</code> <small>false if full</small></td><td> <code>pop(block, block_size)</code> & <code>available()</code></td></tr>
-    <tr><td><code>m_output</code></td><td><code>try_pop(sample, num_samples)</code> <small>false if empty</small></td><td><code>push(block, block_size)</code></td></tr>
+    <tr><td><code>m_input</code></td><td><code>try_push(sample)</code> <small>false if full</small></td><td> <code>pop(block, block_size)</code> & <code>available()</code></td></tr>
+    <tr><td><code>m_output</code></td><td><code>try_pop(sample)</code> <small>false if empty</small></td><td><code>push(block, block_size)</code></td></tr>
   </tbody>
 </table>
 
@@ -191,20 +160,9 @@ Note:
 - Thread-safe: the writer only moves the write position, the reader only the read position. Nothing is written by both, so no lock
 - Atomics with ordering: the sample is written before the position is published
 - Audio thread: `try_push` / `try_pop`, one sample, a bool says whether it worked
-- Worker: `available`, `pop`, `push` for whole blocks; `pop` takes nothing and returns false if too few are there, like in step 3
+- Worker: `available`, `pop`, `push` for whole blocks; `pop` takes nothing and returns false if too few are there (step 3's throws)
 - Underneath: moodycamel's circular buffer, only its `try_` functions: never wait, never allocate, never throw
 - `WorkerThread`: given, calls our `process_model` over and over, from `start` until `stop`
-
-**Script:**
-
-"Let's look at the helpers. Read this table by row: each ring buffer has exactly one thread writing and one thread reading. The audio thread writes into `m_input` and the worker reads from it. For `m_output` it's the other way round.
-
-Why can't we just use step 3's ring buffer? Because there, `push` and `pop` both change the same counter, `m_size`. If two threads do that at the same time, an update can get lost, and the reader could even see the new count before the sample is written. The thread-safe version avoids that: the writer only moves the write position, the reader only moves the read position, and nothing is written by both. So there's nothing to lock. That's the simplest lock-free case there is.
-
-The audio thread gets `try_push` and `try_pop`: one sample at a time, and a bool says whether it worked. The worker gets step 3's functions for whole blocks: `available`, `pop` and `push`. Underneath is a circular buffer from moodycamel, and we only use its try functions, which never wait, never allocate and never throw.
-
-And the thread itself is given: the `WorkerThread` calls our `process_model` over and over, from `start` until `stop`. Nothing here waits: on the audio thread, waiting would be a missed deadline for the whole host."
-  
 
 ---
 
@@ -259,12 +217,6 @@ Note:
 - When it works: the host hears the model's stream, exactly the prefill late
 - Solution is in the `solution` folder
 
-**Script:**
-
-"Now it's your turn. First, if you haven't yet, put your number from step 4 into `k_max_inference_ms` in `steps/common/inference_time.h`. Then there are three TODOs: the ring buffer sizes in `prepare`, the audio thread, and the worker thread. You'll find the `main.cpp` in `steps/06_threading/exercise`, and the build commands are on the slide. This is the biggest task so far, but it's one line at a time, so you get 10 minutes. When it works, the host hears the model's stream, exactly the prefill late. And as always, the solution is in the `solution` folder."
-
-*Timebox.*
-
 ---
 
 <div class="tag">Solution</div>
@@ -274,11 +226,11 @@ Note:
 ```cpp
 // given: how much silence m_output starts with
 adaptation = (k_model.m_input_size - max_block_size);
-m_prefill = adaptation + k_model.rounded_max_inference;
+m_prefill = adaptation + k_max_inference_samples_rounded;
 
 const size_t input_capacity = k_model.m_input_size;  // <- fill out
 const size_t output_capacity =
-    k_model.rounded_max_inference + k_model.m_input_size;  // <- fill out
+    k_max_inference_samples_rounded + k_model.m_input_size;  // <- fill out
 
 // given: the silence goes in, and the worker thread starts
 m_output.push(silence.data(), m_prefill);
@@ -287,21 +239,11 @@ m_worker.start([this] { process_model(); });
 
 Note:
 - `m_input`: one model block, as in step 3: the worker takes it out as soon as it's full
-- `m_output`: at least one model block, so the processed samples fit + the rounded_max_inference_samples.
-- The worst case is in the first block, were w haven't passed any samples yet, so the output RB is empty.
 - Given: the prefill, the silence `m_output` starts with, so the host never finds it empty. Two waits:
   - `adaptation`: 2048 − 512 = 1536. Callbacks 1–3, while the first block fills up, as in step 3
   - the worker's time: then the block still has to go through the model. Your worst case from step 4, rounded up to whole callbacks
 - Together 2560: that's how late the host hears the stream
 - `m_output`: the worker's time plus one model block. Fullest moment: a fast worker pushes a new block while the worker's time is still waiting in there
-
-**Script:**
-
-"The input ring buffer holds one model block, like in step 3: as soon as it's full, the worker takes it out.
-
-For the output, let's first look at the prefill: the silence it starts with, so the host never finds it empty. It covers two waits. First, the first block has to fill up: callbacks 1 to 3, that's 2048 minus 512, 1536 samples, like in step 3. Then that block still has to go through the model, and that takes the worker's time: your worst case from step 4, rounded up to whole callbacks. Together that's 2560 samples, and that's how late the host hears the stream.
-
-And that explains the output's size. When the worker is fast, its new block arrives while the worker's time of prefill is still waiting in the buffer. So it needs room for the worker's time plus one model block."
 
 ---
 
@@ -344,12 +286,6 @@ Note:
 - Push: if a sample doesn't fit, count the rest in `m_unpushed` and stop
 - Pop: if a sample isn't there, the rest of the callback goes out as zeros
 - To understand this better, let's have a look at what happens if a block is actually late
-
-**Script:**
-
-"The audio thread is step 3's `process_block`, without the engine, and one sample at a time. You only had to fill in the `try_push` and the `try_pop`. Neither of them waits, they just tell us whether it worked. If a sample doesn't fit into the input, we count the rest and stop. If a sample isn't in the output yet, the rest of the callback goes out as zeros. The code around that, the zeros and the debt, is given, and the next slide shows why it's there.
-
-Notice what's not in here: no `new`, no mutex, no engine, and no waiting."
 
 ---
 
@@ -450,20 +386,8 @@ Note:
 - Click: with a debt. Count the zeros, throw 3 and 4 away when they arrive
 - 5 lands where it belongs: a dropout, but no shift
 - Same on the way in: `m_input` full, samples lost, counted in `m_unpushed`
-- This works like a safety net, so we are never late
-- It's not perfect, though. The way we handle it now will create short term shift, because we don't 
-
-**Script:**
-
-"The prefill gives the worker its time. But what if it's late anyway, because one call was slow?
-
-*Top row.* On time, the samples arrive in order.
-
-*Click.* Now samples 3 and 4 aren't there yet. The audio thread doesn't wait, so the host gets silence. That's a dropout. If we just pop them later, everything after them is two samples late, and our latency has grown.
-
-*Click.* So we keep a debt: we count the zeros we sent, and throw 3 and 4 away when they arrive. Then 5 lands where it belongs. A dropout, but no shift.
-
-The same can happen on the way in, counted in `m_unpushed`. It's a safety net, and it's given in TODO 2."
+- A safety net: the dropout stays, but the latency doesn't grow
+- Not perfect: the zeros for `m_unpushed` go out right away, while `m_output` still holds the samples from before them. For about one prefill the stream is shifted by those zeros, then it's back in place. To put the zeros in their right place, the audio thread would have to write them into `m_output`, but the worker is its only writer
 
 ---
 
@@ -485,14 +409,10 @@ void process_model() {  // called over and over by m_worker
 
 Note:
 - The other half of step 3's `process_block`, the same lines
-- `WorkerThread` calls it over and over: no block yet, it checks again right away, no sleep. Be careful, this is not the best way to do it, because it will make you cpu run hot! 
+- `WorkerThread` calls it over and over: no block yet, it checks again right away, no sleep. Be careful, this is not the best way to do it, because it makes your CPU run hot! 
 - That keeps one core busy; part 2 does it better
 - A whole block: take it out, run the model, push it into `m_output`
 - The engine may allocate and lock here: nobody waits on this thread
-
-**Script:**
-
-"The worker side is the other half of step 3's process_block, with the same lines. The `WorkerThread` calls it over and over. If there's no whole block in the input ring buffer yet, it simply checks again right away, without sleeping, because the result is needed soon. That keeps one core busy, and in part 2 we'll see how to do it better. If there is a block, we take it out, run the model and push the result into the output ring buffer. And here the engine may allocate and lock as much as it wants: nobody is waiting on this thread."
 
 ---
 
@@ -512,9 +432,3 @@ Note:
 - Audio thread is real-time safe, the model runs beside it
 - The host hears it exactly the prefill late
 - So how do we line up a dry signal with it?
-
-**Script:**
-
-"The result: the same stream as in step 2, and the engine is off the audio thread. The audio thread is now real-time safe, and the model runs beside it."
-*If possible, run it next to step 5 live.*
-"And the host hears it exactly the prefill late. But the model itself answers late too. So what's the one number we tell the host, and how do we line up a dry signal with it? That's our next step: latency."

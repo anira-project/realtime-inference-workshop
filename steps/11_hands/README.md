@@ -41,6 +41,7 @@ The last step, and a playground: no TODO, no check. Open [`exercise/HandMapping.
 
 - **The left hand plays** — `is_right` is your right hand; `Swap hands` flips it.
 - **`The decoder failed to load: ...`** — the message names the file or tensor; `decoder.json` points to `model_decoder_noise.onnx`, which a configure with anira and JUCE on downloads.
+- **macOS: the video area stays empty or says the camera was denied** — start the app with `open` (or a double-click), not the binary inside `Contents/MacOS/`, and not from an IDE: started from a terminal or IDE, macOS asks whether that program may use the camera, not the app. Allow it in *System Settings → Privacy & Security → Camera* if you refused once.
 - **`No camera found.` / `No camera on this platform.`** — the pad plays. On macOS, allow the camera when asked; the app has to be restarted after a refusal. On Linux, install `libopencv-dev` and configure again, and be in the `video` group.
 - **Loud, strange sound** — a latent far outside about ±3; the natural range of each is about ±2.
 

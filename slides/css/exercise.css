@@ -2191,3 +2191,16 @@ html.tanh .deadline-pair { display: grid; grid-template-columns: 1fr 1fr; gap: v
 html.tanh .deadline-pair .deadline { margin-top: var(--space-8, 48px); }
 html.tanh .deadline.fits .deadline-bars i.runs { background: var(--ink); }
 html.tanh .deadline.fits .deadline-bars i.runs span { right: auto; left: 0; text-align: left; }
+
+/* A blank of an exercise file, in a code block (js/todo_marks.js) */
+html.tanh .reveal pre code .todo-mark {
+  background: var(--tint-exercise);
+  outline: 2px solid var(--ink);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+
+/* Task cards: which file a TODO is in, under its title */
+html.tanh .run-where { font-size: 0.6em; color: var(--fs-text-color); margin: 0 0 var(--space-3); }
+html.tanh .run-where code { font-size: 0.95em; }

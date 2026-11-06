@@ -53,39 +53,32 @@ Note:
 
 <div class="tag">In a plugin</div>
 
-## Three places, three calls.
+## Three places in a plugin.<br><span class="then">Three calls.</span>
 
-<!-- .slide: class="tight-code" -->
-
-**`prepareToPlay`** — the host blocks into the contract
-
-```cpp
-contract.hard_host_blocks(1, block, sample_rate);   // up to the announced block
-m_handler->prepare(contract);
-setLatencySamples(static_cast<int>(m_handler->get_latency(0)));
-```
-
-**`processBlock`** — the mono mix-down, then one tensor over it, in place
-
-```cpp
-float* mono = to_mono(buffer);   // the model is mono, as in step 8
-const int64_t shape[2] = {1, buffer.getNumSamples()};
-const auto block = anira::Tensor::from_host(mono, ANIRA_DTYPE_F32, shape);
-m_handler->process(block, 0, block, 0);
-```
-
-**`releaseResources`** — nothing: the `InferenceHandler` frees itself when the plugin goes
+<div class="places">
+  <div class="place"><div class="place-head"><b>Constructor</b> · create</div>
+<pre><code class="language-cpp">anira::Pipeline pipeline;
+pipeline.add_inference(anira::ModelConfig::from_file("model.json"));
+m_handler.emplace(m_context, pipeline);</code></pre></div>
+  <div class="place"><div class="place-head"><b>prepareToPlay</b> · prepare</div>
+<pre><code class="language-cpp">m_contract.hard_host_blocks(1, block, sample_rate);
+m_handler-&gt;prepare(m_contract);
+setLatencySamples(int(m_handler-&gt;get_latency(0)));</code></pre></div>
+  <div class="place"><div class="place-head"><b>processBlock</b> · process</div>
+<pre><code class="language-cpp">// one planar tensor over the host's channels
+auto block = anira::Tensor::from_host_planar(channels, shape);
+m_handler-&gt;process(block, 0, block, 0);</code></pre></div>
+</div>
 
 Note:
-- Three places, three calls: the same three places as step 8.
-- In prepareToPlay the host's blocks go into the contract, 1 up to the block size it announces, we prepare the handler, and we report its latency to the host.
-- Prepare runs again whenever the host changes its blocks.
-- Everything is anira.hpp, as in steps 9 to 11: the model config, the contract and the InferenceHandler.
-- In processBlock we mix down to mono, as in step 8, because the model has one channel, and put one tensor over that buffer: float32, one channel, the sample count as its shape.
-- process then runs it in place.
-- releaseResources does nothing: the InferenceHandler destroys itself when the plugin goes.
+- Three places in a plugin, and three calls: the constructor, prepareToPlay and processBlock, as in step 8.
+- In the constructor we create: the model config, a pipeline with it, and the handler. Create checks the files and builds the slots; it loads nothing yet.
+- In prepareToPlay the host's blocks go into the contract, 1 up to the block size it announces, we prepare the handler, and we report its latency to the host. Prepare runs again whenever the host changes its blocks.
+- In processBlock one tensor goes over the host's channels as they are, planar: channels is a span with one pointer per channel, filled from the buffer every block, and shape is the channel count and the sample count. float32 comes from the pointers. process then runs it in place.
+- Our model in steps 9 and 10 is mono, one channel in the model file, so there we mix down first, as in step 8. A stereo model takes the buffer as it is.
+- Nothing to do in releaseResources: the handler destroys itself when the plugin goes.
 - The threads are not ours to stop any more: anira keeps the pool until the last handler is destroyed.
-
+- This is the pattern of anira's own JUCE example.
 ---
 
 <div class="tag">Take away</div>

@@ -1,3 +1,5 @@
+// Step 9: the model file, filled in. The comments say where each value comes
+// from; the processor drops them before anira reads the file.
 {
   "models": [
     { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_forward.onnx" }
@@ -7,14 +9,14 @@
       "name": "audio",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 1], ["time", 2048]]
+      "axes": [["batch", 1], ["channel", 1], ["time", 2048]]   // TODO1: the model's block, 2048 samples per inference (step 1)
     },
     {
       "name": "state_in",
       "dtype": "float32",
       "role": "state",
-      "axes": [["batch", 1], ["any", 63488]],
-      "state_source": "state_out"
+      "axes": [["batch", 1], ["any", 63488]],   // TODO2: the state of step 2, 63,488 floats
+      "state_source": "state_out"               // TODO2: C, the state output; anira feeds it back, no copy
     }
   ],
   "outputs": [
@@ -22,14 +24,14 @@
       "name": "audio_out",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
-      "latency": 2224
+      "axes": [["batch", 1], ["channel", 1], ["time", 2048]],   // TODO1: as the input
+      "latency": 2224                                          // TODO1: the model's own delay, 2224 samples (step 7)
     },
     {
       "name": "state_out",
       "dtype": "float32",
       "role": "state",
-      "axes": [["batch", 1], ["any", 63488]]
+      "axes": [["batch", 1], ["any", 63488]]   // TODO2: as state_in
     }
   ]
 }

@@ -1,22 +1,23 @@
 #include "PluginProcessor.h"
 
+#include <array>
 #include <cstdio>
 #include <exception>
 #include <vector>
 
 namespace {
-// One knob per latent dimension, -1 to 1 around 0, as in anira's example
+// One knob per latent dimension, -3 to 3 around 0: the range the latents move in
 std::vector<PluginBase::Knob> latent_knobs() {
     static constexpr const char* k_ids[SplitProcessor::k_num_latents] = {
         "z0", "z1", "z2", "z3", "z4", "z5", "z6", "z7"};
     std::vector<PluginBase::Knob> knobs;
-    for (const char* id : k_ids) { knobs.push_back({id, -1.0f, 1.0f, 0.0f}); }
+    for (const char* id : k_ids) { knobs.push_back({id, -3.0f, 3.0f, 0.0f}); }
     return knobs;
 }
 }  // namespace
 
 PluginProcessor::PluginProcessor()
-    : PluginBase("Workshop split", "Step 10: encoder, latents, decoder", latent_knobs()) {
+    : PluginBase("Workshop split", "Step 10: opening the model", latent_knobs()) {
     try {
         m_split = std::make_unique<SplitProcessor>(WORKSHOP_STEP_DIR);
     } catch (const std::exception& error) {
@@ -52,12 +53,14 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     if (bypassed()) { return; }
 
-    // The knobs, z0 to z7, to the latents
-    for (size_t i = 0; i < SplitProcessor::k_num_latents; ++i) { m_split->set_offset(i, knob(i)); }
+    // The knobs, z0 to z7: one offset per latent
+    std::array<float, SplitProcessor::k_num_latents> offsets{};
+    for (size_t i = 0; i < offsets.size(); ++i) { offsets[i] = knob(i); }
 
     m_dry_wet.store(buffer);
     float* mono = to_mono(buffer);
-    m_split->process(mono, static_cast<size_t>(buffer.getNumSamples()));
+    // A bounce (isNonRealtime) waits for every result; live never waits
+    m_split->process(mono, static_cast<size_t>(buffer.getNumSamples()), offsets, isNonRealtime());
     to_all_channels(buffer);
     m_dry_wet.mix(buffer, mix());
 }

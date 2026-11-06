@@ -161,8 +161,7 @@ Note:
 
 ```json
 { "name": "audio", "dtype": "float32", "role": "streamed",
-  "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
-  "window": { "min": 2048, "max": 2048 } }
+  "axes": [["batch", 1], ["channel", 1], ["time", 2048]] }
 ```
 
 <div class="statement-points">
@@ -208,13 +207,12 @@ Note:
 ```json
 "inputs": [
   { "name": "audio",     "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]], "window": { "min": 2048, "max": 2048 } },
+    "axes": [["batch",1],["channel",1],["time",2048]] },
   { "name": "state_in",  "role": "state",
     "axes": [["batch",1],["any",63488]], "state_source": "state_out" }
 ], "outputs": [
   { "name": "audio_out", "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]], "window": { "min": 2048, "max": 2048 },
-    "latency": 2224 },
+    "axes": [["batch",1],["channel",1],["time",2048]], "latency": 2224 },
   { "name": "state_out", "role": "state", "axes": [["batch",1],["any",63488]] }
 ]
 ```
@@ -294,7 +292,7 @@ anira::Context context{config};
 
 Note:
 - In anira there is one pool per process, and every instance queues into it.
-- The first one sizes the pool, and every later one shares it; one asking for fewer threads shrinks it. The threads run while a handler is prepared.
+- The first one sizes the pool, and every later one shares it; one asking for fewer threads shrinks it. The threads start with the first prepare and run until the last handler is destroyed.
 - Strictly, it is one pool per copy of anira: every instance of your plugin shares it, and another plugin that links its own anira has its own.
 - Here, ten instances, one pool, four threads.
 - All handlers share one lock-free queue: the audio thread enqueues a job and leaves, and a free thread takes the next one. The order holds within each handler.

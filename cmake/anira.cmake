@@ -1,5 +1,8 @@
 # anira for part 2, fetched and built from source, pinned to one commit of the
-# v3 line, v3.0.0-alpha.2. ONNX Runtime only, static: the plugin's choice from
+# v3 line: v3.0.0-alpha.3 (ABI 0.3), the release commit on M2b PR 4
+# (anira-project/anira#241, feat/v3-hard-budget): the measured budget, the
+# until-stable warm-up, the optional window and the latency fixes. Move to the
+# v3.0.0-alpha.3 tag once it is pushed. ONNX Runtime only, static: the plugin's choice from
 # step 8, and the engine the model files of steps 9 to 11 name.
 #
 #   workshop_setup_anira()   -> target anira::anira
@@ -10,11 +13,15 @@
 include_guard(GLOBAL)
 include(FetchContent)
 
-# TODO: once anira's prepare accepts "budget": "measured" and "warmup": "until_stable"
-# (M2b PR 4, v3.0.0-alpha.3), bump this pin and switch the contract.json of steps 9,
-# 10 and 11 from {"ms": 20} and {"fixed": 3} to them, as the slides already show.
-set(WORKSHOP_ANIRA_TAG "561f0408317f94676aa3d067242367c0ca92a5b8"
+set(_workshop_anira_pin "131b75de99b85fbe055aaff7cc5e8a4dcadf1dde")
+set(WORKSHOP_ANIRA_TAG "${_workshop_anira_pin}"
     CACHE STRING "anira commit or tag the part 2 steps build against")
+# A build folder configured before this pin keeps the old one in its cache:
+# move it along, unless someone chose another commit on purpose.
+if(WORKSHOP_ANIRA_TAG STREQUAL "561f0408317f94676aa3d067242367c0ca92a5b8")
+    set(WORKSHOP_ANIRA_TAG "${_workshop_anira_pin}" CACHE STRING
+        "anira commit or tag the part 2 steps build against" FORCE)
+endif()
 
 macro(workshop_setup_anira)
     if(NOT TARGET anira::anira)

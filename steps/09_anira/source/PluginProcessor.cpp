@@ -41,7 +41,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     m_dry_wet.store(buffer);
     float* mono = to_mono(buffer);
-    m_anira->process(mono, static_cast<size_t>(buffer.getNumSamples()));
+    // A bounce (isNonRealtime) waits for every result; live never waits
+    m_anira->process(mono, static_cast<size_t>(buffer.getNumSamples()), isNonRealtime());
     to_all_channels(buffer);
     m_dry_wet.mix(buffer, mix());
 }

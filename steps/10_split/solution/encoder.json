@@ -1,3 +1,5 @@
+// Step 10: the encoder, filled in. The comments say where each value comes from.
+// The comments are hints; the processor drops them before anira reads the file.
 {
   "models": [
     { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_encoder.onnx" }
@@ -7,8 +9,7 @@
       "name": "audio",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
-      "window": { "min": 2048, "max": 2048 }
+      "axes": [["batch", 1], ["channel", 1], ["time", 2048]]   // TODO1: one model block, 2048 samples, as in step 9
     },
     {
       "name": "state_in",
@@ -23,8 +24,7 @@
       "name": "latents",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 8], ["time", 1]],
-      "window": { "min": 1, "max": 1 }
+      "axes": [["batch", 1], ["channel", 8], ["time", 1]]   // TODO1: eight latents, one frame per inference
     },
     {
       "name": "state_out",

@@ -16,11 +16,11 @@ Note:
 ## Three configs say what, how, and with what.<br><span class="then">The handler runs it.</span>
 
 <div class="cards">
-  <div class="card">{{ICON:model}}<div class="card-title">ModelConfig</div><div class="card-text">what: the files, every tensor, its role</div><div class="card-file">model.json</div></div>
+  <div class="card">{{ICON:model}}<div class="card-title">ModelConfig</div><div class="card-text">what: the engine and its file, every tensor, its role</div><div class="card-file">model.json</div></div>
   <div class="card-arrow">→</div>
   <div class="card">{{ICON:sliders}}<div class="card-title">Contract</div><div class="card-text">how: <em>Hard</em> for a stream, <em>Async</em> for jobs</div><div class="card-file">contract.json</div></div>
   <div class="card-arrow">→</div>
-  <div class="card">{{ICON:chip}}<div class="card-title">ContextConfig</div><div class="card-text">with what: threads, engines, log</div><div class="card-file optional">context.json · optional</div></div>
+  <div class="card">{{ICON:chip}}<div class="card-title">ContextConfig</div><div class="card-text">with what: the pool, its threads, the log</div><div class="card-file optional">context.json · optional</div></div>
   <div class="card-arrow">→</div>
   <div class="card accent">{{ICON:shield}}<div class="card-title">Handler</div><div class="card-text">three calls</div><div class="card-file">create · prepare · process</div></div>
 </div>
@@ -34,7 +34,7 @@ Note:
 - ModelConfig is the what: the model files and every tensor, each with a name and a role.
 - The contract is the how: what the host promises, and what it gets back.
 - Hard is the contract for a stream, and it is the one we use all day; Async, for jobs, comes later.
-- ContextConfig is the with what: threads, engines and the log, one per process, and the defaults fit most hosts.
+- ContextConfig is the with what: the pool, its threads and how they wait, and the log, one per process, and the defaults fit most hosts. The engine itself is named in the model file.
 - So that is a model file and a contract file, plus an optional context file.
 - The handler takes three calls, in the three places from step 8: create in the constructor, prepare in prepareToPlay, process in processBlock.
 - For most models, that is all you write.

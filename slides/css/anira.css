@@ -1912,6 +1912,11 @@ html.tanh .lat-why {
   color: var(--fs-text-muted-color);
 }
 
+/* Under a table, centred like the table */
+html.tanh table + .lat-why {
+  text-align: center;
+}
+
 /*********************************************
  * The architecture overview and the stages, as SVG
  *********************************************/
@@ -2123,3 +2128,182 @@ html.tanh .reveal .slides section.answer::before {
   border-color: var(--mark-check);
   color: var(--fs-text-muted-color);
 }
+
+/*********************************************
+ * Outlook: inline execution, three checks and two threads
+ *********************************************/
+html.tanh .inline-tree { margin-top: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+html.tanh .it-checks { display: flex; justify-content: center; gap: var(--space-5); }
+html.tanh .it-check { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: var(--hairline) solid var(--fs-border-strong); border-radius: var(--radius-main); font-size: 0.5em; }
+html.tanh .it-check b { display: block; font-weight: 600; }
+html.tanh .it-check small { display: block; color: var(--fs-text-muted-color); font-size: 0.85em; }
+html.tanh .it-box { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; border-radius: var(--radius-small); background: var(--tint-check); font-weight: 700; }
+html.tanh .it-branches { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+html.tanh .it-branch { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-main); background: var(--fs-surface-alt); }
+html.tanh .it-branch.yes { outline: 2px solid var(--ink); }
+html.tanh .it-label { font-size: 0.45em; color: var(--fs-text-muted-color); }
+html.tanh .it-thread { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.6em; }
+html.tanh .it-sum { margin-top: var(--space-2); font-size: 0.85em; gap: var(--space-2); }
+
+/* Outlook · zero copy: the data a second, with a copy and without */
+html.tanh .zc { display: flex; flex-direction: column; gap: var(--space-6); margin-top: var(--space-7); }
+html.tanh .zc-row { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: var(--space-5); }
+html.tanh .zc-label { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.6em; }
+html.tanh .zc-sum { margin-top: 0; justify-content: flex-start; font-size: 1.1em; }
+html.tanh .it-example { text-align: center; font-size: 0.5em; color: var(--fs-text-muted-color); margin-bottom: calc(-1 * var(--space-4)); }
+
+/* Prepare · real-time verdict: a load scale from 0 to 1.25 with three zones */
+html.tanh .rtv { margin-top: var(--space-7); display: flex; flex-direction: column; gap: var(--space-7); }
+html.tanh .rtv-scale { position: relative; display: grid; grid-template-columns: 60fr 20fr 20fr; height: 90px; border-radius: var(--radius-main); overflow: visible; }
+html.tanh .rtv-zone { display: flex; flex-direction: column; justify-content: center; padding: 0 var(--space-4); font-size: 0.5em; }
+html.tanh .rtv-zone b { font-weight: 600; }
+html.tanh .rtv-zone small { color: var(--fs-text-muted-color); }
+html.tanh .rtv-zone.ok { background: var(--tint-check); border-radius: var(--radius-main) 0 0 var(--radius-main); }
+html.tanh .rtv-zone.marginal { background: var(--tint-model); }
+html.tanh .rtv-zone.not { background: var(--fs-surface-alt); outline: 1px dashed var(--fs-border-strong); border-radius: 0 var(--radius-main) var(--radius-main) 0; }
+html.tanh .rtv-mark { position: absolute; top: -14px; bottom: -14px; left: calc(var(--x) / 1.25 * 100%); width: 3px; background: var(--ink); }
+html.tanh .rtv-mark span { position: absolute; top: 100%; left: 8px; margin-top: 6px; white-space: nowrap; font-size: 0.42em; line-height: 1.3; }
+html.tanh .rtv-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); margin-top: var(--space-6); }
+html.tanh .rtv-actions > div { font-size: 0.5em; padding: var(--space-3) var(--space-4); border-left: 3px solid var(--fs-border-strong); }
+html.tanh .rtv-actions b { display: block; font-weight: 600; }
+
+/* A side remark in a framed box under a slide's content */
+html.tanh .note-box { margin-top: var(--space-5); padding: var(--space-3) var(--space-5); border: 1px solid var(--fs-border-strong); border-radius: var(--radius-main); font-size: 0.7em; text-align: center; }
+
+/* Step 9 · the six needs: declared by us, or handled by anira */
+html.tanh .need-how { margin-top: var(--space-3); padding: var(--space-1) var(--space-3); border-radius: var(--radius-small); font-size: 0.66em; align-self: flex-start; }
+html.tanh .reveal .need-how code { font-size: 0.9em; background: none; padding: 0; border: 0; box-shadow: none; }
+html.tanh .need-how.decl { background: var(--tint-exercise); }
+html.tanh .need-how.auto { background: var(--fs-surface-alt); color: var(--fs-text-muted-color); }
+html.tanh .cards .card .need-how { font-size: 0.62em; margin-top: auto; }
+
+/* Step 9 · the model file, with the keys explained beside it */
+html.tanh .mj { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-4); }
+html.tanh .mj pre { margin: 0; width: 100%; }
+html.tanh .mj-keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); font-size: 0.5em; }
+html.tanh .mj-keys > div { padding-left: var(--space-3); border-left: 3px solid var(--fs-border-strong); }
+html.tanh .mj-keys b { display: block; }
+
+/* The whole picture · four places in a plugin, two by two */
+html.tanh .places { display: grid; grid-template-columns: 1fr; gap: var(--space-4); margin-top: var(--space-5); }
+html.tanh .place { border: 1px solid var(--fs-border); border-radius: var(--radius-main); padding: var(--space-3) var(--space-4); min-width: 0; }
+html.tanh .place-head { font-size: 0.65em; margin-bottom: var(--space-2); }
+html.tanh .reveal .place pre { margin: 0; width: 100%; font-size: 0.58em; box-shadow: none; }
+html.tanh .reveal .place pre code { padding: var(--space-3); white-space: pre; overflow: hidden; }
+html.tanh .place-text { font-size: 0.6em; color: var(--fs-text-muted-color); }
+
+/* Process · offline: live and bounce callbacks against one inference */
+html.tanh .offline-fig { display: block; width: 100%; margin-top: var(--space-6); }
+html.tanh .offline-fig .cb { fill: var(--tint-model); }
+html.tanh .offline-fig .cb.miss { fill: var(--mark-over, #c0543f); opacity: 0.75; }
+html.tanh .offline-fig .inf { fill: var(--ink); }
+html.tanh .offline-fig text { font-size: 26px; fill: var(--fs-text-color); }
+html.tanh .offline-fig .lab { font-weight: 600; font-size: 30px; }
+html.tanh .offline-fig .small { font-size: 22px; }
+html.tanh .offline-fig .inv { fill: var(--paper); }
+html.tanh .offline-fig .ok, html.tanh .offline-fig .bad { font-size: 24px; }
+html.tanh .offline-fig .bad { fill: var(--mark-over, #c0543f); }
+
+/* Step 10 · the model figure from the introduction, its three parts framed */
+html.tanh .mf.mf-split { width: 100%; height: auto; max-height: 740px; }
+html.tanh .mf.mf-split .mf-title { font-size: 34px; }
+html.tanh .mf .mf-zone rect { fill: var(--tint-latent); fill-opacity: 0.55; stroke: none; }
+html.tanh .mf .mf-zone.z rect { fill: var(--tint-exercise); fill-opacity: 0.8; }
+html.tanh .mf .mf-zone text { font-size: 34px; font-weight: 600; fill: var(--ink); font-family: var(--fs-heading-font); }
+
+/* Step 10 · the eight offsets of the listening example */
+html.tanh .z-offsets { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--space-2); margin: var(--space-4) 0 var(--space-3); }
+html.tanh .z-offsets span { display: flex; flex-direction: column; align-items: center; padding: var(--space-2); border-radius: var(--radius-small); background: var(--tint-latent); font-family: var(--fs-code-font); font-size: 0.55em; }
+html.tanh .z-offsets b { font-family: var(--fs-heading-font); font-weight: 600; color: var(--fs-text-muted-color); }
+
+/* Step 10 · the latent bars (js/latent_bars.js) */
+html.tanh .latent-live { margin-top: var(--space-6); }
+html.tanh .lb-bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--space-5); height: 520px; }
+html.tanh .lb-col { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+html.tanh .lb-track { position: relative; flex: 1; width: 64px; border-radius: var(--radius-small); background: var(--fs-surface-alt); }
+html.tanh .lb-zero { position: absolute; left: -8px; right: -8px; top: 50%; border-top: 2px solid var(--fs-border-strong); }
+html.tanh .lb-bar, html.tanh .lb-ghost { position: absolute; left: 0; right: 0; border-radius: 4px; transition: top 60ms linear, height 60ms linear; }
+html.tanh .lb-bar { background: var(--tint-latent); outline: 2px solid var(--ink); outline-offset: -2px; }
+html.tanh .latent-live.is-offset .lb-bar { background: var(--tint-exercise); }
+html.tanh .lb-ghost { display: none; background: var(--fs-text-subtle-color); opacity: 0.35; }
+html.tanh .latent-live.is-offset .lb-ghost { display: block; }
+html.tanh .lb-value { font-family: var(--fs-code-font); font-size: 0.5em; }
+html.tanh .lb-name { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.6em; }
+html.tanh .lb-offset { font-family: var(--fs-code-font); font-size: 0.45em; color: var(--fs-text-muted-color); }
+html.tanh .latent-live.is-offset .lb-offset { color: var(--ink); font-weight: 600; }
+html.tanh .lb-controls { display: flex; align-items: center; gap: var(--space-5); margin-top: var(--space-5); }
+html.tanh .lb-toggle { font: inherit; font-size: 0.55em; padding: var(--space-2) var(--space-5); border-radius: 999px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
+html.tanh .lb-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+html.tanh .lb-frame { font-size: 0.45em; color: var(--fs-text-muted-color); font-family: var(--fs-code-font); }
+
+/* Step 10 · the latent space as a map of sounds */
+html.tanh .lat-map { display: block; width: 100%; max-height: 470px; margin-top: var(--space-3); }
+html.tanh .lat-map .lm-a { stop-color: var(--tint-latent); stop-opacity: 0.35; }
+html.tanh .lat-map .lm-b { stop-color: var(--tint-latent); stop-opacity: 1; }
+html.tanh .lat-map .lm-c { stop-color: var(--tint-exercise); stop-opacity: 0.9; }
+html.tanh .lat-map .lm-d { stop-color: var(--tint-exercise); stop-opacity: 0; }
+html.tanh .lat-map .lm-over { mix-blend-mode: multiply; }
+html.tanh .lat-map .lm-axis { font-size: 30px; font-weight: 600; fill: var(--ink); font-family: var(--fs-heading-font); }
+html.tanh .lat-map .lm-path, html.tanh .lat-map .lm-path2 { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+html.tanh .lat-map .lm-path2 { stroke-dasharray: 2 0; }
+html.tanh .lat-map .lm-dot { fill: var(--ink); }
+html.tanh .lat-map .lm-dot2 { fill: var(--paper); stroke: var(--ink); stroke-width: 3; }
+html.tanh .lat-map .lm-arrow { stroke: var(--ink); stroke-width: 4; stroke-dasharray: 10 8; marker-end: none; }
+html.tanh .lat-map .lm-lab { font-size: 28px; fill: var(--ink); font-family: var(--fs-heading-font); }
+html.tanh .lat-map .lm-note text { font-size: 28px; fill: var(--fs-text-muted-color); font-family: var(--fs-heading-font); }
+
+/* Step 10 · what 8 numbers can describe: a waveform against a description */
+html.tanh .wd { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-5); align-items: center; margin-top: var(--space-6); }
+html.tanh .wd-side { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-radius: var(--radius-main); background: var(--fs-surface-alt); min-height: 380px; justify-content: center; }
+html.tanh .wd-head { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.72em; }
+html.tanh .wd-foot { font-size: 0.6em; color: var(--fs-text-muted-color); }
+html.tanh .wd-wave { width: 100%; height: 220px; }
+html.tanh .wd-wave path { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+html.tanh .wd-arrow { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.72em; color: var(--ink); }
+html.tanh .wd-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+html.tanh .wd-list > div { padding: var(--space-4); border-radius: var(--radius-small); background: var(--tint-latent); font-size: 0.68em; }
+html.tanh .wd-list b { display: block; font-weight: 600; }
+html.tanh .wd-list small { color: var(--fs-text-muted-color); font-size: 0.85em; }
+html.tanh .wd-z { font-family: var(--fs-code-font); font-size: 0.5em; color: var(--fs-text-muted-color); margin-top: var(--space-2); white-space: pre; }
+
+/* Step 10 · before and after the shift, as small wave players */
+html.tanh .lm-players { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-top: var(--space-3); }
+html.tanh .lm-player-label { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.55em; margin-bottom: var(--space-1); }
+html.tanh .lm-player .wave-player { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--space-4); }
+html.tanh .lm-player .wave-play { width: 72px; height: 72px; }
+html.tanh .lm-player .wave-track canvas { height: 80px; }
+
+/* Step 10 · the offset first, the other ways beside it */
+html.tanh .zw { display: grid; grid-template-columns: 1fr 1.6fr; gap: var(--space-6); margin-top: var(--space-7); align-items: stretch; }
+html.tanh .zw-main { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6); border-radius: var(--radius-main); background: var(--tint-exercise); outline: 2px solid var(--ink); }
+html.tanh .zw-tag { font-size: 0.45em; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fs-text-muted-color); }
+html.tanh .zw-name { font-family: var(--fs-heading-font); font-weight: 600; font-size: 1.1em; }
+html.tanh .zw-main code { font-size: 0.75em; }
+html.tanh .zw-text { font-size: 0.55em; color: var(--fs-text-muted-color); }
+html.tanh .zw-head { font-size: 0.5em; color: var(--fs-text-muted-color); margin-bottom: var(--space-3); }
+html.tanh .zw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+html.tanh .zw-grid > div { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); border-radius: var(--radius-main); background: var(--fs-surface-alt); font-size: 0.55em; }
+html.tanh .zw-grid b { font-family: var(--fs-heading-font); font-size: 1.15em; }
+html.tanh .zw-grid small { color: var(--fs-text-muted-color); }
+
+/* Step 10 · the forward model and its two halves */
+html.tanh .split-files { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-6); }
+html.tanh .sf-row { display: grid; grid-template-columns: 300px 1fr 60px 1fr 180px; align-items: center; gap: var(--space-4); }
+html.tanh .sf-file { display: flex; justify-content: center; }
+html.tanh .sf-io { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-main); background: var(--fs-surface-alt); font-family: var(--fs-code-font); font-size: 0.55em; }
+html.tanh .sf-io span:last-child { color: var(--fs-text-muted-color); }
+html.tanh .sf-io.z { background: var(--tint-exercise); outline: 2px solid var(--ink); outline-offset: -2px; }
+html.tanh .sf-arrow { text-align: center; font-size: 0.8em; color: var(--fs-text-muted-color); }
+html.tanh .sf-note { font-size: 0.5em; color: var(--fs-text-muted-color); }
+html.tanh .sf-cut { align-self: center; font-size: 0.5em; color: var(--fs-text-muted-color); border-top: 2px dashed var(--fs-border-strong); width: 100%; text-align: center; padding-top: var(--space-2); }
+
+/* Step 11 · the model without its encoder */
+html.tanh .mf .mf-cover { fill: var(--paper); fill-opacity: 0.88; }
+html.tanh .mf .mf-cover.full { fill-opacity: 1; }
+html.tanh .mf .mf-gone { font-size: 34px; font-weight: 600; fill: var(--fs-text-subtle-color); font-family: var(--fs-heading-font); }
+html.tanh .mf .mf-strike { stroke: var(--fs-text-muted-color); stroke-width: 3; }
+html.tanh .mf .mf-src rect { fill: var(--tint-latent); stroke: var(--ink); stroke-width: 2; }
+html.tanh .mf .mf-src.hand rect { fill: var(--tint-exercise); }
+html.tanh .mf .mf-src text { font-size: 34px; font-weight: 600; fill: var(--ink); font-family: var(--fs-heading-font); }
+html.tanh .mf .mf-into { fill: none; stroke: var(--ink); stroke-width: 3; stroke-dasharray: 8 6; }
+html.tanh .mf .mf-zlab { font-size: 34px; font-weight: 600; fill: var(--ink); font-family: var(--fs-heading-font); }

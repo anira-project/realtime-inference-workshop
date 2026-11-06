@@ -1,11 +1,13 @@
 // Step 10 — the check: drives SplitProcessor the way the plugin's host does,
-// prepare once, process every callback, on the fake host with the test
-// signal. With zero offsets the output is compared with step 10's reference
-// (target_split_signal.h), shifted by latency(); then once more with an offset
-// on z0, which must change it. Built twice: step10_exercise_check and
+// prepare once, process every callback, on the fake host with the test signal.
+// It runs offline, as a bounce: the host calls as fast as it can and every
+// block waits for its result, so nothing is missed and the comparison is exact.
+// First with every offset at 0, against step 10's reference
+// (target_split_signal.h), shifted by latency(); then once more with offsets,
+// which must change the output. Built twice: step10_exercise_check and
 // step10_solution_check.
 
-#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
@@ -29,19 +31,19 @@ constexpr size_t k_model_latency = 2224;
 
 namespace {
 
-// The test signal through the processor on the fake host. `late` collects
-// where the miss policy filled a block.
-std::vector<float> run(SplitProcessor& processor, std::vector<size_t>& late) {
+using Offsets = std::array<float, SplitProcessor::k_num_latents>;
+
+// The test signal through the processor, offline, with these offsets. `late`
+// collects where the miss policy filled a block: offline it has to stay empty.
+std::vector<float> run(SplitProcessor& processor, const Offsets& offsets, std::vector<size_t>& late) {
     size_t position = 0;
-    return run_host(
-        k_input_signal.data(),
-        k_input_signal.size(),
-        k_host.m_block_size,
-        [&](float* samples, size_t num_samples) {
-            if (processor.process(samples, num_samples)) { late.push_back(position); }
-            position += num_samples;
-        },
-        k_host.m_sample_rate);
+    return run_host(k_input_signal.data(), k_input_signal.size(), k_host.m_block_size,
+                    [&](float* samples, size_t num_samples) {
+                        if (processor.process(samples, num_samples, offsets, true) == ANIRA_MISSED) {
+                            late.push_back(position);
+                        }
+                        position += num_samples;
+                    });
 }
 
 }  // namespace
@@ -54,31 +56,19 @@ int main() try {
         SplitProcessor processor(WORKSHOP_STEP_DIR);  // Every offset at 0
         processor.prepare(k_host.m_sample_rate, k_host.m_block_size);
         latency = processor.latency();
-
-        if (latency == 0) {
-            std::fprintf(stderr, "TODO 1: the latency the host is told: the encoder's, in samples, plus the decoder's.\n");
-            return 2;
-        }
-
         std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
                     latency,
                     1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,
                     k_host.m_sample_rate);
 
-        output = run(processor, late);
-
-        if (processor.frames() == 0) {
-            std::fprintf(stderr, "TODO 2: no latent frame came out of the encoder.\n");
-            return 2;
-        }
-        // The block is the decoder's output: unpopped, it goes out as it came in.
-        if (std::equal(output.begin(), output.end(), k_input_signal.begin())) {
-            std::fprintf(stderr, "TODO 4: the output is the input: pop the decoder's audio into the block.\n");
-            return 2;
-        }
+        output = run(processor, Offsets{}, late);
         std::printf("  latent frames                %zu, %zu of them priming\n",
                     processor.frames(),
                     processor.encoder_latency_frames());
+    }
+    if (!late.empty()) {
+        std::fprintf(stderr, "Offline, %zu blocks were missed: that should not happen.\n", late.size());
+        return 2;
     }
 
     // The reference carries the model's own delay, which the decoder declared:
@@ -87,20 +77,20 @@ int main() try {
                                            latency - k_model_latency, late, k_host.m_block_size);
     if (result != 0) { return result; }
 
-    // The knob: an offset on z0 must reach the decoder.
+    // The knobs: offsets on every dimension must reach the decoder.
     SplitProcessor processor(WORKSHOP_STEP_DIR);
-    processor.set_offset(0, 1.0f);
+    const Offsets offsets = {1.6f, 2.8f, 2.3f, 0.7f, -2.0f, 2.7f, -2.9f, -1.2f};
     processor.prepare(k_host.m_sample_rate, k_host.m_block_size);
     std::vector<size_t> late_with_offset;
-    const std::vector<float> with_offset = run(processor, late_with_offset);
+    const std::vector<float> with_offset = run(processor, offsets, late_with_offset);
     if (with_offset == output) {
-        std::fprintf(stderr, "TODO 3: an offset on z0 does not change the output: add it to the latents.\n");
+        std::fprintf(stderr, "TODO 2: the offsets do not change the output: add offsets[i] to each latent.\n");
         return 2;
     }
-    std::printf("OK: an offset of 1 on z0 changes the output.\n");
+    std::printf("OK: the offsets change the output.\n");
     return 0;
 } catch (const std::exception& error) {
-    // Every refusal of anira's, from the files to prepare, names what it refused
+    // Every refusal, from the files to prepare, names what it refused
     std::fprintf(stderr, "%s\n", error.what());
     return 2;
 }

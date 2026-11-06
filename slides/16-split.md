@@ -239,13 +239,11 @@ Note:
                  "path": "../../common/assets/models/rave/model_decoder.onnx" } ],
   "anchor":  "audio",
   "inputs":  [ { "name": "latents", "role": "streamed",
-                 "axes": [["batch",1],["channel",8],["time",1]],
-                 "window": { "min": 1, "max": 1 } },
+                 "axes": [["batch",1],["channel",8],["time",1]] },
                { "name": "state_in", "role": "state",
                  "axes": [["batch",1],["any",29184]], "state_source": "state_out" } ],
   "outputs": [ { "name": "audio", "role": "streamed", "latency": 2224,
-                 "axes": [["batch",1],["channel",1],["time",2048]],
-                 "window": { "min": 2048, "max": 2048 } },
+                 "axes": [["batch",1],["channel",1],["time",2048]] },
                { "name": "state_out", "role": "state", "axes": [["batch",1],["any",29184]] } ]
 }
 ```
@@ -319,19 +317,23 @@ Note:
 ## TODO 1 · The latency
 
 ```cpp
-m_encoder->prepare(m_contract);
-m_decoder->prepare(m_contract);
-m_encoder_latency_frames = m_encoder->get_latency(0);       // In latent frames
-const size_t decoder_latency = m_decoder->get_latency(0);   // In samples
+const anira::PlanReport encoder_report = m_encoder->prepare(m_contract);
+const anira::PlanReport decoder_report = m_decoder->prepare(m_contract);
+m_encoder_budget_ms = encoder_report.plans().front().measured_ms;
+m_decoder_budget_ms = decoder_report.plans().front().measured_ms;
 
-m_latency = m_encoder_latency_frames * k_frame_size + decoder_latency;   // 1 × 2048 + 6320 = 8368
+// The encoder's latency is in latent frames of 2048 samples.
+m_encoder_latency_frames = m_encoder->get_latency(0);
+const size_t decoder_latency = m_decoder->get_latency(0);   // In samples
+m_latency = m_encoder_latency_frames * k_frame_size + decoder_latency;
 ```
 
 Note:
 - TODO 1 is the latency the host is told.
 - Each handler reports its own, in the unit of its output: the encoder in latent frames, the decoder in samples.
-- The encoder reports one frame: 2048 samples. The decoder reports 6320, the same as the forward model in Step 9: 2224 of model plus the block handling, for host blocks from 1 to 512.
-- The sum is 8368, one encoder frame more than the forward model.
+- The encoder reports one frame: 2048 samples. The decoder reports, like the forward model in Step 9, 2224 of model plus the block adaptation and its measured budget, for host blocks from 1 to 512.
+- On my machine the decoder measures 6.1 ms and reports 4811; with the encoder's frame that is 6859. It moves a little from run to run, because both budgets are measured.
+- prepare returns a plan report per handler, with what it measured: as in anira's example, where it goes to the log and the editor.
 - As in anira's example, nothing is declared in the contract: the encoder's priming frame keeps the decoder fed from the start.
 
 ---
@@ -345,7 +347,7 @@ m_input_samples += num_samples;
 m_encoder->push_data(block, 0);
 while (m_input_samples >= k_frame_size) {
     const anira_status popped = m_encoder->pop_data(m_frame, 0);
-    if (popped != ANIRA_OK && popped != ANIRA_MISSED) { break; }  // A missed frame keeps its place
+    if (popped != ANIRA_OK && popped != ANIRA_MISSED) { break; }  // A miss keeps its place
     m_input_samples -= k_frame_size;
     ++m_frames;
     …

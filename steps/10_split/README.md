@@ -41,14 +41,15 @@ The result is in `build/steps/10_split/step10_exercise_artefacts/Release/`. A do
 ## Expected output
 
 ```
-Reported latency: 8368 samples (189.8 ms at 44100 Hz)
+Measured budgets: encoder 6.6 ms, decoder 6.1 ms per inference, at prepare
+Reported latency: 6859 samples (155.5 ms at 44100 Hz)
 
   latent frames                8, 1 of them priming
 OK: max abs diff 1.71e-07, within 0.0001 of the reference.
 OK: an offset of 1 on z0 changes the output.
 ```
 
-8368 is the encoder's one frame (2048) plus the decoder's 6320: the chain costs one more frame than the forward model in step 9, because the decoder cannot start before the encoder has delivered.
+The encoder's one frame (2048) plus the decoder's latency: the chain costs one more frame than the decoder alone, because the decoder cannot start before the encoder has delivered. Both budgets are measured at prepare, so the numbers are this machine's and move a little from run to run.
 
 The check compares against step 10's own reference, [`target_split_signal.h`](../common/assets/target_split_signal.h): encoder and decoder as anira's example runs them, the priming frame included. That zero frame changes the decoder's state, so this output differs from the forward model's by about 0.014; `scripts/make_test_data.py` writes both references.
 

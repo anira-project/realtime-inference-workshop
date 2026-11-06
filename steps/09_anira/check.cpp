@@ -40,6 +40,7 @@ int main() try {
         return 2;
     }
 
+    std::printf("Measured budget:  %.1f ms per inference, at prepare\n", processor.budget_ms());
     std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
                 latency,
                 1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,

@@ -7,8 +7,7 @@
       "name": "audio",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
-      "window": { "min": 2048, "max": 2048 }
+      "axes": [["batch", 1], ["channel", 1], ["time", 2048]]
     },
     {
       "name": "state_in",
@@ -24,7 +23,6 @@
       "dtype": "float32",
       "role": "streamed",
       "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
-      "window": { "min": 2048, "max": 2048 },
       "latency": 2224
     },
     {

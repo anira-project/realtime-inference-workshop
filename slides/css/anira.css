@@ -1912,6 +1912,11 @@ html.tanh .lat-why {
   color: var(--fs-text-muted-color);
 }
 
+/* Under a table, centred like the table */
+html.tanh table + .lat-why {
+  text-align: center;
+}
+
 /*********************************************
  * The architecture overview and the stages, as SVG
  *********************************************/

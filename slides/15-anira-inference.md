@@ -97,13 +97,11 @@ Note:
   "models":  [ { "engine": "onnxruntime",
                  "path": "../../common/assets/models/rave/model_forward.onnx" } ],
   "inputs":  [ { "name": "audio",     "role": "streamed",
-                 "axes": [["batch",1],["channel",1],["time",2048]],
-                 "window": { "min": 2048, "max": 2048 } },
+                 "axes": [["batch",1],["channel",1],["time",2048]] },
                { "name": "state_in",  "role": "state",
                  "axes": [["batch",1],["any",63488]], "state_source": "state_out" } ],
   "outputs": [ { "name": "audio_out", "role": "streamed",
-                 "axes": [["batch",1],["channel",1],["time",2048]],
-                 "window": { "min": 2048, "max": 2048 }, "latency": 2224 },
+                 "axes": [["batch",1],["channel",1],["time",2048]], "latency": 2224 },
                { "name": "state_out", "role": "state", "axes": [["batch",1],["any",63488]] } ]
 }
 ```
@@ -113,10 +111,10 @@ Note:
 - Under models: the engine, ONNX Runtime, and the path to our ONNX file.
 - Under inputs: the model's input tensors. The first is audio, and it is streamed: audio comes in continuously, and anira cuts it into blocks for the model.
 - Its axes are its shape, each with a name: batch 1, channel 1, time 2048, so a tensor of 1 by 1 by 2048.
-- The window is the same number as our input size, 2048: how many samples one inference takes.
-- If the model needed overlapping windows or a receptive field, the extra past samples would be added here.
+- The time axis says how many samples one inference takes: 2048, our input size.
+- Here we could also define a window: for a model that needs past samples, overlapping windows or a receptive field. Ours needs no lookback, so there is none.
 - The second input is state_in, with the role state: no time axis, it is carried from one call to the next.
-- The outputs mirror the inputs: audio_out, streamed, with the same shape and window, and state_out, the new state.
+- The outputs mirror the inputs: audio_out, streamed, with the same shape, and state_out, the new state.
 - On audio_out sits a number you know from Step 7: the model's own latency of 2224 samples, declared on the output it belongs to.
 
 ---
@@ -197,15 +195,13 @@ Note:
 ```json
 "inputs": [
   { "name": "audio", "dtype": "float32", "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]],
-    "window": { "min": 2048, "max": 2048 } },
+    "axes": [["batch",1],["channel",1],["time",2048]] },
   { "name": "state_in", "dtype": "float32", "role": "state",
     "axes": [["batch",1],["any",63488]], "state_source": "state_out" }
 ],
 "outputs": [
   { "name": "audio_out", "dtype": "float32", "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]],
-    "window": { "min": 2048, "max": 2048 }, "latency": 2224 },
+    "axes": [["batch",1],["channel",1],["time",2048]], "latency": 2224 },
   { "name": "state_out", "dtype": "float32", "role": "state",
     "axes": [["batch",1],["any",63488]] }
 ]
@@ -213,7 +209,7 @@ Note:
 
 Note:
 - Here are the four tensors.
-- Audio in and out have a time axis and a window of 2048.
+- Audio in and out have a time axis of 2048.
 - The state has no time axis: it is one flat block of 63,488 floats, the same state we copied by hand in Step 2. Its size was given.
 - If a size is wrong, prepare refuses the file and names the tensor.
 
@@ -258,7 +254,7 @@ status = handler.process(block, 0, block, 0);
 Note:
 - Loading, the pipeline, the handler and prepare were given, all from anira.hpp; the warm-up runs inside prepare.
 - First blank: give the contract the host's blocks, any size from 1 up to its largest, and its sample rate.
-- Second: ask for the latency of output 0. Here it is 6320: the host may call with any block up to 512, so the latency covers the worst one, whatever the budget.
+- Second: ask for the latency of output 0. On my machine it is 5295: the budget prepare measured, about 12.7 ms, for any host block up to 512. Yours depends on your machine.
 - Third: in the audio callback, one call over the block, in place: the same block is input and output.
 
 ---

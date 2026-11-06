@@ -1,34 +1,18 @@
-<h1>Step 2<br>Stateless and stateful</h1>
-
-<!-- .slide: data-state="no-header" -->
-<!-- kind: exercise -->
-
-Note:
-- Step 1 ran one block
-- Now the whole signal, and what the model needs for that
-
-**Script:**
-
-"In step 1 we ran one block, and it matched. Now we run the whole signal, block by block."
-
----
-
-<div class="tag">Problem</div>
+<div class="tag">Listen</div>
 
 ## Running every block<br><span class="then">Something sounds wrong.</span>
 
-<div class="wave-player" data-src="assets/audio/demo_output_state_cleared.wav"></div>
+<div class="wave-player" data-src="assets/audio/demo_output_state_cleared.wav" data-blocks="1.48608@1.39556"></div>
 
 <p class="wave-question fragment">Why does this happen?</p>
 
 Note:
 - Press the speaker: the demo chords, and the sound keeps cutting out and coming back
-- The clip is a simulation, to have something to hear: the state is cleared only now and then
-- 2224 samples > block 2048: the input can’t come out in the same call, it waits in the state
-- No state passed: cleared after every block, so the waiting audio is thrown away
+- No memory passed: cleared after every block, so the waiting audio is thrown away and we start with silence at each block, instead of the audio from the memory of the last block.
 - The input never reaches the output: every block is the model’s answer to silence, identical each time
-- Clear it on every block, which is what passing only the audio does, and it never comes back: practically silent, peak around -75 dB
-- Why? Coming up
+- Why does this happen?
+
+- disclaimer: This is not exactly what you would hear in our case, since our model latency is bigger than the block size the model takes, so in reality in our case you would only hear silence. But if our model latency were shorter or our block size bigger you would hear gaps like in this example.
 
 **Script:**
 
@@ -67,9 +51,24 @@ Note:
 
 ---
 
+<h1>Step 2<br>Stateless and stateful</h1>
+
+<!-- .slide: data-state="no-header" -->
+<!-- kind: exercise -->
+
+Note:
+- To explain these silences at the beginning of each block we need to talk about the concept of state -> stateless and stateful models
+- Now the whole signal, and what the model needs for that
+
+**Script:**
+
+"In step 1 we ran one block, and it matched. Now we run the whole signal, block by block."
+
+---
+
 <div class="tag">Concept</div>
 
-## Stateless vs. stateful<br><span class="then">Some models remember, others read the past at every call.</span>
+## Stateless vs. stateful<br><span class="then">Some models  read the past at every call, others remember.</span>
 
 <div class="state-compare">
   <div class="state-panel">
@@ -131,10 +130,10 @@ Our model is stateful, and ONNX keeps that state in the open:<br>
 
 Note:
 - Stateless: no memory, the past is handed in at every call
-- Stateful: only the new block, carries the past along (the dashed line). Our model
-- Consequences: calls in order, one state per stream, zeros for a new stream
-- ONNX can't hide state: the export moves it out, so it's an explicit input and output
-- Without it, every block is the first block. Latency is 2224 samples and a block is 2048, so a first block is nearly silent
+- Stateful: only the new block, carries the past along (the dashed line). 
+- Our model is state full, so we need to pass our memory
+- ONNX can't hide state: the export moves it out, so we need an explicit input and output
+- Without passing the state, every block is the first block. Latency is 2224 samples and a block is 2048, so a first block is nearly silent
 
 **Script:**
 
@@ -158,9 +157,11 @@ engine.process(samples, num_samples, state);   // with the state of 63488 floats
 ```
 
 Note:
-- One more argument: the state, after the audio, the same order as the model's inputs
-- The state comes back in the same vector, so the next call continues
-- 63488 floats: every convolution cache in the model
+- Let have one more look at the engine, as I skipped a detail in step 1
+- There is a second process function that takes 3 arguments. 
+- Third argument: the state, after the audio, the same order as the model's inputs
+- The state is overwritten in the same vector, so the next call continues where this one ended
+- 63488 floats: every convolution cache in the model and starts with and defaults to zeros.
 
 **Script:**
 
@@ -204,7 +205,9 @@ Note:
 - Two TODOs: create the state above the loop, pass it in the loop
 - It runs as it is, and fails from block 1 on
 - Block 0 passes: a zero state is correct for the first block
-- 5 minutes
+- 5 minutes, don't worry if you don't finish
+- to build and run, use commands on the slide
+- We solve it together, solutions are in the solution's main.cpp
 
 **Script:**
 
@@ -223,8 +226,8 @@ std::vector<float> state(k_model.m_state_size, 0.0f); // <- fill out
 ```
 
 Note:
-- 63488 floats, all zeros: a zero state is a new stream
-- Created above the loop: created per block, it would start at zero every time
+- correct size: given in the struct or 63488 floats, all zeros: a zero state is a new stream
+- Created outside the loop: created per block, it would start at zero every time
 
 **Script:**
 
@@ -243,7 +246,7 @@ for (size_t i = 0; i < num_blocks; ++i) {
 ```
 
 Note:
-- One more argument: the state
+- Need to pass the third argument: the state
 - It is overwritten on every call, so the next block continues where this one ended
 - Every block now matches, to below 1e-6
 
@@ -257,14 +260,7 @@ Note:
 
 ## Running every block and passing a state<br><span class="then">Now it sounds right.</span>
 
-<div class="congrats fragment">
-  <svg viewBox="0 -70 120 120" aria-hidden="true">
-    <circle cx="60" cy="60" r="52"/>
-    <path d="M36 62 L53 78 L85 44"/>
-  </svg>
-</div>
-
-<div class="wave-player" data-src="assets/audio/demo_output_with_state.wav"></div>
+<div class="wave-player" data-src="assets/audio/demo_output_with_state.wav" data-blocks="1.48608@1.39556"></div>
 
 <!-- <p class="wave-question fragment">Same model, same audio. Only the state is different.</p> -->
 
@@ -275,7 +271,8 @@ Note:
 - No more drop-outs: the sound runs through
 - Same model, same audio, only the state is different
 - Same output as Python, for every block
-- But a host doesn't always hand us 2048 samples: step 3
+
+- However this is in the case we always get blocks of 2048 samples. But a host doesn't always hand us 2048 samples. Which brings us to step 3
 
 **Script:**
 

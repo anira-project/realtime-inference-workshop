@@ -2179,3 +2179,53 @@ html.tanh .lat-fig text { fill: var(--fs-text-color); font-size: 26px; text-anch
 html.tanh .lat-fig .dim { font-size: 22px; fill: var(--fs-text-muted-color); }
 html.tanh .lat-fig .muted { fill: var(--fs-text-muted-color); }
 html.tanh .lat-fig .small { font-size: 22px; }
+
+/* A build path under the commands: a little smaller, so it stays on one line */
+html.tanh .reveal .slides section p.path-note {
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* Two points at the width of three, centered */
+html.tanh .statement-points.centered-two {
+  grid-template-columns: repeat(2, calc((100% - 2 * var(--space-7)) / 3));
+  justify-content: center;
+}
+
+/* A side note pinned to the slide's lower left corner, above the footer */
+html.tanh .reveal .slides section .cards-note.corner-note {
+  position: absolute;
+  left: 0;
+  bottom: 60px;
+  max-width: 60%;
+  margin: 0;
+  text-align: left;
+}
+
+/* Step 6: the host stream when the worker is late, without and with debt */
+html.tanh .debt-fig { display: block; width: 100%; max-height: 480px; margin: var(--space-6) auto 0; }
+html.tanh .debt-fig .cell { fill: var(--tint-exercise); }
+html.tanh .debt-fig .cell.shifted { fill: var(--tint-model); stroke: var(--fs-text-muted-color); stroke-width: 2; stroke-dasharray: 6 5; }
+html.tanh .debt-fig .zero { fill: none; stroke: var(--fs-text-subtle-color); stroke-width: 2; stroke-dasharray: 6 5; }
+html.tanh .debt-fig text { fill: var(--fs-text-color); font-family: var(--fs-heading-font); }
+html.tanh .debt-fig .num { font-size: 32px; font-weight: 600; text-anchor: middle; }
+html.tanh .debt-fig .row { font-size: 28px; font-weight: 600; text-anchor: end; }
+html.tanh .debt-fig .row.sub { font-size: 26px; font-weight: 400; fill: var(--fs-text-muted-color); }
+html.tanh .debt-fig .note { font-size: 26px; fill: var(--fs-text-muted-color); }
+
+/* Step 3, TODO 1: the ring buffers' fill level, callback by callback */
+html.tanh .reveal table.budget-table.fill-table { margin-top: var(--space-4); }
+html.tanh .reveal table.budget-table.fill-table td:not(:last-child),
+html.tanh .reveal table.budget-table.fill-table th:not(:last-child) { text-align: center; }
+html.tanh .reveal table.budget-table.fill-table td:last-child { color: var(--fs-text-muted-color); font-weight: 400; }
+html.tanh .reveal table.budget-table.fill-table td[colspan] { text-align: left; }
+html.tanh .reveal table.budget-table.fill-table td,
+html.tanh .reveal table.budget-table.fill-table th { padding-top: var(--space-1); padding-bottom: var(--space-1); }
+
+/* Step 6: who calls what on each ring buffer, one writer per row and one reader */
+html.tanh .reveal table.budget-table.rb-table { margin: var(--space-8) 0 var(--space-8); }
+html.tanh .reveal table.budget-table.rb-table th,
+html.tanh .reveal table.budget-table.rb-table td { padding: var(--space-5) var(--space-8) var(--space-5) var(--space-4); }
+html.tanh .reveal table.budget-table.rb-table th { font-size: 0.85em; padding-bottom: var(--space-3); }
+html.tanh .reveal table.budget-table.rb-table th small { font-size: 0.9em; margin-left: var(--space-2); }
+html.tanh .reveal table.budget-table.rb-table td small { margin-left: var(--space-2); }

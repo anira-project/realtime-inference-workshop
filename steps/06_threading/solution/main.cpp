@@ -29,6 +29,7 @@ constexpr struct {
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
+    size_t rounded_max_inference = k_max_inference_samples_rounded;
 } k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
@@ -51,7 +52,7 @@ public:
 
         // How much silence m_output starts with, so the worker has time and the host
         // always finds something to take. Given here, and step 7 takes it apart.
-        m_prefill = (k_model.m_input_size - max_block_size) + k_max_inference_samples_rounded;
+        m_prefill = (k_model.m_input_size - max_block_size) + k_model.rounded_max_inference;
 
         // ---- TODO 1 --------------------------------------------------------
         // Give both ring buffers the capacity they need. As in step 3, think of
@@ -62,7 +63,7 @@ public:
         //      to be waiting in there too. How many can the host take in that time?
         // --------------------------------------------------------------------
         const size_t input_capacity = k_model.m_input_size;  // <- solution
-        const size_t output_capacity = k_max_inference_samples_rounded + k_model.m_input_size;  // <- solution
+        const size_t output_capacity = k_model.rounded_max_inference + k_model.m_input_size;  // <- solution
 
         check_todos(input_capacity,
                     output_capacity,

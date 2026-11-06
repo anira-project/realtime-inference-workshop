@@ -33,8 +33,8 @@ constexpr size_t k_host_block_size = 512;
 
 // Measured as anira's benchmarks do: every repetition constructs a fresh engine,
 // and every iteration times one single forward pass.
-constexpr size_t k_repetitions = 2;
 constexpr size_t k_iterations = 10;
+constexpr size_t k_repetitions = 2;
 
 int main() {
     std::vector<std::vector<double>> times_ms(k_repetitions, std::vector<double>(k_iterations));

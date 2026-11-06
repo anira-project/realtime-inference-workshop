@@ -356,6 +356,19 @@
 
         const buffer = await load(player.dataset.src);
         const canvas = player.querySelector('canvas');
+
+        // data-blocks="1.48608@1.39556": a dashed line every 1.48608 s, the first at 1.39556 s,
+        // where each block starts. In seconds, not samples: the clip is decoded at 48 kHz,
+        // whatever rate the file has
+        if (player.dataset.blocks) {
+            const [size, first] = player.dataset.blocks.split('@').map(Number);
+            const length = buffer.duration;
+            let lines = '';
+            for (let t = first || 0; t < length; t += size) {
+                if (t > 0) lines += `<i class="wave-block" style="left:${(t / length * 100).toFixed(3)}%"></i>`;
+            }
+            player.querySelector('.wave-track').insertAdjacentHTML('afterbegin', lines);
+        }
         const playhead = player.querySelector('.wave-playhead');
         const button = player.querySelector('.wave-play');
         const redraw = () => drawWave(canvas, buffer.getChannelData(0));

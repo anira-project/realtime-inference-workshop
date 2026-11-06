@@ -1,3 +1,5 @@
+// Step 10: the decoder. Replace every TODO1 with its value, a number as it is.
+// The comments are hints; the processor drops them before anira reads the file.
 {
   "models": [
     { "engine": "onnxruntime", "path": "../../common/assets/models/rave/model_decoder.onnx" }
@@ -8,7 +10,7 @@
       "name": "latents",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 8], ["time", 1]]
+      "axes": [["batch", 1], ["channel", TODO1], ["time", TODO1]]   // TODO1: what the encoder gives
     },
     {
       "name": "state_in",
@@ -23,7 +25,7 @@
       "name": "audio",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 1], ["time", 2048]],
+      "axes": [["batch", 1], ["channel", 1], ["time", TODO1]],   // TODO1: audio samples per inference
       "latency": 2224
     },
     {

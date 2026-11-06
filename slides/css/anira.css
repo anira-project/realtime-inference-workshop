@@ -2151,3 +2151,21 @@ html.tanh .zc-row { display: grid; grid-template-columns: 220px 1fr; align-items
 html.tanh .zc-label { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.6em; }
 html.tanh .zc-sum { margin-top: 0; justify-content: flex-start; font-size: 1.1em; }
 html.tanh .it-example { text-align: center; font-size: 0.5em; color: var(--fs-text-muted-color); margin-bottom: calc(-1 * var(--space-4)); }
+
+/* Prepare · real-time verdict: a load scale from 0 to 1.25 with three zones */
+html.tanh .rtv { margin-top: var(--space-7); display: flex; flex-direction: column; gap: var(--space-7); }
+html.tanh .rtv-scale { position: relative; display: grid; grid-template-columns: 60fr 20fr 20fr; height: 90px; border-radius: var(--radius-main); overflow: visible; }
+html.tanh .rtv-zone { display: flex; flex-direction: column; justify-content: center; padding: 0 var(--space-4); font-size: 0.5em; }
+html.tanh .rtv-zone b { font-weight: 600; }
+html.tanh .rtv-zone small { color: var(--fs-text-muted-color); }
+html.tanh .rtv-zone.ok { background: var(--tint-check); border-radius: var(--radius-main) 0 0 var(--radius-main); }
+html.tanh .rtv-zone.marginal { background: var(--tint-model); }
+html.tanh .rtv-zone.not { background: var(--fs-surface-alt); outline: 1px dashed var(--fs-border-strong); border-radius: 0 var(--radius-main) var(--radius-main) 0; }
+html.tanh .rtv-mark { position: absolute; top: -14px; bottom: -14px; left: calc(var(--x) / 1.25 * 100%); width: 3px; background: var(--ink); }
+html.tanh .rtv-mark span { position: absolute; top: 100%; left: 8px; margin-top: 6px; white-space: nowrap; font-size: 0.42em; line-height: 1.3; }
+html.tanh .rtv-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); margin-top: var(--space-6); }
+html.tanh .rtv-actions > div { font-size: 0.5em; padding: var(--space-3) var(--space-4); border-left: 3px solid var(--fs-border-strong); }
+html.tanh .rtv-actions b { display: block; font-weight: 600; }
+
+/* A side remark in a framed box under a slide's content */
+html.tanh .note-box { margin-top: var(--space-5); padding: var(--space-3) var(--space-5); border: 1px solid var(--fs-border-strong); border-radius: var(--radius-main); font-size: 0.7em; text-align: center; }

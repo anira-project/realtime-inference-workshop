@@ -20,8 +20,9 @@ private:
     void process(float* samples, size_t num_samples) override;
     void release() override;
 
-    // One engine and one processor, as in step 7's main. The processor runs
+    // One engine and one processor, as in step 7's main, made with the plugin:
+    // neither loads nor allocates anything before prepare. The processor runs
     // its own worker thread.
-    OnnxEngine m_engine{k_model.m_path};
+    OnnxEngine m_engine;
     ProcessorExample m_processor{m_engine};
 };

@@ -113,7 +113,8 @@ private:
 
 int main() {
     try {
-        OnnxEngine engine(k_model.m_path);
+        OnnxEngine engine;
+        engine.load(k_model.m_path);
 
         ProcessorExample processor(engine);
         processor.prepare(k_host_block_size);

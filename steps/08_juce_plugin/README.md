@@ -24,9 +24,9 @@ Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), sh
 
 ## The three places the host talks to us
 
-**The constructor** creates: the engine loads the model, the processor holds on to it, once, as in step 7's `main`. Nothing here depends on the host's settings. If the model does not load, the window says so.
+**The constructor** creates: the engine and the processor are plain members, made with the plugin, as in step 7's `main`. They load and allocate nothing: a host may construct a plugin just to scan it.
 
-**`prepare`**, from the host's `prepareToPlay`: everything that depends on the host's settings, and may run again whenever they change. `prepare` the processor, which sizes the ring buffers and starts the worker thread. Then it returns the number from step 7:
+**`prepare`**, from the host's `prepareToPlay`: everything that allocates or depends on the host's settings, and may run again whenever they change. The first time, load the model with `m_engine.load`; if it does not load, the window says so. Then `prepare` the processor, which sizes the ring buffers and starts the worker thread. Then it returns the number from step 7:
 
 ```cpp
 return m_processor.latency_samples();

@@ -28,11 +28,12 @@ constexpr struct {
 int main() {
     try {
         // ---- TODO 1 --------------------------------------------------------
-        // Load the model: the engine takes the path to the .onnx file.
+        // Load the model: load() takes the path to the .onnx file.
         //
         // Hint: look at the struct above
         // --------------------------------------------------------------------
-        OnnxEngine engine(k_model.m_path);  // <- solution
+        OnnxEngine engine;
+        engine.load(k_model.m_path);  // <- solution
 
         // The whole signal is in the buffer, but only its first block gets
         // processed.

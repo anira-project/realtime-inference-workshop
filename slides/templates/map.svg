@@ -43,10 +43,10 @@
     <line class="ov-flow" x1="584" y1="149" x2="646" y2="149" marker-end="url(#ov-arrow)"/>
     <path class="ov-flow" d="M584 128 H1300" marker-end="url(#ov-arrow)"/>
     <text x="940" y="121" class="ov-note">get instance</text>
-    <rect class="ov-pill" x="646" y="134" width="236" height="30" rx="6"/><text x="764" y="154" class="ov-pill-text">check the files</text>
+    <rect class="ov-pill" x="646" y="134" width="236" height="30" rx="6"/><text x="764" y="154" class="ov-pill-text">check the config</text>
     <rect class="ov-pill mem" x="892" y="134" width="132" height="30" rx="6"/><text x="958" y="154" class="ov-pill-text">state pairs</text>
     <rect class="ov-pill" x="646" y="172" width="378" height="30" rx="6"/><text x="835" y="192" class="ov-pill-text">a slot per tensor · nothing loaded yet</text>
-    <rect class="ov-pill" x="1316" y="134" width="248" height="30" rx="6"/><text x="1440" y="154" class="ov-pill-text">one pool per process</text>
+    <rect class="ov-pill" x="1316" y="134" width="248" height="30" rx="6"/><text x="1440" y="154" class="ov-pill-text">settings, no threads yet</text>
   </g>
 
   <!-- prepare: when the host announces its blocks -->

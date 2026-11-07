@@ -2118,13 +2118,13 @@ html.tanh .reveal .slides section.answer::before {
 }
 
 html.tanh .reveal .slides section.recap::before {
-  content: 'Recap · how we did it in part 1';
+  content: 'By hand · how we did it in part 1';
   border-color: var(--mark-model);
   color: var(--fs-text-muted-color);
 }
 
 html.tanh .reveal .slides section.answer::before {
-  content: 'Improvement · how anira does it';
+  content: 'With anira · how the library does it';
   border-color: var(--mark-check);
   color: var(--fs-text-muted-color);
 }

@@ -16,8 +16,17 @@
 
 class OnnxEngine {
 public:
+    // Nothing yet: no runtime, no model. load() does the work, so the engine can
+    // be made long before the model is needed, as a plain member of a plugin.
+    OnnxEngine() = default;
+
+    // Loads the model, once: starts ONNX Runtime, reads the file and makes every
+    // tensor. Takes a while and allocates, never on the audio thread.
     // @model_path: the .onnx file, graph and weights in one
-    explicit OnnxEngine(const std::string& model_path) : m_env(ORT_LOGGING_LEVEL_WARNING, "workshop") {
+    void load(const std::string& model_path) {
+        if (loaded()) { throw std::runtime_error("the model is already loaded"); }
+        m_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "workshop");
+
         Ort::SessionOptions options;
         options.SetIntraOpNumThreads(1);  // One thread, so the timing is the model's
 
@@ -59,11 +68,14 @@ public:
         m_state_size = m_inputs[1].GetTensorTypeAndShapeInfo().GetElementCount();
     }
 
+    bool loaded() const { return !m_inputs.empty(); }
+
     // One block without the state, processed in place. The model gets a zero
     // state on this call, as if the stream had just started.
     // @audio: the block, overwritten with the model's output
     // @num_samples: samples in the block; the model takes exactly one model block
     void process(float* audio, size_t num_samples) {
+        check_loaded();
         std::fill_n(m_inputs[1].GetTensorMutableData<float>(), m_state_size, 0.0f);
         run(audio, num_samples);
     }
@@ -75,6 +87,7 @@ public:
     // @state: the model's state, zeros for a new stream; overwritten with the new state
     // @state_size: floats in the state; the model takes exactly its own state size
     void process(float* audio, size_t num_samples, float* state, size_t state_size) {
+        check_loaded();
         if (state_size != m_state_size) {
             throw std::runtime_error("the state is exactly " + std::to_string(m_state_size) +
                                      " floats, got " + std::to_string(state_size));
@@ -85,6 +98,10 @@ public:
     }
 
 private:
+    void check_loaded() const {
+        if (!loaded()) { throw std::runtime_error("no model loaded: call load() first"); }
+    }
+
     // The forward pass: the block in, through the model, the result back in place.
     void run(float* audio, size_t num_samples) {
         if (num_samples != m_num_samples) {
@@ -104,7 +121,7 @@ private:
         std::copy_n(m_outputs[0].GetTensorMutableData<float>(), num_samples, audio);
     }
 
-    Ort::Env m_env;
+    Ort::Env m_env{nullptr};
     Ort::Session m_session{nullptr};
 
     std::vector<std::string> m_input_names;

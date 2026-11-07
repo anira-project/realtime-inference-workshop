@@ -15,7 +15,8 @@ Both signals are compiled in, so there are no files to read and no audio format 
 The engine loads the model and processes the data:
 
 ```cpp
-OnnxEngine engine(path);                  // Loads the model, throws if it cannot
+OnnxEngine engine;                        // Nothing loaded yet
+engine.load(path);                        // Loads the model, throws if it cannot
 
 engine.process(audio, num_samples);       // Overwrites the block in place
 ```
@@ -24,7 +25,7 @@ engine.process(audio, num_samples);       // Overwrites the block in place
 
 Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO banners.
 
-1. **Load the model**: the engine takes the path to the `.onnx` file.
+1. **Load the model**: `load` takes the path to the `.onnx` file.
 2. **Run the first block** through the engine: where it starts, and how many samples. Choose a number, run it, and see whether the model agrees with you.
 
 Build and run from the repository root:

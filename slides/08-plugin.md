@@ -17,20 +17,20 @@ Note:
 
 | Host call | What happens | Steps |
 |---|---|---|
-| **constructor** | load the model, build the processor | 1,&nbsp;7 |
-| **`prepare`** ← `prepareToPlay` | size the buffers, start the worker, return the latency | 2,&nbsp;3,&nbsp;4,&nbsp;7 |
+| **constructor** | make the engine and the processor: nothing loaded, nothing allocated | 1,&nbsp;7 |
+| **`prepare`** ← `prepareToPlay` | load the model, size the buffers, start the worker, return the latency | 1,&nbsp;2,&nbsp;3,&nbsp;4,&nbsp;7 |
 | **`process`** ← `processBlock` | one mono block: in and out between threads, dry/wet mix | 6,&nbsp;7 |
 
 <div class="cards-note corner-note">And <code>release</code> stops the worker thread again. Bypass, mono and stereo: <code>PluginBase</code>.</div>
 
 Note:
 - What did we add? Not much: the host talks to us in three places
-- Constructor: load the model once, build the processor; the host may construct the plugin just to scan it
-- `prepare`, from `prepareToPlay`: size buffers, start the worker thread, return the latency; the host may call it again at any time
+- Constructor: the engine and the processor are plain members, made with the plugin. They load and allocate nothing, because the host may construct the plugin just to scan it
+- `prepare`, from `prepareToPlay`: load the model once with `m_engine.load`, size buffers, start the worker thread, return the latency; the host may call it again at any time
 - `process`, from `processBlock`: callback from step 7, unchanged, on the input mixed down to mono
 - `release`, from `releaseResources`: stop the worker thread
 - PluginBase does the rest: the bypass, mono to stereo, telling the host the latency
-- The same three places come back with anira: create, prepare, process
+- The same three places come back with anira: create, prepare, process. anira loads its models at prepare too
 - Everything else: JUCE boilerplate
 - Only 44.1 kHz and 512: our prefill and latency are only right for that block size, and the model and the step 4 number are 44.1 kHz ones. At 48 kHz the window asks first, Process anyway plays it higher; a resampler does not fit our fixed 512 and 2048 blocks. Anything else: bypassed, the player stops and the input goes out unprocessed, with an overlay that says why; the player starts over once the settings fit
 - Takeaway: arbitrary buffer sizes need a different design, part 2

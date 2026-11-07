@@ -43,7 +43,8 @@ int main() {
 
     for (size_t repetition = 0; repetition < k_repetitions; ++repetition) {
         // A fresh engine and a zero state. Loading is slow and is not what we measure.
-        OnnxEngine engine(k_model.m_path);
+        OnnxEngine engine;
+        engine.load(k_model.m_path);
         std::fill(state.begin(), state.end(), 0.0f);
 
         for (size_t iteration = 0; iteration < k_iterations; ++iteration) {

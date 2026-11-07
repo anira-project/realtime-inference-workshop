@@ -22,19 +22,153 @@ bool is_audio_file(const juce::String& path) {
 }
 }  // namespace
 
+BypassOverlay::BypassOverlay() {
+    addChildComponent(m_run_anyway);
+    addChildComponent(m_show_report);
+}
+
+BypassOverlay::Layout BypassOverlay::layout() const {
+    // The block, centred as a whole: the buttons only when held back
+    const int buttons = m_held_back ? 12 + 32 : 0;
+    auto area = getLocalBounds().reduced(k_margin * 2, 0);
+    const int reason = 18 * m_reason_lines;
+    area = area.withSizeKeepingCentre(area.getWidth(), 30 + reason + 20 + buttons);
+    Layout layout;
+    layout.m_title = area.removeFromTop(30);
+    layout.m_reason = area.removeFromTop(reason);
+    layout.m_host = area.removeFromTop(20);
+    area.removeFromTop(m_held_back ? 12 : 0);
+    layout.m_buttons = area.expanded(k_margin, 0);
+    return layout;
+}
+
 void BypassOverlay::paint(juce::Graphics& g) {
     g.fillAll(palette::k_background.withAlpha(0.94f));
-    auto area = getLocalBounds().reduced(k_margin * 2, 0);
-    area = area.withSizeKeepingCentre(area.getWidth(), 140);
+    const Layout area = layout();
     g.setColour(palette::k_warning);
     g.setFont(font(17.0f, true));
-    g.drawText("Bypassed", area.removeFromTop(30), juce::Justification::centred);
+    g.drawText(m_title, area.m_title, juce::Justification::centred);
     g.setColour(palette::k_text);
     g.setFont(font(13.0f));
-    g.drawFittedText(m_reason, area.removeFromTop(70), juce::Justification::centredTop, 4);
+    g.drawFittedText(m_reason, area.m_reason, juce::Justification::centredTop, m_reason_lines);
     g.setColour(palette::k_muted);
     g.setFont(font(12.0f));
-    g.drawFittedText(m_host, area, juce::Justification::centredTop, 1);
+    g.drawFittedText(m_host, area.m_host, juce::Justification::centredTop, 1);
+}
+
+void BypassOverlay::resized() {
+    auto row = layout().m_buttons;
+    if (m_show_report.isVisible()) {
+        m_run_anyway.setBounds(row.removeFromLeft(row.getWidth() * 2 / 3));
+        m_show_report.setBounds(row);
+    } else {
+        m_run_anyway.setBounds(row);
+    }
+}
+
+ReportPanel::ReportPanel() {
+    addAndMakeVisible(m_close);
+}
+
+namespace {
+juce::Colour verdict_colour(PluginBase::ReportRow::Verdict verdict) {
+    using Verdict = PluginBase::ReportRow::Verdict;
+    switch (verdict) {
+        case Verdict::comfortable: return palette::k_good;
+        case Verdict::marginal: return palette::k_marginal;
+        case Verdict::not_realtime: return palette::k_warning;
+        default: return palette::k_muted;
+    }
+}
+
+const char* verdict_text(PluginBase::ReportRow::Verdict verdict) {
+    using Verdict = PluginBase::ReportRow::Verdict;
+    switch (verdict) {
+        case Verdict::comfortable: return "comfortable";
+        case Verdict::marginal: return "marginal";
+        case Verdict::not_realtime: return "not real-time";
+        default: return "unmeasured";
+    }
+}
+
+juce::String ms(double value) {
+    return juce::String(value, value < 10.0 ? 2 : 1) + " ms";
+}
+}  // namespace
+
+void ReportPanel::paint(juce::Graphics& g) {
+    g.fillAll(palette::k_background);
+    auto area = getLocalBounds().reduced(k_margin, 0).withTrimmedTop(k_margin);
+
+    g.setColour(palette::k_text);
+    g.setFont(font(17.0f, true));
+    g.drawText("anira's report", area.removeFromTop(22), juce::Justification::centredLeft);
+    g.setColour(palette::k_muted);
+    g.setFont(font(12.0f));
+    g.drawText("Measured at prepare, on this machine, under its load of the moment",
+               area.removeFromTop(18),
+               juce::Justification::centredLeft);
+    area.removeFromTop(k_gap);
+
+    for (const auto& row : m_rows) {
+        auto card = area.removeFromTop(104);
+        area.removeFromTop(k_gap);
+        g.setColour(palette::k_tile);
+        g.fillRoundedRectangle(card.toFloat(), 12.0f);
+        card = card.reduced(14, 10);
+
+        // The model's name, and the verdict as a pill
+        auto top = card.removeFromTop(20);
+        g.setColour(palette::k_text);
+        g.setFont(font(14.0f, true));
+        g.drawText(row.m_name, top, juce::Justification::centredLeft);
+        const juce::String verdict = verdict_text(row.m_verdict);
+        const auto pill = top.removeFromRight(110).toFloat();
+        g.setColour(verdict_colour(row.m_verdict));
+        g.fillRoundedRectangle(pill, 10.0f);
+        g.setColour(palette::k_background);
+        g.setFont(font(12.0f, true));
+        g.drawText(verdict, pill, juce::Justification::centred);
+
+        // The times
+        card.removeFromTop(6);
+        g.setFont(font(12.0f));
+        g.setColour(palette::k_text);
+        g.drawText("budget " + ms(row.m_budget_ms) + "   measured " + ms(row.m_measured_ms) +
+                       "   median " + ms(row.m_median_ms),
+                   card.removeFromTop(16),
+                   juce::Justification::centredLeft);
+        g.setColour(palette::k_muted);
+        g.drawText("warm-up: " + juce::String(row.m_warmup_inferences) + " inferences, " + row.m_warmup,
+                   card.removeFromTop(16),
+                   juce::Justification::centredLeft);
+
+        // The load: the real-time factor shared by the inferences that run at
+        // once; below 0.75 comfortable, below 1 marginal
+        card.removeFromTop(6);
+        auto load_line = card.removeFromTop(16);
+        const double load = row.load();
+        g.drawText("load " + juce::String(juce::roundToInt(load * 100.0)) + " %  (real-time factor " +
+                       juce::String(row.m_rt_factor, 2) + " over " + juce::String(row.m_rt_parallel) +
+                       (row.m_rt_parallel == 1 ? " inference)" : " inferences)"),
+                   load_line,
+                   juce::Justification::centredLeft);
+        const auto bar = card.removeFromTop(8).toFloat();
+        const float full = 1.25f;  // The bar's end, past 1
+        g.setColour(palette::k_background);
+        g.fillRoundedRectangle(bar, 4.0f);
+        g.setColour(verdict_colour(row.m_verdict));
+        g.fillRoundedRectangle(bar.withWidth(bar.getWidth() * std::min(1.0f, static_cast<float>(load) / full)), 4.0f);
+        g.setColour(palette::k_muted);
+        for (const float mark : {0.75f, 1.0f}) {
+            const float x = bar.getX() + bar.getWidth() * mark / full;
+            g.drawLine(x, bar.getY() - 3.0f, x, bar.getBottom() + 3.0f, 1.5f);
+        }
+    }
+}
+
+void ReportPanel::resized() {
+    m_close.setBounds(getLocalBounds().reduced(k_margin, 0).removeFromBottom(k_margin + 20).removeFromTop(28).removeFromRight(80));
 }
 
 void SourceTile::paintButton(juce::Graphics& g, bool highlighted, bool down) {
@@ -152,7 +286,18 @@ PluginEditor::PluginEditor(PluginBase& processor)
         addAndMakeVisible(slider);
     }
 
+    // anira's report: the button in the header, the panel over the window
+    m_report_button.onClick = [this] { m_report.setVisible(true); };
+    m_report.m_close.onClick = [this] { m_report.setVisible(false); };
+    addChildComponent(m_report_button);
+    m_overlay.m_run_anyway.onClick = [this] {
+        m_processor.run_anyway();
+        refresh();
+    };
+    m_overlay.m_show_report.onClick = [this] { m_report.setVisible(true); };
+
     addChildComponent(m_overlay);  // Last, so it lies over everything
+    addChildComponent(m_report);
 
     const int tile = (k_width - 2 * k_margin - 2 * k_gap) / 3;
     setSize(k_width,
@@ -231,11 +376,14 @@ void PluginEditor::resized() {
         for (auto& slider : m_knobs) { slider->setBounds(row.removeFromLeft(column).reduced(0, 9)); }
     }
     m_overlay.setBounds(getLocalBounds());
+    m_report.setBounds(getLocalBounds());
+    m_report_button.setBounds(getLocalBounds().reduced(k_margin, 0).withTrimmedTop(k_margin).removeFromTop(22).removeFromRight(60));
 }
 
 void PluginEditor::timerCallback() {
     if (m_processor.player().selected() != selected() ||
-        juce::String(m_processor.bypass_reason()) != m_overlay.m_reason) {
+        overlay_key() != m_overlay_key ||
+        m_processor.report_version() != m_report_version) {
         refresh();
     }
 }
@@ -258,12 +406,42 @@ void PluginEditor::refresh() {
                              : "load or drop one");
     m_input.setButtonText("host or microphone");
 
-    m_overlay.m_reason = m_processor.bypass_reason();
+    m_overlay.m_reason = overlay_reason();
+    m_overlay_key = overlay_key();
     m_overlay.m_host = "The host: " + juce::String(m_processor.getSampleRate(), 0) + " Hz, " +
                        juce::String(m_processor.getBlockSize()) + " samples per buffer";
+    // Held back by the report, not bypassed: then the user may run it anyway
+    // Held back, not bypassed: the first hold that waits, with its button;
+    // agreeing to it brings up the next
+    const auto holds = m_processor.holds();
+    m_overlay.m_held_back = m_processor.bypass_reason() == nullptr && !holds.empty();
+    m_overlay.m_title = "Bypassed";
+    if (m_overlay.m_held_back) {
+        m_overlay.m_title = holds.front()->m_title;
+        if (holds.size() > 1) { m_overlay.m_title << "  (1 of " << static_cast<int>(holds.size()) << ")"; }
+        m_overlay.m_run_anyway.setButtonText(holds.front()->m_button);
+    }
+    m_overlay.m_run_anyway.setVisible(m_overlay.m_held_back);
+    m_overlay.m_show_report.setVisible(m_overlay.m_held_back && !m_processor.report().empty());
+    m_overlay.resized();  // The layout depends on m_held_back
     m_overlay.setVisible(m_overlay.m_reason.isNotEmpty());
+
+    m_report_version = m_processor.report_version();
+    m_report.m_rows = m_processor.report();
+    m_report_button.setVisible(!m_report.m_rows.empty());
+    m_report.repaint();
     m_overlay.repaint();
     repaint();
+}
+
+juce::String PluginEditor::overlay_reason() const {
+    if (const char* bypass = m_processor.bypass_reason()) { return bypass; }
+    const auto holds = m_processor.holds();
+    return holds.empty() ? juce::String() : juce::String(holds.front()->m_reason);
+}
+
+juce::String PluginEditor::overlay_key() const {
+    return overlay_reason() + "|" + juce::String(static_cast<int>(m_processor.holds().size()));
 }
 
 void PluginEditor::select(SourcePlayer::Source source) {

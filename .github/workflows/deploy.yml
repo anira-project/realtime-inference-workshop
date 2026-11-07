@@ -42,10 +42,23 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.first.outputs.page_url || steps.second.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
+      # GitHub's side can stall a deployment (stuck in syncing_files until the
+      # action's timeout cancels it); the next one is then refused while the
+      # cancelled one still counts as in progress. One retry after a pause.
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: first
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Wait before the retry
+        if: steps.first.outcome == 'failure'
+        run: sleep 90
+
+      - name: Deploy to GitHub Pages, second attempt
+        id: second
+        if: steps.first.outcome == 'failure'
         uses: actions/deploy-pages@v4

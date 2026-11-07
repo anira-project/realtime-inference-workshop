@@ -27,7 +27,7 @@ Note:
 - `processBlock`: callback from step 7, unchanged
 - `releaseResources`: stop the worker thread
 - Everything else: JUCE boilerplate
-- Only 44.1 or 48 kHz and 512: our prefill and latency are only right for that block size. Anything else: bypassed, the player stops and the input goes out unprocessed, with an overlay that says why; the player starts over once the settings fit
+- Only 44.1 kHz and 512: our prefill and latency are only right for that block size, and the model and the step 4 number are 44.1 kHz ones. At 48 kHz the window asks first, Process anyway plays it higher; a resampler does not fit our fixed 512 and 2048 blocks. Anything else: bypassed, the player stops and the input goes out unprocessed, with an overlay that says why; the player starts over once the settings fit
 - Takeaway: arbitrary buffer sizes need a different design, part 2
 - One change: ONNX Runtime is handled a bit differently
 
@@ -48,14 +48,14 @@ open build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalo
 ```
 <p class="path-note">The VST3 plugin is in <code>build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/VST3</code>.</p>
 
-<div class="cards-note corner-note">Only 44.1 or 48 kHz and 512-sample buffers: anything else is bypassed, and the window says why.</div>
+<div class="cards-note corner-note">Only 44.1 kHz and 512-sample buffers: 48 kHz asks first, anything else is bypassed, and the window says why.</div>
 
 
 Note:
 - Commands are on the slide: standalone or VST3
 - Start the build now, ready during the break
 - Play with dry/wet, try your own sounds, headphones please
-- Set your device or DAW to 512 samples and 44.1 or 48 kHz, otherwise it is bypassed and says so
+- Set your device or DAW to 512 samples and 44.1 kHz; 48 kHz asks first, anything else is bypassed and says so
 - Sample rate warning: model expects 44.1 kHz
 - At 48 kHz it runs but sounds different: set your device to 44.1
 

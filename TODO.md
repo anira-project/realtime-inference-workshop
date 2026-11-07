@@ -2,7 +2,6 @@
 
 - Process_size not copy in first example
 - Don't get why we need the process_size? Can't we just put it directly when doing the engine.process?
-- Was ist mit .clangd pointing to compile_commands.json symlink in build folder am besten und release and debug sollten am besten in unterordnern sein
 - rename audio to output
 - Benchmark fillout muss nach oben, rest muss in andere header file
 - Worker thread grafik step 6 fixen
@@ -63,3 +62,4 @@
 - Teaser (9306635 and later): two animations, "Fighting the clock" (clock) and the real-time thread with an FFT next to a neural network.
 - Teaser A first with an FFT, then the model: renamed "Every callback has a deadline", A = the clock with FFT + IFFT (about 3 µs with FFTW, roughly 0.1 samples; one box per block shows the time per block), B = the same clock with the network; the codec teaser (FFT and network lanes) dropped.
 - Exported to ONNX slide simplified: "Shipped as an ONNX file" (Open Neural Network Exchange), the file = architecture + weights; export pipeline, sizes and download details dropped.
+- Build folders: the presets build into build/release/ and build/debug/ (step 5's RTSan build into build/rtsan/); every configure links build/compile_commands.json to its tree (cmake/compile-commands.cmake, as in anira), .clangd reads build/. Slides and READMEs use the new paths.

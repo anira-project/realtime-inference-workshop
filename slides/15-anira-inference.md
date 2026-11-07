@@ -215,7 +215,7 @@ Fill in the TODOs in `steps/09_anira/exercise/model.json` and `AniraProcessor.cp
 ```bash
 # validate: the check against the reference
 cmake --build --preset release --target step09_exercise_check
-./build/bin/step09_exercise_check
+./build/release/bin/step09_exercise_check
 # play: the same processor as a plugin (or step09_exercise_VST3)
 cmake --build --preset release --target step09_exercise_Standalone
 ```

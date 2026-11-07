@@ -23,9 +23,9 @@ about 500 MB, and the room's network is shared by everyone.
 - JUCE, ONNX Runtime and anira, with CMake's `FetchContent`, into the build folder
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-./build/bin/step01_solution
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release -j
+./build/release/bin/step01_solution
 ```
 
 Or with the preset, one step at a time:
@@ -33,17 +33,20 @@ Or with the preset, one step at a time:
 ```bash
 cmake --preset release
 cmake --build --preset release --target step01_exercise
-./build/bin/step01_exercise
+./build/release/bin/step01_exercise
 ```
 
 To step through a task in a debugger, use the debug preset. It builds into
-`build-debug/`, next to the release build:
+`build/debug/`, next to the release build in `build/release/`:
 
 ```bash
 cmake --preset debug
 cmake --build --preset debug --target step01_exercise
-./build-debug/bin/step01_exercise
+./build/debug/bin/step01_exercise
 ```
+
+Every configure links `build/compile_commands.json` to its own build folder, so
+clangd (`.clangd`) follows the build configured last.
 
 Timings, such as the benchmark in step 4, only mean something in the release
 build.

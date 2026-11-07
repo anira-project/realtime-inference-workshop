@@ -350,7 +350,7 @@ Fill in the TODOs in `steps/10_split/exercise/`
 ```bash
 # validate: the check against the reference
 cmake --build --preset release --target step10_exercise_check
-./build/bin/step10_exercise_check
+./build/release/bin/step10_exercise_check
 # play: the plugin, eight knobs (or step10_exercise_VST3)
 cmake --build --preset release --target step10_exercise_Standalone
 ```

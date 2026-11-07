@@ -100,7 +100,7 @@ Fill in the TODOs in `steps/07_latency/exercise/main.cpp`
 
 ```bash
 cmake --build --preset release --target step07_exercise
-./build/bin/step07_exercise
+./build/release/bin/step07_exercise
 ```
 
 <div class="run" style="grid-template-columns: 1fr 1fr">

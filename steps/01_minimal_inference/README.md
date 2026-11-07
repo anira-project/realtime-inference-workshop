@@ -33,7 +33,7 @@ Build and run from the repository root:
 ```bash
 cmake --preset release
 cmake --build --preset release --target step01_exercise
-./build/bin/step01_exercise
+./build/release/bin/step01_exercise
 ```
 
 ## Expected output

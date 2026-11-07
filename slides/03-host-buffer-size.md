@@ -144,7 +144,7 @@ Fill in the TODOs in `steps/03_host_buffer_size/exercise/main.cpp`
 
 ```bash
 cmake --build --preset release --target step03_exercise
-./build/bin/step03_exercise
+./build/release/bin/step03_exercise
 ```
 
 <div class="run">

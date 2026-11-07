@@ -29,7 +29,7 @@ Build and run from the repository root:
 
 ```bash
 cmake --build --preset release --target step09_exercise_check
-./build/bin/step09_exercise_check
+./build/release/bin/step09_exercise_check
 ```
 
 Once it passes, the same `AniraProcessor` runs as a plugin:
@@ -38,7 +38,7 @@ Once it passes, the same `AniraProcessor` runs as a plugin:
 cmake --build --preset release --target step09_exercise_Standalone   # or step09_exercise_VST3
 ```
 
-The result is in `build/steps/09_anira/step09_exercise_artefacts/Release/`.
+The result is in `build/release/steps/09_anira/step09_exercise_artefacts/Release/`.
 
 ## Expected output
 

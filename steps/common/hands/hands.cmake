@@ -14,12 +14,11 @@ juce_add_binary_data(workshop_hand_models
         "${WORKSHOP_MODELS_DIR}/handtracking/canned_gesture_classifier.onnx")
 
 # The tracker from anira-cam (src/handtracking): palm detector, landmarks,
-# gesture, on anira's 2.x C++ API, which the v3 library still carries. The app
-# sees it only through HandTracker.h.
+# gesture, one anira v3 handler per model on one context. The app sees it only
+# through HandTracker.h.
 add_library(workshop_handtracking STATIC
     ${WORKSHOP_HANDS_DIR}/handtracking/src/HandTracker.cpp
-    ${WORKSHOP_HANDS_DIR}/handtracking/src/StreamedHandTracker.cpp
-    ${WORKSHOP_HANDS_DIR}/handtracking/src/SyncHandTracker.cpp)
+    ${WORKSHOP_HANDS_DIR}/handtracking/src/StreamedHandTracker.cpp)
 target_compile_features(workshop_handtracking PUBLIC cxx_std_20)
 target_include_directories(workshop_handtracking
     PUBLIC ${WORKSHOP_HANDS_DIR}/handtracking/include

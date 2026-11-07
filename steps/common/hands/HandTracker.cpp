@@ -4,6 +4,8 @@
 
 #include <handtracking/HandTracker.h>
 
+#include "ContextSettings.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -110,7 +112,7 @@ ht::Frame to_frame(const juce::Image& image) {
 }  // namespace
 
 struct HandTracker::Impl {
-    std::unique_ptr<ht::HandTracker> tracker = ht::createHandTracker(ht::Engine::Streamed);
+    std::unique_ptr<ht::HandTracker> tracker = ht::createHandTracker(context_config());
     std::atomic<float> aspect{16.0F / 9.0F};  // of the camera frames
     ht::Result result;                        // the last one hands() read
 };
@@ -156,7 +158,7 @@ double HandTracker::trackingFps() const {
 }
 
 juce::String HandTracker::engine() const {
-    return ht::backend_name(m_impl->tracker->getBackend());
+    return ht::k_engine_name;
 }
 
 }  // namespace hands

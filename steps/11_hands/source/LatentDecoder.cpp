@@ -1,5 +1,7 @@
 #include "LatentDecoder.h"
 
+#include "ContextSettings.h"
+
 #include <anira/anira.hpp>
 
 #include <algorithm>
@@ -28,7 +30,7 @@ constexpr int k_frames_ahead = 2;
 class LatentDecoder::Source : public juce::AudioSource {
 public:
     explicit Source(const std::string& step_dir)
-        : m_context(anira::ContextConfig{})
+        : m_context(context_config())  // the tracker's settings too
         , m_contract(anira::ContractHandle::from_file(step_dir + "/contract.json"))
         , m_handler(create(m_context, step_dir + "/decoder.json")) {
         for (size_t i = 0; i < k_num_latents; ++i) { m_latents[i].store(0.0F); }

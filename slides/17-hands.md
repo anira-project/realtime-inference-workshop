@@ -137,7 +137,7 @@ Note:
 </div>
 
 Note:
-- The chain runs on anira, through the 2.x C++ API, which the v3 library still carries.
+- The chain runs on anira's v3 API, like the decoder: one context, a model config and a hard contract per model.
 - Each model has its own handler, and each tracked hand has its own landmark handler, so two hands run in parallel.
 - The camera thread never waits for an inference: each frame it pops what has finished and pushes new work.
 - A result that is late arrives with the next frame; the tracking rate drops, the camera rate does not.

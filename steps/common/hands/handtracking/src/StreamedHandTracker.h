@@ -1,11 +1,11 @@
 #pragma once
 
-#include <anira/compat/v2.hpp>
+#include <handtracking/HandTracker.h>
+
+#include <anira/anira.hpp>
 #include <array>
 #include <memory>
 #include <vector>
-
-#include <handtracking/HandTracker.h>
 
 #include "Geometry.h"
 #include "StreamedSession.h"
@@ -14,11 +14,12 @@
 
 namespace anira::models::handtracking {
 
-// Streamed engine: each model is an anira session in realtime streaming mode driven from the video callback.
-// No locks and no heap allocation on the video thread; all buffers preallocated, results via lock-free triple buffer.
+// Streamed engine: each model is an anira handler in realtime streaming mode driven from the video
+// callback. No locks and no heap allocation on the video thread; all buffers preallocated, results
+// via lock-free triple buffer.
 class StreamedHandTracker : public HandTracker {
 public:
-    StreamedHandTracker();
+    explicit StreamedHandTracker(const anira::ContextConfig& context_config);
 
     // Camera thread, non-blocking: pops finished results, pushes new work.
     void processFrame(const Frame& frame) override;
@@ -27,14 +28,6 @@ public:
 
     void setOptions(const Options& options) override { m_state.setOptions(options); }
     Options getOptions() const override { return m_state.getOptions(); }
-
-    // Applied on the camera thread at the start of the next frame.
-    void setBackend(anira::v2::InferenceBackend backend) override {
-        m_state.requestBackend(backend);
-    }
-    anira::v2::InferenceBackend getBackend() const override {
-        return m_state.requestedBackend();
-    }
 
 private:
     // Must cover anira's computed latency plus headroom; pushes are skipped if a queue fills.
@@ -52,12 +45,14 @@ private:
     };
 
     struct HandSlot {
-        HandSlot();
+        explicit HandSlot(anira::Context& context);
 
         StreamedSession<SlotPushContext, k_queue_capacity> session;
 
         std::vector<float> input;               // preallocated 224x224x3 tensor
         std::array<float, 63> out_landmarks{};  // 21 x (x, y, z) in crop pixels
+        float out_presence = 0.0F;              // Static: the latest value
+        float out_handedness = 0.0F;            // Static: the latest value
         std::array<float, 63> out_world_landmarks{};
 
         bool active = false;    // slot owns a hand (or is draining after loss)
@@ -68,9 +63,6 @@ private:
         int last_gesture = -1;  // sticky: updated when the classifier pops
         float last_gesture_score = 0.0F;
     };
-
-    // Camera thread: drains in-flight work, resets tracking, re-prepares every session.
-    void applyBackend(anira::v2::InferenceBackend backend);
 
     // Pop side (non-blocking)
     void popDetector(const Options& options);
@@ -87,7 +79,12 @@ private:
                       float handedness_right,
                       int slot_index);
 
-    // Embedder/classifier are shared by all hands (context = slot index), queues sized for k_max_hands pushes per frame.
+    // The context every handler runs on, declared first: the handlers are made on it, and
+    // destroyed before it.
+    anira::Context m_context;
+
+    // Embedder/classifier are shared by all hands (context = slot index), queues sized for
+    // k_max_hands pushes per frame.
     StreamedSession<DetectorPushContext, k_queue_capacity> m_detector;
     StreamedSession<int, k_queue_capacity * k_max_hands> m_embedder;
     StreamedSession<int, k_queue_capacity * k_max_hands> m_classifier;
@@ -101,6 +98,7 @@ private:
     std::vector<float> m_detector_boxes;   // [2016, 18]
     std::vector<float> m_detector_scores;  // [2016, 1]
     std::array<float, 63> m_embedder_hand{};
+    std::array<float, 1> m_embedder_handedness{};
     std::array<float, 63> m_embedder_world{};
     std::array<float, 128> m_embedding{};
     std::array<float, 8> m_gesture_scores{};
@@ -109,8 +107,7 @@ private:
     FpsMeter m_camera_fps;
     FpsMeter m_tracking_fps;
 
-    SharedTrackerState m_state;                // options + requested backend
-    anira::v2::InferenceBackend m_active_backend;  // camera thread only
+    SharedTrackerState m_state;  // options
 
     // Published results (camera thread writes, GUI thread reads). Lock-free.
     TripleBuffer<Result> m_results;

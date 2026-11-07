@@ -9,20 +9,18 @@
 
 #include "PluginBase.h"
 #include "ProcessorExample.h"
-#include "common/helpers/onnx_engine.h"
 
 class PluginProcessor final : public PluginBase {
 public:
     PluginProcessor();
 
 private:
-    size_t prepare(double sample_rate, size_t max_block_size) override;
+    size_t prepare(double sample_rate, size_t host_block_size) override;
     void process(float* samples, size_t num_samples) override;
     void release() override;
 
-    // One engine and one processor, as in step 7's main, made with the plugin:
-    // neither loads nor allocates anything before prepare. The processor runs
-    // its own worker thread.
-    OnnxEngine m_engine;
-    ProcessorExample m_processor{m_engine};
+    // One processor, as in step 7's main, made with the plugin and the model.
+    // It makes its engine, but neither loads nor allocates anything before
+    // prepare. It runs its own worker thread.
+    ProcessorExample m_processor{k_model};
 };

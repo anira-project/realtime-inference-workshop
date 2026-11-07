@@ -150,11 +150,12 @@ Note:
 
 ```cpp
 // given outside the function, in the global scope
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 ```
 
 ```cpp

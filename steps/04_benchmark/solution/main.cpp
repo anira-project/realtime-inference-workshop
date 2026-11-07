@@ -21,12 +21,13 @@
 // @m_input_size: samples the model takes per forward pass
 // @m_state_size: floats in the model's state
 // @m_sample_rate: the sample rate the model was trained for
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 
 // What the host hands over per callback, as in every step of the first part.
 constexpr size_t k_host_block_size = 512;

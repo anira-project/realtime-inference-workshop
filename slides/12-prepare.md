@@ -159,8 +159,8 @@ Note:
 ## Every buffer sized by hand.<br><span class="then">From the worst moment we could think of.</span>
 
 ```cpp
-m_input  = ThreadSafeRingBuffer(k_model.m_input_size);
-m_output = ThreadSafeRingBuffer(worker_time + k_model.m_input_size);
+m_input  = ThreadSafeRingBuffer(m_model.m_input_size);
+m_output = ThreadSafeRingBuffer(worker_time + m_model.m_input_size);
 ```
 
 Note:

@@ -21,11 +21,12 @@
 // @m_path: absolute path to the exported model, set via CMake
 // @m_input_size: samples the model takes per forward pass
 // @m_state_size: floats in the model's state
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 
 int main() {
     try {

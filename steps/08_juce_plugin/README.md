@@ -18,15 +18,15 @@ The VST3 passes `pluginval --strictness-level 5`.
 
 ## The processor is step 7's
 
-[`solution/ProcessorExample.h`](solution/ProcessorExample.h) is step 7's `ProcessorExample`, filled in, one-to-one: the same constants, the same `prepare`, `process_block` and `process_model`, with its `WorkerThread` inside. [`solution/PluginProcessor`](solution/PluginProcessor.cpp) owns the engine and that one processor, as step 7's `main` does, and writes only the places where the host talks to us.
+[`solution/ProcessorExample.h`](solution/ProcessorExample.h) is step 7's `ProcessorExample`, filled in, one-to-one: the same constants, the same `prepare`, `process_block` and `process_model`, with its `WorkerThread` inside. [`solution/PluginProcessor`](solution/PluginProcessor.cpp) owns that one processor, which owns the engine, as step 7's `main` does, and writes only the places where the host talks to us.
 
 Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), shared with steps 9 and 10: `PluginBase` (buses, the dry/wet parameter, the bypass, the mono mix-down, the host boilerplate), the window in `ui/`, and the source player in `dsp/`. `PluginBase` takes the host's `prepareToPlay`, `processBlock` and `releaseResources` and calls the step's `prepare`, `process` and `release`. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
 
 ## The three places the host talks to us
 
-**The constructor** creates: the engine and the processor are plain members, made with the plugin, as in step 7's `main`. They load and allocate nothing: a host may construct a plugin just to scan it.
+**The constructor** creates: the processor is a plain member, made with the plugin and the model, `k_model`, as in step 7's `main`, and it makes its engine. Nothing is loaded or allocated: a host may construct a plugin just to scan it.
 
-**`prepare`**, from the host's `prepareToPlay`: everything that allocates or depends on the host's settings, and may run again whenever they change. The first time, load the model with `m_engine.load`; if it does not load, the window says so. Then `prepare` the processor, which sizes the ring buffers and starts the worker thread. Then it returns the number from step 7:
+**`prepare`**, from the host's `prepareToPlay`: everything that allocates or depends on the host's settings, and may run again whenever they change. `m_processor.prepare(host_block_size, k_max_inference_ms)` loads the model the first time, sizes the ring buffers and starts the worker thread; if the model does not load, the window says so. Then it returns the number from step 7:
 
 ```cpp
 return m_processor.latency_samples();

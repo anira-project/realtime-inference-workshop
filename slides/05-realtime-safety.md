@@ -44,8 +44,8 @@ Note:
 // Step 3's processor, shortened: the callback makes the promise
 void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
     // … host block into m_input; once a model block is there, pop it, then:
-    m_engine.process(m_model_block.data(), k_model.m_input_size,
-                     m_state.data(), k_model.m_state_size);
+    m_engine.process(m_model_block.data(), m_model.m_input_size,
+                     m_state.data(), m_model.m_state_size);
     // … the result into m_output, the host block out of it
 }
 ```

@@ -217,9 +217,9 @@ Note:
 
 ```cpp
 // given, in prepare()
-const double worst_case_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+const double worst_case_samples = max_inference_ms * m_model.m_sample_rate / 1000.0;
 const size_t worker_time =
-    static_cast<size_t>(std::ceil(worst_case_samples / max_block_size)) * max_block_size;
+    static_cast<size_t>(std::ceil(worst_case_samples / host_block_size)) * host_block_size;
 ```
 
 </div>
@@ -230,7 +230,7 @@ Note:
 - Click: in samples, at 44.1 kHz: 18 ms are 794 samples
 - Whole callbacks, because the audio thread only picks results up once per callback
 - Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
-- Click: You don't need to calculate this yourself, it's given at the top of `prepare`. TODO 1 builds on `worker_time`
+- Click: You don't need to calculate this yourself, it's given at the top of `prepare`. `main` passes your number into `prepare`, as `max_inference_ms`. TODO 1 builds on `worker_time`
 
 ---
 
@@ -291,12 +291,12 @@ Note:
 ## TODO 1: The prefill
 
 ```cpp
-m_prefill = «(k_model.m_input_size - max_block_size)»    // <- solution: step 3's prefill
+m_prefill = «(m_model.m_input_size - host_block_size)»    // <- solution: step 3's prefill
           + «worker_time»;                               //    plus the worker's time
 
 // given: the sizes, the silence goes in, and the worker thread starts
-m_input = ThreadSafeRingBuffer(k_model.m_input_size);
-m_output = ThreadSafeRingBuffer(worker_time + k_model.m_input_size);
+m_input = ThreadSafeRingBuffer(m_model.m_input_size);
+m_output = ThreadSafeRingBuffer(worker_time + m_model.m_input_size);
 m_worker.start([this] { process_model(); });
 ```
 
@@ -357,14 +357,14 @@ Note:
 
 ```cpp
 // in process_model(), called over and over by m_worker
-for (size_t i = 0; i < k_model.m_input_size; ++i) {
+for (size_t i = 0; i < m_model.m_input_size; ++i) {
     while («!m_input.try_pop(m_model_block[i])») {    // <- solution: spin
         if (!m_worker.running()) { return; }        // given
     }
 }
-m_engine.process(m_model_block.data(), k_model.m_input_size,
-                 m_state.data(), k_model.m_state_size);
-for (size_t i = 0; i < k_model.m_input_size; ++i) {
+m_engine.process(m_model_block.data(), m_model.m_input_size,
+                 m_state.data(), m_model.m_state_size);
+for (size_t i = 0; i < m_model.m_input_size; ++i) {
     while («!m_output.try_push(m_model_block[i])») {  // <- solution: spin
         if (!m_worker.running()) { return; }        // given
     }

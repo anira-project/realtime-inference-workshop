@@ -102,6 +102,7 @@ Note:
 - Same model, signals and engine helper
 - New: a ring buffer
 - The exercise isn't writing a ring buffer, it's sizing and using it
+- `ProcessorExample` is made with `k_model` and owns the engine. It keeps the model as `m_model`, so the class reads its sizes from the member, not from the global. Its `prepare` gets the host's block size, fixed at 512, and loads the model there, once
 
 ---
 
@@ -184,10 +185,10 @@ Note:
 ## TODO 1: The prefill
 
 ```cpp
-const size_t prefill = «k_model.m_input_size - max_block_size»;  // <- solution
+const size_t prefill = «m_model.m_input_size - host_block_size»;  // <- solution
 
-m_input = RingBuffer(k_model.m_input_size);              // given
-m_output = RingBuffer(prefill + k_model.m_input_size);   // given
+m_input = RingBuffer(m_model.m_input_size);              // given
+m_output = RingBuffer(prefill + m_model.m_input_size);   // given
 for (size_t i = 0; i < prefill; ++i) {                   // given: the zeros go in
     const bool pushed = m_output.try_push(0.0f);
     assert(pushed);  // never fails: m_output has room for the prefill
@@ -215,7 +216,7 @@ for (size_t i = 0; i < num_samples; ++i) {
     assert(pushed);  // never fails
 }
 
-if (m_input.available() >= «k_model.m_input_size») {  // <- 2. solution
+if (m_input.available() >= «m_model.m_input_size») {  // <- 2. solution
     // a whole model block is there: through the model, next slide
 }
 ```
@@ -232,14 +233,14 @@ Note:
 ## TODO 2: Pump whole blocks <span class="then">Through the model.</span>
 
 ```cpp
-if (m_input.available() >= k_model.m_input_size) {
-    for (size_t i = 0; i < k_model.m_input_size; ++i) {
+if (m_input.available() >= m_model.m_input_size) {
+    for (size_t i = 0; i < m_model.m_input_size; ++i) {
         const bool popped = «m_input.try_pop(m_model_block[i])»;    // <- 3. solution
         assert(popped);  // never fails: a whole block is there
     }
-    m_engine.process(m_model_block.data(), k_model.m_input_size,
-                     m_state.data(), k_model.m_state_size);
-    for (size_t i = 0; i < k_model.m_input_size; ++i) {
+    m_engine.process(m_model_block.data(), m_model.m_input_size,
+                     m_state.data(), m_model.m_state_size);
+    for (size_t i = 0; i < m_model.m_input_size; ++i) {
         const bool pushed = «m_output.try_push(m_model_block[i])»;  // <- 3. solution
         assert(pushed);  // never fails: m_output has room
     }

@@ -24,11 +24,12 @@
 #include "common/helpers/support.h"
 
 // Model settings taken from the export metadata, as in step 1.
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
@@ -44,19 +45,24 @@ constexpr size_t k_host_block_size = 512;
 // promise.
 class ProcessorExample {
 public:
-    explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
+    // Keeps the model and makes the engine, which loads nothing yet:
+    // prepare() loads the model.
+    explicit ProcessorExample(const ModelConfig& model) : m_model(model) {}
 
-    void prepare(size_t max_block_size) {
-        const size_t prefill = k_model.m_input_size - max_block_size;
+    void prepare(size_t host_block_size) {
+        // The model, loaded the first time: it takes a while and allocates.
+        if (!m_engine.loaded()) { m_engine.load(m_model.m_path); }
 
-        m_input = RingBuffer(k_model.m_input_size);
-        m_output = RingBuffer(prefill + k_model.m_input_size);
+        const size_t prefill = m_model.m_input_size - host_block_size;
+
+        m_input = RingBuffer(m_model.m_input_size);
+        m_output = RingBuffer(prefill + m_model.m_input_size);
         for (size_t i = 0; i < prefill; ++i) {
             const bool pushed = m_output.try_push(0.0f);
             assert(pushed);  // never fails: m_output has room for the prefill
         }
-        m_model_block.assign(k_model.m_input_size, 0.0f);
-        m_state.assign(k_model.m_state_size, 0.0f);
+        m_model_block.assign(m_model.m_input_size, 0.0f);
+        m_state.assign(m_model.m_state_size, 0.0f);
     }
 
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
@@ -65,14 +71,14 @@ public:
             assert(pushed);  // never fails: the model takes a block out before m_input is full
         }
 
-        if (m_input.available() >= k_model.m_input_size) {
-            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        if (m_input.available() >= m_model.m_input_size) {
+            for (size_t i = 0; i < m_model.m_input_size; ++i) {
                 const bool popped = m_input.try_pop(m_model_block[i]);
                 assert(popped);  // never fails: a whole block is there
             }
-            m_engine.process(m_model_block.data(), k_model.m_input_size,
-                             m_state.data(), k_model.m_state_size);
-            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+            m_engine.process(m_model_block.data(), m_model.m_input_size,
+                             m_state.data(), m_model.m_state_size);
+            for (size_t i = 0; i < m_model.m_input_size; ++i) {
                 const bool pushed = m_output.try_push(m_model_block[i]);
                 assert(pushed);  // never fails: m_output has room for a whole block
             }
@@ -85,7 +91,8 @@ public:
     }
 
 private:
-    OnnxEngine& m_engine;
+    OnnxEngine m_engine;        // Made with the processor, loaded in prepare()
+    const ModelConfig m_model;  // Given at construction, never changes
     RingBuffer m_input{0};
     RingBuffer m_output{0};
     std::vector<float> m_model_block;
@@ -100,11 +107,8 @@ int main() {
         "and -DWORKSHOP_RTSAN=ON. See the README.\n\n");
 #endif
 
-    OnnxEngine engine;
-    engine.load(k_model.m_path);
-
-    ProcessorExample processor(engine);
-    processor.prepare(k_host_block_size);
+    ProcessorExample processor(k_model);  // Keeps the model, loads nothing yet
+    processor.prepare(k_host_block_size);  // Loads the model
 
     // The host, as in step 3. With RTSan, the run stops in the fourth callback,
     // the first one that runs the model.

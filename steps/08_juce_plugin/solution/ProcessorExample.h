@@ -15,17 +15,17 @@
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
 #include "common/helpers/worker_thread.h"
-#include "common/inference_time.h"
 
 // Model settings taken from the export metadata, as in step 1.
 // @m_latency: the model's own delay, how much later its output answers its input
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
     size_t m_latency = 2224;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 
 // Step 6's processor, with a dry path next to it:
 //
@@ -36,33 +36,38 @@ constexpr struct {
 // m_dry is a plain RingBuffer: only the audio thread uses it.
 class ProcessorExample {
 public:
-    explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
+    // Keeps the model and makes the engine, which loads nothing yet:
+    // prepare() loads the model.
+    explicit ProcessorExample(const ModelConfig& model) : m_model(model) {}
 
-    void prepare(size_t max_block_size) {
+    void prepare(size_t host_block_size, double max_inference_ms) {
         m_worker.stop();
 
+        // The model, loaded the first time: it takes a while and allocates.
+        if (!m_engine.loaded()) { m_engine.load(m_model.m_path); }
+
         // Step 6's worker time: your worst case, in samples, in whole callbacks
-        const double worst_case_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+        const double worst_case_samples = max_inference_ms * m_model.m_sample_rate / 1000.0;
         const size_t worker_time =
-            static_cast<size_t>(std::ceil(worst_case_samples / max_block_size)) * max_block_size;
-        m_prefill = (k_model.m_input_size - max_block_size) + worker_time;
-        const size_t output_capacity = worker_time + k_model.m_input_size;
+            static_cast<size_t>(std::ceil(worst_case_samples / host_block_size)) * host_block_size;
+        m_prefill = (m_model.m_input_size - host_block_size) + worker_time;
+        const size_t output_capacity = worker_time + m_model.m_input_size;
 
         // The latency: the prefill, and the model's own delay on top.
-        m_latency = m_prefill + k_model.m_latency;
+        m_latency = m_prefill + m_model.m_latency;
 
-        m_input = ThreadSafeRingBuffer(k_model.m_input_size);
+        m_input = ThreadSafeRingBuffer(m_model.m_input_size);
         m_output = ThreadSafeRingBuffer(output_capacity);
         for (size_t i = 0; i < m_prefill; ++i) {
             const bool pushed = m_output.try_push(0.0f);  // The prefill
             assert(pushed);  // never fails: m_output has room for the prefill
         }
-        m_model_block.assign(k_model.m_input_size, 0.0f);
-        m_state.assign(k_model.m_state_size, 0.0f);
+        m_model_block.assign(m_model.m_input_size, 0.0f);
+        m_state.assign(m_model.m_state_size, 0.0f);
 
         // The dry path: room for the delay and one callback more.
-        m_dry = RingBuffer(m_latency + max_block_size);
-        m_dry_block.assign(max_block_size, 0.0f);
+        m_dry = RingBuffer(m_latency + host_block_size);
+        m_dry_block.assign(host_block_size, 0.0f);
         for (size_t i = 0; i < m_latency; ++i) {
             const bool pushed = m_dry.try_push(0.0f);  // The dry signal, the whole latency late
             assert(pushed);  // never fails: m_dry has room for the delay
@@ -139,23 +144,24 @@ private:
     void process_model() {
         // Step 6's hot spin: try again right away until a whole model block
         // is in, and until the result is out.
-        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        for (size_t i = 0; i < m_model.m_input_size; ++i) {
             while (!m_input.try_pop(m_model_block[i])) {
                 if (!m_worker.running()) { return; }  // so stop() never waits forever
             }
         }
 
-        m_engine.process(m_model_block.data(), k_model.m_input_size,
-                         m_state.data(), k_model.m_state_size);
+        m_engine.process(m_model_block.data(), m_model.m_input_size,
+                         m_state.data(), m_model.m_state_size);
 
-        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        for (size_t i = 0; i < m_model.m_input_size; ++i) {
             while (!m_output.try_push(m_model_block[i])) {
                 if (!m_worker.running()) { return; }
             }
         }
     }
 
-    OnnxEngine& m_engine;
+    OnnxEngine m_engine;               // Made with the processor, loaded in prepare()
+    const ModelConfig m_model;         // Given at construction, never changes
     ThreadSafeRingBuffer m_input{0};   // Audio thread -> worker
     ThreadSafeRingBuffer m_output{0};  // Worker -> audio thread
     std::vector<float> m_model_block;  // The worker's

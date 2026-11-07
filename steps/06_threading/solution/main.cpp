@@ -25,12 +25,13 @@
 #include "common/inference_time.h"
 
 // Model settings taken from the export metadata, as in step 1.
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
@@ -45,17 +46,22 @@ constexpr size_t k_host_block_size = 512;
 // host always finds something to take.
 class ProcessorExample {
 public:
-    explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
+    // Keeps the model and makes the engine, which loads nothing yet:
+    // prepare() loads the model.
+    explicit ProcessorExample(const ModelConfig& model) : m_model(model) {}
 
-    void prepare(size_t max_block_size) {
+    void prepare(size_t host_block_size, double max_inference_ms) {
         m_worker.stop();
 
-        // Given: the worker's time, your worst case from step 4 (k_max_inference_ms)
+        // The model, loaded the first time: it takes a while and allocates.
+        if (!m_engine.loaded()) { m_engine.load(m_model.m_path); }
+
+        // Given: the worker's time, your worst case from step 4 (max_inference_ms)
         // in samples, rounded up to whole callbacks: the audio thread only picks
         // results up once per callback.
-        const double worst_case_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+        const double worst_case_samples = max_inference_ms * m_model.m_sample_rate / 1000.0;
         const size_t worker_time =
-            static_cast<size_t>(std::ceil(worst_case_samples / max_block_size)) * max_block_size;
+            static_cast<size_t>(std::ceil(worst_case_samples / host_block_size)) * host_block_size;
 
         // ---- TODO 1 --------------------------------------------------------
         // The prefill: how much silence m_output starts with, so the host
@@ -64,23 +70,23 @@ public:
         //
         // Hint: the worker's time is worker_time, just above.
         // --------------------------------------------------------------------
-        m_prefill = (k_model.m_input_size - max_block_size) + worker_time;  // <- solution
+        m_prefill = (m_model.m_input_size - host_block_size) + worker_time;  // <- solution
 
         check_prefill(m_prefill,
-                      max_block_size,
-                      k_model.m_input_size,
+                      host_block_size,
+                      m_model.m_input_size,
                       worker_time);  // Given: names TODO 1 if it is off
 
         // Given: m_input holds one model block; m_output the worker's time and
         // one model block more, so the prefill fits
-        m_input = ThreadSafeRingBuffer(k_model.m_input_size);
-        m_output = ThreadSafeRingBuffer(worker_time + k_model.m_input_size);
+        m_input = ThreadSafeRingBuffer(m_model.m_input_size);
+        m_output = ThreadSafeRingBuffer(worker_time + m_model.m_input_size);
         for (size_t i = 0; i < m_prefill; ++i) {
             const bool pushed = m_output.try_push(0.0f);
             assert(pushed);  // never fails: m_output has room for the prefill
         }
-        m_model_block.assign(k_model.m_input_size, 0.0f);
-        m_state.assign(k_model.m_state_size, 0.0f);
+        m_model_block.assign(m_model.m_input_size, 0.0f);
+        m_state.assign(m_model.m_state_size, 0.0f);
 
         std::fill(m_state.begin(), m_state.end(), 0.0f);
         m_unpushed = 0;
@@ -156,23 +162,24 @@ private:
         //   2. push the result into m_output
         // The inference in between is step 3's, given.
         // --------------------------------------------------------------------
-        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        for (size_t i = 0; i < m_model.m_input_size; ++i) {
             while (!m_input.try_pop(m_model_block[i])) {  // <- solution
                 if (!m_worker.running()) { return; }  // given: stop() never waits forever
             }
         }
 
-        m_engine.process(m_model_block.data(), k_model.m_input_size,
-                         m_state.data(), k_model.m_state_size);
+        m_engine.process(m_model_block.data(), m_model.m_input_size,
+                         m_state.data(), m_model.m_state_size);
 
-        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        for (size_t i = 0; i < m_model.m_input_size; ++i) {
             while (!m_output.try_push(m_model_block[i])) {  // <- solution
                 if (!m_worker.running()) { return; }  // given
             }
         }
     }
 
-    OnnxEngine& m_engine;
+    OnnxEngine m_engine;               // Made with the processor, loaded in prepare()
+    const ModelConfig m_model;         // Given at construction, never changes
     ThreadSafeRingBuffer m_input{0};   // Audio thread -> worker
     ThreadSafeRingBuffer m_output{0};  // Worker -> audio thread
     std::vector<float> m_model_block;  // The worker's
@@ -191,11 +198,8 @@ private:
 
 int main() {
     try {
-        OnnxEngine engine;
-        engine.load(k_model.m_path);
-
-        ProcessorExample processor(engine);
-        processor.prepare(k_host_block_size);
+        ProcessorExample processor(k_model);  // Keeps the model, loads nothing yet
+        processor.prepare(k_host_block_size, k_max_inference_ms);  // Loads the model
 
         // The host, as in step 3, with one difference: a sleep after every
         // callback. Two threads only work if the audio thread is called at the

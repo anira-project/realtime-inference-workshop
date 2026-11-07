@@ -21,11 +21,12 @@
 #include "common/helpers/support.h"
 
 // Model settings taken from the export metadata, as in step 1.
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
@@ -37,9 +38,14 @@ constexpr size_t k_host_block_size = 512;
 //   host block -> m_input -> m_model_block -> model -> m_output -> host block
 class ProcessorExample {
 public:
-    explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
+    // Keeps the model and makes the engine, which loads nothing yet:
+    // prepare() loads the model.
+    explicit ProcessorExample(const ModelConfig& model) : m_model(model) {}
 
-    void prepare(size_t max_block_size) {
+    void prepare(size_t host_block_size) {
+        // The model, loaded the first time: it takes a while and allocates.
+        if (!m_engine.loaded()) { m_engine.load(m_model.m_path); }
+
         // ---- TODO 1 --------------------------------------------------------
         // The prefill: m_output starts with this many zeros, so the host finds
         // samples in every callback, also before the model has run. How many
@@ -48,18 +54,18 @@ public:
         // --------------------------------------------------------------------
         const size_t prefill = ?;  // <- fill out
 
-        check_prefill(prefill, max_block_size, k_model.m_input_size);  // Given: names TODO 1 if it is off
+        check_prefill(prefill, host_block_size, m_model.m_input_size);  // Given: names TODO 1 if it is off
 
         // Given: m_input holds one model block, m_output the prefill and one
         // model block more
-        m_input = RingBuffer(k_model.m_input_size);
-        m_output = RingBuffer(prefill + k_model.m_input_size);
+        m_input = RingBuffer(m_model.m_input_size);
+        m_output = RingBuffer(prefill + m_model.m_input_size);
         for (size_t i = 0; i < prefill; ++i) {
             const bool pushed = m_output.try_push(0.0f);
             assert(pushed);  // never fails: m_output has room for the prefill
         }
-        m_model_block.assign(k_model.m_input_size, 0.0f);
-        m_state.assign(k_model.m_state_size, 0.0f);
+        m_model_block.assign(m_model.m_input_size, 0.0f);
+        m_state.assign(m_model.m_state_size, 0.0f);
     }
 
     // One callback: the host's samples come in and go back out in place.
@@ -80,13 +86,13 @@ public:
         }
 
         if (m_input.available() >= ?) {  // <- 2. fill out
-            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+            for (size_t i = 0; i < m_model.m_input_size; ++i) {
                 const bool popped = ?;  // <- 3. fill out
                 assert(popped);  // never fails
             }
-            m_engine.process(m_model_block.data(), k_model.m_input_size,
-                             m_state.data(), k_model.m_state_size);
-            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+            m_engine.process(m_model_block.data(), m_model.m_input_size,
+                             m_state.data(), m_model.m_state_size);
+            for (size_t i = 0; i < m_model.m_input_size; ++i) {
                 const bool pushed = ?;  // <- 3. fill out
                 assert(pushed);  // never fails
             }
@@ -101,11 +107,12 @@ public:
             assert(popped);  // never fails
         }
 
-        check_todos(m_input, m_output, k_model.m_input_size);  // Given: names a missing TODO
+        check_todos(m_input, m_output, m_model.m_input_size);  // Given: names a missing TODO
     }
 
 private:
-    OnnxEngine& m_engine;
+    OnnxEngine m_engine;        // Made with the processor, loaded in prepare()
+    const ModelConfig m_model;  // Given at construction, never changes
     RingBuffer m_input{0};
     RingBuffer m_output{0};
     std::vector<float> m_model_block;
@@ -114,11 +121,8 @@ private:
 
 int main() {
     try {
-        OnnxEngine engine;
-        engine.load(k_model.m_path);
-
-        ProcessorExample processor(engine);
-        processor.prepare(k_host_block_size);
+        ProcessorExample processor(k_model);  // Keeps the model, loads nothing yet
+        processor.prepare(k_host_block_size);  // Loads the model
 
         // The host: the signal in one buffer, handed over 512 samples at a
         // time and processed in place.

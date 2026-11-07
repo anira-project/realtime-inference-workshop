@@ -20,9 +20,12 @@ The model's block size comes from the export. The host's comes from the audio de
 Open [`exercise/main.cpp`](exercise/main.cpp) and fill in `ProcessorExample`, at the three TODO banners. It has the shape a plugin has:
 
 ```cpp
-processor.prepare(max_block_size);            // Before the audio starts: allocate
-processor.process_block(samples, num_samples) // Per callback, in place
+ProcessorExample processor(k_model);              // Keeps the model, makes its engine, loads nothing
+processor.prepare(k_host_block_size);             // Before the audio starts: load, allocate
+processor.process_block(samples, num_samples);    // Per callback, in place
 ```
+
+The processor is made with the model and owns the engine: it keeps `k_model` as `m_model`, and inside the class the sizes come from `m_model`. `prepare` loads the model, once. The host's block size is fixed, 512 samples, for the whole run.
 
 1. **The prefill**, in `prepare()`: how many zeros `m_output` starts with, so the host finds samples in every callback, also before the model's first block. The host takes 512 per callback, the model gives back 2048 once a whole block is in. The ring buffers' sizes follow from it and are given; everything that allocates belongs here, not in the callback.
 2. **The pump**, in `process_block()`, one sample at a time. Push the host's samples into the input ring buffer, check whether a whole model block is waiting there, and if so pop it into `m_model_block`, run the model (given) and push the result into the output ring buffer. What is left over waits for the next call.

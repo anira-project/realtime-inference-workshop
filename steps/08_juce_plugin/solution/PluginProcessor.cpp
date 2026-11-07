@@ -64,6 +64,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         bypass(
             "The host sent a buffer that is not 512 samples. This plugin is built for 512 "
             "only. Arbitrary buffer sizes: part 2, anira.");
+        buffer.clear();  // Nothing plays from here on
         return;
     }
 

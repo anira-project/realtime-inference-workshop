@@ -43,6 +43,10 @@ public:
     juce::String file_name() const { return m_file_name; }
     juce::File file() const { return m_file_path; }  // The last one loaded
 
+    // The audio thread: back to the start of the example or your file, for the
+    // next render().
+    void rewind() { m_position = 0; }
+
     // The audio thread: overwrites the buffer with the example or your file,
     // looped. A mono file goes to every channel. The input is left as it is.
     void render(juce::AudioBuffer<float>& buffer) {

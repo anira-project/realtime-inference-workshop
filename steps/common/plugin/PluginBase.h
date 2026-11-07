@@ -51,22 +51,31 @@ public:
     const juce::String& title() const { return m_title; }
     const juce::String& subtitle() const { return m_subtitle; }
     const std::vector<Knob>& knobs() const { return m_knobs; }
-    // Why the input goes out unprocessed, or nullptr while the plugin processes.
+    // Why nothing plays, or nullptr while the plugin processes.
     const char* bypass_reason() const { return m_bypass.load(std::memory_order_acquire); }
     // Reads a file as your file and plays it, with the audio thread held off
     // while it changes. Returns false if it cannot be read.
     bool load_file(const juce::File& file);
 
 protected:
-    // The input goes out unprocessed, and the window says why. A string
+    // Nothing plays: the output is silent, and the window says why. A string
     // literal, so this is safe on the audio thread too.
     void bypass(const char* reason) { m_bypass.store(reason, std::memory_order_release); }
     void process_normally() { m_bypass.store(nullptr, std::memory_order_release); }
     bool bypassed() const { return m_bypass.load(std::memory_order_acquire) != nullptr; }
 
     // The example or your file replaces the input; the input stays as it is.
-    // Audio thread.
-    void render_source(juce::AudioBuffer<float>& buffer) { m_player.render(buffer); }
+    // While bypassed, nothing plays: the buffer is cleared and the player waits
+    // at the start, so it starts over once the plugin processes again. Audio
+    // thread.
+    void render_source(juce::AudioBuffer<float>& buffer) {
+        if (bypassed()) {
+            buffer.clear();
+            m_player.rewind();
+            return;
+        }
+        m_player.render(buffer);
+    }
 
     // The model is mono: the input channels mixed down into the first one, in
     // place. Returns it. Audio thread.

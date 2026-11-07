@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 project(realtime-inference-workshop LANGUAGES C CXX)  # C for JUCE's few C sources
 
+# FetchContent without its sub-build (CMake 3.30 and up), also in anira: the
+# sub-build's paths are too long for Windows in a checkout of ordinary depth.
+if(POLICY CMP0168)
+    cmake_policy(SET CMP0168 NEW)
+    set(CMAKE_POLICY_DEFAULT_CMP0168 NEW)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

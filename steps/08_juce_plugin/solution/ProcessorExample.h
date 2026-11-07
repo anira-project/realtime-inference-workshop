@@ -18,14 +18,13 @@
 
 // Model settings taken from the export metadata, as in step 1.
 // @m_latency: the model's own delay, how much later its output answers its input
-struct ModelConfig {
+constexpr struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
     size_t m_latency = 2224;
-};
-constexpr ModelConfig k_model{};
+} k_model{};
 
 // Step 6's processor, with a dry path next to it:
 //

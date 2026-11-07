@@ -154,14 +154,13 @@ Note:
 ## A model config, by hand.<br><span class="then">Five facts. The code assumes the rest: float, one channel, one block.</span>
 
 ```cpp
-struct ModelConfig {                       // from the export metadata, step 1
+constexpr struct ModelConfig {             // from the export metadata, step 1
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;            // the model's block
     size_t m_state_size = 63488;           // step 2
     double m_sample_rate = 44100.0;
     size_t m_latency = 2224;               // step 7
-};
-constexpr ModelConfig k_model{};
+} k_model{};
 
 ProcessorExample m_processor{k_model};     // step 8: given at construction, kept, never changed
 ```

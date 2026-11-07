@@ -11,11 +11,14 @@
 The host loop is step 3's. Without RTSan nothing is checked, so the program warns, runs through, and shows that the engine still matches the Python reference:
 
 ```
-WARNING: built without RealtimeSanitizer, so nothing is checked.
-It needs clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux)
-and -DWORKSHOP_RTSAN=ON. See the README.
+  NOTE  built without RealtimeSanitizer, so real-time safety is not checked. It needs
+        clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux) and
+        -DWORKSHOP_RTSAN=ON. See the README.
+  PASS  the output matches the reference: max abs diff 3.87e-07, tolerance 0.0001
 
-OK: max abs diff 3.87e-07, within 0.0001 of the reference.
+==============================================================
+  STEP 5 SOLVED, but real-time safety is not checked: no RealtimeSanitizer
+==============================================================
 ```
 
 ## Building with RTSan

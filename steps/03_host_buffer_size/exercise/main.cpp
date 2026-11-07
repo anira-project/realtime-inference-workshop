@@ -132,12 +132,11 @@ int main() {
 
         // Silence first, then the model's stream.
         const size_t latency = k_model.m_input_size - k_host_block_size;
-        return report_with_latency(buffer.data(),
-                                   k_target_output_signal.data(),
-                                   buffer.size(),
-                                   latency);
+        return step_result(3, report_with_latency(buffer.data(),
+                                                  k_target_output_signal.data(),
+                                                  buffer.size(),
+                                                  latency));
     } catch (const std::exception& error) {
-        std::printf("FAILED: %s\n", error.what());
-        return 1;
+        return step_failed(3, error);
     }
 }

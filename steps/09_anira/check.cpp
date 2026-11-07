@@ -26,23 +26,24 @@ constexpr struct {
 // already carries it, and so does the latency anira reports.
 constexpr size_t k_model_latency = 2224;
 
-int main() try {
+static int check() try {
     AniraProcessor processor(WORKSHOP_STEP_DIR);
     processor.prepare(k_host.m_sample_rate, k_host.m_block_size);
     const size_t latency = processor.latency();
 
     if (latency == 0) {
-        std::fprintf(stderr, "TODO 3: read the latency of output slot 0 into m_latency.\n");
+        fail("TODO 3: read the latency of output slot 0 into m_latency");
         return 2;
     }
     if (latency < k_model_latency) {
-        std::fprintf(stderr, "TODO 1: audio_out declares no latency: the model's own delay is %zu samples.\n",
+        fail("TODO 1: audio_out declares no latency: the model's own delay is %zu samples",
                      k_model_latency);
         return 2;
     }
 
     print_report("model", processor.plan());
-    std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
+    std::printf("  %-28s %zu samples (%.1f ms at %.0f Hz)\n",
+                "reported latency",
                 latency,
                 1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,
                 k_host.m_sample_rate);
@@ -62,12 +63,12 @@ int main() try {
 
     // Offline, the block has to come out processed, and nothing may be missed.
     if (std::equal(output.begin(), output.end(), k_input_signal.begin())) {
-        std::fprintf(stderr, "TODO 3: offline, the output is the input: process the block with process_wait.\n");
+        fail("TODO 3: offline, the output is the input: process the block with process_wait");
         return 2;
     }
     if (!late.empty()) {
-        std::fprintf(stderr, "TODO 3: offline, %zu blocks were missed: wait for the result, "
-                             "process_wait with ANIRA_WAIT_FOREVER.\n", late.size());
+        fail("TODO 3: offline, %zu blocks were missed: wait for the result,\n"
+             "process_wait with ANIRA_WAIT_FOREVER", late.size());
         return 2;
     }
 
@@ -87,13 +88,17 @@ int main() try {
         k_host.m_sample_rate);
     // The block is processed in place: untouched, it goes out as it came in.
     if (std::equal(live.begin(), live.end(), k_input_signal.begin())) {
-        std::fprintf(stderr, "TODO 3: live, the output is the input: process the block in process().\n");
+        fail("TODO 3: live, the output is the input: process the block in process()");
         return 2;
     }
-    std::printf("OK: live, the blocks are processed too.\n");
+    pass("live, at the host's pace, the blocks are processed too");
     return 0;
 } catch (const std::exception& error) {
     // Every refusal of anira's, from the files to prepare, names what it refused
-    std::fprintf(stderr, "%s\n", error.what());
+    fail("%s", error.what());
     return 2;
+}
+
+int main() {
+    return step_result(9, check());
 }

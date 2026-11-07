@@ -213,13 +213,12 @@ int main() {
         processor.stop();
 
         // Silence for the prefill, then the model's stream.
-        return report_with_prefill(buffer,
-                                   k_target_output_signal,
-                                   processor.prefill_samples(),
-                                   k_host_block_size,
-                                   k_model.m_sample_rate);
+        return step_result(6, report_with_prefill(buffer,
+                                                  k_target_output_signal,
+                                                  processor.prefill_samples(),
+                                                  k_host_block_size,
+                                                  k_model.m_sample_rate));
     } catch (const std::exception& error) {
-        std::printf("FAILED: %s\n", error.what());
-        return 1;
+        return step_failed(6, error);
     }
 }

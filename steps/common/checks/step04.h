@@ -13,6 +13,8 @@
 #include <numeric>
 #include <vector>
 
+#include "common/helpers/verdict.h"
+
 // How many of every repetition's first forward passes are shown, and how many
 // of the slowest are listed.
 constexpr size_t k_shown_first_passes = 5;
@@ -28,15 +30,16 @@ inline double percentile(std::vector<double> times, double fraction) {
     return times[index];
 }
 
-// Prints everything step 4 reads off the measurement.
+// Prints everything step 4 reads off the measurement. Returns what main should
+// exit with: 1 if this machine cannot keep up with the model.
 // @times: times[repetition][iteration], in milliseconds, in the order they ran
 // @model_block_size: samples the model takes per forward pass
 // @host_block_size: samples per host callback
 // @sample_rate: in Hz
-inline void report_forward_passes(const std::vector<std::vector<double>>& times,
-                                  size_t model_block_size,
-                                  size_t host_block_size,
-                                  double sample_rate) {
+inline int report_forward_passes(const std::vector<std::vector<double>>& times,
+                                 size_t model_block_size,
+                                 size_t host_block_size,
+                                 double sample_rate) {
     const size_t repetitions = times.size();
     const size_t iterations = times[0].size();
 
@@ -101,13 +104,16 @@ inline void report_forward_passes(const std::vector<std::vector<double>>& times,
     const double model_block_ms = 1000.0 * static_cast<double>(model_block_size) / sample_rate;
     std::printf("\nYour worst case:\n");
     std::printf("  max inference time   %6.2f ms\n", max_inference_ms);
+    std::printf("\n");
     if (max_inference_ms > model_block_ms) {
-        std::printf(
-            "\nLonger than one model block (%.1f ms): this machine cannot keep up with the\n"
-            "model. Please tell us.\n",
-            model_block_ms);
-        return;
+        fail("longer than one model block (%.1f ms): this machine cannot keep up with the\n"
+             "model. Please tell us.",
+             model_block_ms);
+        return 1;
     }
-    std::printf("\nWrite %.2f into k_max_inference_ms in steps/common/inference_time.h.\n",
-                max_inference_ms);
+    pass("shorter than one model block (%.1f ms). Write %.2f into k_max_inference_ms\n"
+         "in steps/common/inference_time.h",
+         model_block_ms,
+         max_inference_ms);
+    return 0;
 }

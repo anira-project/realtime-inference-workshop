@@ -63,6 +63,6 @@ int main() {
         }
     }
 
-    report_forward_passes(times_ms, k_model.m_input_size, k_host_block_size, k_model.m_sample_rate);
-    return 0;
+    return step_result(4, report_forward_passes(times_ms, k_model.m_input_size, k_host_block_size,
+                                                k_model.m_sample_rate));
 }

@@ -65,15 +65,9 @@ inline int report_with_prefill(const std::vector<float>& host_output,
                                             host_output.size(),
                                             prefill,
                                             host_block_size);
-    if (result != 0) {
-        std::printf(
-            "Dropouts or wrong samples mean the worker was late: raise k_max_inference_ms in\n"
-            "common/inference_time.h to the worst case of a few step 4 runs.\n");
-        return result;
-    }
-    std::printf(
-        "OK: inference ran on the worker thread, the host got the model's stream back\n"
-        "%zu samples late.\n",
-        prefill);
+    if (result != 0) { return result; }
+    pass("inference ran on the worker thread, the host got the model's stream back\n"
+         "%zu samples late",
+         prefill);
     return 0;
 }

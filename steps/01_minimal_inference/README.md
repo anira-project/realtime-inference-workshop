@@ -39,15 +39,21 @@ cmake --build --preset release --target step01_exercise
 ## Expected output
 
 ```
-OK: max abs diff 2.33e-10, within 1e-06 of the reference.
+  PASS  the output matches the reference: max abs diff 2.33e-10, tolerance 1e-06
+
+==============================================================
+  STEP 1 SOLVED
+==============================================================
 ```
+
+Anything else ends in `STEP 1 NOT SOLVED`, after a `FAIL` line that says what is off.
 
 ## If you're stuck
 
 The exercise builds once every `?` is filled in. Then:
 
-- **`FAILED: cannot load …`** — the path in TODO 1 is not the model: `k_model.m_path`.
-- **`FAILED: the model takes exactly 2048 samples per call, got M`** — the size you picked is not the model's block: `k_model.m_input_size`.
+- **`cannot load …`** — the path in TODO 1 is not the model: `k_model.m_path`.
+- **`the model takes exactly 2048 samples per call, got M`** — the size you picked is not the model's block: `k_model.m_input_size`.
 - **`TODO 2: run the first block through the engine`** — `buffer` still holds the input: the engine did not process it in place.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.

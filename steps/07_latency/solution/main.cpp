@@ -218,16 +218,15 @@ int main() {
         processor.stop();
 
         // Dry and wet, both late by exactly the reported latency.
-        return report_mix(buffer,
-                          k_input_signal,
-                          k_target_output_signal,
-                          k_mix,
-                          processor.latency_samples(),
-                          k_model.m_latency,
-                          k_host_block_size,
-                          k_model.m_sample_rate);
+        return step_result(7, report_mix(buffer,
+                                         k_input_signal,
+                                         k_target_output_signal,
+                                         k_mix,
+                                         processor.latency_samples(),
+                                         k_model.m_latency,
+                                         k_host_block_size,
+                                         k_model.m_sample_rate));
     } catch (const std::exception& error) {
-        std::printf("FAILED: %s\n", error.what());
-        return 1;
+        return step_failed(7, error);
     }
 }

@@ -50,10 +50,13 @@ anira's report, model (at prepare, on this machine):
   warm-up 4 inferences, until stable
   load 28 % (real-time factor 0.28 over 1 inference): comfortable
 
-Reported latency: 5295 samples (120.1 ms at 44100 Hz)
+  reported latency             5295 samples (120.1 ms at 44100 Hz)
+  PASS  the output matches the reference: max abs diff 3.13e-07, tolerance 0.0001
+  PASS  live, at the host's pace, the blocks are processed too
 
-OK: max abs diff 3.13e-07, within 0.0001 of the reference.
-OK: live, the blocks are processed too.
+==============================================================
+  STEP 9 SOLVED
+==============================================================
 ```
 
 The report and the latency are this machine's: prepare measures the budget while it warms the model up, and the latency follows from it. The load is the inference time over the audio it produces: below 75 % comfortable, below 100 % marginal, else not real-time. The model carries its state, so its inferences run one after another, over 1 inference. Yours differ; a slower machine gets a larger latency, not dropouts. 5295 covers host blocks from 1 to 512, as the contract declares: the host may call with any block up to its largest, so the latency covers the worst one. With every block exactly 512 it would be 4784, the number of step 7.
@@ -77,7 +80,7 @@ The check runs twice. First offline, like a bounce: the host calls as fast as it
 - **`TODO 3: offline, the output is the input`** — TODO 3.3: the block goes out untouched; the offline call does not process it.
 - **`TODO 3: offline, N blocks were missed`** — TODO 3.3: the offline call does not wait; give it `ANIRA_WAIT_FOREVER`.
 - **`TODO 3: live, the output is the input`** — TODO 3.4: the live call does not process the block.
-- **`FAILED: max abs diff 0.158`** with the latency reported — the state is not carried: block 0 matches, every block after it does not. Same failure as a fresh engine per block in step 1. Check `state_source`.
+- **`the output does not match the reference: max abs diff 0.158`** with the latency reported — the state is not carried: block 0 matches, every block after it does not. Same failure as a fresh engine per block in step 1. Check `state_source`.
 - **Many late callbacks** — the machine was busier during the stream than while prepare measured. Close what else runs, or give the budget headroom by hand, `"budget": {"ms": 20}`; the latency grows with it.
 
 Compare with [`solution/`](solution/) when you want to.

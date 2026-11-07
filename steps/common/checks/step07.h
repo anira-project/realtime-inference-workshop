@@ -32,7 +32,8 @@ inline int report_mix(const std::vector<float>& got,
                       size_t model_latency,
                       size_t host_block_size,
                       double sample_rate) {
-    std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n",
+    std::printf("  %-28s %zu samples (%.1f ms at %.0f Hz)\n",
+                "reported latency",
                 latency,
                 1000.0 * static_cast<double>(latency) / sample_rate,
                 sample_rate);
@@ -69,23 +70,19 @@ inline int report_mix(const std::vector<float>& got,
         std::printf("  callbacks with a dropout     %zu of %zu\n", dropouts, callbacks);
     }
     if (wrong > 0) {
-        std::printf(
-            "FAILED: dry and wet do not line up in %zu samples: the reported latency does not\n"
-            "match what comes out.\n",
-            wrong);
+        fail("dry and wet do not line up in %zu samples: the reported latency does not\n"
+             "match what comes out",
+             wrong);
         return 1;
     }
     if (4 * dropouts > callbacks) {
-        std::printf(
-            "FAILED: the worker was late in more than a quarter of the callbacks: raise\n"
-            "k_max_inference_ms in common/inference_time.h to the worst case of a few step 4 "
-            "runs.\n");
+        fail("the worker was late in more than a quarter of the callbacks: raise\n"
+             "k_max_inference_ms in common/inference_time.h to the worst case of a few step 4 runs");
         return 1;
     }
-    std::printf(
-        "OK: max abs diff %.3g at mix %.1f: dry and wet are both late by exactly the\n"
-        "reported latency, so they line up.\n",
-        worst,
-        mix);
+    pass("dry and wet are both late by exactly the reported latency, so they line up:\n"
+         "max abs diff %.3g at mix %.1f",
+         worst,
+         mix);
     return 0;
 }

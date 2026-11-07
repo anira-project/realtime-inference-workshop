@@ -171,7 +171,8 @@ The 5 slowest of all 20 forward passes:
 Your worst case:
   max inference time    18.00 ms
 
-Write 18.00 into k_max_inference_ms in steps/common/inference_time.h.
+  PASS  shorter than one model block (46.4 ms). Write 18.00 into k_max_inference_ms
+        in steps/common/inference_time.h
 ```
 
 </div>

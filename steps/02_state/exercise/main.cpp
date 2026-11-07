@@ -52,9 +52,8 @@ int main() {
                            ?, ?);  // <- fill out
         }
 
-        return report_blocks(buffer, k_target_output_signal, k_model.m_input_size);
+        return step_result(2, report_blocks(buffer, k_target_output_signal, k_model.m_input_size));
     } catch (const std::exception& error) {
-        std::printf("FAILED: %s\n", error.what());
-        return 1;
+        return step_failed(2, error);
     }
 }

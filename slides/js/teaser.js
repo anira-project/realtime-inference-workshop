@@ -6,16 +6,17 @@
  * <div class="teaser" data-teaser="clock" data-work="nn"><canvas></canvas></div>
  *     One turn of the clock is one callback of 512 samples. Every 4th turn a block of
  *     2048 is complete and gets processed: by an FFT and IFFT ("fft"), which takes about
- *     one sample's worth of time and the same for every block, or by the neural network
- *     ("nn"), whose time varies and does not fit. Time is counted in samples of audio,
- *     like the block sizes. Both slides draw the same clock; only the work changes.
+ *     a tenth of a sample's worth of time and the same for every block, or by the neural
+ *     network ("nn"), whose time varies and does not fit. Below the drawing, one box per
+ *     block shows its time. Time is counted in samples of audio, like the block sizes.
+ *     Both slides draw the same clock; only the work changes.
  *
  * Numbers: 44.1 kHz, host block 512, block 2048. The network takes about 13 ms per
  * forward pass on ONNX Runtime (Step 3), slower calls now and then; the variation shown
- * is an illustration of that, not a measurement. The FFT's 1 sample is an upper bound:
- * numpy's 2048-point rfft, multiply and irfft took 22 µs on an Apple Silicon laptop
- * under Asahi Linux, Python's call overhead included. Copying a block costs next to
- * nothing. Both are drawn as the thinnest visible tick.
+ * is an illustration of that, not a measurement. The FFT: a 2048-point real FFT,
+ * multiply and inverse FFT take about 3 µs with FFTW on an Apple Silicon laptop, roughly
+ * a tenth of a sample. Copying a block costs next to nothing. Both are drawn as the
+ * thinnest visible tick.
  */
 
 (() => {
@@ -25,7 +26,7 @@
     const BLOCKS_PER_MODEL = MODEL_BLOCK / HOST_BLOCK;
     const CALLBACK_MS = HOST_BLOCK / SAMPLE_RATE * 1000;   // 11.6
     const FORWARD_MS = 13;
-    const FFT_SAMPLES = 1;
+    const FFT_SAMPLES = 0.1;                                 // about 3 µs, rough
     const COPY_SAMPLES = 0;
     const PIXEL_RATIO = 2;
 
@@ -169,6 +170,47 @@
             return this.work[k];
         }
 
+        // Time per block, in samples: one box per block, the newest on the right
+        blockTimes(ctx, c, width, nx, top, turns) {
+            const boxes = 5;
+            const boxW = 80;
+            const boxH = 46;
+            const gap = 10;
+            const caption = 'samples per block';
+            ctx.font = `500 24px ${MONO}`;
+            const rowW = boxes * boxW + (boxes - 1) * gap;
+            // Centred under the drawing with the caption to its right, moved left if that runs off the canvas
+            const left = Math.min(nx - rowW / 2, width - 8 - rowW - 16 - ctx.measureText(caption).width);
+            // Block b gets its work at the start of callback 4b + 3
+            const first = BLOCKS_PER_MODEL - 1;
+            const started = turns < first ? 0 : Math.floor((turns - first) / BLOCKS_PER_MODEL) + 1;
+            for (let i = 0; i < boxes; ++i) {
+                const block = started - boxes + i;
+                const x = left + i * (boxW + gap);
+                if (block < 0) {
+                    ctx.fillStyle = c.wash;
+                    ctx.fillRect(x, top, boxW, boxH);
+                    ctx.strokeStyle = c.hairline;
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(x + 0.75, top + 0.75, boxW - 1.5, boxH - 1.5);
+                    continue;
+                }
+                const start = BLOCKS_PER_MODEL * block + first;
+                // While the network runs, its box counts up
+                const samples = Math.min(turns - start, this.workOf(start)) * HOST_BLOCK;
+                const late = samples > HOST_BLOCK;
+                const newest = block === started - 1;
+                ctx.fillStyle = c.paper;
+                ctx.fillRect(x, top, boxW, boxH);
+                ctx.strokeStyle = late ? c.over : newest ? c.ink : c.hairline;
+                ctx.lineWidth = newest ? 2.5 : 1.5;
+                ctx.strokeRect(x + 1, top + 1, boxW - 2, boxH - 2);
+                text(ctx, this.fft ? FFT_SAMPLES.toFixed(1) : `${Math.round(samples)}`, x + boxW / 2, top + boxH / 2 + 2,
+                     { font: `600 30px ${SANS}`, colour: late ? c.over : c.ink, align: 'center', baseline: 'middle' });
+            }
+            text(ctx, caption, left + rowW + 16, top + boxH / 2, { font: `500 24px ${MONO}`, colour: c.muted, baseline: 'middle' });
+        }
+
         draw(now) {
             const c = colours();
             const { ctx, width, height } = fit(this.canvas);
@@ -251,7 +293,7 @@
 
             let running = false;
             if (this.fft) {
-                // The FFT takes about one sample: light it up when its block is complete, then fade
+                // The FFT takes a tenth of a sample: light it up when its block is complete, then fade
                 const lit = blockComplete && phase >= 0.05 ? 1 - clamp((phase - 0.15) / 0.3) : 0;
                 const boxW = 170;
                 const boxH = 300;
@@ -263,8 +305,6 @@
                 butterfly(ctx, c, nx + boxGap / 2, ny - boxH / 2, boxW, boxH, lit, 'IFFT');
 
                 text(ctx, 'Fourier transform', nx, labelY, { font: `600 40px ${SANS}`, colour: c.ink, align: 'center' });
-                text(ctx, `FFT + IFFT · ≈ ${FFT_SAMPLES} sample · every block`, nx, labelY + 40,
-                     { font: `500 26px ${MONO}`, colour: c.muted, align: 'center' });
             } else {
                 const layerGap = 130;
                 const nodeR = 17;
@@ -275,14 +315,10 @@
 
                 // Is a forward pass running, and how far is it?
                 let progress = -1;
-                let elapsedMs = 0;
                 if (blockComplete && phase >= ownStart) {
                     progress = (phase - ownStart) / ownWork;
-                    elapsedMs = (phase - ownStart) * CALLBACK_MS;
                 } else if (overflow > 0 && phase < overflow) {
-                    const previous = this.workOf(k - 1);
-                    progress = (1 + phase) / previous;
-                    elapsedMs = (1 + phase) * CALLBACK_MS;
+                    progress = (1 + phase) / this.workOf(k - 1);
                 }
                 running = progress >= 0 && progress <= 1;
                 const front = progress * (LAYERS.length - 1 + 0.6) - 0.3;
@@ -323,9 +359,8 @@
                 });
 
                 text(ctx, 'Neural network', nx, labelY, { font: `600 40px ${SANS}`, colour: c.ink, align: 'center' });
-                text(ctx, running ? `forward pass · ${Math.round(elapsedMs * SAMPLE_RATE / 1000)} samples` : 'forward pass · time varies', nx, labelY + 40,
-                     { font: `500 26px ${MONO}`, colour: running && elapsedMs > CALLBACK_MS ? c.over : c.muted, align: 'center' });
             }
+            this.blockTimes(ctx, c, width, nx, labelY + 24, t / TURN_SECONDS);
 
             // Samples collected for the next block: one square per callback
             const collected = running ? BLOCKS_PER_MODEL : (k % BLOCKS_PER_MODEL) + (phase > 0.05 ? 1 : 0);

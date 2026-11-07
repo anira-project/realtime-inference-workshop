@@ -61,4 +61,4 @@
 - After QR code: clone and configure slide (0c155e8), release preset with the reason in the notes.
 - Shipping the engine: dropped by Lina in 72833ee.
 - Teaser (9306635 and later): two animations, "Fighting the clock" (clock) and the real-time thread with an FFT next to a neural network.
-- Teaser A first with an FFT, then the model: renamed "Every callback has a deadline", A = the clock with FFT + IFFT (about 1 sample, every block, measured 22 µs in numpy), B = the same clock with the network; the codec teaser (FFT and network lanes) dropped.
+- Teaser A first with an FFT, then the model: renamed "Every callback has a deadline", A = the clock with FFT + IFFT (about 3 µs with FFTW, roughly 0.1 samples; one box per block shows the time per block), B = the same clock with the network; the codec teaser (FFT and network lanes) dropped.

@@ -160,7 +160,7 @@ cmake --build --preset release --target step01_exercise
 
 Note:
 - Two TODOs: load the model, run the first block with a block size you pick.
-- At the beginning of the main file you will find the struct `k_model`, with the model's path and block size. Use its values
+- At the beginning of the main file you will find a constructor, with the model's fixed setting. 
 - Build commands are on the slide
 - 8 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
@@ -187,7 +187,7 @@ engine.load(«k_model.m_path»);  // <- solution
 ```
 
 Note:
-- `load` takes the path to the .onnx file, from the struct
+- `load` takes the path to the .onnx file, from the constructor
 - The engine loads it once: 126 MB, too slow to do per block
 
 ---

@@ -17,7 +17,7 @@
 class OnnxEngine {
 public:
     // Nothing yet: no runtime, no model. load() does the work, so the engine can
-    // be made long before the model is needed, as a plain member of a plugin.
+    // be made long before the model is needed, as a plain member of the processor.
     OnnxEngine() = default;
 
     // Loads the model, once: starts ONNX Runtime, reads the file and makes every

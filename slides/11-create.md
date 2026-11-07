@@ -6,26 +6,13 @@ What you declare: the model and the pool. Nothing runs yet.
 <!-- kind: talk -->
 
 Note:
-- The first stage we talk about is the creation of the InferenceHandler.
-- To create it, we declare everything it needs: the engines, the tensors and the state in the ModelConfig, and the thread pool in the optional ContextConfig.
-- One rule for the whole chapter: create declares and checks. Nothing we declare here takes effect before prepare or process, and that is where we look at it.
-
----
-
-<div class="tag">The map</div>
-
-## Create runs once,<br><span class="then">on the main thread.</span>
-
-{{MAP:focus=create}}
-
-Note:
-- Create runs once, on the main thread: the plugin's constructor.
-- Two inputs, the model config and the context; one output, the handler.
-- Create checks the model config: the tensors, the axes, and which engines and providers this build can run. Then it builds the handler's slots, one per tensor, the state pairs among them.
-- It opens no model file: the models, the plans and the pool's threads all come at prepare.
+- The first row of the map: the creation of the InferenceHandler, once, on the main thread, in the plugin's constructor.
+- Two inputs, the model config and the context; one output, the handler. We declare everything it needs: the engines, the tensors and the state in the ModelConfig, and the thread pool in the optional ContextConfig.
+- Create checks the model config: the tensors, the axes, and which engines and providers this build can run. Then it builds the handler's slots, one per tensor, the state pairs among them. It opens no model file: the models, the plans and the pool's threads all come at prepare.
 - As in step 8: there the constructor makes the processor, with the model, and its engine, which load nothing, and the processor's prepare loads the model. anira's create does a little more, it checks the configs and builds the slots, but it loads no model either.
-- So this chapter is declarations only: the engines, the tensors, the state, the pool. Each takes effect at prepare or in process, and every anira slide says which, top right.
+- One rule for the whole chapter: create declares and checks. Nothing we declare here takes effect before prepare or process, and that is where we look at it; every anira slide says which, top right.
 - Nothing in this row runs on the audio thread, so all of it may read files and allocate.
+- We start as in part 1, with what we wrote by hand.
 
 ---
 
@@ -44,7 +31,7 @@ class OnnxEngine {                              // step 1: ONNX Runtime, and onl
 };
 
 class ProcessorExample {
-    OnnxEngine m_engine;                        // step 8: made with the processor, loaded in prepare()
+    OnnxEngine m_engine;                        // step 8: a member, loaded in prepare()
     …
 };
 ```
@@ -151,7 +138,7 @@ Note:
 
 <div class="tag">Part 1 · Steps 1, 2 and 7</div>
 
-## A model config, by hand.<br><span class="then">Five facts. The code assumes the rest: float, one channel, one block.</span>
+## A model config, by hand.<br><span class="then">Five facts. The code assumes the rest.</span>
 
 ```cpp
 constexpr struct ModelConfig {             // from the export metadata, step 1
@@ -162,7 +149,7 @@ constexpr struct ModelConfig {             // from the export metadata, step 1
     size_t m_latency = 2224;               // step 7
 } k_model{};
 
-ProcessorExample m_processor{k_model};     // step 8: given at construction, kept, never changed
+ProcessorExample m_processor{k_model};     // step 8: given at construction, kept
 ```
 
 Note:
@@ -214,7 +201,7 @@ size_t m_state_size = 63488;                      // ModelConfig, step 2
 
 std::vector<Ort::Value> m_inputs;   // audio, state       OnnxEngine
 std::vector<Ort::Value> m_outputs;  // audio, state
-// the state output feeds the state input: a copy in process(), every block, by hand
+// the state output feeds the state input: a copy in process(), by hand
 ```
 
 Note:
@@ -336,11 +323,12 @@ Note:
 ```cpp
 class PluginProcessor final : public PluginBase {
     …
-    ProcessorExample m_processor{k_model};  // one per plugin instance, its engine inside
+    ProcessorExample m_processor{k_model};  // one per instance, its engine inside
 };
 
 size_t PluginProcessor::prepare(…) {
-    m_processor.prepare(host_block_size, k_max_inference_ms);  // every instance loads the model
+    // every instance loads the model: ten instances, ten copies
+    m_processor.prepare(host_block_size, k_max_inference_ms);
     …
 }
 ```
@@ -380,15 +368,15 @@ Note:
 
 <table class="declared">
   <thead>
-    <tr><th>You declare</th><th>Where</th><th>Create</th><th>Takes effect</th></tr>
+    <tr><th>You declare</th><th>Create</th><th>Takes effect</th></tr>
   </thead>
   <tbody>
-    <tr><td>the engines, an entry per export</td><td><code>models</code>, <code>default_engine</code></td><td>checks that this build can run one</td><td><b>prepare</b>: the entry loads</td></tr>
-    <tr><td>the tensors: name, dtype, axes, role</td><td><code>inputs</code>, <code>outputs</code></td><td>checks the shapes, builds a slot each</td><td><b>process</b>: the host's blocks go through them</td></tr>
-    <tr><td>the state, a pair</td><td><code>role: state</code>, <code>state_source</code></td><td>resolves the pair, allocates its two buffers</td><td><b>process</b>: swapped after every run</td></tr>
-    <tr><td>the model's own latency</td><td><code>latency</code> on the output</td><td>keeps it</td><td><b>prepare</b>: part of what the host is told</td></tr>
-    <tr><td>the instances</td><td><code>max_instances</code></td><td>keeps it</td><td><b>prepare</b>: they load; <b>process</b>: they run in parallel</td></tr>
-    <tr><td>the pool: threads, how they wait</td><td><code>ContextConfig</code></td><td>registers the settings</td><td><b>prepare</b>: the threads start</td></tr>
+    <tr><td>the engines, an entry per export<br><code>models</code>, <code>default_engine</code></td><td>checks that this build can run one</td><td><b>prepare</b>: the entry loads</td></tr>
+    <tr><td>the tensors: name, dtype, axes, role<br><code>inputs</code>, <code>outputs</code></td><td>checks the shapes, builds a slot each</td><td><b>process</b>: the blocks go through them</td></tr>
+    <tr><td>the state, a pair<br><code>role: state</code>, <code>state_source</code></td><td>resolves the pair, allocates its buffers</td><td><b>process</b>: swapped after every run</td></tr>
+    <tr><td>the model's own latency<br><code>latency</code> on the output</td><td>keeps it</td><td><b>prepare</b>: part of what the host is told</td></tr>
+    <tr><td>the instances<br><code>max_instances</code></td><td>keeps it</td><td><b>prepare</b>: they load · <b>process</b>: in parallel</td></tr>
+    <tr><td>the pool: threads, how they wait<br><code>ContextConfig</code></td><td>registers the settings</td><td><b>prepare</b>: the threads start</td></tr>
   </tbody>
 </table>
 

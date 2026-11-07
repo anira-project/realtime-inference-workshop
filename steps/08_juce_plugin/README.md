@@ -44,7 +44,7 @@ The prefill and the latency from steps 6 and 7 are only right for a host block o
 
 ## One engine, mono
 
-The model is mono and stateful, so the plugin runs it once: the input channels are mixed down to one signal, that signal goes through one engine and one processor, and the result goes out on every channel. Running a copy per channel would need a second state, a second engine and a second worker thread for every channel. Even so, every instance of the plugin loads the model again and runs its own worker, which is exactly the problem the second block of the workshop is about.
+The model is mono and stateful, so the plugin runs it once: the input channels are mixed down to one signal, that signal goes through one processor and its engine, and the result goes out on every channel. Running a copy per channel would need a second state, a second engine and a second worker thread for every channel. Even so, every instance of the plugin loads the model again and runs its own worker, which is exactly the problem the second block of the workshop is about.
 
 ## What it sounds like
 

@@ -137,7 +137,7 @@ cmake --build --preset release --target step02_exercise
 Note:
 - Two TODOs: outside the loop we need to construct our state and then pass it with the audio
 - We don't create the state ourselves: the model writes it on every call. We only give it the memory, zeros for the start
-- Again you will find a constructor before the main function with the correct size of the state.
+- Again you will find the struct `k_model` before the main function, now with the size of the state.
 - 5 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
 - We solve it together, solutions are in the solution's main.cpp
@@ -162,7 +162,7 @@ std::vector<float> state(«k_model.m_state_size», «0.0f»); // <- solution
 ```
 
 Note:
-- correct size: given in the constructor or 63488 floats
+- correct size: given in `k_model`, 63488 floats
 - We need to construct our state vector with the correct size and initialize it with zeros
 - The vector lives outside the loop, if it were constructed every block, it would start at zero every time
 

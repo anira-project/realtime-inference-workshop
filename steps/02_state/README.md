@@ -12,7 +12,7 @@ The model takes more than audio, and returns more than audio:
 audio[1,1,2048], state_in[1,63488] -> audio_out[1,1,2048], state_out[1,63488]
 ```
 
-The state is every convolution cache in the model, and zeros start a new stream. The engine takes it as a third argument, and overwrites it on every call:
+The state is every convolution cache in the model, and zeros start a new stream. The engine takes it as two more arguments, where it starts and how many floats it has, and overwrites it on every call:
 
 ```cpp
 engine.process(audio, num_samples);                     // Without the state: every call starts from zeros
@@ -35,9 +35,9 @@ Then open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO bann
 
 ```
   block 0                  max abs diff 2.33e-10   OK
-  block 1                  max abs diff 1.12e-07   OK
+  block 1                  max abs diff 1.27e-07   OK
   ...
-  block 7                  max abs diff 3.87e-07   OK
+  block 7                  max abs diff 3.58e-07   OK
 OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 ```
 

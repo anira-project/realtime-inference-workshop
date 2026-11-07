@@ -56,7 +56,7 @@ The checks behind these messages live in [`common/checks/step06.h`](../common/ch
 
 ```
   prefill                      3584 samples (81.3 ms)
-OK: max abs diff 3.02e-07, within 0.0001 of the reference.
+OK: max abs diff 2.91e-07, within 0.0001 of the reference.
 OK: inference ran on the worker thread, the host got the model's stream back
 3584 samples late.
 ```

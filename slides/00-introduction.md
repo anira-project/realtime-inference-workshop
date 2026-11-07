@@ -230,8 +230,8 @@ Note:
 ```bash
 git clone https://github.com/anira-project/realtime-inference-workshop.git
 cd realtime-inference-workshop
-cmake --preset release           # downloads about 500 MB: models, ONNX Runtime, JUCE, anira
-cmake --build --preset release   # builds every step
+cmake --preset release           # about 500 MB: models, ONNX Runtime, JUCE, anira
+cmake --build --preset release   # libraries and solutions
 ```
 
 <div class="cards-note">Release, because we benchmark the model later.</div>
@@ -242,7 +242,7 @@ Note:
 - We sent the setup instructions by email. If you did it at home: thank you, just pull and configure again.
 - If not: please start now. Clone, configure, build.
 - Configuring downloads about 500 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
-- It runs while we talk. Building every step takes a while too, so start the build right after.
+- It runs while we talk. Building the libraries and every solution takes a while too, so start the build right after. The exercises build on their own, once you fill them in.
 - Why release? There is a benchmark in the examples, which is only meaningful in release.
 - Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so please do it at another moment, not now on the shared network.
 - If configuring fails, raise your hand and we come to you.

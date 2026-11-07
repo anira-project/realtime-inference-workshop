@@ -94,8 +94,8 @@ engine.process(audio, num_samples, state, state_size);  // with the state of 634
 
 Note:
 - Let's have one more look at the engine, as I skipped a detail in step 1
-- There is a second process function that takes 3 arguments. 
-- Third argument: the state, after the audio, the same order as the model's inputs
+- There is a second process function that takes 4 arguments
+- The state comes after the audio, as a pointer and a size like the audio, the same order as the model's inputs
 - If no state is passed it defaults to zeros, that's why we got silence at the beginning of every block.
 - The state is overwritten in place, in the same buffer, so the next call continues where this one ended
 
@@ -171,13 +171,13 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process(audio.data() + i * process_size, process_size,
+    engine.process(audio.data() + i * k_model.m_input_size, k_model.m_input_size,
                    state.data(), state.size());  // <- fill out
 }
 ```
 
 Note:
-- Need to pass the third argument: the state
+- Need to pass the state, `state.data()` and `state.size()`, after the audio
 - It is overwritten on every call, so the next block continues where this one ended
 - Every block now matches, to below 1e-6
 

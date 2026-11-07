@@ -323,18 +323,18 @@ Note:
 
 ```json
 // encoder.json: audio in, latents out
-{ "name": "audio",   "axes": [["batch",1],["channel",1],["time",TODO1]] }
-{ "name": "latents", "axes": [["batch",1],["channel",TODO1],["time",TODO1]] }
+{ "name": "audio",   "axes": [["batch",1],["channel",1],["time",?]] }
+{ "name": "latents", "axes": [["batch",1],["channel",?],["time",?]] }
 
 // decoder.json: latents in, audio out ("anchor": "audio")
-{ "name": "latents", "axes": [["batch",1],["channel",TODO1],["time",TODO1]] }
-{ "name": "audio",   "axes": [["batch",1],["channel",1],["time",TODO1]], "latency": 2224 }
+{ "name": "latents", "axes": [["batch",1],["channel",?],["time",?]] }
+{ "name": "audio",   "axes": [["batch",1],["channel",1],["time",?]], "latency": 2224 }
 ```
 
 Note:
 - The two model files, only the tensors that stream; the state pairs are given, as in step 9.
 - The encoder takes audio and gives latents; the decoder takes latents and gives audio. The latents are what connects the two, so their shape is the same on both sides.
-- Every TODO1 is a number: how many samples per inference, how many latents, how many frames per inference. The comments next to them in the files help.
+- Every ? is a number: how many samples per inference, how many latents, how many frames per inference. The comments next to them in the files help.
 - The decoder has no audio input, so its clock is its audio output: anchor audio.
 
 ---
@@ -382,7 +382,7 @@ cmake --build --preset release --target step10_exercise_Standalone
 
 Note:
 - You have ten minutes, and then time to play.
-- First the two model files: replace every TODO1 with its number.
+- First the two model files: replace every ? with its number.
 - Then one line in SplitProcessor.cpp: add each offset to its latent.
 - The check runs offline, like a bounce, so nothing is missed: with all offsets at zero it has to match step 10's reference exactly, and with offsets it has to sound different.
 - Then build the plugin and play: manipulate the latents with the eight knobs, one at a time first.

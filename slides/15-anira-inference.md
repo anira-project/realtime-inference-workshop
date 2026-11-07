@@ -118,12 +118,12 @@ Note:
 {
   "models":  [ { "engine": "onnxruntime", "path": "…/model_forward.onnx" } ],
   "inputs":  [ { "name": "audio",     "role": "streamed",
-                 "axes": [["batch",1],["channel",1],["time",TODO1]] },
+                 "axes": [["batch",1],["channel",1],["time",?]] },
                { "name": "state_in",  "role": "state",
-                 "axes": [["batch",1],["any",TODO2]], "state_source": "TODO2" } ],
+                 "axes": [["batch",1],["any",?]], "state_source": "?" } ],
   "outputs": [ { "name": "audio_out", "role": "streamed",
-                 "axes": [["batch",1],["channel",1],["time",TODO1]], "latency": TODO1 },
-               { "name": "state_out", "role": "state", "axes": [["batch",1],["any",TODO2]] } ]
+                 "axes": [["batch",1],["channel",1],["time",?]], "latency": ? },
+               { "name": "state_out", "role": "state", "axes": [["batch",1],["any",?]] } ]
 }
 ```
 
@@ -137,7 +137,7 @@ Note:
 
 </div>
 Note:
-- This is the model file as you get it: every key is in place, and the blanks are marked TODO1 and TODO2. Only the dtype is left out here: float32 is the default.
+- This is the model file as you get it: every key is in place, and the blanks are marked ?. The comment next to each says TODO 1 or 2. Only the dtype is left out here: float32 is the default.
 - On the right, the five keys you need to read it.
 - Under models: the engine, ONNX Runtime, and the path to our ONNX file.
 - Under inputs: the model's input tensors. The first is audio, and it is streamed: audio comes in continuously, and anira cuts it into blocks for the model.
@@ -249,7 +249,7 @@ cmake --build --preset release --target step09_exercise_Standalone
 
 Note:
 - Ten minutes.
-- TODO 1 and 2 are in model.json: replace every TODO1 and TODO2 with its value. A number as it is, 2048, without quotes; a name in quotes. The comment next to each blank says where the value comes from.
+- TODO 1 and 2 are in model.json: replace every ? with its value. A number as it is, 2048, without quotes; a name in its quotes. The comment next to each blank says where the value comes from.
 - TODO 3 is in AniraProcessor.cpp: four blanks, marked fill out.
 - Then build step09_exercise_check and run it. It names what is still missing, with the line.
 - You are done when it matches the reference. Then the same processor runs as a plugin: step09_exercise_Standalone.

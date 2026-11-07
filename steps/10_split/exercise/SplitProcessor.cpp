@@ -4,13 +4,13 @@
 //         an offset per latent dimension between them.
 // Given:  contract.json, everything in this file but one line, the plugin
 //         around it, anira (anira.hpp).
-// Task:   TODO 1 in encoder.json and decoder.json: replace every TODO1.
+// Task:   TODO 1 in encoder.json and decoder.json: replace every ? there.
 //         TODO 2 below: one line, marked "fill out".
 // Check:  step10_exercise_check: with zero offsets the output equals step 10's
 //         reference, shifted by latency(); an offset changes it. Then play:
 //         the plugin step10_exercise, eight knobs, z0 to z7.
 //
-// It builds and runs as it is, and the check says what is still missing.
+// It builds once every ? is filled in, then the check says what is still off.
 
 #include "SplitProcessor.h"
 
@@ -87,7 +87,7 @@ anira_status SplitProcessor::process(float* samples,
         // offset per dimension: the plugin's eight knobs. Add each offset to
         // its latent.
         for (size_t i = 0; i < k_num_latents; ++i) {
-            m_frame_data[i] = m_frame_data[i]; // <- fill out
+            m_frame_data[i] = ?;  // <- fill out
         }
         // ------------------------------------------------------------------
 

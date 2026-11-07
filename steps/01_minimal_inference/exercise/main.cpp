@@ -2,15 +2,14 @@
 //
 // Goal:   load the model with ONNX Runtime and run one block through it.
 // Given:  common/helpers/onnx_engine.h, the engine — read it first.
-// Task:   wire it up, at the three TODO banners below.
+// Task:   wire it up, at the two TODO banners below.
 // Check:  the block within 1e-6 of what the model produced in Python.
 //
-// It builds and runs as it is, and says what is still missing.
+// It builds once every ? is filled in, then says what is still off.
 
 #include <cstddef>
 #include <cstdio>
 #include <exception>
-#include <string>
 #include <vector>
 
 #include "common/assets/target_signal.h"
@@ -29,37 +28,27 @@ constexpr struct {
 int main() {
     try {
         // ---- TODO 1 --------------------------------------------------------
-        // Set the path to the model, from k_model.m_path.
+        // Load the model: the engine takes the path to the .onnx file.
         //
         // Hint: look at the struct above
         // --------------------------------------------------------------------
-        const std::string model_path = ?;  // <- fill out
+        OnnxEngine engine(?);  // <- fill out
+
+        // The whole signal is in the buffer, but only its first block gets
+        // processed.
+        std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
 
         // ---- TODO 2 --------------------------------------------------------
-        // How many samples do you want to process? Pick a number, run it, and
-        // see whether the model agrees with you.
+        // Run the first block through the engine: pass where it starts and how
+        // many samples it has. Pick a number, run it, and see whether the
+        // model agrees with you. It is processed in place, so afterwards the
+        // first samples of `audio` hold the model's output.
         //
         // Hint: a model often has a fixed processing block size
         // --------------------------------------------------------------------
-        const size_t process_size = ?;  // <- fill out
-
-        check_todos(model_path, process_size);  // Given: names a missing TODO
-
-        OnnxEngine engine(model_path);
-
-        // The whole signal is in the buffer, but only its first process_size
-        // samples get processed.
-        std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
-
-        // ---- TODO 3 --------------------------------------------------------
-        // Run the first block through the engine: pass where it starts,
-        // audio.data(), and process_size. It is processed in place, so
-        // afterwards the first process_size samples of `audio` hold the
-        // model's output.
-        // --------------------------------------------------------------------
         engine.process(?, ?);  // <- fill out
 
-        return report_first_block(audio, k_input_signal, k_target_output_signal, process_size);
+        return report_first_block(audio, k_input_signal, k_target_output_signal, k_model.m_input_size);
     } catch (const std::exception& error) {
         std::printf("FAILED: %s\n", error.what());
         return 1;

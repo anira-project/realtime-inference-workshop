@@ -3,12 +3,12 @@
 // Goal:   the part 1 model on anira: the model file and the contract say what
 //         runs and how, the handler does steps 3, 6 and 7.
 // Given:  contract.json, the plugin around this class, anira (anira.hpp).
-// Task:   TODO 1 and 2 in model.json: replace every TODO1 and TODO2 there.
+// Task:   TODO 1 and 2 in model.json: replace every ? there.
 //         TODO 3 below: four blanks, marked "fill out".
 // Check:  step09_exercise_check: the output equals the reference, shifted by
 //         latency(). Then listen: the plugin step09_exercise.
 //
-// It builds and runs as it is, and the check says what is still missing.
+// It builds once every ? is filled in, then the check says what is still off.
 
 #include "AniraProcessor.h"
 
@@ -36,11 +36,11 @@ void AniraProcessor::prepare(double sample_rate, size_t max_block_size) {
     //   - the latency of output slot 0 (audio_out), from the prepared handler:
     //     handler.get_latency(slot).
     //
-    // m_contract.hard_host_blocks(?, ?, ?); // <- 1. fill out
+    m_contract.hard_host_blocks(?, ?, ?);  // <- 1. fill out
 
     const anira::PlanReport report = m_handler->prepare(m_contract);  // Warm-up and measurement run here
     m_budget_ms = report.plans().front().measured_ms;                  // This machine's
-    m_latency = 0; // <- 2. fill out
+    m_latency = ?;  // <- 2. fill out
     // ------------------------------------------------------------------------
 }
 
@@ -60,9 +60,9 @@ anira_status AniraProcessor::process(float* samples, size_t num_samples, bool of
     // ------------------------------------------------------------------------
     anira_status status = ANIRA_OK;
     if (offline) {   // a bounce: no deadline, wait for the result
-        // status = m_handler->process_wait(?, 0, ?, 0, ANIRA_WAIT_FOREVER); // <- 3. fill out
+        status = m_handler->process_wait(?, 0, ?, 0, ANIRA_WAIT_FOREVER);  // <- 3. fill out
     } else {         // live: never waits
-        // status = m_handler->process(?, 0, ?, 0); // <- 4. fill out
+        status = m_handler->process(?, 0, ?, 0);  // <- 4. fill out
     }
     return status;  // ANIRA_MISSED: the miss policy filled the block
 }

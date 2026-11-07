@@ -1,7 +1,8 @@
 # The part 1 model on anira: two JSON files and AniraProcessor (prepare and
 # process) replace steps 3, 6 and 7. Per variant:
 #   step09_<variant>_check  drives AniraProcessor on the fake host and compares
-#                           the output with the reference; always built
+#                           the output with the reference; the exercise's
+#                           only on request, once its ? are filled in
 #   step09_<variant>        the plugin around it (VST3, Standalone); with WORKSHOP_JUCE
 workshop_setup_anira()
 if(WORKSHOP_JUCE)
@@ -38,4 +39,22 @@ foreach(variant exercise solution)
         target_compile_definitions(${plugin} PRIVATE WORKSHOP_STEP_DIR="${step_dir}")
         target_link_libraries(${plugin} PRIVATE anira::anira)
     endif()
+
+    # The exercise builds once every ? in it is filled in: only on request
+    if(variant STREQUAL "exercise")
+        workshop_exclude_from_all(${check} step09_exercise)
+    endif()
 endforeach()
+
+# The exercise filled in from the solution, model files included: it has to
+# pass like the solution (cmake/exercises.cmake). Only on request.
+if(Python3_Interpreter_FOUND)
+    workshop_fill_exercise(filled AniraProcessor.cpp model.json contract.json)
+    set(check step09_exercise_filled_check)
+    add_executable(${check} check.cpp ${filled})
+    workshop_exclude_from_all(${check})
+    target_compile_features(${check} PRIVATE cxx_std_20)
+    target_include_directories(${check} PRIVATE "${CMAKE_SOURCE_DIR}/steps" source)
+    target_compile_definitions(${check} PRIVATE WORKSHOP_STEP_DIR="${CMAKE_CURRENT_BINARY_DIR}/exercise_filled")
+    target_link_libraries(${check} PRIVATE anira::anira)
+endif()

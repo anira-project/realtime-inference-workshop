@@ -15,18 +15,17 @@ Both signals are compiled in, so there are no files to read and no audio format 
 The engine loads the model and processes the data:
 
 ```cpp
-OnnxEngine engine(model_path);            // Loads the model, throws if it cannot
+OnnxEngine engine(path);                  // Loads the model, throws if it cannot
 
-engine.process(samples, num_samples);     // Overwrites the block in place
+engine.process(audio, num_samples);       // Overwrites the block in place
 ```
 
 ## What to do
 
-Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners.
+Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO banners.
 
-1. **Set the path to the model.**
-2. **Pick the size you process** (`process_size`). It starts unset, and the program says so. Choose a number, run it, and see whether the model agrees with you.
-3. **Run the first block** through the engine.
+1. **Load the model**: the engine takes the path to the `.onnx` file.
+2. **Run the first block** through the engine: where it starts, and how many samples. Choose a number, run it, and see whether the model agrees with you.
 
 Build and run from the repository root:
 
@@ -44,12 +43,11 @@ OK: max abs diff 2.33e-10, within 1e-06 of the reference.
 
 ## If you're stuck
 
-The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
+The exercise builds once every `?` is filled in. Then:
 
-- **`TODO 1: set the path to the model first`** — `model_path` is empty or wrong.
-- **`TODO 2: pick a size to process first`** — `process_size` is 0.
-- **`TODO 3: run the first block through the engine`** — `audio` still holds the input: the engine did not process it in place.
+- **`FAILED: cannot load …`** — the path in TODO 1 is not the model: `k_model.m_path`.
 - **`FAILED: the model takes exactly 2048 samples per call, got M`** — the size you picked is not the model's block: `k_model.m_input_size`.
+- **`TODO 2: run the first block through the engine`** — `audio` still holds the input: the engine did not process it in place.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 

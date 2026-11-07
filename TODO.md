@@ -1,7 +1,5 @@
 # TODOs
 
-- Process_size not copy in first example
-- Don't get why we need the process_size? Can't we just put it directly when doing the engine.process?
 - rename audio to output
 - Benchmark fillout muss nach oben, rest muss in andere header file
 - Worker thread grafik step 6 fixen
@@ -22,6 +20,8 @@
 
 ## Done (2026-11-07)
 
+- Exercises: every blank is a ?, in steps 1–3, 6, 7, 9 and 10, C++ and model files; step 9's commented-out calls are real lines now. The exercises stay out of the default build, scripts/fill_exercise.py fills each from its solution (stepNN_exercise_filled, step09/10_exercise_filled_check), and CI runs them: an exercise committed filled in or drifted from its solution fails, naming the line.
+- Process_size not copy in first example / Don't get why we need the process_size?: step 1 has two TODOs, `OnnxEngine engine(?)` and `engine.process(?, ?)`; no model_path or process_size copies, no check_todos. A wrong size still gets the engine's "the model takes exactly 2048 samples per call".
 - Why are there the quotes for stings in the path: step 1's TODO 1 was `model_path = ""`, now `model_path = ?`; the solution is `k_model.m_path`. Only the CMake define keeps its quotes, it makes the path a string literal.
 - Why copy the floats in example 1? Why not bind tensors?: the tensors are made once, with memory from ONNX Runtime, and process() copies the block in and out. Binding the caller's buffer would mean a new Ort::Value per call (an allocation, RTSan would then report our engine in step 5) and, since process() works in place, still a copy back. The four copies of a call with state take about 7 µs here, the forward pass about 12 ms. anira binds its slot buffers and copies the audio in pre/post-processing; its state is two buffers that swap.
 - OnnxEngine: process(float* audio, size_t num_samples, float* state, size_t state_size), the same shape for audio and state; no reset(), the stateless process() zero-fills the state input; no own buffers, create_tensor or elements().

@@ -4,7 +4,6 @@
 // stays as it is. Main thread only: it reads a file and allocates.
 #pragma once
 
-#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -17,7 +16,7 @@ inline std::string json_file_name(const std::string& path) {
 }
 
 // The two mistakes a blank invites, named before anira sees the file:
-//   TODOn, unquoted, still in place of a number
+//   a ?, still in place of a value: 2048 or "?" as it came
 //   a number written in quotes, "2048", which JSON reads as text
 // @throws std::runtime_error naming the file, the line and the fix
 inline void check_blanks(const std::string& json, const std::string& path) {
@@ -32,6 +31,10 @@ inline void check_blanks(const std::string& json, const std::string& path) {
             if (c == '"') {
                 in_string = false;
                 const std::string text = json.substr(string_start + 1, i - string_start - 1);
+                if (text == "?") {
+                    throw std::runtime_error(json_file_name(path) + ", line " + std::to_string(line) +
+                                             ": \"?\" is still open: replace the ? with the name");
+                }
                 const bool digits = !text.empty() && text.find_first_not_of("0123456789") == std::string::npos;
                 if (digits) {
                     throw std::runtime_error(json_file_name(path) + ", line " + std::to_string(line) + ": \"" + text +
@@ -41,11 +44,9 @@ inline void check_blanks(const std::string& json, const std::string& path) {
         } else if (c == '"') {
             in_string = true;
             string_start = i;
-        } else if (json.compare(i, 4, "TODO") == 0) {
-            size_t end = i + 4;
-            while (end < json.size() && std::isdigit(static_cast<unsigned char>(json[end]))) { ++end; }
-            throw std::runtime_error(json_file_name(path) + ", line " + std::to_string(line) + ": " +
-                                     json.substr(i, end - i) + " is still open: replace it with the value");
+        } else if (c == '?') {
+            throw std::runtime_error(json_file_name(path) + ", line " + std::to_string(line) +
+                                     ": ? is still open: replace it with the value");
         }
     }
 }

@@ -39,7 +39,7 @@ cmake --build --preset release --target step03_exercise
 ## Expected output
 
 ```
-OK: max abs diff 3.73e-07, within 0.0001 of the reference.
+OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 ```
 
 `main` plays the host: a loop that hands `process_block` 512 samples at a time, in place, like the loop in step 2. What came back has to be the model's stream from step 1, sample for sample, after a stretch of silence.

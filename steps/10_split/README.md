@@ -7,7 +7,7 @@
 ## What you have
 
 - `steps/common/assets/models/rave/model_encoder.onnx`, `model_decoder.onnx` — the two halves of the model, each with its own state pair (34,304 and 29,184 floats; together the forward model's 63,488).
-- [`exercise/encoder.json`](exercise/encoder.json), [`exercise/decoder.json`](exercise/decoder.json) — the two model files, every key in place; the state pairs are given. Every `TODO1` is a blank, with a hint next to it.
+- [`exercise/encoder.json`](exercise/encoder.json), [`exercise/decoder.json`](exercise/decoder.json) — the two model files, every key in place; the state pairs are given. Every `?` is a blank, with a hint next to it.
 - [`exercise/contract.json`](exercise/contract.json) — like step 9's, but `on_miss: zeros`, as in anira's encoder/decoder example: bypass passes the input through, and anira refuses it when the output has other channels than the input (8 latents from 1 audio channel). Used for both handlers.
 - [`exercise/SplitProcessor.cpp`](exercise/SplitProcessor.cpp) — everything given but one line: the two handlers, `prepare`, the latency, the frames passed from the encoder to the decoder, and the offline case.
 - [`source/PluginProcessor.cpp`](source/PluginProcessor.cpp) — the plugin around it, step 9's with eight knobs, z0 to z7, from −3 to 3. It hands them to `process` as `offsets` in every block. Complete.
@@ -15,7 +15,7 @@
 
 ## What to do
 
-1. **Declare the tensors** (`encoder.json`, `decoder.json`). Replace every `TODO1` with its number: the encoder takes one model block of audio (`time` 2048, as in step 9) and gives the latents (`channel` 8, `time` 1: eight latents, one frame per inference); the decoder takes those latents and gives 2048 samples back.
+1. **Declare the tensors** (`encoder.json`, `decoder.json`). Replace every `?` with its number: the encoder takes one model block of audio (`time` 2048, as in step 9) and gives the latents (`channel` 8, `time` 1: eight latents, one frame per inference); the decoder takes those latents and gives 2048 samples back.
 2. **An offset on z** (`SplitProcessor.cpp`). One line, marked `fill out`: add each dimension's offset to its latent, before the frame goes on to the decoder. `offsets` is a parameter of `process`: the plugin hands in its eight knobs.
 
 Build and run from the repository root:
@@ -47,7 +47,9 @@ The latency is this machine's: both budgets are measured at prepare. The check r
 
 ## If you're stuck
 
-- **`encoder.json, line 12: TODO1 is still open`** — a blank not filled yet; the line says which.
+`SplitProcessor.cpp` builds once its `?` is filled in. The `?` in the JSON files are found when the check runs:
+
+- **`encoder.json, line 12: ? is still open`** — a blank not filled yet; the line says which.
 - **`"8" is text; write the number without quotes`** — a number in quotes is a string in JSON.
 - **`onnxruntime: output tensor 'latents' bound to the model's 'latents': the model's tensor is [1, 8, 1], the spec's engine dims are [1, 7, 1]`** — a size is filled but wrong; prepare checks every tensor against the model file and names the one that does not fit, with both shapes.
 - **`TODO 2: the offsets do not change the output`** — `offsets[i]` is not added to `m_frame_data[i]`.

@@ -15,7 +15,7 @@ WARNING: built without RealtimeSanitizer, so nothing is checked.
 It needs clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux)
 and -DWORKSHOP_RTSAN=ON. See the README.
 
-OK: max abs diff 3.73e-07, within 0.0001 of the reference.
+OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 ```
 
 ## Building with RTSan

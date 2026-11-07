@@ -73,7 +73,7 @@ Note:
 <div class="lat-sum">
   <div class="lat-part">buffer adaptation<small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">rounded max inference time<small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
+  <div class="lat-part">the worker's time<small>15.3 ms → 2 callbacks</small><strong>1024</strong></div>
   <div class="lat-plus">+</div>
   <div class="lat-part">the model itself<strong>2224</strong></div>
   <div class="lat-plus">=</div>
@@ -160,7 +160,7 @@ Note:
 
 ```cpp
 m_input  = ThreadSafeRingBuffer(k_model.m_input_size);
-m_output = ThreadSafeRingBuffer(rounded_max_inference_time + k_model.m_input_size);
+m_output = ThreadSafeRingBuffer(worker_time + k_model.m_input_size);
 ```
 
 Note:

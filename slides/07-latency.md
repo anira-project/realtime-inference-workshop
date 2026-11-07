@@ -140,7 +140,7 @@ Note:
 <div class="lat-add with-code">
   <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-op fragment">+</div>
-  <div class="lat-term fragment"><span>rounded max inference time</span><small>18 ms → 2 callbacks</small><strong>1024</strong></div>
+  <div class="lat-term fragment"><span>the worker's time</span><small>18 ms → 2 callbacks</small><strong>1024</strong></div>
   <div class="lat-op fragment">+</div>
   <div class="lat-term fragment"><span>the model itself</span><small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
   <div class="lat-op fragment">=</div>
@@ -152,7 +152,7 @@ Note:
 ```cpp
 // in prepare(): step 6's prefill, given
 adaptation = (k_model.m_input_size - max_block_size);
-m_prefill = adaptation + k_max_inference_samples_rounded;
+m_prefill = adaptation + worker_time;
 m_latency = m_prefill + k_model.m_latency;  // <- fill out
 ```
 
@@ -160,7 +160,7 @@ m_latency = m_prefill + k_model.m_latency;  // <- fill out
 
 Note:
 - Buffer adaptation: the model needs a whole block, 
-- The rounded max time it takes for one forward pass: your worst case from step 4
+- The worker's time from step 6: your worst case from step 4, in whole callbacks
 - The model itself: 2224. 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. From the export script, not visible from C++
 - So it's our prefill from Step 6' plus `k_model.m_latency`
 - Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE

@@ -168,6 +168,39 @@ Note:
 
 ---
 
+<div class="tag">The worker's time</div>
+
+## The worker's time<br><span class="then">Your worst case, in whole callbacks.</span>
+
+<div class="lat-add">
+  <div class="lat-term"><span>max inference time</span><small>step 4, inference_time.h</small><strong>18.0 ms</strong></div>
+  <div class="lat-op">=</div>
+  <div class="lat-term fragment" data-fragment-index="1"><span>in samples</span><small>× 44.1 kHz</small><strong>794</strong></div>
+  <div class="lat-op fragment" data-fragment-index="2">→</div>
+  <div class="lat-term total fragment" data-fragment-index="2"><span>worker_time</span><small>whole 512-sample callbacks</small><strong>1024</strong></div>
+</div>
+
+<div class="fragment" data-fragment-index="3">
+
+```cpp
+// given, in prepare()
+const double worst_case_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+const size_t worker_time =
+    static_cast<size_t>(std::ceil(worst_case_samples / max_block_size)) * max_block_size;
+```
+
+</div>
+
+Note:
+- The worker needs time to run a model block: your worst case from step 4, the number you put into `inference_time.h`
+- My worst case: 18 ms
+- Click: in samples, at 44.1 kHz: 18 ms are 794 samples
+- Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
+- Whole callbacks, because the audio thread only picks results up once per callback
+- Click: the same two lines, given at the top of `prepare`. TODO 1 builds on `worker_time`
+
+---
+
 <div class="tag">Task: <code>main.cpp</code></div>
 
 ## The task
@@ -226,11 +259,11 @@ Note:
 
 ```cpp
 m_prefill = (k_model.m_input_size - max_block_size)    // <- fill out: step 3's prefill
-          + k_max_inference_samples_rounded;           //    plus the worker's time
+          + worker_time;                               //    plus the worker's time
 
 // given: the sizes, the silence goes in, and the worker thread starts
 m_input = ThreadSafeRingBuffer(k_model.m_input_size);
-m_output = ThreadSafeRingBuffer(k_max_inference_samples_rounded + k_model.m_input_size);
+m_output = ThreadSafeRingBuffer(worker_time + k_model.m_input_size);
 m_worker.start([this] { process_model(); });
 ```
 
@@ -238,7 +271,7 @@ Note:
 - `m_output` starts with a prefill of zeros, so the host never finds it empty
 - The prefill is the sum of:
   - step 3's prefill, the buffer adaptation: one model block minus one host block
-  - the worker's time: the block still has to go through the model. Your worst case from step 4, rounded up to whole callbacks
+  - the worker's time, `worker_time`: the block still has to go through the model. Your worst case from step 4, in whole callbacks
 - A wrong prefill: the check names TODO 1
 - The sizes are given: `m_input` one model block, `m_output` the worker's time plus one model block, so the prefill fits
 ---

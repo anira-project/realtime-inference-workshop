@@ -60,8 +60,7 @@ The 5 slowest of all 20 forward passes:
   repetition 1, pass   9   15.23 ms
 
 Your worst case:
-  max inference time            21.20 ms = 935 samples
-  rounded_max_inference_time   1024 samples (whole 512-sample callbacks)
+  max inference time    21.20 ms
 
 Write 21.20 into k_max_inference_ms in steps/common/inference_time.h.
 ```
@@ -72,11 +71,11 @@ It prints, in this order:
 - the first 5 forward passes of every repetition, side by side
 - the statistics over all the forward passes: mean, median, min, p99, max
 - the 5 slowest of all 20 forward passes, with their repetition and pass
-- your worst case, in milliseconds and in samples, rounded up to whole 512-sample callbacks
+- your worst case, in milliseconds, and where to put it
 
 Your numbers will differ. What matters is **how far the slowest pass is from the typical one**. It also depends on the runtime: on LibTorch the first two passes are several times slower, because TorchScript optimises the model while it runs it. The slides show both.
 
-The statistics and the last lines cover every forward pass, and the slowest of them is your worst case. Converted to samples at 44.1 kHz and rounded up to whole 512-sample callbacks, it is the `rounded_max_inference_time`: in step 6 the worker gets that much time, because the audio thread only picks results up once per callback. **Put your milliseconds into `k_max_inference_ms` in [`steps/common/inference_time.h`](../common/inference_time.h)**: steps 6, 7 and the plugin read it from there. Above it is the largest worst case that can work at all, one model block of time, 46.4 ms; your number has to be smaller, and if it is not, tell us.
+The statistics and the last lines cover every forward pass, and the slowest of them is your worst case. **Put your milliseconds into `k_max_inference_ms` in [`steps/common/inference_time.h`](../common/inference_time.h)**, the only line in it: steps 6, 7 and the plugin read it from there, and step 6 turns it into the worker's time. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms; your number has to be smaller, and if it is not, tell us.
 
 Run it a few times. Sometimes a later pass is slow too. That is the rest of the system getting in the way, which is why the worst case has to fit with room to spare: take the largest of a few runs, on a machine that is otherwise idle.
 

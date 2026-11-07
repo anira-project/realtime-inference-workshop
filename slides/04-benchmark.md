@@ -167,8 +167,9 @@ The 5 slowest of all 20 forward passes:
   repetition 1, pass   4   13.40 ms
 
 Your worst case:
-  max inference time            18.00 ms = 794 samples
-  rounded_max_inference_time   1024 samples (whole 512-sample callbacks)
+  max inference time    18.00 ms
+
+Write 18.00 into k_max_inference_ms in steps/common/inference_time.h.
 ```
 
 </div>
@@ -297,15 +298,10 @@ Note:
 
 ```cpp
 // steps/common/inference_time.h
-
-// One model block of time: 2048 samples at 44.1 kHz
-constexpr double k_worst_case_inference_ms = 46.4;
-
-// Your worst case, from step 4
 constexpr double k_max_inference_ms = 18.0;  // <- fill out after step 4
 ```
 
-Until you fill it in, it is 46.4 ms: everything runs, with more latency.<br>
+Until you fill it in, it is 46.4 ms, one model block of time: everything runs, with more latency.<br>
 Above 46.4 ms, the build stops.
 
 Note:
@@ -318,28 +314,6 @@ Note:
 
 ---
 
-<div class="tag">Budget</div>
-
-## Your worst case<br><span class="then">In samples, in whole callbacks.</span>
-
-<div class="lat-add">
-  <div class="lat-term"><span>max inference time</span><small>over all forward passes</small><strong>18.0 ms</strong></div>
-  <div class="lat-op">=</div>
-  <div class="lat-term fragment" data-fragment-index="1"><span>in samples</span><small>× 44.1 kHz</small><strong>794</strong></div>
-  <div class="lat-op fragment" data-fragment-index="2">→</div>
-  <div class="lat-term total fragment" data-fragment-index="2"><span>rounded_max_inference_time</span><small>whole 512-sample callbacks</small><strong>1024</strong></div>
-</div>
-
-Note:
-- For later calculations we need your worst case in samples, and rounded to whole callbacks
-- My worst case: 18 ms
-- Click: in samples, at 44.1 kHz: 18 ms are 794 samples
-- Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
-- Whole callbacks, because the audio thread only picks results up once per callback
-- `inference_time.h` works this out from your number
-- You don't need to do anything, but you will need this variable later in step 6 and 7
-
----
 
 <div class="tag">Done</div>
 

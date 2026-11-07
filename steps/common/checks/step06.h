@@ -20,7 +20,7 @@
 // @prefill: the samples of silence m_output starts with
 // @max_block_size: the largest block the callback will be given
 // @model_block_size: samples the model takes per forward pass
-// @worker_samples: the worker's time, k_max_inference_samples_rounded
+// @worker_samples: the worker's time, worker_time
 inline void check_prefill(size_t prefill,
                           size_t max_block_size,
                           size_t model_block_size,

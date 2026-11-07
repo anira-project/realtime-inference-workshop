@@ -3,7 +3,7 @@
 // Goal: turn the time of every single forward pass into the numbers the
 //       slides read: the thresholds, the first forward passes of every
 //       repetition, the statistics over all of them, the slowest forward passes,
-//       and the worst case in samples.
+//       and the worst case.
 #pragma once
 
 #include <algorithm>
@@ -12,8 +12,6 @@
 #include <cstdio>
 #include <numeric>
 #include <vector>
-
-#include "common/inference_time.h"
 
 // How many of every repetition's first forward passes are shown, and how many
 // of the slowest are listed.
@@ -98,27 +96,16 @@ inline void report_forward_passes(const std::vector<std::vector<double>>& times,
                     times[repetition][iteration]);
     }
 
-    // The worst case, in samples: the time the worker in
-    // step 6 has to be given, rounded up to whole host callbacks, because the
-    // audio thread only picks results up once per callback.
-    const double max_inference_samples = max_inference_ms * sample_rate / 1000.0;
-    const auto rounded_max_inference_time =
-        static_cast<size_t>(
-            std::ceil(max_inference_samples / static_cast<double>(host_block_size))) *
-        host_block_size;
-
+    // The worst case: the number steps 6 and 7 build on. Longer than one model
+    // block, and no latency is enough.
+    const double model_block_ms = 1000.0 * static_cast<double>(model_block_size) / sample_rate;
     std::printf("\nYour worst case:\n");
-    std::printf("  max inference time           %6.2f ms = %.0f samples\n",
-                max_inference_ms,
-                max_inference_samples);
-    std::printf("  rounded_max_inference_time   %zu samples (whole %zu-sample callbacks)\n",
-                rounded_max_inference_time,
-                host_block_size);
-    if (max_inference_ms > k_worst_case_inference_ms) {
+    std::printf("  max inference time   %6.2f ms\n", max_inference_ms);
+    if (max_inference_ms > model_block_ms) {
         std::printf(
             "\nLonger than one model block (%.1f ms): this machine cannot keep up with the\n"
             "model. Please tell us.\n",
-            k_worst_case_inference_ms);
+            model_block_ms);
         return;
     }
     std::printf("\nWrite %.2f into k_max_inference_ms in steps/common/inference_time.h.\n",

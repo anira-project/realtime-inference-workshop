@@ -44,8 +44,12 @@ public:
     void prepare(size_t max_block_size) {
         m_worker.stop();
 
-        m_prefill = (k_model.m_input_size - max_block_size) + k_max_inference_samples_rounded;
-        const size_t output_capacity = k_max_inference_samples_rounded + k_model.m_input_size;
+        // Step 6's worker time: your worst case, in samples, in whole callbacks
+        const double worst_case_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+        const size_t worker_time =
+            static_cast<size_t>(std::ceil(worst_case_samples / max_block_size)) * max_block_size;
+        m_prefill = (k_model.m_input_size - max_block_size) + worker_time;
+        const size_t output_capacity = worker_time + k_model.m_input_size;
 
         // The latency: the prefill, and the model's own delay on top.
         m_latency = m_prefill + k_model.m_latency;

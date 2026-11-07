@@ -24,7 +24,7 @@ The thread itself is given: [`WorkerThread`](../common/helpers/worker_thread.h) 
 
 The worker needs time, and the host must always find something to take. So `m_output` starts with silence, the prefill: step 3's prefill, 2048 − 512, plus the worker's time. Working it out is TODO 1, and step 7 takes it apart.
 
-The worker's time is `k_max_inference_samples_rounded`, given: your worst case from step 4 in samples, rounded up to whole 512-sample callbacks, because the audio thread only picks results up once per callback. It comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), where you put your number from step 4. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
+The worker's time is `worker_time`, given in `prepare()`: your worst case from step 4, `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), in samples and rounded up to whole callbacks, because the audio thread only picks results up once per callback. Two lines at the top of `prepare()` do it: 18 ms are 794 samples at 44.1 kHz, two 512-sample callbacks, 1024. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
 
 ## What to do
 
@@ -36,7 +36,7 @@ Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners
    - pop from `m_output` with `try_pop()`.
 3. **In `process_model()`**, the worker thread: the inference is given. Around it, pop a whole model block from `m_input` and push the result into `m_output`, sample by sample. When `try_pop()` or `try_push()` fails, try again right away, a hot spin, until it worked.
 
-Given, around your lines: the rounded worst case, the ring buffer sizes, starting and stopping the worker, and what the audio thread does when something doesn't work:
+Given, around your lines: the worker's time, the ring buffer sizes, starting and stopping the worker, and what the audio thread does when something doesn't work:
 
 - `m_input` is full: the worker is a whole block behind. The rest is counted in `m_unpushed`, the host gets that many zeros instead, and nothing is taken out of `m_output` for them.
 - A sample is not in `m_output` yet, or something is still owed: the worker is late. The rest of the callback goes out as zeros, all of it owed, `m_debt`. Not just that one sample: the worker may be pushing right now, and the next one would land one place too early.

@@ -88,8 +88,8 @@ Note:
 ```cpp
 OnnxEngine engine(path);
 
-engine.process(samples, num_samples);          // without the state
-engine.process(samples, num_samples, state);   // with the state of 63488 floats
+engine.process(audio, num_samples);                     // without the state
+engine.process(audio, num_samples, state, state_size);  // with the state of 63488 floats
 ```
 
 Note:
@@ -97,7 +97,7 @@ Note:
 - There is a second process function that takes 3 arguments. 
 - Third argument: the state, after the audio, the same order as the model's inputs
 - If no state is passed it defaults to zeros, that's why we got silence at the beginning of every block.
-- The state is overwritten in the same vector, so the next call continues where this one ended
+- The state is overwritten in place, in the same buffer, so the next call continues where this one ended
 
 ---
 
@@ -171,7 +171,8 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process(audio.data() + i * process_size, process_size, state); // <- fill out
+    engine.process(audio.data() + i * process_size, process_size,
+                   state.data(), state.size());  // <- fill out
 }
 ```
 

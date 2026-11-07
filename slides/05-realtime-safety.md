@@ -42,13 +42,10 @@ Note:
 ```cpp
 // Step 3's processor, shortened: the callback makes the promise
 void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
-    // … push the host block into m_input, sample by sample
-    if (m_input.available() >= k_model.m_input_size) {
-        // … pop a model block into m_model_block
-        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-        // … push the result into m_output
-    }
-    // … pop the host block from m_output
+    // … host block into m_input; once a model block is there, pop it, then:
+    m_engine.process(m_model_block.data(), k_model.m_input_size,
+                     m_state.data(), m_state.size());
+    // … the result into m_output, the host block out of it
 }
 ```
 

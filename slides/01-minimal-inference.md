@@ -101,22 +101,22 @@ Note:
 ```cpp
 // constructor
 m_session = Ort::Session(m_env, model_path.c_str(), options);
-m_inputs.push_back(create_tensor(m_audio_in, m_input_shapes[0]));
-m_outputs.push_back(create_tensor(m_audio_out, m_input_shapes[0]));
+m_inputs.push_back(Ort::Value::CreateTensor<float>(allocator, ...));   // once, own memory
+m_outputs.push_back(Ort::Value::CreateTensor<float>(allocator, ...));
 
 // process()
-std::copy_n(samples, num_samples, m_audio_in.begin());
+std::copy_n(audio, num_samples, m_inputs[0].GetTensorMutableData<float>());
 
 m_session.Run(Ort::RunOptions{nullptr}, ..., m_inputs.data(), ..., m_outputs.data(), ...);
 
-std::copy_n(m_audio_out.begin(), num_samples, samples);
+std::copy_n(m_outputs[0].GetTensorMutableData<float>(), num_samples, audio);
 ```
 
 Note:
 - The constructor creates an ONNX Runtime session `Ort::Session`. 
 - The `.onnx` file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++.
 - Model is 126 MB, so load once and keep the engine
-- Tensors created once, each wrapping a buffer of the engine. Shape: 1 batch, 1 channel, N samples
+- Tensors created once, with their own memory from ONNX Runtime. Shape: 1 batch, 1 channel, N samples
 - Every block: copy in, `Run`, copy out
 - `Run` writes into the output tensors we already have
 - From the outside still in place, like an audio callback

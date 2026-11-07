@@ -53,7 +53,7 @@ int main() {
 
             // Only this is timed.
             const auto begin = std::chrono::steady_clock::now();
-            engine.process(model_block.data(), model_block.size(), state);
+            engine.process(model_block.data(), model_block.size(), state.data(), state.size());
             const auto end = std::chrono::steady_clock::now();
 
             times_ms[repetition][iteration] =

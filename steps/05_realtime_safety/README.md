@@ -43,7 +43,7 @@ Intercepted call to real-time unsafe function `malloc` in real-time context!
     #2 operator new(unsigned long)
     #3 OrtApis::Run(...)
     #4 OnnxEngine::run(float*, unsigned long)
-    #5 OnnxEngine::process(float*, unsigned long, std::vector<float>&)
+    #5 OnnxEngine::process(float*, unsigned long, float*, unsigned long)
     #6 ProcessorExample::process_block(float*, unsigned long)
     #7 main
 ```

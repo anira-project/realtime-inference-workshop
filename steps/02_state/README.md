@@ -15,8 +15,8 @@ audio[1,1,2048], state_in[1,63488] -> audio_out[1,1,2048], state_out[1,63488]
 The state is every convolution cache in the model, and zeros start a new stream. The engine takes it as a third argument, and overwrites it on every call:
 
 ```cpp
-engine.process(samples, num_samples);          // Without the state: every call starts from zeros
-engine.process(samples, num_samples, state);   // With it: the call continues where the last one stopped
+engine.process(audio, num_samples);                     // Without the state: every call starts from zeros
+engine.process(audio, num_samples, state, state_size);  // With it: the call continues where the last one stopped
 ```
 
 ## What to do

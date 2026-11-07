@@ -394,13 +394,13 @@ Note:
 ## TODO 1 · Declare the tensors
 
 ```json
-// encoder.json
-"audio":   [["batch",1],["channel",1],["time",2048]]   // one model block
-"latents": [["batch",1],["channel",8],["time",1]]      // eight latents, one frame
+// encoder.json: one model block in, eight latents and one frame out
+"audio":   [["batch", 1], ["channel", 1], ["time", «2048»]]  // <- solution
+"latents": [["batch", 1], ["channel", «8»], ["time", «1»]]     // <- solution
 
-// decoder.json
-"latents": [["batch",1],["channel",8],["time",1]]      // what the encoder gives
-"audio":   [["batch",1],["channel",1],["time",2048]]   // one model block
+// decoder.json: what the encoder gives in, one model block out
+"latents": [["batch", 1], ["channel", «8»], ["time", «1»]]     // <- solution
+"audio":   [["batch", 1], ["channel", 1], ["time", «2048»]]  // <- solution
 ```
 
 Note:
@@ -416,7 +416,7 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < k_num_latents; ++i) {
-    m_frame_data[i] = m_frame_data[i] + offsets[i];
+    m_frame_data[i] = «m_frame_data[i] + offsets[i]»;  // <- solution
 }
 ```
 

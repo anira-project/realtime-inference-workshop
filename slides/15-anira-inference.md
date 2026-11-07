@@ -263,12 +263,13 @@ Note:
 ```json
 "inputs": [
   { "name": "audio", "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]] },
+    "axes": [["batch", 1], ["channel", 1], ["time", «2048»]] },   // <- solution
   …
 ],
 "outputs": [
   { "name": "audio_out", "role": "streamed",
-    "axes": [["batch",1],["channel",1],["time",2048]], "latency": 2224 },
+    "axes": [["batch", 1], ["channel", 1], ["time", «2048»]],     // <- solution
+    "latency": «2224» },                                          // <- solution
   …
 ]
 ```
@@ -285,10 +286,12 @@ Note:
 ## TODO 2 · Declare the state
 
 ```json
-{ "name": "state_in",  "role": "state", "axes": [["batch", 1], ["any", 63488]],
-  "state_source": "state_out" },
+{ "name": "state_in",  "role": "state",
+  "axes": [["batch", 1], ["any", «63488»]],     // <- solution
+  "state_source": "«state_out»" },              // <- solution: C
 …
-{ "name": "state_out", "role": "state", "axes": [["batch", 1], ["any", 63488]] }
+{ "name": "state_out", "role": "state",
+  "axes": [["batch", 1], ["any", «63488»]] }    // <- solution
 ```
 
 Note:
@@ -306,13 +309,17 @@ Note:
 
 ```cpp
 // prepare()
-m_contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the largest
-m_handler->prepare(m_contract);                                 // warm-up runs here
-m_latency = m_handler->get_latency(0);                          // output slot 0
+m_contract.hard_host_blocks(«1», «max_block_size», «sample_rate»);  // <- 1. solution
+const anira::PlanReport report = m_handler->prepare(m_contract);  // warm-up runs here
+m_budget_ms = report.plans().front().measured_ms;
+m_latency = «m_handler->get_latency(0)»;  // <- 2. solution: output slot 0
 
-// process(): offline waits for the result; live, one call, in place
-if (offline) { status = m_handler->process_wait(block, 0, block, 0, ANIRA_WAIT_FOREVER); }
-else         { status = m_handler->process(block, 0, block, 0); }
+// process()
+if (offline) {   // <- 3. solution: a bounce, wait for the result
+    status = m_handler->process_wait(«block», 0, «block», 0, ANIRA_WAIT_FOREVER);
+} else {         // <- 4. solution: live, never waits
+    status = m_handler->process(«block», 0, «block», 0);
+}
 ```
 
 Note:

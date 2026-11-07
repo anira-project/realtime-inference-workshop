@@ -107,11 +107,11 @@ Note:
 ## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
 
 ```cpp
-m_input.try_push(samples[i]);                             // host in, sample by sample
+m_input.try_push(samples[i]);       // host in, sample by sample
 …
-m_input.pop(m_model_block.data(), k_model.m_input_size);  // a model block, on the worker
+m_input.try_pop(m_model_block[i]);  // a model block, on the worker, sample by sample
 …
-m_output.try_pop(samples[i]);                             // host out, sample by sample
+m_output.try_pop(samples[i]);       // host out, sample by sample
 ```
 
 Note:

@@ -26,7 +26,7 @@ Open [`exercise/main.cpp`](exercise/main.cpp). It is step 6's `ProcessorExample`
 
 The mix in `process_block()` is given: both paths are equally late, so it is a plain crossfade between the delayed dry signal and the wet one.
 
-Each TODO says so while it is still open:
+The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
 
 ```
 FAILED: TODO 1: work out the latency

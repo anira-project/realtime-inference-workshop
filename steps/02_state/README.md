@@ -43,6 +43,8 @@ OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 
 ## If you're stuck
 
+The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
+
 - **`TODO 1 and 2: block 0 is right, the blocks after it are not`** — the model only gets the audio, so every block starts from a zero state: every block is the first block.
 - **`FAILED: the state is exactly 63488 floats, got ...`** — the state vector has the wrong size.
 - **The same failure after adding the state** — the state is being created inside the loop, so it starts at zero on every block. It belongs above the loop.

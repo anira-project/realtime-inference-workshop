@@ -61,14 +61,14 @@ Note:
 ## The goal<br><span class="then">A 512-sample host, a 2048-sample model.</span>
 
 <div class="statement-points">
-  <div><small>1</small>Create the ring buffers</div>
+  <div><small>1</small>Prefill the output ring buffer</div>
   <div><small>2</small>Pump whole blocks through the model</div>
   <div><small>3</small>Hand the host its samples back</div>
 </div>
 
 Note:
 - Goal: the model gets 2048, the host gets its 512 back
-- Size the ring buffers
+- Prefill the output ring buffer, so the host always finds samples
 - Pump whole blocks through the model
 - Hand the samples back to the host
 
@@ -113,8 +113,8 @@ Note:
 ```cpp
 RingBuffer buffer(capacity);           // Allocates once, never again
 buffer.available();                    // Samples waiting to be read
-buffer.push(samples, num_samples);     // Append at the back — throws if it does not fit
-buffer.pop(samples, num_samples);      // Take from the front — throws if too few
+buffer.try_push(sample);               // Append at the back — false if full
+buffer.try_pop(sample);                // Take from the front — false if empty
 ```
 
 <div class="ring">
@@ -129,8 +129,8 @@ Note:
 - Allocates once with the correct capacity or size, when created, never again
 - We use 3 methods: 
 - The available() method checks if there are samples in the buffer
-- `push` at the back, `pop` from the front: first in, first out method
-- If the buffer has the wrong size: it throws, so we notice right away
+- `try_push` at the back, `try_pop` from the front, one sample at a time: first in, first out method
+- They never throw: they say whether it worked. Full or empty, nothing changes
 
 ---
 
@@ -149,7 +149,7 @@ cmake --build --preset release --target step03_exercise
 
 <div class="run">
   <div class="run-step" data-seconds="2.2">
-    <div class="run-title"><span>1</span>Give the ring buffers a size</div>
+    <div class="run-title"><span>1</span>Prefill the output</div>
     <div class="run-visual run-size-buffers">
       <div class="mini-buf grow"></div>
       <div class="mini-buf grow"></div>
@@ -176,7 +176,7 @@ cmake --build --preset release --target step03_exercise
 </div>
 
 Note:
-- Your task is to size the ring buffers, pump a whole block, hand the samples back
+- Your task is to work out the prefill, pump a whole block, hand the samples back
 - `main.cpp` in steps/03_host_buffer_size/exercise, build commands on the slide
 - 8 minutes, don't worry if you don't finish, we solve it together
 
@@ -184,42 +184,68 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 1: Give the ring buffers their size
-
+## TODO 1: The prefill
 
 ```cpp
-const size_t capacity = k_model.m_input_size; // <- fill out
+const size_t prefill = k_model.m_input_size - max_block_size;  // <- fill out
+
+m_input = RingBuffer(k_model.m_input_size);              // given
+m_output = RingBuffer(prefill + k_model.m_input_size);   // given, then the zeros go in
 ```
 
-
 Note:
-- In this set up the model runs inside the fourth callback and nothing happens between callbacks
-- We need at least one model block, so the model get the right amount of samples
-- But one model block for both is enough
-- For host sizes that don't divide 2048 or are a multiple of 2048 this isn't true anymore, but we'll get into that in part 2
+- The host takes 512 samples every callback, but the model's first block is only complete in the fourth callback
+- Callbacks 1 to 3 take 3 × 512 = 1536 samples from `m_output`: 2048 − 512. That is the prefill, zeros
+- So the host always finds samples, from the very first callback
+- The sizes are given: `m_input` one model block, `m_output` the prefill and one model block more
+- A wrong prefill: the check names TODO 1
+- For host sizes that don't divide 2048 this isn't true anymore, but we'll get into that in part 2
 
 ---
 
 <div class="tag">Solution</div>
 
-## TODO 2: Pump whole blocks
+## TODO 2: Pump whole blocks <span class="then">Into the input buffer.</span>
 
 ```cpp
-m_input.push(samples, num_samples); // <- 1. fill out
+for (size_t i = 0; i < num_samples; ++i) {
+    const bool pushed = m_input.try_push(samples[i]);  // <- 1. fill out
+    assert(pushed);  // never fails
+}
 
-const bool has_block = m_input.available() >= k_model.m_input_size; // <- 2. fill out
-
-if (has_block) {
-    m_input.pop(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
-    m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-    m_output.push(m_model_block.data(), k_model.m_input_size); // <- 3. fill out
+if (m_input.available() >= k_model.m_input_size) {  // <- 2. fill out
+    // a whole model block is there: through the model, next slide
 }
 ```
 
 Note:
-- First we push the host's samples into the input ring buffer, one host sample block at a time
-- Check if 2048 sample are available -> only pump one model block at a time
+- First we push the host's samples into the input ring buffer, sample by sample
+- `try_push` never fails: the model takes a whole block out before `m_input` is full. So we only assert it
+- Check if 2048 samples are available -> only pump one model block at a time
+
+---
+
+<div class="tag">Solution</div>
+
+## TODO 2: Pump whole blocks <span class="then">Through the model.</span>
+
+```cpp
+if (m_input.available() >= k_model.m_input_size) {
+    for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        const bool popped = m_input.try_pop(m_model_block[i]);    // <- 3. fill out
+        assert(popped);  // never fails: a whole block is there
+    }
+    m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+    for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        const bool pushed = m_output.try_push(m_model_block[i]);  // <- 3. fill out
+        assert(pushed);  // never fails: TODO 1 made room
+    }
+}
+```
+
+Note:
 - Then: pop, process, push to the output ring buffer
+- Those two can't fail: the check said a whole block is there, and `m_output` has room for one. So we only assert it
 
 ---
 
@@ -228,16 +254,15 @@ Note:
 ## TODO 3: Hand the samples back
 
 ```cpp
-if (m_output.available() >= num_samples) { // <- fill out
-    m_output.pop(samples, num_samples); // <- fill out
-} else {
-    std::fill_n(samples, num_samples, 0.0f);   // Nothing ready yet: silence
+for (size_t i = 0; i < num_samples; ++i) {
+    const bool popped = m_output.try_pop(samples[i]);  // <- fill out
+    assert(popped);  // never fails: the prefill covers the wait
 }
 ```
 
 Note:
-- Hand the samples back to the host if enough samples (512) are available in the output buffer, one host sample block at a time
-- At the start nothing is ready: fill the buffer with silence
+- Hand the samples back to the host, sample by sample, straight from the output buffer
+- At the start they are the prefill's zeros: `try_pop` never fails, so we only assert it
 
 ---
 
@@ -258,9 +283,9 @@ Note:
 Note:
 - Ask first: How long does it take to hear our first processed samples?
 - The model needs 2048, the host brings 512 at a time
-- Callbacks 1 to 3: `m_input` only collects samples 
+- Callbacks 1 to 3: `m_input` only collects samples, the host gets the prefill
 - Callback 4: the block is complete, the model runs inside the callback
-- The first part of our latency: the first 3 callback make up the Buffer adaptation, the time before the model can start running, which is 1536 samples
+- The first part of our latency: the first 3 callbacks make up the buffer adaptation, the time before the model can start running, which is 1536 samples: our prefill from TODO 1
 - In general: model block minus the largest block that divides both, here 2048 − 512
 - Second part of the latency: the latency of the model itself. Here 2224: 1696 from the decoder's transposed convolutions, 528 from the PQMF filter bank (from the export script, not visible from C++)
 - Total 3760 samples, about 85 ms at 44.1 kHz

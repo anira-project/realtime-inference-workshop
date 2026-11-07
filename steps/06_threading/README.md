@@ -16,37 +16,37 @@ process_block()                  process_model(), over and over
            (starts with the prefill)
 ```
 
-Step 3's `ProcessorExample`, split over two threads: `process_block` keeps the ring buffers, `process_model` gets the model. [`ThreadSafeRingBuffer`](../common/helpers/threadsafe_ring_buffer.h) is safe for one writer and one reader on different threads: step 3's `push`, `pop` and `available` for the worker's blocks, and `try_push` and `try_pop` for the audio thread, which move one sample and say whether it worked. None of them waits, throws or allocates. Underneath is [moodycamel's](https://github.com/cameron314/readerwriterqueue) single-producer single-consumer circular buffer.
+Step 3's `ProcessorExample`, split over two threads: `process_block` keeps the ring buffers, `process_model` gets the model. [`ThreadSafeRingBuffer`](../common/helpers/threadsafe_ring_buffer.h) is safe for one writer and one reader on different threads. It has `try_push` and `try_pop`, which move one sample and say whether it worked. Neither waits, throws or allocates: the audio thread gives up when one fails, the worker tries again right away. Underneath is [moodycamel's](https://github.com/cameron314/readerwriterqueue) single-producer single-consumer circular buffer.
 
 The thread itself is given: [`WorkerThread`](../common/helpers/worker_thread.h) calls `process_model()` over and over from `start()` until `stop()`.
 
 ## The prefill
 
-The worker needs time, and the host must always find something to take. So `m_output` starts with silence, the prefill. It is given, in `prepare()`, and step 7 takes it apart.
+The worker needs time, and the host must always find something to take. So `m_output` starts with silence, the prefill: step 3's prefill, 2048 − 512, plus the worker's time. Working it out is TODO 1, and step 7 takes it apart.
 
-It depends on `k_max_inference_samples_rounded`, also given: your worst case from step 4 in samples, rounded up to whole 512-sample callbacks, because the audio thread only picks results up once per callback. It comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), where you put your number from step 4. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
+The worker's time is `k_max_inference_samples_rounded`, given: your worst case from step 4 in samples, rounded up to whole 512-sample callbacks, because the audio thread only picks results up once per callback. It comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), where you put your number from step 4. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
 
 ## What to do
 
 Open [`exercise/main.cpp`](exercise/main.cpp) and fill in the three TODO banners.
 
-1. **In `prepare()`**: give the ring buffers their sizes: `m_input` one model block, `m_output` the worker's time plus one model block.
+1. **In `prepare()`**: the prefill, step 3's plus the worker's time. The ring buffer sizes are given: `m_input` one model block, `m_output` the worker's time plus one model block.
 2. **In `process_block()`**, the audio thread: step 3's `process_block`, without the engine, one sample at a time:
    - push into `m_input` with `try_push()`;
    - pop from `m_output` with `try_pop()`.
-3. **In `process_model()`**, the worker thread: if `m_input` holds a whole model block, pop it, run the model (given) and push the result into `m_output`.
+3. **In `process_model()`**, the worker thread: the inference is given. Around it, pop a whole model block from `m_input` and push the result into `m_output`, sample by sample. When `try_pop()` or `try_push()` fails, try again right away, a hot spin, until it worked.
 
-Given, around your lines: the rounded worst case, the prefill, starting and stopping the worker, and what the audio thread does when something doesn't work:
+Given, around your lines: the rounded worst case, the ring buffer sizes, starting and stopping the worker, and what the audio thread does when something doesn't work:
 
 - `m_input` is full: the worker is a whole block behind. The rest is counted in `m_unpushed`, the host gets that many zeros instead, and nothing is taken out of `m_output` for them.
 - A sample is not in `m_output` yet, or something is still owed: the worker is late. The rest of the callback goes out as zeros, all of it owed, `m_debt`. Not just that one sample: the worker may be pushing right now, and the next one would land one place too early.
 - The debt is paid first: an owed sample came too late, its place already went out as a zero, so it is taken out and thrown away.
 
-Each TODO says so while it is still open:
+The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
 
 ```
-FAILED: TODO 1.1: give m_input room for a whole model block
-FAILED: TODO 1.2: give m_output room for the prefill and a callback more
+FAILED: TODO 1: the prefill is too small, the worker's first block would come too late
+FAILED: TODO 1: the prefill is too large, the host would hear the model later than needed
 FAILED: TODO 2 or 3: the host only got silence. ...
 ```
 

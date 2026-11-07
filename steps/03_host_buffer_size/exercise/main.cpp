@@ -7,6 +7,7 @@
 // Check:  does the host get the model's stream back, sample for sample?
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
@@ -40,15 +41,23 @@ public:
 
     void prepare(size_t max_block_size) {
         // ---- TODO 1 --------------------------------------------------------
-        // Choose a ring buffer size: a capacity that can hold everything that
-        // is in flight at the worst moment. Think about the input side just
-        // before a model block is taken out, and the output side just after
-        // one was put in. Too small, and push() throws.
+        // The prefill: m_output starts with this many zeros, so the host finds
+        // samples in every callback, also before the model has run. How many
+        // samples does the host take from m_output before the model's first
+        // block is in it?
         // --------------------------------------------------------------------
-        const size_t capacity = 0;  // <- fill out
+        const size_t prefill = ?;  // <- fill out
 
-        m_input = RingBuffer(capacity);
-        m_output = RingBuffer(capacity);
+        check_prefill(prefill, max_block_size, k_model.m_input_size);  // Given: names TODO 1 if it is off
+
+        // Given: m_input holds one model block, m_output the prefill and one
+        // model block more
+        m_input = RingBuffer(k_model.m_input_size);
+        m_output = RingBuffer(prefill + k_model.m_input_size);
+        for (size_t i = 0; i < prefill; ++i) {
+            const bool pushed = m_output.try_push(0.0f);
+            assert(pushed);  // never fails: m_output has room for the prefill
+        }
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
     }
@@ -56,33 +65,39 @@ public:
     // One callback: the host's samples come in and go back out in place.
     void process_block(float* samples, size_t num_samples) {
         // ---- TODO 2 --------------------------------------------------------
-        // From the host through the model:
+        // From the host through the model, one sample at a time:
         //   1. push the host's samples into m_input
         //   2. check if m_input has enough samples for a model block
         //   3. if so: pop it into m_model_block, run the model (given), push
         //      the result into m_output
         //
-        // Hint: available() says how many samples are waiting
+        // Hint: try_push() and try_pop() say whether it worked, available()
+        // how many samples are waiting
         // --------------------------------------------------------------------
-        // m_input.push(?, ?);  // <- 1. fill out
+        for (size_t i = 0; i < num_samples; ++i) {
+            const bool pushed = m_input.?;  // <- 1. fill out
+            assert(pushed);  // never fails
+        }
 
-        const bool has_block = false;  // <- 2. fill out
-
-        if (has_block) {
-            // m_input.pop(?, ?);  // <- 3. fill out
+        if (m_input.available() >= ?) {  // <- 2. fill out
+            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+                const bool popped = ?;  // <- 3. fill out
+                assert(popped);  // never fails
+            }
             m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-            // m_output.push(?, ?);  // <- 3. fill out
+            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+                const bool pushed = ?;  // <- 3. fill out
+                assert(pushed);  // never fails
+            }
         }
 
         // ---- TODO 3 --------------------------------------------------------
-        // From m_output back to the host: pop num_samples straight into the
-        // host's buffer, if there are enough samples waiting. At the start
-        // they are not, and the host gets silence.
+        // From m_output back to the host: pop the samples straight into the
+        // host's buffer. At the start they are the prefill's zeros.
         // --------------------------------------------------------------------
-        if (m_output.available() >= 0) {  // <- fill out
-            // m_output.pop(?, ?);  // <- fill out
-        } else {
-            std::fill_n(samples, num_samples, 0.0f);
+        for (size_t i = 0; i < num_samples; ++i) {
+            const bool popped = ?;  // <- fill out
+            assert(popped);  // never fails
         }
 
         check_todos(m_input, m_output, k_model.m_input_size);  // Given: names a missing TODO

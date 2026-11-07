@@ -174,9 +174,12 @@ Note:
 ## TODO 2: Delay the dry signal
 
 ```cpp
-// in prepare(): the wet path gets a prefill of silence, and so does the dry one
-m_output.push(silence.data(), m_prefill);       // given: the prefill
-m_dry.push(dry_silence.data(), m_latency);      // <- fill out
+// in prepare(): the wet path has step 6's prefill, the dry one gets its own
+const size_t dry_prefill = m_latency;  // <- fill out
+for (size_t i = 0; i < dry_prefill; ++i) {
+    const bool pushed = m_dry.try_push(0.0f);
+    assert(pushed);  // never fails: m_dry has room for the delay
+}
 ```
 
 Note:

@@ -33,7 +33,7 @@ int main() {
         //
         // Hint: look at the struct above
         // --------------------------------------------------------------------
-        const std::string model_path = "";  // <- fill out
+        const std::string model_path = ?;  // <- fill out
 
         // ---- TODO 2 --------------------------------------------------------
         // How many samples do you want to process? Pick a number, run it, and
@@ -41,7 +41,7 @@ int main() {
         //
         // Hint: a model often has a fixed processing block size
         // --------------------------------------------------------------------
-        const size_t process_size = 0;  // <- fill out
+        const size_t process_size = ?;  // <- fill out
 
         check_todos(model_path, process_size);  // Given: names a missing TODO
 
@@ -57,7 +57,7 @@ int main() {
         // afterwards the first process_size samples of `audio` hold the
         // model's output.
         // --------------------------------------------------------------------
-        // engine.process(?, ?);  // <- fill out
+        engine.process(?, ?);  // <- fill out
 
         return report_first_block(audio, k_input_signal, k_target_output_signal, process_size);
     } catch (const std::exception& error) {

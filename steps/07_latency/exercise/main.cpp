@@ -8,6 +8,7 @@
 //         latency.
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -64,26 +65,31 @@ public:
         // a plugin it goes to setLatencySamples(). Three things delay it, and
         // all are fixed.
         // --------------------------------------------------------------------
-        m_latency = 0;  // <- fill out
+        m_latency = ?;  // <- fill out
 
         m_input = ThreadSafeRingBuffer(k_model.m_input_size);
         m_output = ThreadSafeRingBuffer(output_capacity);
-        const std::vector<float> silence(m_prefill, 0.0f);
-        m_output.push(silence.data(), m_prefill);  // The prefill
+        for (size_t i = 0; i < m_prefill; ++i) {
+            const bool pushed = m_output.try_push(0.0f);  // The prefill
+            assert(pushed);  // never fails: m_output has room for the prefill
+        }
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
 
         // The dry path: room for the delay and one callback more.
         m_dry = RingBuffer(m_latency + max_block_size);
         m_dry_block.assign(max_block_size, 0.0f);
-        const std::vector<float> dry_silence(m_latency, 0.0f);
 
         // ---- TODO 2 --------------------------------------------------------
         // Delay the dry signal: how much silence does m_dry start with, so
         // that dry and wet line up? The model's own delay is already inside
         // what the worker returns; the dry path has nothing like that.
         // --------------------------------------------------------------------
-        m_dry.push(dry_silence.data(), 0);  // <- fill out
+        const size_t dry_prefill = ?;  // <- fill out
+        for (size_t i = 0; i < dry_prefill; ++i) {
+            const bool pushed = m_dry.try_push(0.0f);
+            assert(pushed);  // never fails: m_dry has room for the delay
+        }
 
         // Given: names a missing TODO
         check_todos(m_latency, k_model.m_latency, m_dry);
@@ -107,8 +113,12 @@ public:
     // The audio thread: one callback. No engine anymore, only samples in and out.
     void process_block(float* samples, size_t num_samples) {
         // The dry path: in, and out as late as m_dry was prefilled.
-        m_dry.push(samples, num_samples);
-        m_dry.pop(m_dry_block.data(), num_samples);
+        for (size_t i = 0; i < num_samples; ++i) {
+            const bool pushed = m_dry.try_push(samples[i]);
+            assert(pushed);  // never fails: room for the delay and one callback more
+            const bool popped = m_dry.try_pop(m_dry_block[i]);
+            assert(popped);  // never fails: m_dry starts with the delay
+        }
 
         for (size_t i = 0; i < num_samples; ++i) {
             const bool pushed = m_input.try_push(samples[i]);
@@ -153,12 +163,20 @@ private:
     // The worker thread: called over and over. The engine may allocate and
     // lock here, nobody is waiting on this thread.
     void process_model() {
-        const bool has_block = m_input.available() >= k_model.m_input_size;
+        // Step 6's hot spin: try again right away until a whole model block
+        // is in, and until the result is out.
+        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+            while (!m_input.try_pop(m_model_block[i])) {
+                if (!m_worker.running()) { return; }  // so stop() never waits forever
+            }
+        }
 
-        if (has_block) {
-            m_input.pop(m_model_block.data(), k_model.m_input_size);
-            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-            m_output.push(m_model_block.data(), k_model.m_input_size);
+        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+
+        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+            while (!m_output.try_push(m_model_block[i])) {
+                if (!m_worker.running()) { return; }
+            }
         }
     }
 

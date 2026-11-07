@@ -54,14 +54,14 @@ Note:
 
 
 <div class="statement-points">
-  <div><small>1</small>Size the ring buffers and start the worker thread</div>
+  <div><small>1</small>Prefill the output and start the worker thread</div>
   <div><small>2</small>Hand over samples from the audio thread</div>
   <div><small>3</small>Run the model on the worker thread and return the results</div>
 </div>
 
 Note:
 - Goal: step 3's processor on two threads, with a fixed latency
-- `prepare`: size `m_input` and `m_output`; and start the worker thread
+- `prepare`: the prefill for `m_output`, step 3's plus the worker's time; and start the worker thread
 - Audio thread: samples into `m_input`, samples out of `m_output`, never waiting
 - Worker: take a block out of `m_input`, run the model, push it into `m_output`
 
@@ -135,10 +135,10 @@ Note:
 ## One writer, one reader<br><span class="then">No locks.</span>
 
 <table class="budget-table rb-table">
-  <thead><tr><th></th><th>Audio thread <small>one sample, never waits</small></th><th>Worker <small>whole blocks</small></th></tr></thead>
+  <thead><tr><th></th><th>Audio thread <small>gives up, never waits</small></th><th>Worker <small>tries again until it worked</small></th></tr></thead>
   <tbody>
-    <tr><td><code>m_input</code></td><td><code>try_push(sample)</code> <small>false if full</small></td><td> <code>pop(block, block_size)</code> & <code>available()</code></td></tr>
-    <tr><td><code>m_output</code></td><td><code>try_pop(sample)</code> <small>false if empty</small></td><td><code>push(block, block_size)</code></td></tr>
+    <tr><td><code>m_input</code></td><td><code>try_push(sample)</code> <small>false if full</small></td><td><code>try_pop(sample)</code> <small>false if empty</small></td></tr>
+    <tr><td><code>m_output</code></td><td><code>try_pop(sample)</code> <small>false if empty</small></td><td><code>try_push(sample)</code> <small>false if full</small></td></tr>
   </tbody>
 </table>
 
@@ -162,7 +162,7 @@ Note:
 - What makes these ring buffers thread-safe?
 - Each ring buffer only has one thread writing, the other reading, so we need no locks
 - Audio thread: `try_push` and `try_pop`, one sample at a time, never waiting or allocating, a bool says whether it worked
-- Worker: `available`, `pop`, `push` for whole blocks, like in step 3; 
+- Worker: the same two calls, but it may wait: when one fails, it tries again right away, a hot spin
 - Underneath: moodycamel's circular buffer, only its `try_` functions: never wait, never allocate, never throw
 <!-- - `WorkerThread`: given, calls our `process_model` over and over, from `start` until `stop` -->
 
@@ -183,8 +183,7 @@ cmake --build --preset release --target step06_exercise
 
 <div class="run">
   <div class="run-step" data-seconds="2.4">
-    <div class="run-title"><span>1</span>Give each ring buffer a size
-  </div>
+    <div class="run-title"><span>1</span>The prefill</div>
     <div class="run-visual run-setup">
       <div class="q small appear"><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div></div>
       <div class="q small appear"><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div></div>
@@ -213,7 +212,7 @@ cmake --build --preset release --target step06_exercise
 
 Note:
 - First: make sure your number from step 4 into `k_max_inference_ms` in `steps/common/inference_time.h`, if not done yet
-- Then give ring buffer sizes in `prepare`, hint now they don't necessarily have the same size:
+- Then the prefill in `prepare`: step 3's, plus the worker's time
 - Then set up the audio thread, the worker thread
 - `main.cpp` in steps/06_threading/exercise, build commands on the slide
 - The biggest task so far, 10 minutes
@@ -223,30 +222,25 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 1: The ring buffer sizes
+## TODO 1: The prefill
 
 ```cpp
-// given: how much silence m_output starts with
-adaptation = (k_model.m_input_size - max_block_size);
-m_prefill = adaptation + k_max_inference_samples_rounded;
+m_prefill = (k_model.m_input_size - max_block_size)    // <- fill out: step 3's prefill
+          + k_max_inference_samples_rounded;           //    plus the worker's time
 
-const size_t input_capacity = k_model.m_input_size;  // <- fill out
-const size_t output_capacity =
-    k_max_inference_samples_rounded + k_model.m_input_size;  // <- fill out
-
-// given: the silence goes in, and the worker thread starts
-m_output.push(silence.data(), m_prefill);
+// given: the sizes, the silence goes in, and the worker thread starts
+m_input = ThreadSafeRingBuffer(k_model.m_input_size);
+m_output = ThreadSafeRingBuffer(k_max_inference_samples_rounded + k_model.m_input_size);
 m_worker.start([this] { process_model(); });
 ```
 
 Note:
-- `m_input`: one model block, as in step 3: the worker takes it out as soon as it's full
-- `m_output`: We need to start with a prefill of zeros, so the host never finds it empty. 
-  - The prefill is the latency we found out in step 3, the sum of:
-    - adaptation buffer: which was one model block - one host block. 
-    - the rounded worst case from step 4, in whole callbacks.
-- The worker's time: then the block still has to go through the model. Your worst case from step 4, rounded up to whole callbacks.
-- `m_output`: needs to have space for the prefill, but we also need to make sure that it fits one model block. Since our model block is larger than our host block, we need one model block + the rounded worst case from step 4
+- `m_output` starts with a prefill of zeros, so the host never finds it empty
+- The prefill is the sum of:
+  - step 3's prefill, the buffer adaptation: one model block minus one host block
+  - the worker's time: the block still has to go through the model. Your worst case from step 4, rounded up to whole callbacks
+- A wrong prefill: the check names TODO 1
+- The sizes are given: `m_input` one model block, `m_output` the worker's time plus one model block, so the prefill fits
 ---
 
 <div class="tag">Solution</div>
@@ -297,21 +291,24 @@ Note:
 ## TODO 3: The worker thread
 
 ```cpp
-void process_model() {  // called over and over by m_worker
-    const bool has_block = m_input.available() >= k_model.m_input_size;  // <- fill out
-
-    if (has_block) {
-        m_input.pop(m_model_block.data(), k_model.m_input_size);         // <- fill out
-        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-        m_output.push(m_model_block.data(), k_model.m_input_size);       // <- fill out
+// in process_model(), called over and over by m_worker
+for (size_t i = 0; i < k_model.m_input_size; ++i) {
+    while (!m_input.try_pop(m_model_block[i])) {    // <- fill out: spin
+        if (!m_worker.running()) { return; }        // given
+    }
+}
+m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+for (size_t i = 0; i < k_model.m_input_size; ++i) {
+    while (!m_output.try_push(m_model_block[i])) {  // <- fill out: spin
+        if (!m_worker.running()) { return; }        // given
     }
 }
 ```
 
 Note:
-- The other half of step 3's `process_block`, the same lines
-- In the worker thread, we can take a whole model block out of `m_input`, run the model, and push it into `m_output`
-- `WorkerThread` calls it over and over: no block yet, it checks again right away, no sleep. 
+- The other half of step 3's `process_block`: the inference is the same, given
+- The worker may wait, the audio thread may not. So here a failed `try_pop` or `try_push` is simply tried again, right away: a hot spin, until the whole model block is in, then until the result is out
+- The `running()` check is given: without it `stop()` would wait forever for samples that never come
 - Be careful, this is not the best way to do it. That keeps one core busy; part 2 does it better
 - The engine may allocate and lock here: nobody waits on this thread
 

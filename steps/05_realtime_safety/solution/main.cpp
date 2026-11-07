@@ -11,6 +11,7 @@
 // has RTSan, run it, and read what comes out.
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdio>
 #include <vector>
@@ -46,29 +47,39 @@ public:
     explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
 
     void prepare(size_t max_block_size) {
-        const size_t capacity = k_model.m_input_size;
+        const size_t prefill = k_model.m_input_size - max_block_size;
 
-        m_input = RingBuffer(capacity);
-        m_output = RingBuffer(capacity);
+        m_input = RingBuffer(k_model.m_input_size);
+        m_output = RingBuffer(prefill + k_model.m_input_size);
+        for (size_t i = 0; i < prefill; ++i) {
+            const bool pushed = m_output.try_push(0.0f);
+            assert(pushed);  // never fails: m_output has room for the prefill
+        }
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
     }
 
     void process_block(float* samples, size_t num_samples) WORKSHOP_AUDIO_CALLBACK {
-        m_input.push(samples, num_samples);
-
-        const bool has_block = m_input.available() >= k_model.m_input_size;
-
-        if (has_block) {
-            m_input.pop(m_model_block.data(), k_model.m_input_size);
-            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-            m_output.push(m_model_block.data(), k_model.m_input_size);
+        for (size_t i = 0; i < num_samples; ++i) {
+            const bool pushed = m_input.try_push(samples[i]);
+            assert(pushed);  // never fails: the model takes a block out before m_input is full
         }
 
-        if (m_output.available() >= num_samples) {
-            m_output.pop(samples, num_samples);
-        } else {
-            std::fill_n(samples, num_samples, 0.0f);
+        if (m_input.available() >= k_model.m_input_size) {
+            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+                const bool popped = m_input.try_pop(m_model_block[i]);
+                assert(popped);  // never fails: a whole block is there
+            }
+            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+            for (size_t i = 0; i < k_model.m_input_size; ++i) {
+                const bool pushed = m_output.try_push(m_model_block[i]);
+                assert(pushed);  // never fails: m_output has room for a whole block
+            }
+        }
+
+        for (size_t i = 0; i < num_samples; ++i) {
+            const bool popped = m_output.try_pop(samples[i]);
+            assert(popped);  // never fails: the prefill covers the wait for the first block
         }
     }
 

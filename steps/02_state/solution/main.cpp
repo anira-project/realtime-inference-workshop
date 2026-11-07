@@ -29,7 +29,8 @@ constexpr struct {
 
 int main() {
     try {
-        OnnxEngine engine(k_model.m_path);
+        OnnxEngine engine;
+        engine.load(k_model.m_path);
 
         const size_t num_blocks = k_signal_length / k_model.m_input_size;
 
@@ -48,7 +49,7 @@ int main() {
             // What should be passed next to the buffer in process()?
             // ----------------------------------------------------------------
             engine.process(buffer.data() + i * k_model.m_input_size, k_model.m_input_size,
-                           state.data(), state.size());  // <- solution
+                           state.data(), k_model.m_state_size);  // <- solution
         }
 
         return report_blocks(buffer, k_target_output_signal, k_model.m_input_size);

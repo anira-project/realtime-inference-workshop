@@ -169,7 +169,8 @@ private:
             }
         }
 
-        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state.data(), m_state.size());
+        m_engine.process(m_model_block.data(), k_model.m_input_size,
+                         m_state.data(), k_model.m_state_size);
 
         for (size_t i = 0; i < k_model.m_input_size; ++i) {
             while (!m_output.try_push(m_model_block[i])) {
@@ -196,7 +197,8 @@ private:
 
 int main() {
     try {
-        OnnxEngine engine(k_model.m_path);
+        OnnxEngine engine;
+        engine.load(k_model.m_path);
 
         ProcessorExample processor(engine);
         processor.prepare(k_host_block_size);

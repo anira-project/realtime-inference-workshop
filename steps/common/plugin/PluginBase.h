@@ -1,8 +1,8 @@
 // The plugin shell steps 8 to 10 share, given complete: buses, the dry/wet
-// parameter, a step's own knobs, the source player, the window, and the host
-// boilerplate. A step derives from it and writes the places where the host
-// talks to it: prepareToPlay, processBlock, releaseResources, and the latency
-// it reports.
+// parameter, a step's own knobs, the source player, the window, the bypass,
+// the mono mix-down, and the host boilerplate. A step derives from it and
+// writes three places: its constructor creates, prepare() prepares and
+// returns the latency, process() runs one mono block.
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -10,6 +10,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <mutex>
 #include <vector>
 
@@ -48,6 +49,12 @@ public:
     PluginBase(juce::String title, juce::String subtitle, std::vector<Knob> knobs = {});
     ~PluginBase() override;
 
+    // The host's calls, here once for every step: they call the step's
+    // prepare(), process() and release() below.
+    void prepareToPlay(double sample_rate, int samples_per_block) final;
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) final;
+    void releaseResources() final { release(); }
+
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
 
@@ -79,26 +86,6 @@ public:
         const char* m_button;
         bool m_live_only;  // An offline render (a bounce) is not held back
     };
-    // anira measured a plan slower than real time (steps 9 and 10): live it
-    // drops out; a bounce waits for every result, so it is not held back.
-    static constexpr Hold k_not_realtime{
-        "Not real-time",
-        "anira measured this model slower than real time on this machine: live, it would drop "
-        "out, and you would hear clicks. Run anyway plays it nonetheless.",
-        "Run anyway, with dropouts",
-        true};
-    // The host's rate is not the model's 44.1 kHz (steps 9 and 10): the model
-    // plays at the wrong speed, so it sounds higher or lower. Step 8 has its own.
-    static constexpr Hold k_not_44k{
-        "44.1 kHz only",
-        "The model is trained at 44.1 kHz: at another rate it sounds higher or lower. A "
-        "resampler would fix it; this plugin has none. Process anyway plays it as it is.",
-        "Process anyway",
-        false};
-    // The two things that hold the plugin back, each on its own, both at once
-    // if both apply: then the window asks for one, then for the other.
-    enum class HoldKind { sample_rate, report };
-
     // Why the plugin is bypassed, or nullptr. A bypass goes before a hold.
     const char* bypass_reason() const { return m_bypass.load(std::memory_order_acquire); }
     // The holds the user has not agreed to yet, the sample rate first. The
@@ -119,26 +106,43 @@ public:
     bool load_file(const juce::File& file);
 
 protected:
+    // What a step writes, besides its constructor.
+    //
+    // Before the stream: the host's rate and its largest block. Allocate,
+    // plan, start threads. May throw: the plugin is then bypassed, and the
+    // window points to the console. Main thread.
+    // @return the latency in samples, what the host is told
+    virtual size_t prepare(double sample_rate, size_t max_block_size) = 0;
+    // One callback, in place, on the input mixed down to mono; the result goes
+    // out on every channel. Not while bypassed. Audio thread.
+    virtual void process(float* samples, size_t num_samples) = 0;
+    // After the stream, and before every prepare. Main thread.
+    virtual void release() {}
+
     // The plugin does not process: the example or your file stops, the input
     // goes out unprocessed, and the window says why. A string literal, so this
-    // is safe on the audio thread too.
+    // is safe on the audio thread too. Each prepareToPlay starts without one.
     void bypass(const char* reason) { m_bypass.store(reason, std::memory_order_release); }
-    void process_normally() { m_bypass.store(nullptr, std::memory_order_release); }
     bool bypassed() const { return m_bypass.load(std::memory_order_acquire) != nullptr; }
 
+    // Step 8: built for 512-sample buffers at 44.1 kHz, the only settings its
+    // prefill and latency are right for. Another buffer size or rate is
+    // bypassed, and the window says why; 48 kHz asks the user first. Returns
+    // whether the plugin can prepare. In prepare.
+    bool fixed_settings_fit(double sample_rate, size_t max_block_size);
+
+    // Steps 9 and 10: anira takes any rate, but the model is trained at 44.1
+    // kHz: any other rate asks the user first. In prepare.
+    void ask_unless_44k(double sample_rate);
+
     // After prepare: anira's plan report, one row per model. A row that is not
-    // real-time holds the plugin back (k_not_realtime) until run_anyway();
-    // anira asks a live host to do exactly that. Not on the audio thread.
+    // real-time holds the plugin back until run_anyway(); anira asks a live
+    // host to do exactly that. Not on the audio thread.
     void set_report(std::vector<ReportRow> rows);
 
-    // The plugin waits for the user before it processes: the window shows
-    // the hold and its button. A static Hold; nullptr releases that kind. A
-    // hold that was not there yet asks again. In prepareToPlay.
-    void set_hold(HoldKind kind, const Hold* hold);
-
     // Whether this block goes through the model: not bypassed, and not held
-    // back; a hold that is live only lets a bounce (isNonRealtime) through.
-    // Audio thread.
+    // back until the user agrees; a hold that is live only lets a bounce
+    // (isNonRealtime) through. Audio thread.
     bool processing() const {
         if (bypassed()) { return false; }
         if (!held_back()) { return true; }
@@ -150,30 +154,19 @@ protected:
         return true;  // Only live holds wait: a bounce goes through
     }
 
+    // The dry/wet position, 0 dry to 1 wet; dry only while the plugin is
+    // held back. Audio thread.
+    float mix() const { return processing() ? m_mix->load() : 0.0f; }
+
+    // The value of the step's knob at `index`, in the order given. Audio thread.
+    float knob(size_t index) const { return m_knob_values[index]->load(); }
+
+private:
     // The example or your file replaces the input; the input stays as it is.
     // While the plugin does not process, the example or your file stops:
     // silence, and the player waits at the start, so it starts over once the
     // plugin processes again. The input still passes through. Audio thread.
-    void render_source(juce::AudioBuffer<float>& buffer) {
-        // A channel the host gave no input (a mono track into a stereo output)
-        // holds what was there before, often our own last output: it gets the
-        // input too, or silence without one, before the dry path keeps it.
-        const int inputs = getTotalNumInputChannels();
-        for (int channel = inputs; channel < buffer.getNumChannels(); ++channel) {
-            if (inputs > 0) {
-                buffer.copyFrom(channel, 0, buffer, 0, 0, buffer.getNumSamples());
-            } else {
-                buffer.clear(channel, 0, buffer.getNumSamples());
-            }
-        }
-
-        if (!processing() && m_player.selected() != SourcePlayer::Source::input) {
-            buffer.clear();
-            m_player.rewind();
-            return;
-        }
-        m_player.render(buffer);
-    }
+    void render_source(juce::AudioBuffer<float>& buffer);
 
     // The model is mono: the input channels mixed down into the first one, in
     // place. Returns it. Audio thread.
@@ -182,13 +175,6 @@ protected:
     // The first channel copied to every output channel. Audio thread.
     void to_all_channels(juce::AudioBuffer<float>& buffer) const;
 
-    // The dry/wet position, 0 dry to 1 wet. Audio thread.
-    float mix() const { return m_mix != nullptr ? m_mix->load() : 1.0f; }
-
-    // The value of the step's knob at `index`, in the order given. Audio thread.
-    float knob(size_t index) const { return m_knob_values[index]->load(); }
-
-private:
     juce::String m_title;
     juce::String m_subtitle;
     std::vector<Knob> m_knobs;
@@ -197,6 +183,14 @@ private:
     std::vector<std::atomic<float>*> m_knob_values;
     SourcePlayer m_player;
     std::atomic<const char*> m_bypass{nullptr};
+    // The two things that hold the plugin back, each on its own, both at once
+    // if both apply: then the window asks for one, then for the other.
+    enum class HoldKind { sample_rate, report };
+
+    // The plugin waits for the user before it processes: the window shows
+    // the hold and its button. A static Hold; nullptr releases that kind. A
+    // hold that was not there yet asks again.
+    void set_hold(HoldKind kind, const Hold* hold);
     bool waiting(size_t kind) const { return m_holds[kind].load() != nullptr && !m_agreed[kind].load(); }
 
     std::atomic<const Hold*> m_holds[2]{{nullptr}, {nullptr}};  // By HoldKind
@@ -207,3 +201,17 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginBase)
 };
+
+// The host's entry point, for createPluginFilter(): the step's plugin. If its
+// constructor throws (the model did not load, a file has an error), a plugin
+// that only says so, instead of taking the host down.
+juce::AudioProcessor* create_failed_plugin(const std::exception& error);
+
+template <typename Plugin>
+juce::AudioProcessor* create_plugin() {
+    try {
+        return new Plugin();
+    } catch (const std::exception& error) {
+        return create_failed_plugin(error);
+    }
+}

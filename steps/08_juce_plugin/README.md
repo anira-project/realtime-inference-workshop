@@ -30,7 +30,7 @@ Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), sh
 setLatencySamples(static_cast<int>(m_processor->latency_samples()));
 ```
 
-That one line is what lets the host line our track up with every other track: 1536 + the rounded max inference time + 2224, 4784 samples with `k_max_inference_ms` from 11.6 to 23.2 ms.
+That one line is what lets the host line our track up with every other track: 1536 + the worker's time + 2224, 4784 samples with `k_max_inference_ms` from 11.6 to 23.2 ms.
 
 **`processBlock`**: the mono mix-down, then step 7's `process_block`, unchanged. No engine, no allocation, no lock.
 

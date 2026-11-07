@@ -50,26 +50,31 @@ public:
     void prepare(size_t max_block_size) {
         m_worker.stop();
 
+        // Given: the worker's time, your worst case from step 4 (k_max_inference_ms)
+        // in samples, rounded up to whole callbacks: the audio thread only picks
+        // results up once per callback.
+        const double worst_case_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+        const size_t worker_time =
+            static_cast<size_t>(std::ceil(worst_case_samples / max_block_size)) * max_block_size;
+
         // ---- TODO 1 --------------------------------------------------------
         // The prefill: how much silence m_output starts with, so the host
         // always finds something to take. Step 3's prefill, and now the worker
         // needs time on top to run the model block.
         //
-        // Hint: the worker's time is k_max_inference_samples_rounded, your worst
-        // case from step 4 in samples, rounded up to whole callbacks. It comes
-        // from common/inference_time.h.
+        // Hint: the worker's time is worker_time, just above.
         // --------------------------------------------------------------------
-        m_prefill = (k_model.m_input_size - max_block_size) + k_max_inference_samples_rounded;  // <- solution
+        m_prefill = (k_model.m_input_size - max_block_size) + worker_time;  // <- solution
 
         check_prefill(m_prefill,
                       max_block_size,
                       k_model.m_input_size,
-                      k_max_inference_samples_rounded);  // Given: names TODO 1 if it is off
+                      worker_time);  // Given: names TODO 1 if it is off
 
         // Given: m_input holds one model block; m_output the worker's time and
         // one model block more, so the prefill fits
         m_input = ThreadSafeRingBuffer(k_model.m_input_size);
-        m_output = ThreadSafeRingBuffer(k_max_inference_samples_rounded + k_model.m_input_size);
+        m_output = ThreadSafeRingBuffer(worker_time + k_model.m_input_size);
         for (size_t i = 0; i < m_prefill; ++i) {
             const bool pushed = m_output.try_push(0.0f);
             assert(pushed);  // never fails: m_output has room for the prefill

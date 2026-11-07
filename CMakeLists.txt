@@ -36,8 +36,8 @@ option(WORKSHOP_JUCE "Build the JUCE plugin and app steps" ON)
 option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
 
 # The models are downloaded from the repository's own release into
-# steps/common/assets/models/, unless they are already there: only those the
-# enabled steps load. The test signal and the expected output are compiled in
+# steps/common/assets/models/, unless they are already there: one archive with
+# every model the steps load. The test signal and the expected output are compiled in
 # (steps/common/assets/test_signal.h).
 workshop_fetch_models()
 

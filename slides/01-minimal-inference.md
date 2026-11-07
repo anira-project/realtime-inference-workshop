@@ -157,7 +157,8 @@ cmake --build --preset release --target step01_exercise
 </div>
 
 Note:
-- Two TODOs: load the model, run the first block with a block size you pick
+- Two TODOs: load the model, run the first block with a block size you pick.
+- At the beginning of the main file you will find a constructer for the model that passes the has the model path and size. Use the values from the constructor
 - Build commands are on the slide
 - 8 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
@@ -179,7 +180,7 @@ constexpr struct {
 ```
 
 ```cpp
-OnnxEngine engine(k_model.m_path);  // <- fill out
+OnnxEngine engine(«k_model.m_path»);  // <- solution
 ```
 
 Note:
@@ -201,7 +202,7 @@ Note:
 ```cpp
 std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());  // given
 
-engine.process(buffer.data(), k_model.m_input_size);  // <- fill out
+engine.process(«buffer.data()», «k_model.m_input_size»);  // <- solution
 ```
 
 Note:

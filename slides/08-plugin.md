@@ -1,6 +1,6 @@
 <h1>Step 8<br>The plugin</h1>
 
-Everything from steps 1 to 7, where the host can reach it
+<!-- Everything from steps 1 to 7 in a JUCE plugin -->
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: demo -->
@@ -13,7 +13,7 @@ Note:
 
 <div class="tag">Host</div>
 
-## Three places the host talks to us
+## Everything from steps 1 to 7 in a JUCE plugin
 
 | Host call | What happens | Steps |
 |---|---|---|
@@ -65,11 +65,11 @@ Note:
 
 ## Break<br><span class="then">Afterwards: how anira handles these steps.</span>
 
-<div class="break-mug free-loop">{{ICON:coffee}}<div class="break-back break-countdown" style="margin-top: 50px;"><span class="break-label">back in</span><div class="task-timer" data-minutes="15"></div></div></div>
+<div class="break-mug">{{ICON:coffee}}<div class="break-back" style="margin-top: 150px;">back at 11:40</div></div>
 
 Note:
 - Every piece is a place where things can go wrong
 - You'd write all of it again for every new model
 - After the break: how anira does this for you
-- 15 minute break, we start again at 11:35
+- 15 minute break, we start again at 11:40
 - Click the timer to start the countdown; a tone with one minute left, three when time is up

@@ -44,6 +44,7 @@ Note:
 </div>
 
 Note:
+- Go through the slide fast
 - Every callback has a deadline: the real-time threshold, our time budget
 - Model block: 2048 samples = 46.4 ms. Says whether real-time is possible at all
 - Host callback: 512 samples = 11.6 ms. Says whether one forward pass fits into one callback
@@ -126,8 +127,8 @@ Note:
 - Only the forward pass between the two clock reads: that's what the worker in step 6 runs
 - `steady_clock`: a monotonic clock, made for measuring intervals
 - Every forward pass timed on its own: an average can't show a worst case
-- Iterations: how many forward passes will be measured 
-- Repetitions: creates a new onnx runtime environment and loads the model into a new session -> fresh engine each time
+- Iterations: how many forward passes are timed within one session.
+- Repetitions: how many times the whole benchmark runs from scratch. Each repetition creates a new ONNX Runtime environment and a new session, so nothing is carried over between runs.
 
 ---
 
@@ -200,11 +201,9 @@ Note:
 
 Note:
 - One earlier run on my Mac, ONNX Runtime: first pass 18 ms, then about 13 ms
-- The slower first pass is warm-up: one-time setup after loading.
+- First iteration is slower, this is typical for inference engines, they habe some warm up time
 - Click, the two thresholds: every call fits the 46.4 ms model block easily
 - None fits the 11.6 ms callback, not even a typical one
-- We will ignore the concept of warm-up in part 1, so we will take the worst case of 18 ms as our number anyway
-- Your output ends with your worst case: write it down, steps 6 and 7 need it
 ---
 
 <!-- .slide: data-visibility="hidden" -->
@@ -284,6 +283,7 @@ Note:
 
 Note:
 - Ask the room: did anyone measure a worst case above 46.4 ms?
+- Colleague will come to have a look and help
 - That means one forward pass would take longer than the audio it produces: no latency fixes that
 - Run it again with other apps closed and the laptop on power; a busy machine makes the worst case worse
 - Still above: tell us, we look at it together

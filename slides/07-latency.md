@@ -5,43 +5,13 @@
 
 Note:
 - The host hears it exactly the prefill late
-- So how do we line up a dry signal with it?
-- A latency that changes with load is a guess
-- Pick a fixed number the design can always hold, pad up to it
-- Aso we can mix our dry and our wet signal
-
----
-
-<div class="tag">Motivation</div>
-
-## Fixed latency<br><span class="then">Dry and wet align.</span>
-
-<div class="align meet">
-  <div class="align-row">
-    <div class="align-label">dry</div>
-    <div class="align-track">
-      <div class="align-wave dry delayed">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=100|from=2|to=3}}</div>
-    </div>
-  </div>
-  <div class="align-row">
-    <div class="align-label">wet</div>
-    <div class="align-track">
-      <div class="align-wave wet fixed">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=100|from=2|to=3}}</div>
-    </div>
-  </div>
-</div>
-
-Note:
-- Wet is late by design: collect a block, give the worker its time, and the model answers late
-- Undelayed dry + late wet: no blend, a slap-back echo and comb filtering
-- Delay dry by exactly the same amount
-- Then they line up and we can crossfade
+- But is this the same latency we need to pad our dry signal with?
 
 ---
 
 <div class="tag">The latency</div>
 
-## The latency<br><span class="then">And the model's own delay.</span>
+## What is the latency?<br><span class="then">The delay we need to pad the dry signal with.</span>
 
 <div class="lat-add with-code">
   <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>

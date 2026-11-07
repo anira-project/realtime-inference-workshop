@@ -28,7 +28,7 @@ Note:
 - `m_input` fills a quarter per callback; at the fourth, a whole model block of 2048 is there and the worker takes it
 - Worker thread: it spins on `try_pop` the whole time, and runs the model as soon as a block is whole. It is not tied to the callbacks: the run may take longer than one callback
 - `m_output` starts with the prefill, 5 blocks: the host hears silence first. The model's result arrives before the prefill runs out, and from then on the host hears the model's stream
-- Click: what this buys us
+- We solve 2 problems:
 - Its own clock, step 4: even a typical forward pass of 13 ms is longer than our 11.6 ms callback. On the worker that is fine, it has the time of the prefill
 - Its own rules, step 5: the engine allocates and locks. On the worker that is allowed; the audio thread stays real-time safe and never waits, never overloaded
 ---
@@ -46,7 +46,7 @@ Note:
 
 Note:
 - Goal: step 3's processor on two threads, with a fixed latency
-- `prepare`: the prefill for `m_output`, step 3's plus the worker's time; and start the worker thread
+- `prepare`: the prefill for `m_output`, same as in step 3 plus the worker's time; and start the worker thread
 - Audio thread: samples into `m_input`, samples out of `m_output`, never waiting
 - Worker: take a block out of `m_input`, run the model, push it into `m_output`
 
@@ -83,7 +83,7 @@ Note:
 
 Note:
 - Still the model, signals and engine
-- New: `host.h`, how long one block lasts: step 3's host loop sleeps that long after every callback, like an audio device
+- New: `host.h`, how long one block lasts: step 3's host loop sleeps one host block long after every callback, like an audio device
 - New: `ThreadSafeRingBuffer`, step 3's ring buffer safe between two threads, on moodycamel, fetched by CMake
 - New: `WorkerThread`, `start` and `stop` the worker thread
 
@@ -195,9 +195,9 @@ Note:
 - The worker needs time to run a model block: your worst case from step 4, the number you put into `inference_time.h`
 - My worst case: 18 ms
 - Click: in samples, at 44.1 kHz: 18 ms are 794 samples
-- Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
 - Whole callbacks, because the audio thread only picks results up once per callback
-- Click: the same two lines, given at the top of `prepare`. TODO 1 builds on `worker_time`
+- Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
+- Click: You don't need to calculate this yourself, it's given at the top of `prepare`. TODO 1 builds on `worker_time`
 
 ---
 
@@ -258,8 +258,8 @@ Note:
 ## TODO 1: The prefill
 
 ```cpp
-m_prefill = (k_model.m_input_size - max_block_size)    // <- fill out: step 3's prefill
-          + worker_time;                               //    plus the worker's time
+m_prefill = «(k_model.m_input_size - max_block_size)»    // <- solution: step 3's prefill
+          + «worker_time»;                               //    plus the worker's time
 
 // given: the sizes, the silence goes in, and the worker thread starts
 m_input = ThreadSafeRingBuffer(k_model.m_input_size);
@@ -272,7 +272,7 @@ Note:
 - The prefill is the sum of:
   - step 3's prefill, the buffer adaptation: one model block minus one host block
   - the worker's time, `worker_time`: the block still has to go through the model. Your worst case from step 4, in whole callbacks
-- A wrong prefill: the check names TODO 1
+- A wrong prefill: the check says what's wrong
 - The sizes are given: `m_input` one model block, `m_output` the worker's time plus one model block, so the prefill fits
 ---
 
@@ -286,7 +286,7 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_samples; ++i) {
-    const bool pushed = m_input.try_push(samples[i]);        // <- fill out
+    const bool pushed = «m_input.try_push(samples[i])»;        // <- solution
     if (!pushed) { m_unpushed += num_samples - i; break; }  // given: count the rest
 }
 const size_t zeros = std::min(m_unpushed, num_samples);     // given: zeros for those
@@ -298,7 +298,7 @@ while (m_debt > 0) {                                        // pay the debt firs
 }
 
 for (size_t i = zeros; i < num_samples; ++i) {
-    const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);  // <- fill out
+    const bool popped = m_debt == 0 && «m_output.try_pop(samples[i])»;  // <- solution
     if (!popped) {                                    // late: the rest is zeros, all owed
         std::fill_n(samples + i, num_samples - i, 0.0f);
         m_debt += num_samples - i;                                     // given
@@ -312,10 +312,9 @@ for (size_t i = zeros; i < num_samples; ++i) {
 Note:
 - Same job as step 3's `process_block`, minus the engine: host samples into `m_input`, model samples out of `m_output`
 - You fill in two calls: `try_push` and `try_pop`. They never wait and never allocate, they only say whether it worked
-- Push: `m_input` full? The rest of the block is lost. We count it in `m_unpushed` and send that many zeros instead
-- Pop: `m_output` empty? The worker is late. The rest of this callback goes out as zeros: a dropout
+- try_push: `m_input` full? The rest of the block is lost. We count it in `m_unpushed` and send that many zeros instead
+- try_pop: `m_output` empty? The worker is late. The rest of this callback goes out as zeros: a dropout
 - Those zeros are our debt. When the late samples arrive we throw that many away first, so everything after stays in place: a dropout, but the latency never grows
-- Details: bonus slide at the end of this step
 
 ---
 
@@ -326,14 +325,14 @@ Note:
 ```cpp
 // in process_model(), called over and over by m_worker
 for (size_t i = 0; i < k_model.m_input_size; ++i) {
-    while (!m_input.try_pop(m_model_block[i])) {    // <- fill out: spin
+    while («!m_input.try_pop(m_model_block[i])») {    // <- solution: spin
         if (!m_worker.running()) { return; }        // given
     }
 }
 m_engine.process(m_model_block.data(), k_model.m_input_size,
                  m_state.data(), m_state.size());
 for (size_t i = 0; i < k_model.m_input_size; ++i) {
-    while (!m_output.try_push(m_model_block[i])) {  // <- fill out: spin
+    while («!m_output.try_push(m_model_block[i])») {  // <- solution: spin
         if (!m_worker.running()) { return; }        // given
     }
 }

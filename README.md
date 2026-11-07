@@ -6,11 +6,12 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 
 ## Layout
 
-- `steps/` — one buildable folder per step, each with `exercise/` and `solution/`; steps 4, 5 and 8 have no exercise, only `solution/`
+- `steps/` — one buildable folder per step, each with `exercise/` and `solution/`; steps 4, 5 and 8 have no exercise, only `solution/`, and step 11 is a playground, `exercise/` only
 - `steps/common/assets/` — the test signal and its target output, the example audio in `audio/`, and the models in `models/` (downloaded at configure time)
 - `steps/common/helpers/` — the engines, the ring buffer, the fake host and the reporting, shared by every step
 - `setup/` — setup check
-- `cmake/` — shared CMake helpers (backends, models, anira, JUCE)
+- `cmake/` — shared CMake helpers (backends, models, anira, JUCE, exercises)
+- `scripts/` — the slide build, the model export and test data, and `fill_exercise.py` for the exercise check
 - `slides/` — Reveal.js slides
 
 ## Setup
@@ -24,7 +25,7 @@ about 500 MB, and the room's network is shared by everyone.
 
 ```bash
 cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/release -j
+cmake --build build/release -j       # the libraries and every solution
 ./build/release/bin/step01_solution
 ```
 
@@ -50,6 +51,27 @@ clangd (`.clangd`) follows the build configured last.
 
 Timings, such as the benchmark in step 4, only mean something in the release
 build.
+
+## Exercises
+
+Every blank in an exercise is a `?`, in the C++ and in the model files of
+steps 9 and 10. An exercise builds once every `?` in its C++ is filled in, so
+the default build leaves the exercises out: build one with
+`--target stepNN_exercise` (`stepNN_exercise_check` and the plugin for steps 9
+and 10).
+
+That every exercise still fits its solution is checked by its filled-in copy:
+[`scripts/fill_exercise.py`](scripts/fill_exercise.py) takes each `?` line
+from the solution, and the copy has to build and pass like the solution. It
+fails, naming the line, if an exercise was committed filled in or drifted away
+from its solution. CI runs all of them; locally:
+
+```bash
+cmake --build --preset release --target step03_exercise_filled && ./build/release/bin/step03_exercise_filled
+cmake --build --preset release --target step09_exercise_filled_check && ./build/release/bin/step09_exercise_filled_check
+```
+
+Filling needs Python 3; without it, CMake skips these targets.
 
 Build a single step with `-DWORKSHOP_STEP=01`. See
 [steps/common/assets/models/README.md](steps/common/assets/models/README.md) for

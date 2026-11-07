@@ -83,12 +83,12 @@ Note:
 ```cpp
 OnnxEngine engine(path);                  // Loads the model
 
-engine.process(samples, num_samples);     // Overwrites the block in place
+engine.process(audio, num_samples);       // Overwrites the block in place
 ```
 
 Note:
 - The onnx engine wrapper has a constructor and one method, `process`
-- Constructor loads the model using the model_path
+- Constructor loads the model from its path
 - `process` takes where the block starts and how many samples it has
 - The audio is processed in place
 
@@ -137,33 +137,27 @@ cmake --build --preset release --target step01_exercise
 ./build/release/bin/step01_exercise
 ```
 
-<div class="run" style="grid-template-columns: 1fr 1.5fr 1.5fr">
+<div class="run" style="grid-template-columns: 1fr 1.5fr">
   <div class="run-step" data-seconds="2">
-    <div class="run-title"><span>1</span>Set the model path</div>
+    <div class="run-title"><span>1</span>Load the model</div>
     <div class="run-visual">
       <div class="run-file">{{FILE:model_forward.onnx}}</div>
       <div class="run-engine">{{ICON:cpp}}<small>ONNX Runtime</small></div>
     </div>
   </div>
-  <div class="run-step" data-seconds="2.2">
-    <div class="run-title"><span>2</span>Pick the block size</div>
+  <div class="run-step" data-seconds="3.4">
+    <div class="run-title"><span>2</span>Run the first block</div>
     <div class="run-visual run-wave">
       {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=6}}
       <div class="run-cuts"><i></i><i></i><i></i></div>
       <div class="run-size">? samples</div>
-    </div>
-  </div>
-  <div class="run-step" data-seconds="3.4">
-    <div class="run-title"><span>3</span>Run the first block</div>
-    <div class="run-visual">
-      <div class="run-engine">{{ICON:cpp}}<small>process()</small></div>
       <div class="run-ok">✓ matches the reference</div>
     </div>
   </div>
 </div>
 
 Note:
-- Three TODOs: set the model path, pick the block size, run the first block
+- Two TODOs: load the model, run the first block with a block size you pick
 - Build commands are on the slide
 - 8 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
@@ -174,7 +168,7 @@ Note:
 
 <div class="tag">Solution</div>
 
-## TODO 1: Set the model path
+## TODO 1: Load the model
 
 ```cpp
 // given outside the function, in the global scope
@@ -185,18 +179,18 @@ constexpr struct {
 ```
 
 ```cpp
-const std::string model_path = k_model.m_path; // <- fill out
+OnnxEngine engine(k_model.m_path);  // <- fill out
 ```
 
 Note:
-- Only the path to fill in
+- The engine takes the path to the .onnx file, from the struct
 - The engine loads it once: 126 MB, too slow to do per block
 
 ---
 
 <div class="tag">Solution</div>
 
-## TODO 2: Pick the block size
+## TODO 2: Run the first block
 
 <div class="run-visual run-wave run-solved" style="margin-bottom: 5rem">
   {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=6}}
@@ -205,31 +199,16 @@ Note:
 </div>
 
 ```cpp
-const size_t process_size = k_model.m_input_size; // <- fill out
+std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());  // given
+
+engine.process(audio.data(), k_model.m_input_size);  // <- fill out
 ```
 
 Note:
-- 2048, set by the model at export
+- Where the block starts, `audio.data()`, and how many samples: 2048, set by the model at export
 - Try 512: the engine says the model takes exactly 2048 samples per call
-
----
-
-<div class="tag">Solution</div>
-
-## TODO 3: Run the first block
-
-```cpp
-std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
-
-engine.process(audio.data(), process_size); // <- fill out
-
-return report_first_block(audio, k_input_signal, k_target_output_signal, process_size);
-```
-
-Note:
-- `audio` starts as a copy of the input
-- `process()` reads the block and overwrites it with the result
-- Only the first `process_size` samples are compared
+- `audio` starts as a copy of the input; `process()` overwrites the block with the result, in place
+- Only the first 2048 samples are compared
 
 ---
 
@@ -271,7 +250,7 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process(audio.data() + i * process_size, process_size);
+    engine.process(audio.data() + i * k_model.m_input_size, k_model.m_input_size);
 }
 ```
 

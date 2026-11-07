@@ -239,7 +239,7 @@ if (m_input.available() >= k_model.m_input_size) {
                      m_state.data(), m_state.size());
     for (size_t i = 0; i < k_model.m_input_size; ++i) {
         const bool pushed = m_output.try_push(m_model_block[i]);  // <- 3. fill out
-        assert(pushed);  // never fails: TODO 1 made room
+        assert(pushed);  // never fails: m_output has room
     }
 }
 ```

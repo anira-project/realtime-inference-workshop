@@ -1,8 +1,9 @@
 name: build
 
 # Every step and the plugin have to build on every platform participants bring,
-# and every solution has to produce the right numbers. Exercises only have to
-# build: they fail at runtime by design, until their TODOs are filled in.
+# and every solution has to produce the right numbers. Exercises only build
+# once their ? are filled in: filled in from the solution, they have to pass
+# like it.
 
 on:
   push:
@@ -102,17 +103,21 @@ jobs:
           path=$(find build -name "step05_solution" | head -1)
           "$path" verify
 
-      # Exercises are expected to fail — they are full of TODOs. What matters
-      # is that they compile, so nobody loses time on a build error that is
-      # not theirs.
-      - name: Exercises build and report their first open TODO
+      # Every exercise, its ? filled in from the solution (scripts/fill_exercise.py),
+      # has to build and pass like the solution: exercise and solution still
+      # match, and no exercise was committed filled in.
+      - name: Filled-in exercises pass
         shell: bash
+        env:
+          WORKSHOP_HOST_SLOWDOWN: 4
         run: |
-          for binary in step01_exercise step02_exercise step03_exercise step06_exercise step07_exercise; do
+          for binary in step01_exercise_filled step02_exercise_filled step03_exercise_filled \
+                        step06_exercise_filled step07_exercise_filled \
+                        step09_exercise_filled_check step10_exercise_filled_check; do
+            cmake --build build --config Release --target $binary
             path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)
-            if [ -z "$path" ]; then echo "$binary was not built"; exit 1; fi
             echo "=== $binary"
-            "$path" || true
+            "$path"
           done
 
       - name: The plugin was built

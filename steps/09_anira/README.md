@@ -7,7 +7,7 @@
 ## What you have
 
 - `steps/common/assets/models/rave/model_forward.onnx` — the model as in step 1: audio plus a state tensor in, audio plus the new state out.
-- [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named and their roles given. Every `TODO1` and `TODO2` is a blank: replace it with the value, a number as it is (`2048`, no quotes), a name in quotes (`"audio"`). The comment next to each blank says where the value comes from.
+- [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named and their roles given. Every `?` is a blank: replace it with the value, a number as it is (`2048`, no quotes), a name in its quotes (`"audio"`). The comment next to each blank says which TODO it belongs to and where the value comes from.
 - [`exercise/contract.json`](exercise/contract.json) — how it runs: the budget measured at prepare on this machine (`"budget": "measured"`), warm-up runs until their times are stable (`"warmup": "until_stable"`), the input block on a miss (`"on_miss": "bypass"`). Complete.
 - [`common/helpers/host.h`](../common/helpers/host.h) — the fake host from step 6, pacing its callbacks.
 - [`common/helpers/support.h`](../common/helpers/support.h) — `report_with_latency`: the step 7 comparison, with the late callbacks left out.
@@ -56,19 +56,21 @@ The check runs twice. First offline, like a bounce: the host calls as fast as it
 
 ## If you're stuck
 
-- **`model.json, line 13: TODO1 is still open`** — a blank not filled yet; the line says which.
+`AniraProcessor.cpp` builds once every `?` in it is filled in. The `?` in `model.json` are found when the check runs:
+
+- **`model.json, line 13: ? is still open`** (or `"?" is still open`) — a blank not filled yet; the line says which.
 - **`model.json, line 13: "2048" is text; write the number without quotes`** — a number in quotes is a string in JSON.
 - **`inputs[0].axes[2][1]: an extent is a positive integer or "dynamic"`** — a size is not a positive number. The path names it: `inputs[0]` is `audio`, `inputs[1]` is `state_in`, `outputs[…]` the same for the outputs.
 - **`prepare: ... 'audio' ... axes`** or a similar refusal naming a tensor — TODO 1: a size is filled but wrong; prepare checks every spec against the file and says which one does not fit.
 - **`create: configuration error: tensor 'state_in': a State input needs a state_source`** — TODO 2: a state input nobody feeds is refused by name, at create.
 - **`prepare: configuration error: contract: Hard host blocks missing`** — TODO 3.1: the contract does not know the host's blocks yet.
 - **`TODO 3: read the latency of output slot 0`** — TODO 3.2.
-- **`state_source 'TODO2' names no output tensor`** (or `'audio'`) — TODO 2: no output has that name.
+- **`state_source 'audio' names no output tensor`** — TODO 2: no output has that name.
 - **`state_source 'audio_out' is a Streamed output`** — TODO 2: a state input is fed from the state output, not from the audio.
 - **`TODO 1: audio_out declares no latency`** — `"latency"` in `model.json` is 0.
-- **`TODO 3: offline, the output is the input`** — TODO 3.3: the block goes out untouched; `process_wait` is still commented out.
+- **`TODO 3: offline, the output is the input`** — TODO 3.3: the block goes out untouched; the offline call does not process it.
 - **`TODO 3: offline, N blocks were missed`** — TODO 3.3: the offline call does not wait; give it `ANIRA_WAIT_FOREVER`.
-- **`TODO 3: live, the output is the input`** — TODO 3.4: `process` is still commented out.
+- **`TODO 3: live, the output is the input`** — TODO 3.4: the live call does not process the block.
 - **`FAILED: max abs diff 0.158`** with the latency reported — the state is not carried: block 0 matches, every block after it does not. Same failure as a fresh engine per block in step 1. Check `state_source`.
 - **Many late callbacks** — the machine was busier during the stream than while prepare measured. Close what else runs, or give the budget headroom by hand, `"budget": {"ms": 20}`; the latency grows with it.
 

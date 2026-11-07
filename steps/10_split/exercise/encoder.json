@@ -1,4 +1,4 @@
-// Step 10: the encoder. Replace every TODO1 with its value, a number as it is.
+// Step 10: the encoder. Replace every ? with its value, a number as it is.
 // The comments are hints; the processor drops them before anira reads the file.
 {
   "models": [
@@ -9,7 +9,7 @@
       "name": "audio",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 1], ["time", TODO1]]   // TODO1: audio samples per inference, as in step 9
+      "axes": [["batch", 1], ["channel", 1], ["time", ?]]   // TODO1: audio samples per inference, as in step 9
     },
     {
       "name": "state_in",
@@ -24,7 +24,7 @@
       "name": "latents",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", TODO1], ["time", TODO1]]   // TODO1: how many latents, and frames per inference
+      "axes": [["batch", 1], ["channel", ?], ["time", ?]]   // TODO1: how many latents, and frames per inference
     },
     {
       "name": "state_out",

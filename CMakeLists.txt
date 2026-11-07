@@ -14,6 +14,7 @@ include(readerwriterqueue)
 include(juce)
 include(models)
 include(anira)
+include(exercises)
 
 set(WORKSHOP_ONNX_MODEL "${WORKSHOP_MODELS_DIR}/rave/model_forward.onnx"
     CACHE FILEPATH "ONNX model to run")

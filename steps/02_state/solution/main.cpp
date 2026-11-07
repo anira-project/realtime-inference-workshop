@@ -5,7 +5,8 @@
 // Task:   pass the engine everything the model needs, at the TODO banners below.
 // Check:  every block within 1e-4 of what the model produced in Python.
 //
-// It builds and runs as it is, and fails from the second block on.
+// It builds once every ? is filled in. Without the state, every block after
+// the first fails.
 
 #include <cstddef>
 #include <cstdio>
@@ -30,8 +31,7 @@ int main() {
     try {
         OnnxEngine engine(k_model.m_path);
 
-        const size_t process_size = k_model.m_input_size;
-        const size_t num_blocks = k_signal_length / process_size;
+        const size_t num_blocks = k_signal_length / k_model.m_input_size;
 
         // The whole signal, processed in place block by block.
         std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
@@ -47,10 +47,11 @@ int main() {
             // ---- TODO 2 ----------------------------------------------------
             // What should be passed next to audio in process()?
             // ----------------------------------------------------------------
-            engine.process(audio.data() + i * process_size, process_size, state.data(), state.size());  // <- solution
+            engine.process(audio.data() + i * k_model.m_input_size, k_model.m_input_size,
+                           state.data(), state.size());  // <- solution
         }
 
-        return report_blocks(audio, k_target_output_signal, process_size);
+        return report_blocks(audio, k_target_output_signal, k_model.m_input_size);
     } catch (const std::exception& error) {
         std::printf("FAILED: %s\n", error.what());
         return 1;

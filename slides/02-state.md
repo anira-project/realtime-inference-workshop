@@ -86,7 +86,8 @@ Note:
 ## The engine<br><span class="then">The same call, with one more argument.</span>
 
 ```cpp
-OnnxEngine engine(path);
+OnnxEngine engine;
+engine.load(path);
 
 engine.process(audio, num_samples);                     // without the state
 engine.process(audio, num_samples, state, state_size);  // with the state of 63488 floats

@@ -110,7 +110,8 @@ Note:
 constexpr size_t k_iterations = 10;  // 10 forward passes, every one timed
 constexpr size_t k_repetitions = 2;  // 2 fresh engines
 for (size_t repetition = 0; repetition < k_repetitions; ++repetition) {
-    OnnxEngine engine(k_model.m_path);  // not timed
+    OnnxEngine engine;
+    engine.load(k_model.m_path);  // not timed
 
     for (size_t iteration = 0; iteration < k_iterations; ++iteration) {
         const auto begin = std::chrono::steady_clock::now();

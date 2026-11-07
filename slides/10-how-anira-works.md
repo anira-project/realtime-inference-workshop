@@ -1,58 +1,53 @@
 <h1>How anira works</h1>
 
-Three configs, then the design
+Create, prepare, process
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->
 
 Note:
-- From what anira is to how it works.
-- First the three configs you declare, then the design, over the next three chapters.
+- Thanks valentin for the history overview of anira
+- In the next part I want to show you how anira works.
+- You start using anira, by declaring up to three configs
 
 ---
 
 <div class="tag">How you use it</div>
 
-## Three configs say what, how, and with what.<br><span class="then">The handler runs it.</span>
+## Three configs: the model, the stream, the pool.<br><span class="then">The handler runs it.</span>
 
 <div class="cards">
-  <div class="card">{{ICON:model}}<div class="card-title">ModelConfig</div><div class="card-text">what: the engine and its file, every tensor, its role</div><div class="card-file">model.json</div></div>
+  <div class="card">{{ICON:model}}<div class="card-title">ModelConfig</div><div class="card-text">the model file or binary, every tensor and its role</div><div class="card-file">model.json</div></div>
   <div class="card-arrow">→</div>
-  <div class="card">{{ICON:sliders}}<div class="card-title">Contract</div><div class="card-text">how: <em>Hard</em> for a stream, <em>Async</em> for jobs</div><div class="card-file">contract.json</div></div>
+  <div class="card">{{ICON:sliders}}<div class="card-title">Contract</div><div class="card-text">the host's block sizes and sample rate, the inference budget</div><div class="card-file">contract.json</div></div>
   <div class="card-arrow">→</div>
-  <div class="card">{{ICON:chip}}<div class="card-title">ContextConfig</div><div class="card-text">with what: the pool, its threads, the log</div><div class="card-file optional">context.json · optional</div></div>
+  <div class="card">{{ICON:chip}}<div class="card-title">ContextConfig</div><div class="card-text">the thread pool, its threads, the log level</div><div class="card-file optional">context.json · optional</div></div>
   <div class="card-arrow">→</div>
-  <div class="card accent">{{ICON:shield}}<div class="card-title">Handler</div><div class="card-text">three calls</div><div class="card-file">create · prepare · process</div></div>
+  <div class="card accent">{{ICON:shield}}<div class="card-title">Handler</div><div class="card-text">your API to the inference pool</div><div class="card-file">create · prepare · process</div></div>
 </div>
 
 <div class="cards-note">A model file and a contract file, plus an optional context file, and three calls. For most models that is all.</div>
 
-<div class="cards-note fragment">Some models need their own pre- and post-processing: a stage, in code. That comes later.</div>
-
 Note:
-- Three configs say what, how and with what, and the handler runs it.
-- ModelConfig is the what: the model files and every tensor, each with a name and a role.
-- The contract is the how: what the host promises, and what it gets back.
-- Hard is the contract for a stream, and it is the one we use all day; Async, for jobs, comes later.
-- ContextConfig is the with what: the pool, its threads and how they wait, and the log, one per process, and the defaults fit most hosts. The engine itself is named in the model file.
-- So that is a model file and a contract file, plus an optional context file.
-- The handler takes three calls, in the three places from step 8: create in the constructor, prepare in prepareToPlay, process in processBlock.
-- For most models, that is all you write.
-- [click] A model that needs its own pre- and post-processing gets a stage in code, and that comes in the process chapter.
+- With anira, most models run without any processing code of your own.
+- You declare the model and the runtime settings in config files, and the InferenceHandler is your API to anira's inference thread pool.
+- There are three configs: one for the model, one for the stream contract, one for the pool.
+- The ModelConfig declares the model: its file path or binary, and every tensor with its role.
+- The Contract is the contract for the stream: it contains information about the host's buffer sizes and sample rate, and the inference budget.
+- The optional ContextConfig declares the context of the process: how many threads the pool has and which log level. There is one pool per process, and every handler shares it.
+- The InferenceHandler gives you the three typical calls from step 8: create, prepare and process. It is created with the model config and the context; the contract comes in at prepare, once the host has said its buffer size.
 
 ---
 
 <div class="tag">In the following</div>
 
-## One map, three rows.<br><span class="then">A chapter per row, each from part 1 to anira.</span>
+## The three calls in a plugin,<br><span class="then">now with anira behind them.</span>
 
 {{MAP}}
 
 Note:
-- One map, three rows, and a chapter per row.
-- The map is still empty: your app, the handler, the session behind it, and the context with the pool.
-- The columns run from your code on the left, through the handler, which is the public C ABI, to anira's private session and context on the right; we come back to the ABI at the end.
-- The top band is the main and the audio thread, the bottom one the inference threads.
-- The rows are the three places in a plugin from step 8: the constructor, prepareToPlay and processBlock.
-- Each chapter fills one row, and every concept in it starts from the step in part 1 where we built it by hand.
-- At the end the map is full, and the last chapter looks at it as one piece.
+- The three handler calls, create, prepare and process, are called in the typical plugin calls from step 8: the constructor, prepareToPlay and processBlock.
+- The columns run from your code on the left, through the language api of your choice (C++, Typescript, C), through the C ABI, to anira's private session and context on the right
+- Typically create and prepare run on the main thread and the process function is called from the audio thread.
+- In the following we will fill each row
+- We'll start with the implementations from the first workshop part and see how its implemented in anira for general use case

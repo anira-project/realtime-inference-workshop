@@ -50,8 +50,9 @@ Note:
 - we need a reliable way of passing the samples, that makes sure the model always get a block of 2048 and the host will always get 512 samples
 - The approach: A ring buffer on each side of the model
 - Host pushes whatever it has into the first ringbuffer
-- Full block in: the model runs, writes 2048 to the output ring buffer
-- Host takes its block size each call, 512 in this picture
+- The model takes a full block, as soon as it's available. 
+- The model processes and writes 2048 to the output ring buffer
+- Host takes its block size each call, 512 in our case
 
 ---
 
@@ -126,6 +127,8 @@ buffer.pop(samples, num_samples);      // Take from the front — throws if too 
 Note:
 - A ringbuffer is like a queue for samples with a fixed size
 - Allocates once with the correct capacity or size, when created, never again
+- We use 3 methods: 
+- The available() method checks if there are samples in the buffer
 - `push` at the back, `pop` from the front: first in, first out method
 - If the buffer has the wrong size: it throws, so we notice right away
 
@@ -173,7 +176,7 @@ cmake --build --preset release --target step03_exercise
 </div>
 
 Note:
-- Three things: size the ring buffers, pump a whole block, hand the samples back
+- Your task is to size the ring buffers, pump a whole block, hand the samples back
 - `main.cpp` in steps/03_host_buffer_size/exercise, build commands on the slide
 - 8 minutes, don't worry if you don't finish, we solve it together
 
@@ -190,11 +193,9 @@ const size_t capacity = k_model.m_input_size; // <- fill out
 
 
 Note:
-- Synchronous case: the model runs inside the callback, nothing happens between callbacks
-- So one callback is: push 512, maybe run the model, pop 512
-- Input: fills 512 per call, full at 2048 in callback 4, emptied in the same call
-- Output: the model's 2048 land when the previous block is fully drained (512 divides 2048), so 2048 is the peak
-- So one model block for both is enough
+- In this set up the model runs inside the fourth callback and nothing happens between callbacks
+- We need at least one model block, so the model get the right amount of samples
+- But one model block for both is enough
 - For host sizes that don't divide 2048 or are a multiple of 2048 this isn't true anymore, but we'll get into that in part 2
 
 ---
@@ -218,7 +219,6 @@ if (has_block) {
 Note:
 - First we push the host's samples into the input ring buffer, one host sample block at a time
 - Check if 2048 sample are available -> only pump one model block at a time
-- With 512 per call that is every fourth callback, never more than one block
 - Then: pop, process, push to the output ring buffer
 
 ---
@@ -248,7 +248,7 @@ Note:
 <div class="lat-add">
   <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-op fragment">+</div>
-  <div class="lat-term fragment"><span>the model itself</span><small>in this case?</small><strong>2224</strong></div>
+  <div class="lat-term fragment"><span>the model itself</span><small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
   <div class="lat-op fragment">=</div>
   <div class="lat-term total fragment"><span>latency</span><small>samples</small><strong>3760</strong></div>
 </div>
@@ -258,11 +258,11 @@ Note:
 Note:
 - Ask first: How long does it take to hear our first processed samples?
 - The model needs 2048, the host brings 512 at a time
-- Callbacks 1 to 3: `m_input` collects 512, 1024, 1536 samples, `m_output` is empty, so the host gets silence: 3 × 512 = 1536 
+- Callbacks 1 to 3: `m_input` only collects samples 
 - Callback 4: the block is complete, the model runs inside the callback
-- The first 3 callback make up the Buffer adaptation, the first part of our latency.
+- The first part of our latency: the first 3 callback make up the Buffer adaptation, the time before the model can start running, which is 1536 samples
 - In general: model block minus the largest block that divides both, here 2048 − 512
-- Second part of the latency: plus the model itself. Here 2224: 1696 from the decoder's transposed convolutions, 528 from the PQMF filter bank (from the export script, not visible from C++)
+- Second part of the latency: the latency of the model itself. Here 2224: 1696 from the decoder's transposed convolutions, 528 from the PQMF filter bank (from the export script, not visible from C++)
 - Total 3760 samples, about 85 ms at 44.1 kHz
 - Only for 512: other host block sizes give other numbers, part 2
 
@@ -282,5 +282,4 @@ Note:
 Note:
 - Our model now runs on the host's 512-sample blocks
 - But we now have three callbacks doing nothing, the fourth a full forward pass
-- To know if we are even realtime capable we need to know how long our forward pass takes
-- Can we run it in time? Let's measure
+- We need to know if our forward pass is fast enough to run in one callback

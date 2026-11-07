@@ -5,6 +5,7 @@
 //
 // In steps 1 to 8 every loop repeats only every LOOP_EVERY ms: a looping CSS animation
 // plays once, holds its end, and starts over then; a pipeline holds until then.
+// Anything inside .free-loop (the break's coffee steam) keeps its own CSS loop.
 const RUN_START = 400;
 const RUN_HOLD = 10600;
 const LOOP_EVERY = 20000;
@@ -51,7 +52,7 @@ window.addEventListener('reveal-ready', () => {
     const slow = slowLoops(currentSlide);
     loops = [];
     for (const animation of currentSlide.getAnimations({ subtree: true })) {
-      if (slow && animation.effect.getTiming().iterations === Infinity) {
+      if (slow && animation.effect.getTiming().iterations === Infinity && !animation.effect.target?.closest('.free-loop')) {
         animation.effect.updateTiming({ iterations: 1, fill: 'forwards' });
         loops.push(animation);
       }

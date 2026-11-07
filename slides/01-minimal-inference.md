@@ -259,12 +259,9 @@ Note:
 <p class="wave-question fragment">Why does this happen?</p>
 
 Note:
-- Press the speaker: the demo chords, and the sound keeps cutting out and coming back
-- No memory passed: cleared after every block, so the waiting audio is thrown away and we start with silence at each block, instead of the audio from the memory of the last block.
-- The input never reaches the output: every block is the model’s answer to silence, identical each time
-- Why does this happen?
-
-- disclaimer: This is not exactly what you would hear in our case, since our model latency is bigger than the block size the model takes, so in reality in our case you would only hear silence. But if our model latency were shorter or our block size bigger you would hear gaps like in this example.
+- One block works. Now we run the whole signal, block after block: listen
+- the sound keeps cutting out. Something is wrong
+- Click: why? That's step 2
 
 ---
 
@@ -288,7 +285,5 @@ block 4    max abs diff 0.113      <-- FAILED
 ```
 
 Note:
-- The call from step 1, once per block, over the whole test signal
-- This is what the exercise prints before you change anything
-- Block 0 matches the reference, every block after it fails
-- Don't explain yet: why is next
+- What the exercise prints for the whole signal: block 0 matches, every block after it fails
+- Don't explain yet: that's step 2

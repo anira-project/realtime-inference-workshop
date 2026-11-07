@@ -171,7 +171,7 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process(audio.data() + i * k_model.m_input_size, k_model.m_input_size,
+    engine.process(buffer.data() + i * k_model.m_input_size, k_model.m_input_size,
                    state.data(), state.size());  // <- fill out
 }
 ```

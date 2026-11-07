@@ -120,16 +120,16 @@ int main() {
 
         // The host: the signal in one buffer, handed over 512 samples at a
         // time and processed in place.
-        std::vector<float> output(k_input_signal.begin(), k_input_signal.end());
-        for (size_t start = 0; start < output.size(); start += k_host_block_size) {
-            processor.process_block(output.data() + start, k_host_block_size);
+        std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());
+        for (size_t start = 0; start < buffer.size(); start += k_host_block_size) {
+            processor.process_block(buffer.data() + start, k_host_block_size);
         }
 
         // Silence first, then the model's stream.
         const size_t latency = k_model.m_input_size - k_host_block_size;
-        return report_with_latency(output.data(),
+        return report_with_latency(buffer.data(),
                                    k_target_output_signal.data(),
-                                   output.size(),
+                                   buffer.size(),
                                    latency);
     } catch (const std::exception& error) {
         std::printf("FAILED: %s\n", error.what());

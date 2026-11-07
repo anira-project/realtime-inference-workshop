@@ -36,19 +36,19 @@ int main() {
 
         // The whole signal is in the buffer, but only its first block gets
         // processed.
-        std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
+        std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());
 
         // ---- TODO 2 --------------------------------------------------------
         // Run the first block through the engine: pass where it starts and how
         // many samples it has. Pick a number, run it, and see whether the
         // model agrees with you. It is processed in place, so afterwards the
-        // first samples of `audio` hold the model's output.
+        // first samples of `buffer` hold the model's output.
         //
         // Hint: a model often has a fixed processing block size
         // --------------------------------------------------------------------
         engine.process(?, ?);  // <- fill out
 
-        return report_first_block(audio, k_input_signal, k_target_output_signal, k_model.m_input_size);
+        return report_first_block(buffer, k_input_signal, k_target_output_signal, k_model.m_input_size);
     } catch (const std::exception& error) {
         std::printf("FAILED: %s\n", error.what());
         return 1;

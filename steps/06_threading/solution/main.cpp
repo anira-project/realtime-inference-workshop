@@ -194,16 +194,16 @@ int main() {
         // callback. Two threads only work if the audio thread is called at the
         // audio rate, one block every 11.6 ms, not as fast as the loop can go.
         // The sleep simulates the audio device.
-        std::vector<float> output(k_input_signal.begin(), k_input_signal.end());
-        for (size_t start = 0; start < output.size(); start += k_host_block_size) {
-            processor.process_block(output.data() + start, k_host_block_size);
+        std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());
+        for (size_t start = 0; start < buffer.size(); start += k_host_block_size) {
+            processor.process_block(buffer.data() + start, k_host_block_size);
             std::this_thread::sleep_for(block_duration(k_host_block_size, k_model.m_sample_rate));
         }
 
         processor.stop();
 
         // Silence for the prefill, then the model's stream.
-        return report_with_prefill(output,
+        return report_with_prefill(buffer,
                                    k_target_output_signal,
                                    processor.prefill_samples(),
                                    k_host_block_size,

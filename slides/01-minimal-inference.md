@@ -199,15 +199,15 @@ Note:
 </div>
 
 ```cpp
-std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());  // given
+std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());  // given
 
-engine.process(audio.data(), k_model.m_input_size);  // <- fill out
+engine.process(buffer.data(), k_model.m_input_size);  // <- fill out
 ```
 
 Note:
-- Where the block starts, `audio.data()`, and how many samples: 2048, set by the model at export
+- Where the block starts, `buffer.data()`, and how many samples: 2048, set by the model at export
 - Try 512: the engine says the model takes exactly 2048 samples per call
-- `audio` starts as a copy of the input; `process()` overwrites the block with the result, in place
+- `buffer` starts as a copy of the input; `process()` overwrites the block with the result, in place
 - Only the first 2048 samples are compared
 
 ---
@@ -250,7 +250,7 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
-    engine.process(audio.data() + i * k_model.m_input_size, k_model.m_input_size);
+    engine.process(buffer.data() + i * k_model.m_input_size, k_model.m_input_size);
 }
 ```
 

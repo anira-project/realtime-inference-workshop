@@ -2,7 +2,6 @@
 
 - Remove the Claude trailer from commit 72833ee (Lina, 2026-11-04, "Renumber part 1 to steps 1-8 and drop the shipping step"): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, the only one in the history. Rewrites the 70 commits after it and needs a force push of main; Lina resets her main to origin/main afterwards.
 - Worker thread grafik step 6 fixen
-- Threadsafe Ringbuffers ohne one writer, one reader
 - Model latency erst bei latency einbringen
 - Latency einfach erklären ohne exercise
 - Three places the host talks to us ersätzen
@@ -20,6 +19,7 @@
 
 ## Done (2026-11-07)
 
+- Threadsafe Ringbuffers ohne one writer, one reader: the table slide in step 6 became one flow animation, "Every callback 512 in, 512 out", in two lanes: the callback's host block (not a ring) into m_input, the worker spinning on try_pop until a model block is whole, the model, the result into m_output, the audio thread taking the prefill first. One writer, one reader is a line below it and in the notes.
 - Benchmark fillout muss nach oben, rest muss in andere header file: inference_time.h holds only k_max_inference_ms. Step 4 prints and shows milliseconds only; the 46.4 ms check stays below it. Step 6 introduces the worker's time: an explainer slide, and `worker_time` computed in two given lines at the top of prepare(); steps 7 and 8 compute it the same way.
 - rename audio to output: the signal processed in place is `buffer` in every step (1, 2, 3, 5, 6, 7), in the checks of steps 1 and 2 and in host.h; the slides follow. The engine's parameter stays `audio`.
 - Exercises: every blank is a ?, in steps 1–3, 6, 7, 9 and 10, C++ and model files; step 9's commented-out calls are real lines now. The exercises stay out of the default build, scripts/fill_exercise.py fills each from its solution (stepNN_exercise_filled, step09/10_exercise_filled_check), and CI runs them: an exercise committed filled in or drifted from its solution fails, naming the line.

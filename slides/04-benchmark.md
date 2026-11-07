@@ -298,7 +298,7 @@ Note:
 
 ```cpp
 // steps/common/inference_time.h
-constexpr double k_max_inference_ms = 18.0;  // <- fill out after step 4
+constexpr double k_max_inference_ms = «18.0»;  // <- fill out after step 4
 ```
 
 Until you fill it in, it is 46.4 ms, one model block of time: everything runs, with more latency.<br>

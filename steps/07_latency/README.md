@@ -1,5 +1,7 @@
 # Step 7: Latency and the dry/wet mix
 
+**No exercise here** — this one is a demonstration: two lines in `prepare()`, walked through on the slides.
+
 **Goal:** work out how late the processed signal is, report that number, and delay the dry signal by the same amount so the two can be mixed.
 
 **Problem it solves:** step 6 left the audio thread safe and the stream exactly the prefill late, but the model itself answers late too. A plugin that cannot say how late it is cannot be mixed, and cannot be lined up by the host.
@@ -17,26 +19,16 @@ Nothing here is the engine being slow. It is the design, and the model:
 
 The first two are step 6's prefill. The second is a choice: it buys the worker the time of your worst case, and in exchange the latency is a **fixed number** instead of whatever the worker managed today. A number that changes with the weather is useless to the host. And it only holds for a host block of 512: other block sizes give other numbers, which is part 2.
 
-## What to do
+## What it does
 
-Open [`exercise/main.cpp`](exercise/main.cpp). It is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses. Your number from step 4 comes from [`common/inference_time.h`](../common/inference_time.h), as in step 6. Fill in the two TODO banners, both in `prepare()`:
+[`solution/main.cpp`](solution/main.cpp) is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses. Your number from step 4 comes from [`common/inference_time.h`](../common/inference_time.h), as in step 6. Two lines in `prepare()` are what this step is about:
 
-1. **`m_latency`**: the number above, what the host is told. Step 6's prefill already holds the first two parts. The wet path only gets that prefill: the model's own delay is already inside what it returns.
-2. **The dry delay**: prefill `m_dry` with the full latency in silence.
+1. **`m_latency = m_prefill + k_model.m_latency`**: the number above, what the host is told. Step 6's prefill holds the first two parts; the model's own delay comes on top. The wet path only gets the prefill: the model's own delay is already inside what it returns.
+2. **The dry delay**: `m_dry` starts with the full latency in silence.
 
-The mix in `process_block()` is given: both paths are equally late, so it is a plain crossfade between the delayed dry signal and the wet one.
+The mix in `process_block()` is a plain crossfade between the delayed dry signal and the wet one: both paths are equally late. The check behind the output lives in [`common/checks/step07.h`](../common/checks/step07.h).
 
-The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
-
-```
-FAILED: TODO 1: work out the latency
-FAILED: TODO 1: the latency is shorter than the model's own
-FAILED: TODO 2: delay the dry signal: m_dry has to start with the latency in silence
-```
-
-The checks behind these messages live in [`common/checks/step07.h`](../common/checks/step07.h).
-
-## Expected output
+## What it prints
 
 ```
 Reported latency: 5808 samples (131.7 ms at 44100 Hz)

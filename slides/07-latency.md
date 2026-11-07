@@ -1,7 +1,7 @@
 <h1>Step 7<br>Latency and the<br>dry/wet mix</h1>
 
 <!-- .slide: data-state="no-header" -->
-<!-- kind: exercise -->
+<!-- kind: demo -->
 
 Note:
 - The host hears it exactly the prefill late
@@ -39,103 +39,9 @@ Note:
 
 ---
 
-<div class="tag">Goal</div>
+<div class="tag">The latency</div>
 
-## The goal<br><span class="then">One latency number, dry and wet line up.</span>
-
-<div class="statement-points centered-two">
-  <div><small>1</small>Work out the latency and pass it to the host</div>
-  <div><small>2</small>Delay the dry signal so both sides align</div>
-</div>
-
-Note:
-- Goal: a fixed latency number, wet and dry aligned
-- Define the latency
-- Tell the host, use it to delay the dry path
-- The mix is given: easy once both sides are equally late
-
----
-
-<div class="tag">Given</div>
-
-## What we get<br><span class="then">Step 6, plus a dry path.</span>
-
-<div class="given">
-  <div class="given-column">
-    <div class="given-label">Assets</div>
-    <div class="given-folder">common/assets/</div>
-    {{FILE:model_forward.onnx}}
-    {{FILE:test_signal.h}}
-    {{FILE:target_signal.h}}
-  </div>
-  <div class="given-column many">
-    <div class="given-label">Helpers</div>
-    <div class="given-folder">common/helpers/ · CMake</div>
-    {{FILE:onnx_engine.h}}
-    {{FILE:ring_buffer.h}}
-    {{FILE:host.h}}
-    {{FILE:threadsafe_ring_buffer.h}}
-    {{FILE:worker_thread.h}}
-  </div>
-  <div class="given-column exercise">
-    <div class="given-label">Exercise</div>
-    <div class="given-folder">07_latency/exercise/</div>
-    {{FILE:main.cpp}}
-  </div>
-</div>
-
-Note:
-- No new files
-- Step 6's processor, filled in, plus a dry path
-
----
-
-<div class="tag">Task: <code>main.cpp</code></div>
-
-## The task
-
-<div class="task-timer" data-minutes="5"></div>
-
-Fill in the TODOs in `steps/07_latency/exercise/main.cpp`
-
-```bash
-cmake --build --preset release --target step07_exercise
-./build/release/bin/step07_exercise
-```
-
-<div class="run" style="grid-template-columns: 1fr 1fr">
-  <div class="run-step" data-seconds="2.6">
-    <div class="run-title"><span>1</span>Work out the latency</div>
-    <div class="run-visual run-latency">
-      <div class="lat-plus">latency =</div>
-      <div class="lat-part">?</div>
-      <div class="lat-plus">+</div>
-      <div class="lat-part">?</div>
-      <div class="lat-plus">+</div>
-      <div class="lat-part">?</div>
-    </div>
-  </div>
-  <div class="run-step" data-seconds="2.6">
-    <div class="run-title"><span>2</span>Delay the dry signal</div>
-    <div class="run-visual run-wave run-delay">
-      <div class="mix-wave dry">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
-      <div class="mix-wave wet">{{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=120|from=2|to=3}}</div>
-      <div class="run-ok">✓ dry and wet line up</div>
-    </div>
-  </div>
-</div>
-
-Note:
-- `main.cpp` in steps/07_latency/exercise
-- TODO 1: where does the delay come from? Everything between a sample going in and coming out
-- TODO 2: delay the dry signal by that number
-- 5 minutes, don't worry if you don't finish, we solve it together
-
----
-
-<div class="tag">Solution</div>
-
-## TODO 1: Work out the latency
+## The latency<br><span class="then">And the model's own delay.</span>
 
 <div class="lat-add with-code">
   <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
@@ -153,29 +59,31 @@ Note:
 // in prepare(): step 6's prefill, given
 adaptation = (k_model.m_input_size - max_block_size);
 m_prefill = adaptation + worker_time;
-m_latency = m_prefill + k_model.m_latency;  // <- fill out
+m_latency = m_prefill + k_model.m_latency;  // the number the host is told
 ```
 
 </div>
 
 Note:
-- Buffer adaptation: the model needs a whole block, 
-- The worker's time from step 6: your worst case from step 4, in whole callbacks
-- The model itself: 2224. 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. From the export script, not visible from C++
-- So it's our prefill from Step 6' plus `k_model.m_latency`
+- Buffer adaptation, step 3: the model needs a whole block
+- The worker's time, step 6: your worst case from step 4, in whole callbacks
+- Together, the prefill: that is how late the host hears the model's stream
+- New: the model itself answers late. 2224 samples: 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. From the export script, not visible from C++
+- Up to now it did not matter: we compared against the reference, which has it too. For the dry/wet mix it does: the dry signal has no such delay
+- So the latency is our prefill from step 6 plus `k_model.m_latency`
 - Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE
 - Only for 512: other block sizes give other numbers, part 2
 - Honest: fine for mixing, can't play through it live. Part 2 comes back to it
 
 ---
 
-<div class="tag">Solution</div>
+<div class="tag">The dry path</div>
 
-## TODO 2: Delay the dry signal
+## Delay the dry signal<br><span class="then">By the whole latency.</span>
 
 ```cpp
 // in prepare(): the wet path has step 6's prefill, the dry one gets its own
-const size_t dry_prefill = m_latency;  // <- fill out
+const size_t dry_prefill = m_latency;
 for (size_t i = 0; i < dry_prefill; ++i) {
     const bool pushed = m_dry.try_push(0.0f);
     assert(pushed);  // never fails: m_dry has room for the delay

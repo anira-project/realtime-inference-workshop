@@ -269,27 +269,26 @@ Note:
 
 <div class="tag">Bonus question</div>
 
-## How late is the host's output?
+## What is the algorithmic latency?
 
 <div class="lat-add">
-  <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
-  <div class="lat-op fragment">+</div>
-  <div class="lat-term fragment"><span>the model itself</span><small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
+  <div class="lat-term fragment"><span>model block</span><small>samples</small><strong>2048</strong></div>
+  <div class="lat-op fragment">−</div>
+  <div class="lat-term fragment"><span>host block</span><small>samples</small><strong>512</strong></div>
   <div class="lat-op fragment">=</div>
-  <div class="lat-term total fragment"><span>latency</span><small>samples</small><strong>3760</strong></div>
+  <div class="lat-term total fragment"><span>buffer adaptation</span><small>samples, the prefill</small><strong>1536</strong></div>
 </div>
 
 <div class="cards-note corner-note fragment">For 512 into 2048. Other host block sizes give other numbers: part 2.</div>
 
 Note:
-- Ask first: How long does it take to hear our first processed samples?
+- Ask first: how much latency does our processing add, the way we built it?
 - The model needs 2048, the host brings 512 at a time
 - Callbacks 1 to 3: `m_input` only collects samples, the host gets the prefill
 - Callback 4: the block is complete, the model runs inside the callback
-- The first part of our latency: the first 3 callbacks make up the buffer adaptation, the time before the model can start running, which is 1536 samples: our prefill from TODO 1
+- Click: that wait is the buffer adaptation, model block minus host block: 1536 samples, about 35 ms at 44.1 kHz. It is our prefill from TODO 1
 - In general: model block minus the largest block that divides both, here 2048 − 512
-- Second part of the latency: the latency of the model itself. Here 2224: 1696 from the decoder's transposed convolutions, 528 from the PQMF filter bank (from the export script, not visible from C++)
-- Total 3760 samples, about 85 ms at 44.1 kHz
+- It is the algorithm's latency, from how we feed the model. The model itself adds its own on top: step 7
 - Only for 512: other host block sizes give other numbers, part 2
 
 ---

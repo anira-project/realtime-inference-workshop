@@ -359,10 +359,8 @@ Note:
 ## An engine per instance.<br><span class="then">Every instance loads the model again.</span>
 
 ```cpp
-if (m_engine == nullptr) {
-    m_engine = std::make_unique<OnnxEngine>(k_model.m_path);
-    …
-}
+OnnxEngine m_engine{k_model.m_path};      // one per plugin instance
+ProcessorExample m_processor{m_engine};
 ```
 
 Note:

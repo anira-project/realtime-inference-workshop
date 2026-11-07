@@ -6,8 +6,6 @@
 //       boilerplate are PluginBase, shared with steps 8 and 9.
 #pragma once
 
-#include <memory>
-
 #include "DryWet.h"
 #include "PluginBase.h"
 #include "SplitProcessor.h"
@@ -16,11 +14,10 @@ class PluginProcessor final : public PluginBase {
 public:
     PluginProcessor();
 
-    void prepareToPlay(double sample_rate, int samples_per_block) override;
-    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override;
-    void releaseResources() override {}
-
 private:
-    std::unique_ptr<SplitProcessor> m_split;
+    size_t prepare(double sample_rate, size_t max_block_size) override;
+    void process(float* samples, size_t num_samples) override;
+
+    SplitProcessor m_split{WORKSHOP_STEP_DIR};
     DryWet m_dry_wet;  // Step 7's dry path: the decoder returns the wet signal only
 };

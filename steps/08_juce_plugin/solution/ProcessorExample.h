@@ -27,9 +27,6 @@ constexpr struct {
     size_t m_latency = 2224;
 } k_model{};
 
-// What the host hands over per callback: four callbacks make one model block.
-constexpr size_t k_host_block_size = 512;
-
 // Step 6's processor, with a dry path next to it:
 //
 //   audio thread:   host block -> m_input              m_output -> wet --+

@@ -25,9 +25,24 @@ struct CameraInput::Impl {
         juce::MessageManager::callAsync([callback = on_error, message] { callback(message); });
     }
 
+    // Linux: V4L2 directly. OpenCV's default order tries GStreamer first, and its errors
+    // (no frames, camera held by another program) don't say why. MJPG keeps USB webcams
+    // at full frame rate at 1280x720; cameras without it keep their own format. Elsewhere,
+    // or if V4L2 fails: OpenCV's default backend.
+    static void openCamera(cv::VideoCapture& capture) {
+#if JUCE_LINUX
+        if (capture.open(0, cv::CAP_V4L2)) {
+            capture.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+            return;
+        }
+#endif
+        capture.open(0);
+    }
+
     // Capture thread: opening can take a moment and read() blocks until the next frame.
     void run() {
-        cv::VideoCapture capture(0);
+        cv::VideoCapture capture;
+        openCamera(capture);
 #if JUCE_MAC
         // OpenCV asks for camera permission on the first open and fails at once instead of
         // waiting for the answer: try again for half a minute while the dialog is up.

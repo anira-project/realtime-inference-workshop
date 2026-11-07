@@ -1,9 +1,10 @@
-// Step 7 — Latency and the dry/wet mix, reference implementation
+// Step 7 — Latency and the dry/wet mix
 //
 // Goal:   work out how late the processed signal is, report it, and delay the
 //         dry signal by the same amount so the two can be mixed.
 // Given:  step 6's processor, filled in, with a dry path and a mix added.
-// Task:   fill in the two TODO banners.
+// Task:   none, this step is a demonstration. Build it, run it, read the two
+//         lines in prepare(): the latency, and the dry delay.
 // Check:  in the mix, dry and wet line up: both late by exactly the reported
 //         latency.
 
@@ -64,15 +65,13 @@ public:
         m_prefill = adaptation + worker_time;
         const size_t output_capacity = worker_time + k_model.m_input_size;
 
-        // ---- TODO 1 --------------------------------------------------------
-        // How late is the wet signal? This is the number the host is told; in
-        // a plugin it goes to setLatencySamples(). Three things delay it, and
+        // The latency: how late the wet signal is, the number the host is told;
+        // in a plugin it goes to setLatencySamples(). Three things delay it, and
         // all are fixed:
         //   - the buffer adaptation (step 3)
         //   - the time the worker is given (step 6)
-        //   - the model itself answers late: k_model.m_latency
-        // --------------------------------------------------------------------
-        m_latency = m_prefill + k_model.m_latency;  // <- solution
+        //   - the model itself answers late: k_model.m_latency, from the export
+        m_latency = m_prefill + k_model.m_latency;
 
         m_input = ThreadSafeRingBuffer(k_model.m_input_size);
         m_output = ThreadSafeRingBuffer(output_capacity);
@@ -87,19 +86,14 @@ public:
         m_dry = RingBuffer(m_latency + max_block_size);
         m_dry_block.assign(max_block_size, 0.0f);
 
-        // ---- TODO 2 --------------------------------------------------------
-        // Delay the dry signal: how much silence does m_dry start with, so
-        // that dry and wet line up? The model's own delay is already inside
-        // what the worker returns; the dry path has nothing like that.
-        // --------------------------------------------------------------------
-        const size_t dry_prefill = m_latency;  // <- solution
+        // The dry delay: m_dry starts with the whole latency in silence, so dry
+        // and wet line up. The model's own delay is already inside what the
+        // worker returns; the dry path has nothing like that.
+        const size_t dry_prefill = m_latency;
         for (size_t i = 0; i < dry_prefill; ++i) {
             const bool pushed = m_dry.try_push(0.0f);
             assert(pushed);  // never fails: m_dry has room for the delay
         }
-
-        // Given: names a missing TODO
-        check_todos(m_latency, k_model.m_latency, m_dry);
 
         std::fill(m_state.begin(), m_state.end(), 0.0f);
         m_unpushed = 0;

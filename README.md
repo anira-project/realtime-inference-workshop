@@ -6,7 +6,7 @@ The workshop starts naive and runs into every problem on purpose: each step fixe
 
 ## Layout
 
-- `steps/` — one buildable folder per step, each with `exercise/` and `solution/`; steps 4, 5 and 8 have no exercise, only `solution/`, and step 11 is a playground, `exercise/` only
+- `steps/` — one buildable folder per step, each with `exercise/` and `solution/`; steps 4, 5, 7 and 8 have no exercise, only `solution/`, and step 11 is a playground, `exercise/` only
 - `steps/common/assets/` — the test signal and its target output, the example audio in `audio/`, and the models in `models/` (downloaded at configure time)
 - `steps/common/helpers/` — the engines, the ring buffer, the fake host and the reporting, shared by every step
 - `setup/` — setup check
@@ -85,7 +85,7 @@ The steps so far:
 4. [Benchmarking and the real-time budget](steps/04_benchmark/README.md) — how long a forward pass takes, and how long in the worst case
 5. [Real-time safety](steps/05_realtime_safety/README.md) — RTSan on both engines; demonstration, no exercise
 6. [Inference on a worker thread](steps/06_threading/README.md) — lock-free ring buffers, and an audio thread that allocates nothing
-7. [Latency and the dry/wet mix](steps/07_latency/README.md) — what to report to the host, and how to prove it
+7. [Latency and the dry/wet mix](steps/07_latency/README.md) — what to report to the host, and how to prove it; demonstration, no exercise
 8. [The plugin](steps/08_juce_plugin/README.md) — all of it inside JUCE; solution only
 
 Part 2, on anira (fetched and built by CMake, `-DWORKSHOP_ANIRA=OFF` to skip):

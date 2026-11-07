@@ -1,34 +1,17 @@
-// Step 7's checks, given complete. Not part of the exercise.
+// Step 7's check, given complete. Not part of the demonstration.
 //
-// Goal: say which TODO is still missing, and check that dry and wet line up
-//       in the mix, both late by exactly the reported latency.
+// Goal: check that dry and wet line up in the mix, both late by exactly the
+//       reported latency.
 #pragma once
 
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
-#include <stdexcept>
 #include <vector>
 
 #include "common/assets/test_signal.h"
-#include "common/helpers/ring_buffer.h"
 #include "common/helpers/support.h"
-
-// Both TODOs, in prepare().
-// @latency: what the host is told
-// @model_latency: the model's own delay
-// @dry: the dry ring buffer, after TODO 2
-inline void check_todos(size_t latency, size_t model_latency, const RingBuffer& dry) {
-    if (latency == 0) { throw std::runtime_error("TODO 1: work out the latency"); }
-    if (latency < model_latency) {
-        throw std::runtime_error("TODO 1: the latency is shorter than the model's own");
-    }
-    if (dry.available() != latency) {
-        throw std::runtime_error(
-            "TODO 2: delay the dry signal: m_dry has to start with the latency in silence");
-    }
-}
 
 // The mix the host heard, against dry and wet references, both late by the
 // reported latency. Returns what main should exit with.

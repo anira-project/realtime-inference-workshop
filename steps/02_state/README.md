@@ -49,9 +49,10 @@ Then open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO bann
 
 The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
 
-- **`TODO 1 and 2: block 0 is right, the blocks after it are not`** — the model only gets the audio, so every block starts from a zero state: every block is the first block.
-- **`the state is exactly 63488 floats, got ...`** — the state vector has the wrong size.
-- **The same failure after adding the state** — the state is being created inside the loop, so it starts at zero on every block. It belongs above the loop.
+- **`TODO 1: the state has N floats, the model's state is 63488`** — the state vector has the wrong size. The check looks before the first block: the engine only gets a pointer and a size, and cannot see how large the vector really is.
+- **`TODO 1: the state starts at zero, before the first block`** — the state vector is filled with something else.
+- **`TODO 2: block 0 is right, the blocks after it are not`** — the model only gets the audio, so every block starts from a zero state: every block is the first block.
+- **`the state is exactly 63488 floats, got ...`** — TODO 2 passes the wrong size next to the state.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 

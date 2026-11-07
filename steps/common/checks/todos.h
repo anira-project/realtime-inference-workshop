@@ -16,7 +16,7 @@ inline std::string todo_for(int step, const std::string& message) {
         if (has("cannot load")) { return "TODO 1"; }
         return "TODO 2";  // The size, or where the block starts
     case 2:
-        return "TODO 1 or 2";  // The state: its size, its start, or what is passed
+        return "TODO 2";  // check_state() names TODO 1: the rest is what is passed
     case 3:
         return "TODO 2 or 3";  // Samples lost between the host, the model and back
     case 6:

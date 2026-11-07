@@ -1202,15 +1202,8 @@ html.tanh .reveal section.present .lane-queue.from i { animation: lane-up 5s var
 }
 
 /*********************************************
- * ring_buffer.h: four blocks fit; the fifth does not and is dropped; the
- * buffer drains front first
+ * A ring buffer: a row of slots in a frame
  *********************************************/
-
-html.tanh .queue-demo {
-  position: relative;
-  height: 110px;
-  margin-top: var(--space-6);
-}
 
 html.tanh .q {
   display: flex;
@@ -1228,61 +1221,275 @@ html.tanh .q-slot {
   background: var(--wash);
 }
 
-html.tanh .queue-demo .q {
-  position: absolute;
-  top: 10px;
-  left: 360px;
+/*********************************************
+ * Step 6 · the flow, two lanes. Audio thread: a host block of 512 samples
+ * each callback into m_input, one out of m_output, the prefill first. Worker:
+ * spinning on try_pop, taking every block at once into the model block, the
+ * model on a whole one, the result into m_output. 9 s, a callback a second.
+ *********************************************/
+
+html.tanh .flow {
+  position: relative;
+  height: 300px;
+  margin: 70px 0 var(--space-6);
 }
 
-html.tanh .queue-demo .q-slot {
-  width: 120px;
-  height: 64px;
-}
+html.tanh .flow .q { position: absolute; gap: 8px; padding: 8px; }
+html.tanh .flow .q-slot { width: 80px; height: 50px; }
+html.tanh .flow .flow-in { top: 0; left: 220px; }
+html.tanh .flow .flow-out { top: 0; left: 1120px; }
+html.tanh .flow .flow-block { top: 190px; left: 420px; border-style: dashed; }
 
-html.tanh .q-chip {
+/* The callback's own buffer: one host block, no ring */
+html.tanh .flow-host {
   position: absolute;
-  top: 20px;
-  left: 0;
-  width: 120px;
-  height: 64px;
+  top: 0;
+  width: 96px;
+  height: 66px;
+  border: 2px solid var(--ink);
   border-radius: 4px;
-  background: var(--mark-exercise);
-  opacity: 0;
 }
+html.tanh .flow-host.in { left: 0px; }
+html.tanh .flow-host.out { left: 1620px; }
 
-html.tanh .reveal section.present .q-chip { animation: q-in 7s var(--ease) infinite; animation-delay: calc(var(--n) * 0.6s); }
-html.tanh .reveal section.present .q-chip.bounce { animation: q-bounce 7s var(--ease) 2.8s infinite; background: var(--mark-model); }
-html.tanh .reveal section.present .q-fail { animation: q-fail 7s var(--ease) 2.8s infinite; }
-
-@keyframes q-in {
-  0% { transform: translateX(0); opacity: 0; }
-  4% { transform: translateX(0); opacity: 1; }
-  14% { transform: translateX(calc(370px + var(--n) * 128px)); opacity: 1; }
-  68% { transform: translateX(calc(370px + var(--n) * 128px)); opacity: 1; }
-  76%, 100% { transform: translateX(calc(370px + var(--n) * 128px)) translateY(-30px); opacity: 0; }
-}
-
-@keyframes q-bounce {
-  0% { transform: translateX(0); opacity: 0; }
-  4% { transform: translateX(0); opacity: 1; }
-  12% { transform: translateX(230px); opacity: 1; }
-  20% { transform: translateX(40px); opacity: 1; }
-  28%, 100% { transform: translateX(40px); opacity: 0; }
-}
-
-html.tanh .q-fail {
+html.tanh .flow-model {
   position: absolute;
-  top: -40px;
-  left: 150px;
+  top: 190px;
+  left: 860px;
+  width: 150px;
+  height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-small);
+  font-size: 0.6em;
+}
+
+html.tanh .flow-lane-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 154px;
+  border-top: 1px dashed var(--ink);
+  opacity: 0.3;
+}
+
+html.tanh .flow-name {
+  position: absolute;
+  font-size: 0.48em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+html.tanh .flow-lane {
+  position: absolute;
+  left: 0;
   font-size: 0.55em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+html.tanh .flow-say {
+  position: absolute;
+  font-size: 0.5em;
+  white-space: nowrap;
   opacity: 0;
 }
 
-@keyframes q-fail {
-  0%, 10% { opacity: 0; }
-  13%, 30% { opacity: 1; }
-  36%, 100% { opacity: 0; }
+html.tanh .flow-say.spin { opacity: 1; }
+
+html.tanh .flow-spinner {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.4em;
+  vertical-align: -0.1em;
+  border: 3px solid var(--ink);
+  border-right-color: transparent;
+  border-radius: 50%;
 }
+
+html.tanh .flow i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 50px;
+  border-radius: 4px;
+  opacity: 0;
+}
+html.tanh .flow i.in { background: var(--mark-exercise); }
+html.tanh .flow i.res { background: var(--mark-model); }
+html.tanh .flow i.pre { background: var(--wash); border: 2px solid var(--ink); }
+
+
+@keyframes flow-in-0 {
+  0%, 3.22% { transform: translate(8px, 8px); opacity: 0; }
+  3.33% { transform: translate(8px, 8px); opacity: 1; }
+  6.67%, 8.33% { transform: translate(228px, 8px); opacity: 1; }
+  11.67%, 48.89% { transform: translate(428px, 198px); opacity: 1; }
+  52.22% { transform: translate(895px, 198px); opacity: 1; }
+  53.33%, 100% { transform: translate(895px, 198px); opacity: 0; }
+}
+
+@keyframes flow-in-1 {
+  0%, 14.33% { transform: translate(8px, 8px); opacity: 0; }
+  14.44% { transform: translate(8px, 8px); opacity: 1; }
+  17.78%, 19.44% { transform: translate(316px, 8px); opacity: 1; }
+  22.78%, 48.89% { transform: translate(516px, 198px); opacity: 1; }
+  52.22% { transform: translate(895px, 198px); opacity: 1; }
+  53.33%, 100% { transform: translate(895px, 198px); opacity: 0; }
+}
+
+@keyframes flow-in-2 {
+  0%, 25.44% { transform: translate(8px, 8px); opacity: 0; }
+  25.56% { transform: translate(8px, 8px); opacity: 1; }
+  28.89%, 30.56% { transform: translate(404px, 8px); opacity: 1; }
+  33.89%, 48.89% { transform: translate(604px, 198px); opacity: 1; }
+  52.22% { transform: translate(895px, 198px); opacity: 1; }
+  53.33%, 100% { transform: translate(895px, 198px); opacity: 0; }
+}
+
+@keyframes flow-in-3 {
+  0%, 36.56% { transform: translate(8px, 8px); opacity: 0; }
+  36.67% { transform: translate(8px, 8px); opacity: 1; }
+  40.00%, 41.67% { transform: translate(492px, 8px); opacity: 1; }
+  45.00%, 48.89% { transform: translate(692px, 198px); opacity: 1; }
+  52.22% { transform: translate(895px, 198px); opacity: 1; }
+  53.33%, 100% { transform: translate(895px, 198px); opacity: 0; }
+}
+
+@keyframes flow-pre-0 {
+  0%, 3.33% { transform: translate(1128px, 8px); opacity: 1; }
+  6.67%, 10.00% { transform: translate(1628px, 8px); opacity: 1; }
+  11.11%, 99.9% { transform: translate(1628px, 8px); opacity: 0; }
+  100% { transform: translate(1128px, 8px); opacity: 1; }
+}
+
+@keyframes flow-pre-1 {
+  0%, 14.44% { transform: translate(1216px, 8px); opacity: 1; }
+  17.78%, 21.11% { transform: translate(1628px, 8px); opacity: 1; }
+  22.22%, 99.9% { transform: translate(1628px, 8px); opacity: 0; }
+  100% { transform: translate(1216px, 8px); opacity: 1; }
+}
+
+@keyframes flow-pre-2 {
+  0%, 25.56% { transform: translate(1304px, 8px); opacity: 1; }
+  28.89%, 32.22% { transform: translate(1628px, 8px); opacity: 1; }
+  33.33%, 99.9% { transform: translate(1628px, 8px); opacity: 0; }
+  100% { transform: translate(1304px, 8px); opacity: 1; }
+}
+
+@keyframes flow-pre-3 {
+  0%, 36.67% { transform: translate(1392px, 8px); opacity: 1; }
+  40.00%, 43.33% { transform: translate(1628px, 8px); opacity: 1; }
+  44.44%, 99.9% { transform: translate(1628px, 8px); opacity: 0; }
+  100% { transform: translate(1392px, 8px); opacity: 1; }
+}
+
+@keyframes flow-pre-4 {
+  0%, 47.78% { transform: translate(1480px, 8px); opacity: 1; }
+  51.11%, 54.44% { transform: translate(1628px, 8px); opacity: 1; }
+  55.56%, 99.9% { transform: translate(1628px, 8px); opacity: 0; }
+  100% { transform: translate(1480px, 8px); opacity: 1; }
+}
+
+@keyframes flow-res-0 {
+  0%, 54.44% { transform: translate(895px, 198px); opacity: 0; }
+  55.00% { transform: translate(895px, 198px); opacity: 1; }
+  58.33%, 58.89% { transform: translate(1128px, 8px); opacity: 1; }
+  62.22%, 65.56% { transform: translate(1628px, 8px); opacity: 1; }
+  66.67%, 100% { transform: translate(1628px, 8px); opacity: 0; }
+}
+
+@keyframes flow-res-1 {
+  0%, 54.44% { transform: translate(895px, 198px); opacity: 0; }
+  55.00% { transform: translate(895px, 198px); opacity: 1; }
+  58.33%, 70.00% { transform: translate(1216px, 8px); opacity: 1; }
+  73.33%, 76.67% { transform: translate(1628px, 8px); opacity: 1; }
+  77.78%, 100% { transform: translate(1628px, 8px); opacity: 0; }
+}
+
+@keyframes flow-res-2 {
+  0%, 54.44% { transform: translate(895px, 198px); opacity: 0; }
+  55.00% { transform: translate(895px, 198px); opacity: 1; }
+  58.33%, 81.11% { transform: translate(1304px, 8px); opacity: 1; }
+  84.44%, 87.78% { transform: translate(1628px, 8px); opacity: 1; }
+  88.89%, 100% { transform: translate(1628px, 8px); opacity: 0; }
+}
+
+@keyframes flow-res-3 {
+  0%, 54.44% { transform: translate(895px, 198px); opacity: 0; }
+  55.00% { transform: translate(895px, 198px); opacity: 1; }
+  58.33%, 92.22% { transform: translate(1392px, 8px); opacity: 1; }
+  95.56%, 98.89% { transform: translate(1628px, 8px); opacity: 1; }
+  99.78%, 100% { transform: translate(1628px, 8px); opacity: 0; }
+}
+
+@keyframes flow-tick {
+  0% { box-shadow: 0 0 0 0 transparent; }
+  3.33% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  6.11% { box-shadow: 0 0 0 0 transparent; }
+  14.44% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  17.22% { box-shadow: 0 0 0 0 transparent; }
+  25.56% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  28.33% { box-shadow: 0 0 0 0 transparent; }
+  36.67% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  39.44% { box-shadow: 0 0 0 0 transparent; }
+  47.78% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  50.56% { box-shadow: 0 0 0 0 transparent; }
+  58.89% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  61.67% { box-shadow: 0 0 0 0 transparent; }
+  70.00% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  72.78% { box-shadow: 0 0 0 0 transparent; }
+  81.11% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  83.89% { box-shadow: 0 0 0 0 transparent; }
+  92.22% { border-color: var(--ink); box-shadow: 0 0 0 6px var(--mark-check); }
+  95.00% { box-shadow: 0 0 0 0 transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes flow-model {
+  0%, 51.11% { background: transparent; }
+  52.78%, 55.00% { background: var(--mark-model); }
+  57.22%, 100% { background: transparent; }
+}
+
+@keyframes flow-push-say {
+  0%, 53.89% { opacity: 0; }
+  55.00%, 62.22% { opacity: 1; }
+  64.44%, 100% { opacity: 0; }
+}
+
+@keyframes flow-blink {
+  0% { opacity: 1; }
+  100% { opacity: 0.25; }
+}
+
+@keyframes flow-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+html.tanh .reveal section.present .flow i:nth-of-type(1) { animation: flow-in-0 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(2) { animation: flow-in-1 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(3) { animation: flow-in-2 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(4) { animation: flow-in-3 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(5) { animation: flow-pre-0 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(6) { animation: flow-pre-1 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(7) { animation: flow-pre-2 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(8) { animation: flow-pre-3 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(9) { animation: flow-pre-4 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(10) { animation: flow-res-0 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(11) { animation: flow-res-1 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(12) { animation: flow-res-2 9s linear infinite; }
+html.tanh .reveal section.present .flow i:nth-of-type(13) { animation: flow-res-3 9s linear infinite; }
+html.tanh .reveal section.present .flow-host { animation: flow-tick 9s linear infinite; }
+html.tanh .reveal section.present .flow-model { animation: flow-model 9s linear infinite; }
+html.tanh .reveal section.present .flow-say.spin .blink { display: inline-block; animation: flow-blink 0.35s steps(2) infinite; }
+html.tanh .reveal section.present .flow-spinner { animation: flow-rotate 0.6s linear infinite; }
+html.tanh .reveal section.present .flow-say.push { animation: flow-push-say 9s linear infinite; }
 
 /*********************************************
  * Step 6 Task cards
@@ -1778,7 +1985,7 @@ html.tanh .congrats .confetti {
   html.tanh .reveal section.present .deadline *,
   html.tanh .reveal section.present .warmup *,
   html.tanh .reveal section.present .meters *,
-  html.tanh .reveal section.present .queue-demo *,
+  html.tanh .reveal section.present .flow *,
   html.tanh .reveal section.present .congrats * {
     animation-duration: 0.01ms !important;
     animation-delay: 0s !important;

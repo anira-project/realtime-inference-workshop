@@ -132,38 +132,53 @@ Note:
 
 <div class="tag">Helpers: <code>threadsafe_ring_buffer.h</code></div>
 
-## One writer, one reader<br><span class="then">No locks.</span>
+## Every callback 512 in, 512 out<br><span class="then">The worker spins until a model block is whole.</span>
 
-<table class="budget-table rb-table">
-  <thead><tr><th></th><th>Audio thread <small>gives up, never waits</small></th><th>Worker <small>tries again until it worked</small></th></tr></thead>
-  <tbody>
-    <tr><td><code>m_input</code></td><td><code>try_push(sample)</code> <small>false if full</small></td><td><code>try_pop(sample)</code> <small>false if empty</small></td></tr>
-    <tr><td><code>m_output</code></td><td><code>try_pop(sample)</code> <small>false if empty</small></td><td><code>try_push(sample)</code> <small>false if full</small></td></tr>
-  </tbody>
-</table>
-
-<div class="queue-demo" style="margin-bottom: var(--space-8)">
-  <div class="q">
-    <div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div>
-  </div>
-  <i class="q-chip" style="--n:0"></i>
-  <i class="q-chip" style="--n:1"></i>
-  <i class="q-chip" style="--n:2"></i>
-  <i class="q-chip" style="--n:3"></i>
-  <i class="q-chip bounce"></i>
-  <div class="q-fail"><code>try_push()</code> fails → a zero goes out instead</div>
+<div class="flow">
+  <div class="flow-lane" style="top: -48px">audio thread</div>
+  <div class="flow-lane" style="top: 162px">worker thread</div>
+  <div class="flow-lane-line"></div>
+  <div class="flow-host in"></div>
+  <div class="q flow-in"><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div></div>
+  <div class="q flow-out"><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div></div>
+  <div class="flow-host out"></div>
+  <div class="q flow-block"><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div><div class="q-slot"></div></div>
+  <div class="flow-model">model</div>
+  <div class="flow-name" style="top: 76px; left: 0px">callback: 512 in</div>
+  <div class="flow-name" style="top: 76px; left: 220px"><code>m_input</code>, ring buffer</div>
+  <div class="flow-name" style="top: 76px; left: 1120px"><code>m_output</code>, ring buffer, the prefill first</div>
+  <div class="flow-name" style="top: 76px; left: 1600px">callback: 512 out</div>
+  <div class="flow-name" style="top: 266px; left: 420px">model block, 2048</div>
+  <div class="flow-say spin" style="top: 236px; left: 0"><span class="flow-spinner"></span><code>try_pop()</code> <span class="blink">false, again</span></div>
+  <div class="flow-say push" style="top: 236px; left: 1040px"><code>try_push()</code> the result</div>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="pre"></i>
+  <i class="pre"></i>
+  <i class="pre"></i>
+  <i class="pre"></i>
+  <i class="pre"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
 </div>
+
+<div class="cards-note"><code>ThreadSafeRingBuffer</code>: <code>try_push</code> and <code>try_pop</code>, one sample at a time, never wait. One writer, one reader: no locks.</div>
 
 <!-- ```cpp
 m_worker.start([this] { process_model(); });  // over and over, until stop()
 ``` -->
 
 Note:
-- What makes these ring buffers thread-safe?
-- Each ring buffer only has one thread writing, the other reading, so we need no locks
-- Audio thread: `try_push` and `try_pop`, one sample at a time, never waiting or allocating, a bool says whether it worked
-- Worker: the same two calls, but it may wait: when one fails, it tries again right away, a hot spin
-- Underneath: moodycamel's circular buffer, only its `try_` functions: never wait, never allocate, never throw
+- Every callback, every 512 samples, the host hands us its own buffer: not a ring buffer, just the block. The audio thread pushes it into `m_input`, `try_push`
+- The worker spins: `try_pop` returns false again and again until a sample is there, and takes each one at once, until a whole model block of 2048 is together. That is TODO 3
+- Then the model runs, and the worker pushes the result into `m_output`, `try_push`
+- Meanwhile the audio thread takes one block out of `m_output` every callback, `try_pop`: first the prefill, silence, then the model's stream. If something is missing, it never waits: a zero goes out. That is TODO 2
+- Both rings: one writer, one reader, so no locks. `try_push` and `try_pop` never wait, never allocate, a bool says whether it worked
+- Underneath: moodycamel's circular buffer, only its `try_` functions
 <!-- - `WorkerThread`: given, calls our `process_model` over and over, from `start` until `stop` -->
 
 ---

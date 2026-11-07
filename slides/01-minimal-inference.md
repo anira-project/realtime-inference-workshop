@@ -235,7 +235,7 @@ Note:
 
 <div class="tag">Done</div>
 
-## AI model integrated in C++
+## Neural network model integrated in C++
 
 <div class="congrats">
   <svg viewBox="0 0 120 120" aria-hidden="true">

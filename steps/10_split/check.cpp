@@ -16,6 +16,7 @@
 #include "SplitProcessor.h"
 #include "common/assets/target_split_signal.h"
 #include "common/assets/test_signal.h"
+#include "common/checks/anira_report.h"
 #include "common/helpers/host.h"
 #include "common/helpers/support.h"
 
@@ -56,6 +57,8 @@ int main() try {
         SplitProcessor processor(WORKSHOP_STEP_DIR);  // Every offset at 0
         processor.prepare(k_host.m_sample_rate, k_host.m_block_size);
         latency = processor.latency();
+        print_report("encoder", processor.encoder_plan());
+        print_report("decoder", processor.decoder_plan());
         std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
                     latency,
                     1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,

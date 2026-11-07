@@ -48,6 +48,12 @@ public:
     size_t encoder_latency_frames() const { return m_encoder_latency_frames; }
     // Latent frames popped from the encoder since prepare.
     size_t frames() const { return m_frames; }
+    // The encoder's and the decoder's row of their handler's report from the
+    // last prepare: budget, measured and median time, warm-up, real-time
+    // factor and verdict. Empty before a prepare. Their strings live until the
+    // next prepare.
+    anira_plan_info encoder_plan() const { return first_plan(m_encoder->plan_report()); }
+    anira_plan_info decoder_plan() const { return first_plan(m_decoder->plan_report()); }
 
 private:
     // In this order: the handlers run on the context and go before it
@@ -64,4 +70,8 @@ private:
     size_t m_frames = 0;
     size_t m_encoder_latency_frames = 0;
     size_t m_latency = 0;
+
+    static anira_plan_info first_plan(const anira::PlanReport& report) {
+        return report.num_plans() > 0 ? report.plans().front() : anira_plan_info{};
+    }
 };

@@ -12,6 +12,7 @@
 #include "AniraProcessor.h"
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
+#include "common/checks/anira_report.h"
 #include "common/helpers/host.h"
 #include "common/helpers/support.h"
 
@@ -40,7 +41,7 @@ int main() try {
         return 2;
     }
 
-    std::printf("Measured budget:  %.1f ms per inference, at prepare\n", processor.budget_ms());
+    print_report("model", processor.plan());
     std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
                 latency,
                 1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,

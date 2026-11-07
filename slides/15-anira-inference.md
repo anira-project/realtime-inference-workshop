@@ -325,6 +325,38 @@ Note:
 
 ---
 
+<div class="tag">anira's report</div>
+
+## What prepare measured.<br><span class="then">On this machine, before the first block.</span>
+
+<div class="report">
+  <div class="report-card">
+    <div class="report-head"><strong>model</strong><span class="report-pill ok">comfortable</span></div>
+    <div class="report-times"><span>budget <b>12.9 ms</b></span><span>measured <b>12.9 ms</b></span><span>median <b>12.8 ms</b></span></div>
+    <div class="report-line">warm-up: 4 inferences, until stable</div>
+    <div class="report-line">load <b>28 %</b>: real-time factor 0.28 over 1 inference</div>
+    <div class="report-bar"><i style="width:22.4%"></i><b style="left:60%"><span>75 %</span></b><b style="left:80%"><span>100 %</span></b></div>
+  </div>
+  <div class="report-scale">
+    <div><span class="report-pill ok">comfortable</span>below 75 %</div>
+    <div><span class="report-pill marginal">marginal</span>below 100 %, may drop out under load</div>
+    <div><span class="report-pill over">not real-time</span>held back live, until <strong>Run anyway</strong></div>
+  </div>
+</div>
+
+<div class="cards-note">The check prints it, the plugin shows it under <strong>report</strong>: <code>handler.plan_report()</code></div>
+
+Note:
+- prepare does not only plan: it warms the model up and measures it, on this machine, with this engine. That is step 4, done by the library
+- The report has one row per plan: the budget anira plans with, what it measured (the maximum of the last warm-up inferences), and the median, the jitter at a glance
+- The load is the inference time over the audio it produces. Here 28 %: the model needs about a quarter of the time it has
+- Over 1 inference: the model carries its state, so its inferences run one after another. A stateless model could run several at once, and the load is shared
+- Below 75 % comfortable, below 100 % marginal, else not real-time
+- Not real-time: the plugin holds back while live. The window says so, and Run anyway plays it nonetheless, with dropouts and clicks. A bounce always processes, it waits for every result
+- Your check prints your report, and the plugin's report button shows it
+
+---
+
 <div class="tag">Done</div>
 
 ## Steps 3, 6 and 7,<br><span class="then">in two files.</span>

@@ -37,6 +37,10 @@ public:
     size_t latency() const { return m_latency; }
     // The budget prepare measured on this machine, in ms. Valid after prepare.
     double budget_ms() const { return m_budget_ms; }
+    // The plan's row of the handler's report from the last prepare: budget,
+    // measured and median time, warm-up, real-time factor and verdict. Empty
+    // before a prepare. Its two strings live until the next prepare.
+    anira_plan_info plan() const { return first_plan(m_handler->plan_report()); }
 
 private:
     // In this order: the handlers run on the context and go before it
@@ -45,4 +49,8 @@ private:
     std::optional<anira::InferenceHandler> m_handler;  // Created in the constructor
     size_t m_latency = 0;
     double m_budget_ms = 0.0;
+
+    static anira_plan_info first_plan(const anira::PlanReport& report) {
+        return report.num_plans() > 0 ? report.plans().front() : anira_plan_info{};
+    }
 };

@@ -2,8 +2,8 @@
 # default build: only on request, with --target. Their filled-in copy, every ?
 # taken from the solution (scripts/fill_exercise.py), is how the workshop
 # checks them: it has to build and pass like the solution, and it fails if an
-# exercise was committed filled in. Filling needs Python 3; without it there
-# are no filled targets.
+# exercise was committed filled in. These targets only exist with
+# -DWORKSHOP_CHECK_EXERCISES=ON, as in CI; filling needs Python 3.
 #
 #   workshop_fill_exercise(<out_var> <file>...)
 #     the step's exercise/<file>, filled in from solution/<file>, generated
@@ -17,7 +17,10 @@
 #     a one-file step (exercise/main.cpp, solution/main.cpp):
 #     <step>_solution, <step>_exercise and <step>_exercise_filled
 
-find_package(Python3 COMPONENTS Interpreter QUIET)
+option(WORKSHOP_CHECK_EXERCISES "Add the filled-in exercise targets that CI checks" OFF)
+if(WORKSHOP_CHECK_EXERCISES)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+endif()
 
 function(workshop_fill_exercise out_var)
     set(outputs)
@@ -50,7 +53,7 @@ endfunction()
 
 function(workshop_add_exercise_and_solution step)
     set(variants exercise solution)
-    if(Python3_Interpreter_FOUND)
+    if(WORKSHOP_CHECK_EXERCISES)
         list(APPEND variants exercise_filled)
     endif()
 

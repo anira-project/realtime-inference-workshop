@@ -64,14 +64,14 @@ That every exercise still fits its solution is checked by its filled-in copy:
 [`scripts/fill_exercise.py`](scripts/fill_exercise.py) takes each `?` line
 from the solution, and the copy has to build and pass like the solution. It
 fails, naming the line, if an exercise was committed filled in or drifted away
-from its solution. CI runs all of them; locally:
+from its solution. CI runs all of them; locally, configure with
+`-DWORKSHOP_CHECK_EXERCISES=ON` (needs Python 3):
 
 ```bash
+cmake --preset release -DWORKSHOP_CHECK_EXERCISES=ON
 cmake --build --preset release --target step03_exercise_filled && ./build/release/bin/step03_exercise_filled
 cmake --build --preset release --target step09_exercise_filled_check && ./build/release/bin/step09_exercise_filled_check
 ```
-
-Filling needs Python 3; without it, CMake skips these targets.
 
 Build a single step with `-DWORKSHOP_STEP=01`. See
 [steps/common/assets/models/README.md](steps/common/assets/models/README.md) for

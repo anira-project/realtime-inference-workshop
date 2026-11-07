@@ -7,7 +7,7 @@ Even if it were fast enough, would we be safe?
 
 Note:
 - The next question is, are we even real-time safe?
-- We will have a look at what actually happens on the audio thread when we call our engine?
+- We will have a look at what actually happens on the audio thread when we call our engine
 - No code this step: a demo
 
 ---
@@ -25,6 +25,7 @@ Inside the callback, never:
 The average doesn't matter. **The worst case does.**
 
 Note:
+- Go through this quickly
 - You probably know these rules
 - Never allocate: the allocator might lock or need a page from the OS
 - Never lock: whoever holds it might be paused by the scheduler
@@ -54,10 +55,8 @@ void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
 
 Note:
 - To find out we will use a RealtimeSanitizer
-- Since Clang 20 there's a tool for this
-- `[[clang::nonblocking]]`: a promise in the type system, here on our `process_block` from step 3
 - Build our main.cpp with RealtimeSanitizer on: checks every call underneath at runtime, also in libraries
-- Reports the first thing that breaks the promise
+- Since Clang 20 there's a tool for this
 <!-- - On a Mac: LLVM from Homebrew, not Apple's Clang -->
 
 ---
@@ -79,12 +78,9 @@ Intercepted call to real-time unsafe function `malloc`
 One thread. Our buffers and tensors preallocated. **Still allocates.**
 
 Note:
-- Run `step05_solution`, without and with the sanitizer, live if possible
-- Correct: matches the Python reference
 - With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has run
-- If we read the stack from the bottom up: our callback calls `process`, `process` calls ONNX Runtime's `Run`, and `Run` calls `malloc` on its way into the model.
+- If we read the stack we see that ONNX Runtime's `Run` calls a `malloc` on its way into the model.
 - Even with one thread and our own buffers and tensors preallocated
-- Even a small `malloc` can take too long on the audio thread
 
 ---
 
@@ -107,28 +103,7 @@ Note:
 - We can also let RTSan report every violation.
 - 8 forward passes: about 1,130 mallocs and frees in every one, mostly small bookkeeping objects
 - And about 145 mutex locks per forward pass
-- Allocations are bad a lock is worse: our audio thread can end up waiting for a completely different thread
 - Not a mistake: the engine is built for throughput, not for real-time
-
----
-
-<div class="tag">Problem</div>
-
-## Can we fix it?<br>
-
-<div class="attempts">
-  <div class="attempt"><b>Custom allocator</b><span>other memory, same locks</span></div>
-  <div class="attempt"><b>One thread</b><span>no pool, same allocations</span></div>
-  <div class="attempt"><b>Preallocate</b><span>ours move, theirs stay</span></div>
-</div>
-
-Note:
-- Can we fix it? Not really
-- Allocations are inside the engine, a library we don't control
-- Custom allocator would only change where the memory comes from, not whether a lock is taken
-- Running the engine with one thread removes its thread pool, but not its allocations.
-- Preallocating: moves our allocations, not the ones in onnx runtime
-- On the audio thread: we're hoping the allocator stays fast. Hoping is not a strategy
 
 ---
 
@@ -140,6 +115,6 @@ Note:
 
 
 Note:
-- Can't make the engine safe: 
+- Our engine is inherently not realtime safe. 
 - the obvious solution: the model has to leave the audio thread
 - Where does the model go?

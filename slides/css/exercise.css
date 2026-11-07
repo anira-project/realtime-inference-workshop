@@ -2523,6 +2523,13 @@ html.tanh .reveal pre code .todo-mark {
   font-weight: 600;
 }
 
+/* What the participant filled in, on a solution slide (js/solution_marks.js) */
+html.tanh .reveal pre code .solution-mark {
+  background: var(--tint-check);
+  box-shadow: inset 0 -2px 0 var(--ink);
+  font-weight: 600;
+}
+
 /* Task cards: which file a TODO is in, under its title */
 html.tanh .run-where { font-size: 0.6em; color: var(--fs-text-color); margin: 0 0 var(--space-3); }
 html.tanh .run-where code { font-size: 0.95em; }

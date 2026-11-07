@@ -74,9 +74,9 @@ Note:
 - Some models read the past at every call, others remember
 - Stateless: no memory, the past is handed in at every call
 - Stateful: only the new block, carries the past along. 
-- Our model is stateful, so we need to pass our memory
-- Although ONNX works for a stateful model, it can't hide our state
-- The export moves it out, so we need an explicit input and output
+- Our model is stateful in pytorch/python.
+- Because Onnx runtime is stateless by design, so the state needs to be cleared when exporting
+- At every forward pass: We need to explicitly pass out the state of the model to feed it into the next forward pass
 - Without passing the state, every block is the first block.
 
 ---
@@ -134,8 +134,9 @@ cmake --build --preset release --target step02_exercise
 </div>
 
 Note:
-- Two TODOs: above the loop, a vector for the state; in the loop, pass it with the audio
+- Two TODOs: outside the loop we need to construct our state and then pass it with the audio
 - We don't create the state ourselves: the model writes it on every call. We only give it the memory, zeros for the start
+- Again you will find a constructor before the main function with the correct size of the state.
 - 5 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
 - We solve it together, solutions are in the solution's main.cpp
@@ -156,12 +157,13 @@ constexpr struct {
 ```
 
 ```cpp
-std::vector<float> state(k_model.m_state_size, 0.0f); // <- fill out
+std::vector<float> state(«k_model.m_state_size», «0.0f»); // <- solution
 ```
 
 Note:
-- correct size: given in the struct or 63488 floats, all zeros: a zero state is a new stream
-- The vector lives outside the loop: made again per block, it would start at zero every time
+- correct size: given in the constructor or 63488 floats
+- We need to construct our state vector with the correct size and initialize it with zeros
+- The vector lives outside the loop, if it were constructed every block, it would start at zero every time
 
 ---
 
@@ -172,7 +174,7 @@ Note:
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
     engine.process(buffer.data() + i * k_model.m_input_size, k_model.m_input_size,
-                   state.data(), state.size());  // <- fill out
+                   «state.data()», «state.size()»);  // <- solution
 }
 ```
 

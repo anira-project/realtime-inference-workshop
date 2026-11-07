@@ -52,7 +52,6 @@ Note:
 - Host pushes whatever it has into the first ringbuffer
 - The model takes a full block, as soon as it's available. 
 - The model processes and writes 2048 to the output ring buffer
-- Host takes its block size each call, 512 in our case
 
 ---
 
@@ -67,7 +66,7 @@ Note:
 </div>
 
 Note:
-- Goal: the model gets 2048, the host gets its 512 back
+- Goal: make it work with a the model gets 2048, the host gets its 512 back
 - Prefill the output ring buffer, so the host always finds samples
 - Pump whole blocks through the model
 - Hand the samples back to the host
@@ -108,7 +107,7 @@ Note:
 
 <div class="tag">Helpers: <code>ring_buffer.h</code></div>
 
-## The ringbuffer <span class="then">A fixed-size queue for samples.</span>
+## The ringbuffer <span class="then">3 methods are given</span>
 
 ```cpp
 RingBuffer buffer(capacity);           // Allocates once, never again
@@ -125,8 +124,6 @@ buffer.try_pop(sample);                // Take from the front — false if empty
 </div>
 
 Note:
-- A ringbuffer is like a queue for samples with a fixed size
-- Allocates once with the correct capacity or size, when created, never again
 - We use 3 methods: 
 - The available() method checks if there are samples in the buffer
 - `try_push` at the back, `try_pop` from the front, one sample at a time: first in, first out method
@@ -187,7 +184,7 @@ Note:
 ## TODO 1: The prefill
 
 ```cpp
-const size_t prefill = k_model.m_input_size - max_block_size;  // <- fill out
+const size_t prefill = «k_model.m_input_size - max_block_size»;  // <- solution
 
 m_input = RingBuffer(k_model.m_input_size);              // given
 m_output = RingBuffer(prefill + k_model.m_input_size);   // given, then the zeros go in
@@ -198,7 +195,7 @@ Note:
 - Callbacks 1 to 3 take 3 × 512 = 1536 samples from `m_output`: 2048 − 512. That is the prefill, zeros
 - So the host always finds samples, from the very first callback
 - The sizes are given: `m_input` one model block, `m_output` the prefill and one model block more
-- A wrong prefill: the check names TODO 1
+- A wrong prefill: The tells you what's wrong
 - For host sizes that don't divide 2048 this isn't true anymore, but we'll get into that in part 2
 
 ---
@@ -209,11 +206,11 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_samples; ++i) {
-    const bool pushed = m_input.try_push(samples[i]);  // <- 1. fill out
+    const bool pushed = m_input.«try_push(samples[i])»;  // <- 1. solution
     assert(pushed);  // never fails
 }
 
-if (m_input.available() >= k_model.m_input_size) {  // <- 2. fill out
+if (m_input.available() >= «k_model.m_input_size») {  // <- 2. solution
     // a whole model block is there: through the model, next slide
 }
 ```
@@ -232,13 +229,13 @@ Note:
 ```cpp
 if (m_input.available() >= k_model.m_input_size) {
     for (size_t i = 0; i < k_model.m_input_size; ++i) {
-        const bool popped = m_input.try_pop(m_model_block[i]);    // <- 3. fill out
+        const bool popped = «m_input.try_pop(m_model_block[i])»;    // <- 3. solution
         assert(popped);  // never fails: a whole block is there
     }
     m_engine.process(m_model_block.data(), k_model.m_input_size,
                      m_state.data(), m_state.size());
     for (size_t i = 0; i < k_model.m_input_size; ++i) {
-        const bool pushed = m_output.try_push(m_model_block[i]);  // <- 3. fill out
+        const bool pushed = «m_output.try_push(m_model_block[i])»;  // <- 3. solution
         assert(pushed);  // never fails: m_output has room
     }
 }
@@ -256,7 +253,7 @@ Note:
 
 ```cpp
 for (size_t i = 0; i < num_samples; ++i) {
-    const bool popped = m_output.try_pop(samples[i]);  // <- fill out
+    const bool popped = «m_output.try_pop(samples[i])»;  // <- solution
     assert(popped);  // never fails: the prefill covers the wait
 }
 ```

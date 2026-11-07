@@ -2,9 +2,6 @@
 //
 // Goal:   work out how late the processed signal is, report it, and delay the
 //         dry signal by the same amount so the two can be mixed.
-// Given:  step 6's processor, filled in, with a dry path and a mix added.
-// Task:   none, this step is a demonstration. Build it, run it, read the two
-//         lines in prepare(): the latency, and the dry delay.
 // Check:  in the mix, dry and wet line up: both late by exactly the reported
 //         latency.
 

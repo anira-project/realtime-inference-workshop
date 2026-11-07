@@ -1,72 +1,69 @@
 #pragma once
 
-#include <anira/compat/v2.hpp>
-#include <thread>
-#include <vector>
-
 #include <handtracking/HandTracker.h>
 #include <handtracking/Types.h>
 
+#include <anira/anira.hpp>
+#include <span>
+#include <string_view>
+#include <vector>
+
 #include "EmbeddedModels.h"
 
-// anira configs + model constants (MediaPipe gesture_recognizer.task; image inputs are NHWC RGB in [0, 1]).
+// The models as anira model configs, and their constants (MediaPipe gesture_recognizer.task;
+// image inputs are NHWC RGB in [0, 1]). Every input and output is Streamed with one window per
+// inference: a camera frame or a hand is pushed whole and its result popped whole.
 namespace anira::models::handtracking {
 
-// anira requires an identical wait strategy across all ContextConfigs in a process — construct every InferenceHandler with this config.
-inline anira::v2::ContextConfig make_context_config() {
-    return anira::v2::ContextConfig(std::thread::hardware_concurrency(),
-                                anira::v2::WaitStrategy::Blocking);
+// A model document with the compiled-in ONNX bytes in place of its path. The bytes are static,
+// so anira borrows them.
+inline anira::ModelConfig make_model(std::string_view document, std::span<const std::byte> bytes) {
+    anira::ModelConfig model = anira::ModelConfig::from_json(document);
+    model.set_model_bytes(0, bytes, ANIRA_BYTES_BORROW);
+    return model;
 }
 
 // Worst-case frame rate into a tracker; anira sizes its ring buffers from it.
 inline constexpr double k_camera_frame_rate = 30.0;
 
-// All models are stateless, so sessions share pooled processors; a stateful model would need an exclusive processor to keep inferences ordered.
-inline constexpr bool k_session_exclusive_processor = false;
-
-// Per-backend max_inference_time deadlines (Streamed engine): 2x the benchmarked worst case (M3 Max); determine latency and queue sizing.
-inline float detector_deadline_ms(anira::v2::InferenceBackend backend) {
-    if (backend == anira::v2::InferenceBackend::ONNX)
-        return 76.0F;  // worst 38.0 ms
-#ifdef USE_LIBTORCH
-    if (backend == anira::v2::InferenceBackend::LIBTORCH)
-        return 193.0F;  // worst 96.5 ms
-#endif
-    return 23.4F;       // LiteRT, worst 11.7 ms
-}
-
-inline float landmark_deadline_ms(anira::v2::InferenceBackend backend) {
-    if (backend == anira::v2::InferenceBackend::ONNX)
-        return 39.2F;  // worst 19.6 ms
-#ifdef USE_LIBTORCH
-    if (backend == anira::v2::InferenceBackend::LIBTORCH)
-        return 114.4F;  // worst 57.2 ms
-#endif
-    return 21.0F;       // LiteRT, worst 10.5 ms
-}
-
-// Must cover thread-pool queueing behind detector/landmark jobs, not just the ~0.1 ms execution: too small -> too few in-flight slots, dropped pushes, desynced session.
+// Per-model budgets: 2x the benchmarked worst case on ONNX Runtime (M3 Max); they set the
+// latency and the queue sizes.
+inline constexpr float k_detector_deadline_ms = 76.0F;  // worst 38.0 ms
+inline constexpr float k_landmark_deadline_ms = 39.2F;  // worst 19.6 ms
+// Must cover thread-pool queueing behind detector/landmark jobs, not just the ~0.1 ms execution:
+// too small -> too few in-flight slots, dropped pushes, desynced session.
 inline constexpr float k_gesture_stage_deadline_ms = 200.0F;
 
-// Non-realtime blocking mode: the deadline only sizes buffers and can never be missed.
-inline constexpr float k_sync_deadline_ms = 200.0F;
-
-inline constexpr int k_detector_input_size = 192;   // 192x192x3
+inline constexpr int k_detector_input_size = 192;  // 192x192x3
 inline constexpr int k_num_anchors = 2016;
-inline constexpr int k_num_detection_values = 18;   // 4 box + 7 keypoints x 2
+inline constexpr int k_num_detection_values = 18;  // 4 box + 7 keypoints x 2
 
-inline anira::v2::InferenceConfig make_detector_config() {
-    return anira::v2::InferenceConfig(
-        embedded::hand_detector_models(),
-        {anira::v2::TensorShape({{1, 192, 192, 3}},           // NHWC image input
-                            {{1, 2016, 18}, {1, 2016, 1}})},  // raw boxes+keypoints, raw scores
-        anira::v2::ProcessingSpec({1}, {1, 1}, {192 * 192 * 3}, {2016 * 18, 2016}),
-        detector_deadline_ms(anira::v2::InferenceBackend::ONNX),  // overwritten per backend/engine
-        1,  // one warm-up inference
-        k_session_exclusive_processor);
+// In: the letterboxed frame. Out: raw boxes and keypoints, raw scores.
+inline constexpr std::string_view k_detector_document = R"({
+  "models": [{ "engine": "onnxruntime", "path": "anira:bytes" }],
+  "state": "stateless",
+  "anchor": "input_0",
+  "inputs": [
+    { "name": "input_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["any", 192], ["any", 192], ["time", 3]],
+      "window": { "min": 110592, "max": 110592 }, "overlap": 0 }
+  ],
+  "outputs": [
+    { "name": "output_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["any", 2016], ["time", 18]],
+      "window": { "min": 36288, "max": 36288 }, "overlap": 0 },
+    { "name": "output_1", "dtype": "float32", "role": "streamed",
+      "axes": [["any", 1], ["time", 2016], ["channel", 1]],
+      "window": { "min": 2016, "max": 2016 }, "overlap": 0 }
+  ]
+})";
+
+inline anira::ModelConfig make_detector_model() {
+    return make_model(k_detector_document, embedded::hand_detector());
 }
 
-// SSD anchors: strides {8, 16, 16, 16}, 2 anchors/cell on the 24x24 map, 6 on the 12x12 map -> 2016.
+// SSD anchors: strides {8, 16, 16, 16}, 2 anchors/cell on the 24x24 map, 6 on the 12x12 map ->
+// 2016.
 inline std::vector<Vec2> generate_ssd_anchors() {
     constexpr int strides[4]{8, 16, 16, 16};
     std::vector<Vec2> anchors;
@@ -75,8 +72,7 @@ inline std::vector<Vec2> generate_ssd_anchors() {
     while (layer_id < 4) {
         size_t last_same_stride_layer = layer_id;
         int anchors_per_cell = 0;
-        while (last_same_stride_layer < 4 &&
-               strides[last_same_stride_layer] == strides[layer_id]) {
+        while (last_same_stride_layer < 4 && strides[last_same_stride_layer] == strides[layer_id]) {
             ++last_same_stride_layer;
             anchors_per_cell += 2;  // aspect ratio 1.0 + interpolated scale
         }
@@ -99,39 +95,80 @@ inline std::vector<Vec2> generate_ssd_anchors() {
 inline constexpr int k_landmark_input_size = 224;  // 224x224x3
 inline constexpr int k_num_landmarks = 21;
 
-inline anira::v2::InferenceConfig make_landmark_config() {
-    return anira::v2::InferenceConfig(
-        embedded::hand_landmarks_detector_models(),
-        {anira::v2::TensorShape({{1, 224, 224, 3}},                    // NHWC image input
-                            {{1, 63}, {1, 1}, {1, 1}, {1, 63}})},  // landmarks, presence,
-                                                                   // handedness, world landmarks
-        // Scalar presence/handedness outputs are non-streamable (size 0): read via PrePostProcessor::get_output.
-        anira::v2::ProcessingSpec({1}, {1, 1, 1, 1}, {224 * 224 * 3}, {63, 0, 0, 63}),
-        landmark_deadline_ms(anira::v2::InferenceBackend::ONNX),  // overwritten per backend/engine
-        1,
-        k_session_exclusive_processor);
+// In: the hand crop. Out: landmarks, presence, handedness, world landmarks. Presence and
+// handedness are Static: popped together with the landmarks, each the latest value anira has.
+inline constexpr std::string_view k_landmark_document = R"({
+  "models": [{ "engine": "onnxruntime", "path": "anira:bytes" }],
+  "state": "stateless",
+  "anchor": "input_0",
+  "inputs": [
+    { "name": "input_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["any", 224], ["any", 224], ["time", 3]],
+      "window": { "min": 150528, "max": 150528 }, "overlap": 0 }
+  ],
+  "outputs": [
+    { "name": "output_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["time", 63]],
+      "window": { "min": 63, "max": 63 }, "overlap": 0 },
+    { "name": "output_1", "dtype": "float32", "role": "static", "axes": [["any", 1], ["any", 1]] },
+    { "name": "output_2", "dtype": "float32", "role": "static", "axes": [["any", 1], ["any", 1]] },
+    { "name": "output_3", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["time", 63]],
+      "window": { "min": 63, "max": 63 }, "overlap": 0 }
+  ]
+})";
+
+inline anira::ModelConfig make_landmark_model() {
+    return make_model(k_landmark_document, embedded::hand_landmarks_detector());
 }
 
-inline anira::v2::InferenceConfig make_embedder_config() {
-    return anira::v2::InferenceConfig(
-        embedded::gesture_embedder_models(),
-        {anira::v2::TensorShape({{1, 21, 3}, {1, 1}, {1, 21, 3}},  // hand, handedness, world_hand
-                            {{1, 128}})},
-        // Handedness stays streamable although scalar: non-streamable tensors have latest-value semantics and concurrent hands would race on it.
-        anira::v2::ProcessingSpec({1, 1, 1}, {1}, {63, 1, 63}, {128}),
-        k_gesture_stage_deadline_ms,
-        1,
-        k_session_exclusive_processor);
+// In: hand, handedness, world hand. Handedness stays Streamed although scalar: a Static value is
+// the latest one, and concurrent hands would race on it. Out: the embedding.
+inline constexpr std::string_view k_embedder_document = R"({
+  "models": [{ "engine": "onnxruntime", "path": "anira:bytes" }],
+  "state": "stateless",
+  "anchor": "input_0",
+  "inputs": [
+    { "name": "input_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["any", 21], ["time", 3]],
+      "window": { "min": 63, "max": 63 }, "overlap": 0 },
+    { "name": "input_1", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["time", 1]],
+      "window": { "min": 1, "max": 1 }, "overlap": 0 },
+    { "name": "input_2", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["any", 21], ["time", 3]],
+      "window": { "min": 63, "max": 63 }, "overlap": 0 }
+  ],
+  "outputs": [
+    { "name": "output_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["time", 128]],
+      "window": { "min": 128, "max": 128 }, "overlap": 0 }
+  ]
+})";
+
+inline anira::ModelConfig make_embedder_model() {
+    return make_model(k_embedder_document, embedded::gesture_embedder());
 }
 
-inline anira::v2::InferenceConfig make_classifier_config() {
-    return anira::v2::InferenceConfig(
-        embedded::canned_gesture_classifier_models(),
-        {anira::v2::TensorShape({{1, 128}}, {{1, 8}})},
-        anira::v2::ProcessingSpec({1}, {1}, {128}, {8}),
-        k_gesture_stage_deadline_ms,
-        1,
-        k_session_exclusive_processor);
+// In: the embedding. Out: the eight gesture scores.
+inline constexpr std::string_view k_classifier_document = R"({
+  "models": [{ "engine": "onnxruntime", "path": "anira:bytes" }],
+  "state": "stateless",
+  "anchor": "input_0",
+  "inputs": [
+    { "name": "input_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["time", 128]],
+      "window": { "min": 128, "max": 128 }, "overlap": 0 }
+  ],
+  "outputs": [
+    { "name": "output_0", "dtype": "float32", "role": "streamed",
+      "axes": [["channel", 1], ["time", 8]],
+      "window": { "min": 8, "max": 8 }, "overlap": 0 }
+  ]
+})";
+
+inline anira::ModelConfig make_classifier_model() {
+    return make_model(k_classifier_document, embedded::canned_gesture_classifier());
 }
 
 }  // namespace anira::models::handtracking

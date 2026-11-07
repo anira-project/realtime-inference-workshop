@@ -81,17 +81,7 @@ public:
         return options;
     }
 
-    void requestBackend(anira::v2::InferenceBackend backend) {
-        m_requested_backend.store(static_cast<int>(backend), std::memory_order_relaxed);
-    }
-
-    anira::v2::InferenceBackend requestedBackend() const {
-        return static_cast<anira::v2::InferenceBackend>(
-            m_requested_backend.load(std::memory_order_relaxed));
-    }
-
 private:
-    std::atomic<int> m_requested_backend{0};
     std::atomic<int> m_num_hands{2};
     std::atomic<float> m_min_detection_confidence{0.5F};
     std::atomic<float> m_min_presence_confidence{0.5F};

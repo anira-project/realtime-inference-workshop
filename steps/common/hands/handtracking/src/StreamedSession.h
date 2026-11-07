@@ -1,49 +1,65 @@
 #pragma once
 
-#include <anira/compat/v2.hpp>
+#include <anira/anira.hpp>
 #include <array>
+#include <chrono>
 #include <cstddef>
-#include <utility>
+#include <cstdint>
 
-// One anira session in realtime streaming mode: one pop scheduled per push, priming zeros skipped, push-time contexts paired FIFO with popped results.
-// Never blocks on inference; no locks and no heap allocation once constructed.
+// One anira handler in realtime streaming mode: one pop scheduled per push, priming zeros skipped,
+// push-time contexts paired FIFO with popped results.
+// Never blocks on inference; no locks and no heap allocation once prepared.
 namespace anira::models::handtracking {
+
+// `count` floats as one Streamed block: one channel of `count` values.
+inline anira::Tensor host_block(float* data, std::size_t count) {
+    const int64_t shape[2] = {1, static_cast<int64_t>(count)};
+    return anira::Tensor::from_host(data, ANIRA_DTYPE_F32, shape);
+}
+
+// One float as a Static value, shape {1, 1}.
+inline anira::Tensor host_scalar(float* data) {
+    const int64_t shape[2] = {1, 1};
+    return anira::Tensor::from_host(data, ANIRA_DTYPE_F32, shape);
+}
+
+// Whether a whole result is waiting in output 0: a pop with nothing waiting is a miss.
+inline bool has_result(anira::InferenceHandler& handler, std::size_t num_values) {
+    std::size_t available = 0;
+    handler.get_available_samples(0, 0, &available);
+    return available >= num_values;
+}
 
 template <typename Context, size_t Capacity>
 class StreamedSession {
 public:
-    // anira requires the wait strategy to match across every ContextConfig in the process — pass the same config to every session.
-    StreamedSession(anira::v2::InferenceConfig config, const anira::v2::ContextConfig& context_config)
-        : m_config(std::move(config)), m_pp(m_config), m_handler(m_pp, m_config, context_config) {}
+    // Every session of the tracker shares one anira::Context.
+    StreamedSession(anira::Context& context, const anira::ModelConfig& model)
+        : m_handler(make_handler(context, model)) {}
 
-    anira::v2::InferenceHandler& handler() { return m_handler; }
-    anira::v2::PrePostProcessor& pp() { return m_pp; }  // non-streamable tensors
+    anira::InferenceHandler& handler() { return m_handler; }
 
-    // deadline_ms must cover thread-pool queueing behind other models, not just execution time: too small -> silently dropped pushes, permanently desynced session.
+    // deadline_ms must cover thread-pool queueing behind other models, not just execution time:
+    // too small -> silently dropped pushes, permanently desynced session.
     // pushes_per_second is the worst-case push rate; anira sizes its buffers from it.
-    void prepare(anira::v2::InferenceBackend backend,
-                 float deadline_ms,
+    void prepare(float deadline_ms,
                  int values_per_push,
                  size_t out0_size,
                  double pushes_per_second) {
-        m_config.m_max_inference_time = deadline_ms;
-        m_handler.set_inference_backend(backend);
-        m_handler.prepare(anira::v2::HostConfig(
-            static_cast<float>(values_per_push),
-            static_cast<float>(values_per_push) * static_cast<float>(pushes_per_second)));
+        anira::Hard hard;
+        // Each push is one whole input: the host block is exactly one window
+        hard.host_block_min = values_per_push;
+        hard.host_block_max = values_per_push;
+        hard.host_rate = static_cast<double>(values_per_push) * pushes_per_second;
+        hard.budget = std::chrono::duration<float, std::milli>(deadline_ms);
+        hard.warmup = ANIRA_WARMUP_FIXED;
+        hard.warmup_iterations = 1;
+        hard.on_miss = ANIRA_MISS_ZEROS;
+        m_handler.prepare(hard);  // Throws with anira's reason
+
         m_primed_skips = m_handler.get_latency(0) / out0_size;
         m_pending_pops = 0;
         m_in_flight.clear();
-    }
-
-    // Not realtime-safe: reset() waits for pending inferences.
-    void switchBackend(anira::v2::InferenceBackend backend,
-                       float deadline_ms,
-                       int values_per_push,
-                       size_t out0_size,
-                       double pushes_per_second) {
-        m_handler.reset();
-        prepare(backend, deadline_ms, values_per_push, out0_size, pushes_per_second);
     }
 
     bool canPush() const { return m_in_flight.count < Capacity; }
@@ -54,12 +70,12 @@ public:
         ++m_pending_pops;
     }
 
-    // try_pop returns false while the result is not there yet (it checks the available samples first, since a pop with nothing waiting is a miss; the pop stays scheduled, retried next frame); handle_result gets the paired context for every real result.
+    // try_pop returns false while the result is not there yet (the pop stays scheduled, retried
+    // next frame); handle_result gets the paired context for every real result.
     template <typename TryPopFn, typename HandleResultFn>
     void drainResults(TryPopFn&& try_pop, HandleResultFn&& handle_result) {
         while (m_pending_pops > 0) {
-            if (!try_pop())
-                return;
+            if (!try_pop()) { return; }
             --m_pending_pops;
             if (m_primed_skips > 0) {
                 --m_primed_skips;
@@ -74,13 +90,21 @@ public:
     bool allPopsServed() const { return m_pending_pops == 0; }
     bool hasInFlightResults() const { return m_in_flight.count > 0; }
 
-    // Turns leftover in-flight results into skips so future pushes pair with fresh results. Only call when allPopsServed().
+    // Turns leftover in-flight results into skips so future pushes pair with fresh results. Only
+    // call when allPopsServed().
     void discardInFlightResults() {
         m_primed_skips += m_in_flight.count;
         m_in_flight.clear();
     }
 
 private:
+    static anira::InferenceHandler make_handler(anira::Context& context,
+                                                const anira::ModelConfig& model) {
+        anira::Pipeline pipeline;
+        pipeline.add_inference(model);
+        return anira::InferenceHandler(context, pipeline);
+    }
+
     // Fixed-capacity FIFO — no heap allocation on the video thread.
     struct ContextQueue {
         std::array<Context, Capacity> items{};
@@ -98,14 +122,11 @@ private:
             ++count;
         }
         void clear() {
-            while (count > 0)
-                pop();
+            while (count > 0) { pop(); }
         }
     };
 
-    anira::v2::InferenceConfig m_config;
-    anira::v2::PrePostProcessor m_pp;
-    anira::v2::InferenceHandler m_handler;
+    anira::InferenceHandler m_handler;
 
     ContextQueue m_in_flight;
     size_t m_pending_pops = 0;

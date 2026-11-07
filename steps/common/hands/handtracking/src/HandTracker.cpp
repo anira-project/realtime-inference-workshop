@@ -1,14 +1,11 @@
 #include <handtracking/HandTracker.h>
 
 #include "StreamedHandTracker.h"
-#include "SyncHandTracker.h"
 
 namespace anira::models::handtracking {
 
-std::unique_ptr<HandTracker> createHandTracker(Engine engine) {
-    if (engine == Engine::Synchronous)
-        return std::make_unique<SyncHandTracker>();
-    return std::make_unique<StreamedHandTracker>();
+std::unique_ptr<HandTracker> createHandTracker(const anira::ContextConfig& context_config) {
+    return std::make_unique<StreamedHandTracker>(context_config);
 }
 
 }  // namespace anira::models::handtracking

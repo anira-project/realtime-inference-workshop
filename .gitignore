@@ -6,6 +6,7 @@ tmp/
 build/
 steps/common/assets/models/*/
 .idea/
+.vscode/
 __pycache__/
 presenter-notes/
 .cache/

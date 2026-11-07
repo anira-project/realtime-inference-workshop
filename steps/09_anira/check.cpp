@@ -4,6 +4,7 @@
 // Built twice: step09_exercise_check and step09_solution_check.
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
@@ -26,6 +27,25 @@ constexpr struct {
 // already carries it, and so does the latency anira reports.
 constexpr size_t k_model_latency = 2224;
 
+// Offline, the host's blocks change size: any size up to its largest may come,
+// as the contract declares, so the check sends a few, not only 512.
+constexpr std::array<size_t, 6> k_offline_blocks = {512, 100, 412, 1, 511, 256};
+
+// The host offline: blocks of the given sizes in turn, each waiting for its
+// result. Returns the output; `late` gets where a block was missed.
+static std::vector<float> run_offline(AniraProcessor& processor,
+                                      const std::vector<size_t>& block_sizes,
+                                      std::vector<size_t>& late) {
+    std::vector<float> output(k_input_signal.begin(), k_input_signal.end());
+    late.clear();
+    for (size_t offset = 0, call = 0; offset < output.size(); ++call) {
+        const size_t size = std::min(block_sizes[call % block_sizes.size()], output.size() - offset);
+        if (processor.process(output.data() + offset, size, true) != ANIRA_OK) { late.push_back(offset); }
+        offset += size;
+    }
+    return output;
+}
+
 static int check() try {
     AniraProcessor processor(WORKSHOP_STEP_DIR);
     processor.prepare(k_host.m_sample_rate, k_host.m_block_size);
@@ -42,6 +62,7 @@ static int check() try {
     }
 
     print_report("model", processor.plan());
+    std::vector<size_t> late;
     std::printf("  %-28s %zu samples (%.1f ms at %.0f Hz)\n",
                 "reported latency",
                 latency,
@@ -50,18 +71,8 @@ static int check() try {
 
     // Offline, as a bounce: the host calls as fast as it can, and every block
     // waits for its result. Nothing may be missed, so the comparison is exact.
-    std::vector<size_t> late;
-    size_t position = 0;
-    const std::vector<float> output = run_host(
-        k_input_signal.data(),
-        k_input_signal.size(),
-        k_host.m_block_size,
-        [&](float* samples, size_t num_samples) {
-            if (processor.process(samples, num_samples, true) == ANIRA_MISSED) { late.push_back(position); }
-            position += num_samples;
-        });
-
-    // Offline, the block has to come out processed, and nothing may be missed.
+    // First with blocks of 512: a miss here is the call that does not wait.
+    std::vector<float> output = run_offline(processor, {k_host.m_block_size}, late);
     if (std::equal(output.begin(), output.end(), k_input_signal.begin())) {
         fail("TODO 3: offline, the output is the input: process the block with process_wait");
         return 2;
@@ -69,6 +80,17 @@ static int check() try {
     if (!late.empty()) {
         fail("TODO 3: offline, %zu blocks were missed: wait for the result,\n"
              "process_wait with ANIRA_WAIT_FOREVER", late.size());
+        return 2;
+    }
+
+    // Then with blocks of changing size, as the contract allows: a miss now is
+    // a block size the contract leaves out.
+    processor.prepare(k_host.m_sample_rate, k_host.m_block_size);
+    output = run_offline(processor, {k_offline_blocks.begin(), k_offline_blocks.end()}, late);
+    if (!late.empty()) {
+        fail("TODO 3: offline, %zu blocks were missed once they changed size: the host may\n"
+             "send any block from 1 up to its largest, so the contract has to say so",
+             late.size());
         return 2;
     }
 

@@ -106,7 +106,7 @@ public:
             assert(popped);  // never fails: the prefill covers the wait for the first block
         }
 
-        check_todos(m_input, m_output, m_model.m_input_size);  // Given: names a missing TODO
+        check_todos(m_input, m_output, m_model.m_input_size, num_samples);  // Given: names the TODO
     }
 
 private:

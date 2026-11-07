@@ -1,6 +1,5 @@
 # TODOs
 
-- I like the first teaser slide, but maybe we could have first the same slide with an fft, where it is deterministic and always fast enough. And then as a second example the model where there is not enough time...
 - Process_size not copy in first example
 - Don't get why we need the process_size? Can't we just put it directly when doing the engine.process?
 - Was ist mit .clangd pointing to compile_commands.json symlink in build folder am besten und release and debug sollten am besten in unterordnern sein
@@ -62,3 +61,4 @@
 - After QR code: clone and configure slide (0c155e8), release preset with the reason in the notes.
 - Shipping the engine: dropped by Lina in 72833ee.
 - Teaser (9306635 and later): two animations, "Fighting the clock" (clock) and the real-time thread with an FFT next to a neural network.
+- Teaser A first with an FFT, then the model: renamed "Every callback has a deadline", A = the clock with FFT + IFFT (about 1 sample, every block, measured 22 µs in numpy), B = the same clock with the network; the codec teaser (FFT and network lanes) dropped.

@@ -35,9 +35,9 @@ Note:
 - An FFT on blocks of 2048: three callbacks only collect, the 4th runs FFT and IFFT
 - That is the pattern you know from STFT and FFT convolution: a FIFO collects the block, the callback that completes it does the transform, and we report 2048 samples of latency to the host
 - The block sizes don't match, and that only costs latency
-- FFT and IFFT take about 1 sample's worth of time: measured with numpy, 2048-point rfft, multiply, irfft, 22 µs on our laptop, Python's overhead included. The tick on the clock is drawn thicker than that
-- And it takes the same time for every block: an FFT does the same operations, whatever the audio is
-- Three callbacks idle, one does all the work. Spiky, but with about 500 times headroom it doesn't matter. Every callback is on time
+- FFT and IFFT take about 3 µs on our laptop (FFTW), roughly a tenth of a sample. The tick on the clock is drawn much thicker than that
+- The boxes on the right: time per block, in samples. The same for every block: an FFT does the same operations, whatever the audio is
+- Three callbacks idle, one does all the work. Spiky, but with thousands of times headroom it doesn't matter. Every callback is on time
 
 ---
 
@@ -52,9 +52,9 @@ Note:
 - The block sizes don't match, as with the FFT: four callbacks collect, the 4th runs the network. That part we know how to handle
 - New problem 1: the forward pass takes about 570 samples' worth of time (13 ms on ONNX Runtime, step 3), more than the 512 a callback has. It doesn't fit
 - New problem 2: by how much it misses changes every time, sometimes far more. The runtime is not deterministic
+- The boxes on the right: time per block, in samples, red when it is more than the 512 a callback has. The newest one counts while the network runs
 - The times shown are illustrative, after step 3's measurements
 - The question: how do we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline? That is today's workshop
-- The question: how do we fit that into a callback with varying block sizes and a hard deadline? That is today's workshop
 
 ---
 

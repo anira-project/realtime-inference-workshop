@@ -2,7 +2,6 @@
 
 - I like the first teaser slide, but maybe we could have first the same slide with an fft, where it is deterministic and always fast enough. And then as a second example the model where there is not enough time...
 - Process_size not copy in first example
-- Why are there the quotes for stings in the path
 - Don't get why we need the process_size? Can't we just put it directly when doing the engine.process?
 - Was ist mit .clangd pointing to compile_commands.json symlink in build folder am besten und release and debug sollten am besten in unterordnern sein
 - rename audio to output
@@ -25,6 +24,7 @@
 
 ## Done (2026-11-07)
 
+- Why are there the quotes for stings in the path: step 1's TODO 1 was `model_path = ""`, now `model_path = ?`; the solution is `k_model.m_path`. Only the CMake define keeps its quotes, it makes the path a string literal.
 - Why copy the floats in example 1? Why not bind tensors?: the tensors are made once, with memory from ONNX Runtime, and process() copies the block in and out. Binding the caller's buffer would mean a new Ort::Value per call (an allocation, RTSan would then report our engine in step 5) and, since process() works in place, still a copy back. The four copies of a call with state take about 7 µs here, the forward pass about 12 ms. anira binds its slot buffers and copies the audio in pre/post-processing; its state is two buffers that swap.
 - OnnxEngine: process(float* audio, size_t num_samples, float* state, size_t state_size), the same shape for audio and state; no reset(), the stateless process() zero-fills the state input; no own buffers, create_tensor or elements().
 - alle ringbuffer try_push and try_pop: RingBuffer and ThreadSafeRingBuffer have only try_push and try_pop (plus available, space), no block push/pop, no throws.

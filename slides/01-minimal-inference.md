@@ -100,12 +100,13 @@ Note:
 ## The engine<br><span class="then">Load once, then one block at a time.</span>
 
 ```cpp
-// constructor
+// load(): once
+m_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "workshop");
 m_session = Ort::Session(m_env, model_path.c_str(), options);
-m_inputs.push_back(Ort::Value::CreateTensor<float>(allocator, ...));   // once, own memory
+m_inputs.push_back(Ort::Value::CreateTensor<float>(allocator, ...));   // own memory
 m_outputs.push_back(Ort::Value::CreateTensor<float>(allocator, ...));
 
-// process()
+// process(): every block
 std::copy_n(audio, num_samples, m_inputs[0].GetTensorMutableData<float>());
 
 m_session.Run(Ort::RunOptions{nullptr}, ..., m_inputs.data(), ..., m_outputs.data(), ...);
@@ -114,10 +115,10 @@ std::copy_n(m_outputs[0].GetTensorMutableData<float>(), num_samples, audio);
 ```
 
 Note:
-- The constructor creates an ONNX Runtime session `Ort::Session`. 
+- The constructor does nothing. `load` starts ONNX Runtime, `Ort::Env`, and creates the session, `Ort::Session`, from the file
 - The `.onnx` file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++.
 - Model is 126 MB, so load once and keep the engine
-- Tensors created once, with their own memory from ONNX Runtime. Shape: 1 batch, 1 channel, N samples
+- Tensors created once, in `load`, with their own memory from ONNX Runtime. Shape: 1 batch, 1 channel, N samples
 - Every block: copy in, `Run`, copy out
 - `Run` writes into the output tensors we already have
 - From the outside still in place, like an audio callback
@@ -159,7 +160,7 @@ cmake --build --preset release --target step01_exercise
 
 Note:
 - Two TODOs: load the model, run the first block with a block size you pick.
-- At the beginning of the main file you will find a constructer for the model that passes the has the model path and size. Use the values from the constructor
+- At the beginning of the main file you will find the struct `k_model`, with the model's path and block size. Use its values
 - Build commands are on the slide
 - 8 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide

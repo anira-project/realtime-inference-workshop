@@ -140,11 +140,43 @@ Note:
   <i class="in"></i>
   <i class="in"></i>
   <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
+  <i class="in"></i>
   <i class="pre"></i>
   <i class="pre"></i>
   <i class="pre"></i>
   <i class="pre"></i>
   <i class="pre"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
+  <i class="res"></i>
   <i class="res"></i>
   <i class="res"></i>
   <i class="res"></i>
@@ -161,6 +193,7 @@ Note:
 - Every callback, every 512 samples, the host hands us its own buffer: not a ring buffer, just the block. The audio thread pushes it into `m_input`, `try_push`
 - The worker spins: `try_pop` returns false again and again until a sample is there, and takes each one at once, until a whole model block of 2048 is together. That is TODO 3
 - Then the model runs, and the worker pushes the result into `m_output`, `try_push`
+- The audio keeps coming meanwhile: every callback pushes its 512, also while the model runs. That block waits in `m_input` until the worker is back and takes it
 - Meanwhile the audio thread takes one block out of `m_output` every callback, `try_pop`: first the prefill, silence, then the model's stream. If something is missing, it never waits: a zero goes out. That is TODO 2
 - Both rings: one writer, one reader, so no locks. `try_push` and `try_pop` never wait, never allocate, a bool says whether it worked
 - Underneath: moodycamel's circular buffer, only its `try_` functions

@@ -2,8 +2,6 @@
 
 - Remove the Claude trailer from commit 72833ee (Lina, 2026-11-04, "Renumber part 1 to steps 1-8 and drop the shipping step"): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, the only one in the history. Rewrites the 70 commits after it and needs a force push of main; Lina resets her main to origin/main afterwards.
 
-- Bypass nichts abspuielen
-- Report, siehe anria example
 
 ## Old
 
@@ -15,6 +13,8 @@
 
 ## Done (2026-11-07)
 
+- Bypass nichts abspuielen: while bypassed, the example or your file stops (silence, back to the start) and starts over once the settings fit; the input still passes through. Step 8 processes short blocks instead of bypassing on them.
+- Report, siehe anira example: the plugins of steps 9 and 10 keep anira's PlanReport row per model; a **report** button opens a panel (verdict, budget, measured, median, warm-up, load bar with the 0.75 and 1.0 thresholds). A not-real-time plan holds the plugin back live, with **Run anyway, with dropouts**; a bounce always processes. The report comes from the handler (plan_report()), the exercise code is untouched; the checks of steps 9 and 10 print it, and step 9 has a slide for it.
 - Worker thread grafik step 6 fixen: the two-lane graphic (step 6 motivation and the part 2 recap) is a timeline of 12 callbacks, every row aligned: callbacks, m_input filling, the worker spinning with a model run after every fourth, m_output starting with the 5 prefill blocks, what the host hears; a playhead sweeps over it ({{THREADS}} in scripts/build.js). The points below: its own clock, its own rules.
 - Model latency erst bei latency einbringen / Latency einfach erklären ohne exercise: step 3's bonus slide asks for the algorithmic latency only, 2048 − 512 = 1536, the prefill. Step 7 is a demonstration, solution only (exercise and its filled check gone): its slides bring in the model's own 2224 through the dry/wet mix, the dry path delayed by the whole latency.
 - Threadsafe Ringbuffers ohne one writer, one reader: the table slide in step 6 became one flow animation, "Every callback 512 in, 512 out", in two lanes: the callback's host block (not a ring) into m_input, the worker spinning on try_pop until a model block is whole, the model, the result into m_output, the audio thread taking the prefill first. One writer, one reader is a line below it and in the notes.

@@ -2307,3 +2307,100 @@ html.tanh .mf .mf-src.hand rect { fill: var(--tint-exercise); }
 html.tanh .mf .mf-src text { font-size: 34px; font-weight: 600; fill: var(--ink); font-family: var(--fs-heading-font); }
 html.tanh .mf .mf-into { fill: none; stroke: var(--ink); stroke-width: 3; stroke-dasharray: 8 6; }
 html.tanh .mf .mf-zlab { font-size: 34px; font-weight: 600; fill: var(--ink); font-family: var(--fs-heading-font); }
+
+/*********************************************
+ * Step 9 · anira's report: one card per plan, as the plugin shows it, and the
+ * verdict's thresholds
+ *********************************************/
+
+html.tanh .report {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--space-8);
+  align-items: center;
+  margin: var(--space-7) 0 var(--space-6);
+}
+
+html.tanh .report-card {
+  padding: var(--space-6) var(--space-7);
+  border-radius: var(--radius-main);
+  background: var(--wash);
+  font-size: 0.72em;
+}
+
+html.tanh .report-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  font-size: 1.2em;
+}
+
+html.tanh .report-pill {
+  display: inline-block;
+  min-width: 7.5em;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  color: var(--paper);
+  font-size: 0.85em;
+  font-weight: 600;
+  text-align: center;
+}
+html.tanh .report-pill.ok { background: var(--mark-check); }
+html.tanh .report-pill.marginal { background: var(--mark-model); }
+html.tanh .report-pill.over { background: var(--mark-over); }
+
+html.tanh .report-times {
+  display: flex;
+  gap: var(--space-6);
+  margin-bottom: var(--space-2);
+}
+
+html.tanh .report-line { margin-top: var(--space-2); opacity: 0.8; }
+html.tanh .report-line b { opacity: 1; }
+
+html.tanh .report-bar {
+  position: relative;
+  height: 12px;
+  margin: var(--space-4) 0 var(--space-6);
+  border-radius: 6px;
+  background: var(--paper);
+}
+
+html.tanh .report-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: var(--mark-check);
+}
+
+html.tanh .report-bar b {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  background: var(--ink);
+  opacity: 0.6;
+}
+
+html.tanh .report-bar b span {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8em;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+html.tanh .report-scale {
+  display: grid;
+  gap: var(--space-6);
+  font-size: 0.66em;
+}
+
+html.tanh .report-scale div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}

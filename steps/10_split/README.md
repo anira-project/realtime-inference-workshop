@@ -31,12 +31,22 @@ Once it passes, play: the plugin, eight knobs, one per latent.
 cmake --build --preset release --target step10_exercise_Standalone   # or step10_exercise_VST3
 ```
 
-The result is in `build/release/steps/10_split/step10_exercise_artefacts/Release/`. A double-click on a knob sets it back to 0. Turn one at a time: in this model z0 changes the loudness and z2 the brightness.
+The result is in `build/release/steps/10_split/step10_exercise_artefacts/Release/`. A double-click on a knob sets it back to 0. Turn one at a time: in this model z0 changes the loudness and z2 the brightness. **report** shows step 9's report, one card for the encoder and one for the decoder; a slow machine and a rate other than 44.1 kHz ask first, as in step 9.
 
 ## Expected output
 
 ```
-Reported latency: 6859 samples (155.5 ms at 44100 Hz)
+anira's report, encoder (at prepare, on this machine):
+  budget 6.1 ms   measured 6.1 ms   median 6.1 ms
+  warm-up 4 inferences, until stable
+  load 13 % (real-time factor 0.13 over 1 inference): comfortable
+
+anira's report, decoder (at prepare, on this machine):
+  budget 6.3 ms   measured 6.3 ms   median 6.0 ms
+  warm-up 6 inferences, until stable
+  load 14 % (real-time factor 0.14 over 1 inference): comfortable
+
+Reported latency: 6873 samples (155.9 ms at 44100 Hz)
 
   latent frames                8, 1 of them priming
 OK: max abs diff 2.31e-07, within 0.0001 of the reference.

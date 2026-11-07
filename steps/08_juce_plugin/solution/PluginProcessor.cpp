@@ -29,14 +29,15 @@ void PluginProcessor::prepareToPlay(double sample_rate, int samples_per_block) {
         }
     }
 
-    // Built for 512-sample buffers at 44.1 or 48 kHz, nothing else: the
-    // prefill and the latency are only right for those. Part 2 does the rest.
-    // The worker's time is rounded at 44.1 kHz: at 48 kHz the same samples last
-    // about 8% less, so a worst case close to the next callback may not fit.
-    const bool supported_rate =
-        std::abs(sample_rate - 44100.0) < 1.0 || std::abs(sample_rate - 48000.0) < 1.0;
-    if (!supported_rate) {
-        bypass("This plugin is built for 44.1 or 48 kHz. Arbitrary sample rates: part 2, anira.");
+    // Built for 512-sample buffers at 44.1 kHz: the model is trained at 44.1
+    // kHz, and the prefill and the latency are only right for those. At 48
+    // kHz it waits for the user (k_not_44k): it plays higher, and the worker's
+    // time is rounded at 44.1 kHz, so at 48 kHz the same samples last about
+    // 8% less. Anything else is bypassed. Part 2 does the rest.
+    const bool at_44k = std::abs(sample_rate - 44100.0) < 1.0;
+    const bool at_48k = std::abs(sample_rate - 48000.0) < 1.0;
+    if (!at_44k && !at_48k) {
+        bypass("This plugin is built for 44.1 kHz. Arbitrary sample rates: part 2, anira.");
         return;
     }
     if (static_cast<size_t>(samples_per_block) != k_host_block_size) {
@@ -51,6 +52,7 @@ void PluginProcessor::prepareToPlay(double sample_rate, int samples_per_block) {
     // The number from step 7, now where it belongs: the host delays every other
     // track by this much, so our output lines up with the rest of the session.
     setLatencySamples(static_cast<int>(m_processor->latency_samples()));
+    set_hold(HoldKind::sample_rate, at_48k ? &k_not_44k_step8 : nullptr);
     process_normally();
 }
 
@@ -59,12 +61,14 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     juce::ScopedNoDenormals no_denormals;
     render_source(buffer);
 
-    if (bypassed()) { return; }
+    if (bypassed()) { return; }  // Latency 0: the input goes out as it is
 
     // Up to the 512 prepareToPlay announced. A shorter block now and then is
     // fine: the ring buffers move sample by sample, the stream stays in place.
     float* mono = to_mono(buffer);
-    m_processor->set_mix(mix());
+    // Held back at 48 kHz: the dry path only, as late as the host was told,
+    // so the track stays in line with the others
+    m_processor->set_mix(processing() ? mix() : 0.0f);
     m_processor->process_block(mono, static_cast<size_t>(buffer.getNumSamples()));
     to_all_channels(buffer);
 }

@@ -37,6 +37,47 @@ PluginBase::PluginBase(juce::String title, juce::String subtitle, std::vector<Kn
 
 PluginBase::~PluginBase() = default;
 
+std::vector<const PluginBase::Hold*> PluginBase::holds() const {
+    std::vector<const Hold*> open;
+    for (size_t kind = 0; kind < 2; ++kind) {
+        if (waiting(kind)) { open.push_back(m_holds[kind].load()); }
+    }
+    return open;
+}
+
+void PluginBase::run_anyway() {
+    for (size_t kind = 0; kind < 2; ++kind) {
+        if (waiting(kind)) {
+            m_agreed[kind].store(true);
+            return;  // One at a time: the window asks for the next
+        }
+    }
+}
+
+void PluginBase::set_report(std::vector<ReportRow> rows) {
+    bool not_realtime = false;
+    for (const ReportRow& row : rows) {
+        not_realtime = not_realtime || row.m_verdict == ReportRow::Verdict::not_realtime;
+    }
+    {
+        const std::lock_guard<std::mutex> lock(m_report_mutex);
+        m_report = std::move(rows);
+    }
+    set_hold(HoldKind::report, not_realtime ? &k_not_realtime : nullptr);
+    m_report_version.fetch_add(1);
+}
+
+void PluginBase::set_hold(HoldKind kind, const Hold* hold) {
+    const size_t index = kind == HoldKind::sample_rate ? 0 : 1;
+    if (m_holds[index].load() != hold) { m_agreed[index].store(false); }  // New: asks again
+    m_holds[index].store(hold);
+}
+
+std::vector<PluginBase::ReportRow> PluginBase::report() const {
+    const std::lock_guard<std::mutex> lock(m_report_mutex);
+    return m_report;
+}
+
 bool PluginBase::load_file(const juce::File& file) {
     suspendProcessing(true);
     const bool loaded = m_player.load(file);

@@ -36,9 +36,9 @@ That one line is what lets the host line our track up with every other track: 15
 
 **`releaseResources`**: stop the worker thread.
 
-## Only 44.1 or 48 kHz, only 512 samples
+## Only 44.1 kHz, only 512 samples
 
-The prefill and the latency from steps 6 and 7 are only right for a host block of 512, and the model is trained at 44.1 kHz (at 48 kHz it runs, a little higher). For anything else the plugin is **bypassed**: the example or your file stops, the input goes out unprocessed, the latency is 0, and the window shows an overlay that says why. Once the settings fit again, the player starts over from the beginning. A block shorter than 512 now and then during playback is processed like any other: the ring buffers move sample by sample, so the stream stays in place. Arbitrary rates and buffer sizes need a different design; that is part 2.
+The prefill and the latency from steps 6 and 7 are only right for a host block of 512, and the model is trained at 44.1 kHz, as is your step 4 number. At **48 kHz** the window asks first: the model would sound higher and the worker's time is off, and a resampler does not fit our fixed 512 and 2048 blocks. **Process anyway** plays it as it is; until then the input goes out dry, as late as the reported latency, so the track stays in line with the others. For anything else the plugin is **bypassed**: the example or your file stops, the input goes out unprocessed, the latency is 0, and the window shows an overlay that says why. Once the settings fit again, the player starts over from the beginning. A block shorter than 512 now and then during playback is processed like any other: the ring buffers move sample by sample, so the stream stays in place. Arbitrary rates and buffer sizes need a different design; that is part 2.
 
 ## One engine, mono
 
@@ -63,7 +63,7 @@ The plugin links **ONNX Runtime statically**, where the steps before it use it a
 ## Known rough edges, on purpose
 
 - **The model path is absolute**, baked in at compile time. A real plugin ships `model_forward.onnx` inside the bundle.
-- **44.1 or 48 kHz and 512 samples only.** Anything else is bypassed, and the window says so: set the audio device or the DAW to match.
+- **44.1 kHz and 512 samples only.** 48 kHz asks first (**Process anyway**), anything else is bypassed, and the window says so: set the audio device or the DAW to match.
 - **The worker busy-waits.** It spins on `try_pop` and `try_push` without sleeping, which keeps one core busy.
 
 ## Slides

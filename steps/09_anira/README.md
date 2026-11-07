@@ -40,17 +40,23 @@ cmake --build --preset release --target step09_exercise_Standalone   # or step09
 
 The result is in `build/release/steps/09_anira/step09_exercise_artefacts/Release/`.
 
+**report**, top right in the window, shows what `prepare` measured on your machine: the budget, the measured and the median time, the warm-up, and the load, the real-time factor over the inferences that run at once, with its verdict: comfortable below 75 %, marginal below 100 %, else not real-time. A model that is not real-time does not play live: the overlay says so, and **Run anyway** plays it nonetheless, with dropouts and clicks. A bounce always processes, it waits for every result. A sample rate other than 44.1 kHz asks first too: the model is trained at 44.1 kHz and would sound higher or lower, and the plugin has no resampler. **Process anyway** plays it as it is. If both apply, the window asks for one, then for the other.
+
 ## Expected output
 
 ```
-Measured budget:  12.7 ms per inference, at prepare
+anira's report, model (at prepare, on this machine):
+  budget 12.9 ms   measured 12.9 ms   median 12.8 ms
+  warm-up 4 inferences, until stable
+  load 28 % (real-time factor 0.28 over 1 inference): comfortable
+
 Reported latency: 5295 samples (120.1 ms at 44100 Hz)
 
 OK: max abs diff 3.13e-07, within 0.0001 of the reference.
 OK: live, the blocks are processed too.
 ```
 
-Both numbers are this machine's: prepare measures the budget while it warms the model up, and the latency follows from it. Yours differ; a slower machine gets a larger latency, not dropouts. 5295 covers host blocks from 1 to 512, as the contract declares: the host may call with any block up to its largest, so the latency covers the worst one. With every block exactly 512 it would be 4784, the number of step 7.
+The report and the latency are this machine's: prepare measures the budget while it warms the model up, and the latency follows from it. The load is the inference time over the audio it produces: below 75 % comfortable, below 100 % marginal, else not real-time. The model carries its state, so its inferences run one after another, over 1 inference. Yours differ; a slower machine gets a larger latency, not dropouts. 5295 covers host blocks from 1 to 512, as the contract declares: the host may call with any block up to its largest, so the latency covers the worst one. With every block exactly 512 it would be 4784, the number of step 7.
 
 The check runs twice. First offline, like a bounce: the host calls as fast as it can and every block waits for its result, so nothing is missed and the comparison is exact: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. Then once live, at the host's pace, with your `process` line: it only has to process the blocks. Live, a block that is not back in time goes out as the miss policy's fill, here the input itself (`"on_miss": "bypass"`).
 

@@ -1,6 +1,7 @@
 // The plugin's window: what to process (the example, your file, or the
-// input), the dry/wet mix, a row of the step's own knobs if it has any, and an
-// overlay while the plugin is bypassed.
+// input), the dry/wet mix, a row of the step's own knobs if it has any, an
+// overlay while the plugin is bypassed or held back, and anira's plan report
+// (steps 9 and 10).
 // Colours from the slides.
 #pragma once
 
@@ -18,15 +19,42 @@ const juce::Colour k_text{0xfffafafa};
 const juce::Colour k_muted{0xff8a8a90};
 const juce::Colour k_accent{0xffbf85fc};
 const juce::Colour k_warning{0xfffe938c};
+const juce::Colour k_good{0xff8fd6a0};
+const juce::Colour k_marginal{0xfff2c46d};
 }  // namespace palette
 
 // Over the whole window while the plugin is bypassed: why, and what to change.
+// Held back by anira's report, it offers to run anyway and to show the report.
 class BypassOverlay : public juce::Component {
 public:
+    BypassOverlay();
     void paint(juce::Graphics& g) override;
+    void resized() override;
+
+    // Top to bottom, one after the other: title, reason, host line, buttons
+    struct Layout {
+        juce::Rectangle<int> m_title, m_reason, m_host, m_buttons;
+    };
+    Layout layout() const;
 
     juce::String m_reason;
     juce::String m_host;  // The host's sample rate and buffer size
+    juce::String m_title{"Bypassed"};
+    int m_reason_lines = 6;   // Room for the reason
+    bool m_held_back = false;
+    juce::TextButton m_run_anyway{"Run anyway, with dropouts"};
+    juce::TextButton m_show_report{"Report"};
+};
+
+// Over the whole window: anira's plan report, one card per model.
+class ReportPanel : public juce::Component {
+public:
+    ReportPanel();
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+    std::vector<PluginBase::ReportRow> m_rows;
+    juce::TextButton m_close{"Close"};
 };
 
 // One source: the whole tile selects it.
@@ -84,6 +112,12 @@ private:
     void choose_file();
     void load(const juce::File& file);
     void refresh();
+    // What the overlay says: the bypass, else the first hold that waits.
+    // Empty: no overlay.
+    juce::String overlay_reason() const;
+    // Changes whenever the overlay has to: its reason, and how many holds wait.
+    juce::String overlay_key() const;
+    juce::String m_overlay_key;
 
     PluginBase& m_processor;
     WorkshopLookAndFeel m_look;
@@ -91,12 +125,15 @@ private:
     SourceTile m_file;
     SourceTile m_input;
     juce::TextButton m_load{"load"};
+    juce::TextButton m_report_button{"report"};
+    uint32_t m_report_version = 0;
     juce::Slider m_mix{juce::Slider::LinearHorizontal, juce::Slider::NoTextBox};
     juce::Rectangle<int> m_mix_area;
     std::vector<std::unique_ptr<juce::Slider>> m_knobs;  // The step's own, in PluginBase's order
     juce::Rectangle<int> m_knobs_area;
     juce::String m_status;  // A file that could not be read
     BypassOverlay m_overlay;
+    ReportPanel m_report;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> m_mix_attachment;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> m_knob_attachments;
     std::unique_ptr<juce::FileChooser> m_chooser;

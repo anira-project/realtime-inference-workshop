@@ -47,8 +47,8 @@ foreach(variant exercise solution)
 endforeach()
 
 # The exercise filled in from the solution, model files included: it has to
-# pass like the solution (cmake/exercises.cmake). Only on request.
-if(Python3_Interpreter_FOUND)
+# pass like the solution (cmake/exercises.cmake). Only with WORKSHOP_CHECK_EXERCISES.
+if(WORKSHOP_CHECK_EXERCISES)
     workshop_fill_exercise(filled AniraProcessor.cpp model.json contract.json)
     set(check step09_exercise_filled_check)
     add_executable(${check} check.cpp ${filled})

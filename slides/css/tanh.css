@@ -30,7 +30,7 @@ html.tanh {
      what checks it, what sits in between. Fills only, never text. */
   --tint-model: #e7e1d6;
   --tint-exercise: #d5e0da;
-  --tint-check: #dde3d0;
+  --tint-check: #dee3a2ba; /* #e3cca2ba; */
   --tint-latent: #dddbe6;
 
   /* ---------- spacing: a 4 px grid that doubles ---------- */

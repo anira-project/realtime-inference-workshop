@@ -18,6 +18,14 @@
         while (walker.nextNode()) { nodes.push(walker.currentNode); }
 
         let inside = false;
+        let pieces = [];  // the spans of the mark being built, to round its two ends
+        const close = () => {
+            if (pieces.length) {
+                pieces[0].classList.add('solution-start');
+                pieces[pieces.length - 1].classList.add('solution-end');
+            }
+            pieces = [];
+        };
         nodes.forEach((node) => {
             const text = node.nodeValue;
             if (!inside && !text.includes(OPEN) && !text.includes(CLOSE)) { return; }
@@ -30,6 +38,7 @@
                     span.className = 'solution-mark';
                     span.textContent = run;
                     parts.appendChild(span);
+                    pieces.push(span);
                 } else {
                     parts.appendChild(document.createTextNode(run));
                 }
@@ -38,6 +47,7 @@
             for (const ch of text) {
                 if (ch === OPEN || ch === CLOSE) {
                     flush();
+                    if (ch === CLOSE) { close(); }
                     inside = ch === OPEN;
                 } else {
                     run += ch;

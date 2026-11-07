@@ -64,7 +64,7 @@ The plugin links **ONNX Runtime statically**, where the steps before it use it a
 
 - **The model path is absolute**, baked in at compile time. A real plugin ships `model_forward.onnx` inside the bundle.
 - **44.1 or 48 kHz and 512 samples only.** Anything else is bypassed, and the window says so: set the audio device or the DAW to match.
-- **The worker busy-waits.** It checks for a new block without sleeping, which keeps one core busy.
+- **The worker busy-waits.** It spins on `try_pop` and `try_push` without sleeping, which keeps one core busy.
 
 ## Slides
 

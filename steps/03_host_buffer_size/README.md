@@ -10,10 +10,10 @@ The model's block size comes from the export. The host's comes from the audio de
 
 ## What you have
 
-- [`common/helpers/ring_buffer.h`](../common/helpers/ring_buffer.h) — a ring buffer, written for you: `push`, `pop`, `available`, `space`. It throws on overflow and underflow, which is how you find out your capacity was wrong.
+- [`common/helpers/ring_buffer.h`](../common/helpers/ring_buffer.h) — a ring buffer, written for you: `try_push` and `try_pop` move one sample and say whether it worked, `available` and `space` say how full it is.
 - `common/helpers/onnx_engine.h` — the engine from step 1, unchanged, with the state from step 2.
 - `common/helpers/support.h`, `common/assets/test_signal.h`, `common/assets/target_signal.h` — as before.
-- [`common/checks/step03.h`](../common/checks/step03.h) — `check_todos`, called at the end of `process_block`: says which TODO is still missing. Not part of the exercise.
+- [`common/checks/step03.h`](../common/checks/step03.h) — `check_prefill`, called in `prepare`, and `check_todos`, called at the end of `process_block`: say which TODO is off. Not part of the exercise.
 
 ## What to do
 
@@ -24,9 +24,9 @@ processor.prepare(max_block_size);            // Before the audio starts: alloca
 processor.process_block(samples, num_samples) // Per callback, in place
 ```
 
-1. **Size the two ring buffers**, in `prepare()`. How much can be in flight at once, with a host block of 512 and a model block of 2048? Everything that allocates belongs here, not in the callback.
-2. **The pump**, in `process_block()`. Push the host's samples into the input ring buffer, check whether a whole model block is waiting there, and if so pop it into `m_model_block`, run the model (given) and push the result into the output ring buffer. What is left over waits for the next call.
-3. **Give the host its samples back**, in place: pop them from the output ring buffer, if enough are there. At the start the model has produced nothing, and the host gets silence (given).
+1. **The prefill**, in `prepare()`: how many zeros `m_output` starts with, so the host finds samples in every callback, also before the model's first block. The host takes 512 per callback, the model gives back 2048 once a whole block is in. The ring buffers' sizes follow from it and are given; everything that allocates belongs here, not in the callback.
+2. **The pump**, in `process_block()`, one sample at a time. Push the host's samples into the input ring buffer, check whether a whole model block is waiting there, and if so pop it into `m_model_block`, run the model (given) and push the result into the output ring buffer. What is left over waits for the next call.
+3. **Give the host its samples back**, in place: pop them from the output ring buffer. At the start they are the prefill's zeros.
 
 Build and run from the repository root:
 
@@ -46,17 +46,13 @@ OK: max abs diff 3.73e-07, within 0.0001 of the reference.
 
 ## If you're stuck
 
-Each TODO says so when it is still missing:
+The exercise builds once every `?` is filled in. Then each TODO says so when it is off:
 
-- **`TODO 1: give the ring buffers a capacity in prepare()`** — `capacity` is still 0. Think about the worst moment on each side: the input just before a model block is taken out, the output just after one was put in.
-- **`TODO 2: push the samples into m_input and m_output`** — both ring buffers are empty after a callback: the host's samples were not pushed into `m_input`, or the model's result was not pushed into `m_output`.
-- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but `has_block` is still false or it is not popped from `m_input`.
+- **`TODO 1: the prefill is too small, …`** — the host would find `m_output` empty before the model's first block is in. Count the samples the host takes until then.
+- **`TODO 1: the prefill is too large, …`** — it works, but the host hears the model later than it has to.
+- **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but the check for it is not filled in yet, or the block is not popped from `m_input`.
 - **`TODO 3: give the host its samples back`** — the output is piling up instead of being popped into the host's buffer.
 
-The ring buffer complains too:
-
-- **`ring buffer overflow: 512 samples pushed, room for …`** — the capacity from TODO 1 is still 0, or too small.
-- **`ring buffer underflow`** — you are popping output that does not exist yet. Early on there is none; the condition in TODO 3 decides when the host gets silence instead.
 - **`FAILED: max abs diff …`** — every TODO is filled in, but the host did not get the model's stream back: the samples are not the right ones, or not in the right place.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
@@ -67,4 +63,4 @@ Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
 ## What broke?
 
-Nothing, but two things are now true that were not before. The host gets silence at the start: how long, and where it comes from, is the question after the solution. And every fourth callback now runs a whole forward pass. How long does that take, and what is the budget? That is step 4.
+Nothing, but two things are now true that were not before. The host hears the prefill first, 1536 samples of silence: that is part of the latency, the question after the solution. And every fourth callback now runs a whole forward pass. How long does that take, and what is the budget? That is step 4.

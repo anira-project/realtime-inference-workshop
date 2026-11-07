@@ -6,7 +6,6 @@
 #pragma once
 
 #include <cstddef>
-#include <stdexcept>
 #include <vector>
 
 class RingBuffer {
@@ -20,31 +19,22 @@ public:
     // Room left for writing.
     size_t space() const { return m_samples.size() - m_size; }
 
-    // Appends num_samples to the back of the buffer. Throws if they do not fit — in a plugin you would
-    // size the buffer so this cannot happen, which is the point of TODO 1.
-    void push(const float* samples, size_t num_samples) {
-        if (num_samples > space()) {
-            throw std::runtime_error("ring buffer overflow: " + std::to_string(num_samples) +
-                                     " samples pushed, room for " + std::to_string(space()));
-        }
-        for (size_t i = 0; i < num_samples; ++i) {
-            m_samples[m_write] = samples[i];
-            m_write = (m_write + 1) % m_samples.size();
-        }
-        m_size += num_samples;
+    // Appends one sample at the back. False, and nothing changes, if full.
+    [[nodiscard]] bool try_push(float sample) {
+        if (space() == 0) { return false; }
+        m_samples[m_write] = sample;
+        m_write = (m_write + 1) % m_samples.size();
+        ++m_size;
+        return true;
     }
 
-    // Removes num_samples from the front of the buffer into `samples`. Throws if there are not enough samples.
-    void pop(float* samples, size_t num_samples) {
-        if (num_samples > m_size) {
-            throw std::runtime_error("ring buffer underflow: " + std::to_string(num_samples) +
-                                     " samples popped, only " + std::to_string(m_size) + " available");
-        }
-        for (size_t i = 0; i < num_samples; ++i) {
-            samples[i] = m_samples[m_read];
-            m_read = (m_read + 1) % m_samples.size();
-        }
-        m_size -= num_samples;
+    // Takes one sample from the front. False, and nothing changes, if empty.
+    [[nodiscard]] bool try_pop(float& sample) {
+        if (m_size == 0) { return false; }
+        sample = m_samples[m_read];
+        m_read = (m_read + 1) % m_samples.size();
+        --m_size;
+        return true;
     }
 
 private:

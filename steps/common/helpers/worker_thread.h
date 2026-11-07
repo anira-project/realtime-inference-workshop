@@ -26,6 +26,10 @@ public:
         });
     }
 
+    // False once stop() was called: a `work` that waits checks it, so stop()
+    // does not wait forever.
+    bool running() const { return m_running.load(std::memory_order_acquire); }
+
     // Waits for the current call of `work` to finish, then ends the thread.
     void stop() {
         if (!m_thread.joinable()) { return; }

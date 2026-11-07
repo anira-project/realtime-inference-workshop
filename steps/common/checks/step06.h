@@ -15,23 +15,24 @@
 #include "common/helpers/support.h"
 
 
-// TODO 1, in prepare(), before anything is allocated.
-// @input_capacity: the size of m_input
-// @output_capacity: the size of m_output
+// TODO 1, in prepare(): step 3's prefill, plus the worker's time to run the
+// model block.
 // @prefill: the samples of silence m_output starts with
 // @max_block_size: the largest block the callback will be given
 // @model_block_size: samples the model takes per forward pass
-inline void check_todos(size_t input_capacity,
-                        size_t output_capacity,
-                        size_t prefill,
-                        size_t max_block_size,
-                        size_t model_block_size) {
-    if (input_capacity < model_block_size) {
-        throw std::runtime_error("TODO 1.1: give m_input room for a whole model block");
-    }
-    if (output_capacity < prefill + max_block_size) {
+// @worker_samples: the worker's time, k_max_inference_samples_rounded
+inline void check_prefill(size_t prefill,
+                          size_t max_block_size,
+                          size_t model_block_size,
+                          size_t worker_samples) {
+    const size_t needed = (model_block_size - max_block_size) + worker_samples;
+    if (prefill < needed) {
         throw std::runtime_error(
-            "TODO 1.2: give m_output room for the prefill and a callback more");
+            "TODO 1: the prefill is too small, the worker's first block would come too late");
+    }
+    if (prefill > needed) {
+        throw std::runtime_error(
+            "TODO 1: the prefill is too large, the host would hear the model later than needed");
     }
 }
 

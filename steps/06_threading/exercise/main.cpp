@@ -7,6 +7,7 @@
 // Check:  the host gets the model's stream back, exactly the prefill later.
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -49,35 +50,30 @@ public:
     void prepare(size_t max_block_size) {
         m_worker.stop();
 
-        // How much silence m_output starts with, so the worker has time and the host
-        // always finds something to take. Given here, and step 7 takes it apart.
-        m_prefill = (k_model.m_input_size - max_block_size) + k_max_inference_samples_rounded;
-
         // ---- TODO 1 --------------------------------------------------------
-        // Give both ring buffers the capacity they need. As in step 3, think of
-        // the moment each one is fullest:
-        //   1. m_input: the worker takes a whole model block out of it at once.
-        //   2. m_output: the worker pushes a whole model block into it. And while
-        //      the worker is busy, the host keeps taking samples, so those have
-        //      to be waiting in there too. How many can the host take in that time?
+        // The prefill: how much silence m_output starts with, so the host
+        // always finds something to take. Step 3's prefill, and now the worker
+        // needs time on top to run the model block.
         //
         // Hint: the worker's time is k_max_inference_samples_rounded, your worst
         // case from step 4 in samples, rounded up to whole callbacks. It comes
-        // from common/inference_time.h, and the prefill above uses it too.
+        // from common/inference_time.h.
         // --------------------------------------------------------------------
-        const size_t input_capacity = 0; // <- 1. fill out
-        const size_t output_capacity = 0; // <- 2. fill out
+        m_prefill = ?;  // <- fill out
 
-        check_todos(input_capacity,
-                    output_capacity,
-                    m_prefill,
-                    max_block_size,
-                    k_model.m_input_size);  // Given: names a missing TODO
+        check_prefill(m_prefill,
+                      max_block_size,
+                      k_model.m_input_size,
+                      k_max_inference_samples_rounded);  // Given: names TODO 1 if it is off
 
-        m_input = ThreadSafeRingBuffer(input_capacity);
-        m_output = ThreadSafeRingBuffer(output_capacity);
-        const std::vector<float> silence(m_prefill, 0.0f);
-        m_output.push(silence.data(), m_prefill);
+        // Given: m_input holds one model block; m_output the worker's time and
+        // one model block more, so the prefill fits
+        m_input = ThreadSafeRingBuffer(k_model.m_input_size);
+        m_output = ThreadSafeRingBuffer(k_max_inference_samples_rounded + k_model.m_input_size);
+        for (size_t i = 0; i < m_prefill; ++i) {
+            const bool pushed = m_output.try_push(0.0f);
+            assert(pushed);  // never fails: m_output has room for the prefill
+        }
         m_model_block.assign(k_model.m_input_size, 0.0f);
         m_state.assign(k_model.m_state_size, 0.0f);
 
@@ -104,7 +100,7 @@ public:
         // Hint: try_push() and try_pop() never wait, they say whether it worked.
         // --------------------------------------------------------------------
         for (size_t i = 0; i < num_samples; ++i) {
-            const bool pushed = false;  // <- 1. fill out
+            const bool pushed = ?;  // <- 1. fill out
             if (!pushed) {
                 m_unpushed += num_samples - i;
                 break;
@@ -129,7 +125,7 @@ public:
         }
 
         for (size_t i = zeros; i < num_samples; ++i) {
-            const bool popped = m_debt == 0 && false;  // <- 2. fill out
+            const bool popped = m_debt == 0 && ?;  // <- 2. fill out
             if (!popped) {
                 // Not the next one either: while anything is owed, or while
                 // the worker is pushing right now, what comes next would land
@@ -149,17 +145,24 @@ private:
     // lock here, nobody is waiting on this thread.
     void process_model() {
         // ---- TODO 3 --------------------------------------------------------
-        // The model's half of step 3's process_block():
-        //   1. check if m_input has enough samples for a model block
-        //   2. if so: pop it into m_model_block, run the model (given), push
-        //      the result into m_output
+        // The worker, sample by sample like the audio thread, but this thread
+        // may wait: when a try_ fails, it tries again right away, a hot spin.
+        //   1. pop a whole model block from m_input into m_model_block
+        //   2. push the result into m_output
+        // The inference in between is step 3's, given.
         // --------------------------------------------------------------------
-        const bool has_block = false;  // <- 1. fill out
+        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+            while (?) {  // <- 1. fill out: spin until try_pop() worked
+                if (!m_worker.running()) { return; }  // given: stop() never waits forever
+            }
+        }
 
-        if (has_block) {
-            // m_input.pop(?, ?);  // <- 2. fill out
-            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
-            // m_output.push(?, ?);  // <- 2. fill out
+        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+
+        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+            while (?) {  // <- 2. fill out: spin until try_push() worked
+                if (!m_worker.running()) { return; }  // given
+            }
         }
     }
 

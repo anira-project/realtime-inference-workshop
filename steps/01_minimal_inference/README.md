@@ -8,7 +8,7 @@
 - [`common/helpers/onnx_engine.h`](../common/helpers/onnx_engine.h) — the engine, written for you. Read it first.
 - [`common/assets/test_signal.h`](../common/assets/test_signal.h) — `k_input_signal`: a 220 Hz sine, 8 blocks of 2048 samples.
 - `common/assets/target_signal.h` — `k_target_output_signal`: what the model produced for it in Python.
-- [`common/checks/step01.h`](../common/checks/step01.h) — says which TODO is still missing, and compares the first block with the reference. Not part of the exercise.
+- [`common/checks/step01.h`](../common/checks/step01.h) — says which TODO is off, and compares the first block with the reference. Not part of the exercise.
 
 Both signals are compiled in, so there are no files to read and no audio format to parse.
 
@@ -44,9 +44,11 @@ OK: max abs diff 2.33e-10, within 1e-06 of the reference.
 
 ## If you're stuck
 
+The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
+
 - **`TODO 1: set the path to the model first`** — `model_path` is empty or wrong.
-- **`TODO 2: pick a size to process first`** — `process_size` is still 0.
-- **`TODO 3: run the first block through the engine`** — the engine is never used, so `audio` still holds the input.
+- **`TODO 2: pick a size to process first`** — `process_size` is 0.
+- **`TODO 3: run the first block through the engine`** — `audio` still holds the input: the engine did not process it in place.
 - **`FAILED: the model takes exactly 2048 samples per call, got M`** — the size you picked is not the model's block: `k_model.m_input_size`.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.

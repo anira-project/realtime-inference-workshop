@@ -308,8 +308,8 @@ Note:
 ## The worker spins, the audio thread never waits.<br><span class="then">One fixed way to wait, on both sides.</span>
 
 ```cpp
-// the worker hot-spins: no block yet, it checks again at once, no sleep
-if (m_input.available() >= k_model.m_input_size) { /* pop, run the model, push */ }
+// the worker hot-spins: a sample not there yet, it tries again at once, no sleep
+while (!m_input.try_pop(m_model_block[i])) { if (!m_worker.running()) { return; } }
 
 // the audio thread: one sample at a time, never waits
 const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);

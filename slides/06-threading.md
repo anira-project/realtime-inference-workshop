@@ -330,7 +330,7 @@ for (size_t i = 0; i < k_model.m_input_size; ++i) {
     }
 }
 m_engine.process(m_model_block.data(), k_model.m_input_size,
-                 m_state.data(), m_state.size());
+                 m_state.data(), k_model.m_state_size);
 for (size_t i = 0; i < k_model.m_input_size; ++i) {
     while («!m_output.try_push(m_model_block[i])») {  // <- solution: spin
         if (!m_worker.running()) { return; }        // given

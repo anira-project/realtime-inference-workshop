@@ -187,7 +187,11 @@ Note:
 const size_t prefill = «k_model.m_input_size - max_block_size»;  // <- solution
 
 m_input = RingBuffer(k_model.m_input_size);              // given
-m_output = RingBuffer(prefill + k_model.m_input_size);   // given, then the zeros go in
+m_output = RingBuffer(prefill + k_model.m_input_size);   // given
+for (size_t i = 0; i < prefill; ++i) {                   // given: the zeros go in
+    const bool pushed = m_output.try_push(0.0f);
+    assert(pushed);  // never fails: m_output has room for the prefill
+}
 ```
 
 Note:
@@ -195,7 +199,8 @@ Note:
 - Callbacks 1 to 3 take 3 × 512 = 1536 samples from `m_output`: 2048 − 512. That is the prefill, zeros
 - So the host always finds samples, from the very first callback
 - The sizes are given: `m_input` one model block, `m_output` the prefill and one model block more
-- A wrong prefill: The tells you what's wrong
+- The loop is given too: it pushes the prefill's zeros into `m_output` with `try_push`, one at a time. It never fails, `m_output` has room for them, so we only assert it
+- A wrong prefill: the check tells you what's wrong
 - For host sizes that don't divide 2048 this isn't true anymore, but we'll get into that in part 2
 
 ---
@@ -233,7 +238,7 @@ if (m_input.available() >= k_model.m_input_size) {
         assert(popped);  // never fails: a whole block is there
     }
     m_engine.process(m_model_block.data(), k_model.m_input_size,
-                     m_state.data(), m_state.size());
+                     m_state.data(), k_model.m_state_size);
     for (size_t i = 0; i < k_model.m_input_size; ++i) {
         const bool pushed = «m_output.try_push(m_model_block[i])»;  // <- 3. solution
         assert(pushed);  // never fails: m_output has room

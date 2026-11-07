@@ -115,8 +115,8 @@ for (size_t repetition = 0; repetition < k_repetitions; ++repetition) {
 
     for (size_t iteration = 0; iteration < k_iterations; ++iteration) {
         const auto begin = std::chrono::steady_clock::now();
-        engine.process(model_block.data(), model_block.size(),
-                       state.data(), state.size());  // only this is timed
+        engine.process(model_block.data(), k_model.m_input_size,
+                       state.data(), k_model.m_state_size);  // only this is timed
         const auto end = std::chrono::steady_clock::now();
         times_ms[repetition][iteration] =
             std::chrono::duration<double, std::milli>(end - begin).count();

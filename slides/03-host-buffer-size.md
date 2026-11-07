@@ -235,7 +235,8 @@ if (m_input.available() >= k_model.m_input_size) {
         const bool popped = m_input.try_pop(m_model_block[i]);    // <- 3. fill out
         assert(popped);  // never fails: a whole block is there
     }
-    m_engine.process(m_model_block.data(), k_model.m_input_size, m_state);
+    m_engine.process(m_model_block.data(), k_model.m_input_size,
+                     m_state.data(), m_state.size());
     for (size_t i = 0; i < k_model.m_input_size; ++i) {
         const bool pushed = m_output.try_push(m_model_block[i]);  // <- 3. fill out
         assert(pushed);  // never fails: TODO 1 made room

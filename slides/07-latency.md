@@ -4,13 +4,11 @@
 <!-- kind: exercise -->
 
 Note:
-- Our output is late: by how much, and what do we do about it?
-- Ask: What kind of latency do we want?
-- Not the smallest, a **fixed** one
-- For that we need to talk about the latency
+- The host hears it exactly the prefill late
+- So how do we line up a dry signal with it?
 - A latency that changes with load is a guess
-- Pick the number the design can always hold, pad up to it
-- Also the dry/wet mix: common use case, has implications for latency
+- Pick a fixed number the design can always hold, pad up to it
+- Aso we can mix our dry and our wet signal
 
 ---
 
@@ -89,9 +87,6 @@ Note:
 Note:
 - No new files
 - Step 6's processor, filled in, plus a dry path
-- Third ring buffer, step 3's: only the audio thread uses it, filled with silence in `prepare`, as many samples as our latency
-- Host still real time, 512 samples per call
-- `k_max_inference_ms`: still your number from step 4, in `steps/common/inference_time.h`
 
 ---
 
@@ -164,13 +159,10 @@ m_latency = m_prefill + k_model.m_latency;  // <- fill out
 </div>
 
 Note:
-- Buffer adaptation: the model needs a whole block, the host brings 512 at a time: 2048 − 512 = 1536 (step 3)
-- The worker's time: your worst case from step 4, rounded up to whole callbacks (step 6). A choice
-- Smaller: the worker might not be done, latency no longer fixed
-- 18 ms don't fit in one callback of 11.6 ms, they take two: 1024. Yours may differ
+- Buffer adaptation: the model needs a whole block, 
+- The rounded max time it takes for one forward pass: your worst case from step 4
 - The model itself: 2224. 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. From the export script, not visible from C++
-- In general a model is late because of what it does inside: filters and filter banks, STFT windows, layers that look ahead. Ours was trained causal, so no look-ahead
-- Step 6's prefill already holds the first two: `m_prefill + k_model.m_latency`
+- So it's our prefill from Step 6' plus `k_model.m_latency`
 - Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE
 - Only for 512: other block sizes give other numbers, part 2
 - Honest: fine for mixing, can't play through it live. Part 2 comes back to it
@@ -211,4 +203,3 @@ Note:
 - Correct, real-time safe, late by a known, fixed amount
 - Host can line it up, dry and wet crossfade cleanly
 - Only for a constant 512: the plugin in step 8 bypasses outside 512 samples and 44.1 or 48 kHz. Every size: part 2, with anira
-- Next: all of this in a JUCE plugin, where the host asks for exactly these numbers

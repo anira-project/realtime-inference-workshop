@@ -5,7 +5,6 @@
 
 Note:
 - To explain these silences at the beginning of each block we need to talk about the concept of state -> stateless and stateful models
-- Now the whole signal, and what the model needs for that
 
 ---
 
@@ -68,15 +67,17 @@ Note:
   </div>
 </div>
 
-Our model is stateful, and ONNX keeps that state in the open:<br>
-`audio` + `state_in` → `audio_out` + `state_out`
+Our model is **stateful**<br>
+ONNX keeps that state in the open: `audio` + `state_in` → `audio_out` + `state_out`
 
 Note:
+- Some models read the past at every call, others remember
 - Stateless: no memory, the past is handed in at every call
-- Stateful: only the new block, carries the past along (the dashed line). 
+- Stateful: only the new block, carries the past along. 
 - Our model is stateful, so we need to pass our memory
-- ONNX can't hide state: the export moves it out, so we need an explicit input and output
-- Without passing the state, every block is the first block. Latency is 2224 samples and a block is 2048, so a first block is nearly silent
+- Although ONNX works for a stateful model, it can't hide our state
+- The export moves it out, so we need an explicit input and output
+- Without passing the state, every block is the first block.
 
 ---
 
@@ -95,8 +96,8 @@ Note:
 - Let's have one more look at the engine, as I skipped a detail in step 1
 - There is a second process function that takes 3 arguments. 
 - Third argument: the state, after the audio, the same order as the model's inputs
+- If no state is passed it defaults to zeros, that's why we got silence at the beginning of every block.
 - The state is overwritten in the same vector, so the next call continues where this one ended
-- 63488 floats: every convolution cache in the model and starts with and defaults to zeros.
 
 ---
 
@@ -135,8 +136,6 @@ cmake --build --preset release --target step02_exercise
 Note:
 - Two TODOs: above the loop, a vector for the state; in the loop, pass it with the audio
 - We don't create the state ourselves: the model writes it on every call. We only give it the memory, zeros for the start
-- It runs as it is, and fails from block 1 on
-- Block 0 passes: a zero state is correct for the first block
 - 5 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
 - We solve it together, solutions are in the solution's main.cpp
@@ -194,9 +193,8 @@ Note:
 
 
 Note:
-- Press the speaker: the same chords as at the start of this step, now with the state passed on every block
+- If we listen to our example from before but now with the state passed on every block
 - No more drop-outs: the sound runs through
 - Same model, same audio, only the state is different
 - Same output as Python, for every block
-
 - However this is in the case we always get blocks of 2048 samples. But a host doesn't always hand us 2048 samples. Which brings us to step 3

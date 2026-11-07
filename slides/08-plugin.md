@@ -6,9 +6,8 @@ Everything from steps 1 to 7, where the host can reach it
 <!-- kind: demo -->
 
 Note:
-- Run the standalone: the example plays, move dry/wet, drop in an audio file, switch to the input
-- Everything from steps 1 to 7, in a plugin
-- Listen first: switch examples, dry/wet, your own audio files
+- Next: all of this in a JUCE plugin, where the host asks for exactly these numbers
+- For this we prepared a JUCE plug in that uses everything from steps 1 to 7, in a plugin
 
 ---
 
@@ -28,13 +27,9 @@ Note:
 - `processBlock`: callback from step 7, unchanged
 - `releaseResources`: stop the worker thread
 - Everything else: JUCE boilerplate
-- Built step by step, every step from 1 to 7 is in here:
-  - `prepareToPlay`: model (1), state (2), ring buffers (3), worst case in the prefill (4), latency (7)
-  - `processBlock`: host blocks (3), real-time safe (5), worker hand-off (6), dry/wet (7)
-  - `releaseResources`: stop the worker (6)
 - Only 44.1 or 48 kHz and 512: our prefill and latency are only right for that block size. Anything else: bypassed, the input goes out unprocessed, with an overlay that says why
 - Takeaway: arbitrary buffer sizes need a different design, part 2
-- One change: ONNX Runtime is now linked statically: 28 MB + 126 MB model
+- One change: ONNX Runtime is handled a bit differently
 
 --- 
 
@@ -70,10 +65,11 @@ Note:
 
 ## Break<br><span class="then">Afterwards: how anira handles these steps.</span>
 
-<div class="break-mug">{{ICON:coffee}}<div class="break-back" style="margin-top: 150px;">back at 11:35</div></div>
+<div class="break-mug free-loop">{{ICON:coffee}}<div class="break-back break-countdown" style="margin-top: 50px;"><span class="break-label">back in</span><div class="task-timer" data-minutes="15"></div></div></div>
 
 Note:
 - Every piece is a place where things can go wrong
 - You'd write all of it again for every new model
 - After the break: how anira does this for you
 - 15 minute break, we start again at 11:35
+- Click the timer to start the countdown; a tone with one minute left, three when time is up

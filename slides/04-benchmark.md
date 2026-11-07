@@ -4,8 +4,8 @@
 <!-- kind: demo -->
 
 Note:
-- In this step we'll get into benchmarking and talk about if we're real time capable at all.
-- Measure how long a forward pass takes
+- Let's measure this in our next step
+- In this step we're going to define our realtime budget and do some benchmarking 
 - No code to write in this step: run on your own machine
 
 ---
@@ -44,22 +44,13 @@ Note:
 </div>
 
 Note:
-- As you all know in real-time programming it's important to be in time. This means we have a deadline for how long our processing is allowed to take.
-- the real-time threshold, how much time we have, so our budget
-- Model: 2048 samples = threshold of 46 ms
-- Model block’s threshold says whether real-time is possible at all
-- 512 samples at 44.1 kHz: threshold of 11.6 ms per callback
-- The host callback’s threshold says whether this synchronous implementation actually makes it. So if we can manage one forward pass in one callback from the host.
-- Click: real-time factor, how much of that time (our budget) we use; has to stay below 1
-- Forward pass on ONNX Runtime on my Mac: the average is about 13 ms
-- Against the model's threshold: 0.28, what a CPU meter shows. 
-- It looks fine, but it's only an average over the callbacks.
-- Compared to the callback's threshold: 1.12. 
-- Too long, even on average (13 ms is not even the worst case). For a slow call of 18 ms: 1.55. what you hear: a dropout
-- Click: 3 callbacks just copy samples, the 4th runs the whole network in 13ms
-- We are realtime capable, but not fast enough for one callback of the host. 
-- And this is only looking at the average, not the worst case.
-- The average doesn't decide, the worst case does: measure it
+- Every callback has a deadline: the real-time threshold, our time budget
+- Model block: 2048 samples = 46.4 ms. Says whether real-time is possible at all
+- Host callback: 512 samples = 11.6 ms. Says whether one forward pass fits into one callback
+- Click: real-time factor = forward pass ÷ threshold, must stay below 1
+- ONNX Runtime on my Mac, about 13 ms on average: 0.28 against the model block (what a CPU meter shows), 1.12 against the callback: too long
+- Click: 3 callbacks only copy samples, the 4th runs the whole model
+- And that's only the average. The worst case decides: we measure it
 
 ---
 
@@ -76,7 +67,6 @@ Note:
 Note:
 - Everything is written: you run it and read your own numbers
 - One call at a time, then the slowest time for a block
-- Run it again: what stays the same?
 
 ---
 
@@ -107,7 +97,7 @@ Note:
 - The ONNX Runtime engine and its state from step 2, timed with `std::chrono`
 - Model is loaded before timing: loading isn't what we measure
 - We only measure our forward pass
-- Let's take a look
+- Let's take a look how we measure this
 
 ---
 
@@ -116,8 +106,8 @@ Note:
 ## Timing <span class="then">Only the call is timed.</span>
 
 ```cpp
-constexpr size_t k_iterations = 10;  // 10 forward passes each, every one timed
-constexpr size_t k_repetitions = 2;  // 2 fresh engines, as in anira's benchmarks
+constexpr size_t k_iterations = 10;  // 10 forward passes, every one timed
+constexpr size_t k_repetitions = 2;  // 2 fresh engines
 
 for (size_t repetition = 0; repetition < k_repetitions; ++repetition) {
     OnnxEngine engine(k_model.m_path);  // not timed
@@ -135,31 +125,12 @@ Note:
 - Only the forward pass between the two clock reads: that's what the worker in step 6 runs
 - `steady_clock`: a monotonic clock, made for measuring intervals
 - Every forward pass timed on its own: an average can't show a worst case
-
-- Iterations: how many forward passes will be measured in 
+- Iterations: how many forward passes will be measured 
 - Repetitions: creates a new onnx runtime environment and loads the model into a new session -> fresh engine each time
 
 ---
 
-<div class="tag">Run it</div>
-
-## Run it <span class="then">Are we real-time capable?</span>
-
-<div class="task-timer" data-minutes="2"></div>
-
-Nothing to edit, `steps/04_benchmark/solution/main.cpp` is ready to run
-
-```bash
-cmake --build --preset release --target step04_solution
-./build/bin/step04_solution
-```
-
-Note:
-- Nothing to edit: build it and run it
-- You can change the amount of repetitions and iterations to see what happens
-- 2 minutes
-
----
+<!-- .slide: data-visibility="hidden" -->
 
 <div class="tag">Result</div>
 
@@ -226,13 +197,15 @@ Note:
 </div>
 
 Note:
-- The run from the previous slide: repetition 1, the one with the worst pass
-- First pass 18 ms, second 14.1 ms, then about 13 ms
-- Click, the two thresholds together: pass 1, 18.00 ms, factor 0.39 against a model block, 1.55 against a callback
-- It fits the 46 ms of a model block easily
-- It doesn't fit the 11.6 ms of a callback, not even a typical call
-
+- One earlier run on my Mac, ONNX Runtime: first pass 18 ms, then about 13 ms
+- The slower first pass is warm-up: one-time setup after loading.
+- Click, the two thresholds: every call fits the 46.4 ms model block easily
+- None fits the 11.6 ms callback, not even a typical one
+- We will ignore the concept of warm-up in part 1, so we will take the worst case of 18 ms as our number anyway
+- Your output ends with your worst case: write it down, steps 6 and 7 need it
 ---
+
+<!-- .slide: data-visibility="hidden" -->
 
 <div class="tag">Result</div>
 
@@ -257,6 +230,8 @@ Note:
 
 ---
 
+<!-- .slide: data-visibility="hidden" -->
+
 <div class="tag">Result</div>
 
 ## The two engines<br><span class="then">One run each.</span>
@@ -277,6 +252,28 @@ Note:
 
 ---
 
+<div class="tag">Run it</div>
+
+## Run it <span class="then">Are we real-time capable?</span>
+
+<div class="task-timer" data-minutes="2"></div>
+
+Nothing to edit, `steps/04_benchmark/solution/main.cpp` is ready to run
+
+```bash
+cmake --build --preset release --target step04_solution
+./build/bin/step04_solution
+```
+
+Note:
+- Nothing to edit: build it and run it
+- You can change the amount of repetitions and iterations to see what happens
+- 2 minutes
+- Remeber the output of your worst case, we need it in steps 6 and 7
+
+
+---
+
 <div class="tag">Question</div>
 
 ## Anyone above 46.4 ms?<br><span class="then">Then the model cannot keep up.</span>
@@ -291,9 +288,9 @@ Note:
 
 ---
 
-<div class="tag">Budget</div>
+<div class="tag"><code>inference_time.h</code></div>
 
-## Your number goes into one header<br><span class="then">Steps 6, 7 and the plugin read it.</span>
+## Your max inference time goes into one header<br><span class="then">Steps 6, 7 and the plugin read it.</span>
 
 <div class="task-timer" data-minutes="1"></div>
 
@@ -314,7 +311,6 @@ Note:
 - One place for your number: `steps/common/inference_time.h`
 - The last line of the output says which number to put there
 - Steps 6, 7 and the plugin read it from there
-- Above it: 46.4 ms, one model block of time, the largest worst case that can work at all
 - Until you put yours in, it is 46.4: everything runs, with more latency
 - Yours makes the latency smaller
 - Larger than 46.4: the build stops with a message
@@ -334,12 +330,13 @@ Note:
 </div>
 
 Note:
-- `inference_time.h` (next slide) works this out from your number: in samples, and rounded to whole callbacks
-- Your worst call, from the last lines of the output
+- For later calculations we need your worst case in samples, and rounded to whole callbacks
+- My worst case: 18 ms
 - Click: in samples, at 44.1 kHz: 18 ms are 794 samples
 - Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
 - Whole callbacks, because the audio thread only picks results up once per callback
-- You don't need to do this, but you will need this variable later in step 6 and 7
+- `inference_time.h` works this out from your number
+- You don't need to do anything, but you will need this variable later in step 6 and 7
 
 ---
 
@@ -356,7 +353,7 @@ Note:
 
 Note:
 - So what did we find out?
-- Typically about 13 ms: it fits a 46 ms block easily, but not a 11.6 ms callback
+- Our worst case. In my case 18 ms: it fits a 46 ms block easily, but not a 11.6 ms callback
 - Measured on a quiet thread, nothing competing
 - So we are real-time capable, but we currently don't fit our hosts callback.
-- The next question is, are we even real-time safe?
+

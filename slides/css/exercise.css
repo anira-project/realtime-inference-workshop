@@ -1871,6 +1871,45 @@ html.tanh .break-back {
   color: var(--ink);
 }
 
+/* The break's countdown: the task timer, large, inside the "back in" box */
+html.tanh .break-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+html.tanh .break-countdown .break-label {
+  font-size: 0.5em;
+  font-weight: 500;
+  color: var(--fs-text-subtle-color);
+}
+
+html.tanh .break-countdown .task-timer {
+  position: static;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 1.3em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+html.tanh .break-countdown .task-timer::after {
+  margin-top: var(--space-2);
+  font-size: 0.25em;
+}
+
+html.tanh .break-countdown .task-timer.done {
+  color: #c62828;
+}
+
+html.tanh .break-countdown .task-timer.done::after {
+  content: 'time · double-click to reset';
+  color: var(--fs-text-subtle-color);
+}
+
 html.tanh .break-mug .steam {
   stroke: var(--fs-text-muted-color);
 }

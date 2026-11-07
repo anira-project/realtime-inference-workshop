@@ -6,9 +6,9 @@ Even if it were fast enough, would we be safe?
 <!-- kind: demo -->
 
 Note:
-- In this step we will check if we are realtime safe.
-- No code this step: a demo
+- The next question is, are we even real-time safe?
 - We will have a look at what actually happens on the audio thread when we call our engine?
+- No code this step: a demo
 
 ---
 <div class="tag">Promise</div>
@@ -55,9 +55,10 @@ void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
 <div class="cards-note corner-note">Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang. </div>
 
 Note:
+- To find out we will use a RealtimeSanitizer
 - Since Clang 20 there's a tool for this
 - `[[clang::nonblocking]]`: a promise in the type system, here on our `process_block` from step 3
-- Build with RealtimeSanitizer: checks every call underneath at runtime, also in libraries
+- Build our main.cpp with RealtimeSanitizer on: checks every call underneath at runtime, also in libraries
 - Reports the first thing that breaks the promise
 <!-- - On a Mac: LLVM from Homebrew, not Apple's Clang -->
 
@@ -89,57 +90,33 @@ Note:
 
 ---
 
-<div class="tag">Allocation</div>
+<div class="tag">Allocation · Locks</div>
 
 ## Not once<br><span class="then">Every forward pass.</span>
 
 ```bash
-RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false ./build-rtsan/bin/step05_solution
+RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false \
+  ./build-rtsan/bin/step05_solution
 ```
 
 | | per forward pass | total |
 |---|---|---|
-| `malloc` | ~1130 | 9019 |
-| `free` | ~1130 | 9014 |
-
-
-Not a slip. The engine is built this way.
-
-Note:
-- If we build it again with `halt_on_error=false`: RTSan reports every violation instead of stopping at the first
-- `suppress_equal_stacks=false`: also when the call stack is one it has seen before
-- Over the whole test signal: 8 forward passes, 9,019 mallocs and almost as many (matching) frees
-- About 1,130 of each in every forward pass
-- These are mostly small bookkeeping objects, not audio data
-- Not a small mistake: built for throughput, not for real-time
-
----
-
-<div class="tag">Locks</div>
-
-## Locks<br><span class="then">On the audio thread.</span>
-
-The same run, as RTSan reports it:
-
-| | per forward pass | total |
-|---|---|---|
+| `malloc` / `free` | ~1130 each | 9019 / 9014 |
 | `pthread_mutex_lock` | ~145 | 1164 |
 
-An allocation is bad. <br>
-A lock is worse! 
-
+Not a slip. The engine is built this way. 
 Note:
-- On the same run
-- Not only allocations: the same run, as the sanitizer reports it
-- Mutex locks: about 145 in every forward pass, 1,164 in total
-- Allocations were already bad, but
-- A lock is worse: our thread can wait for a completely different thread
+- We can also let RTSan report every violation.
+- 8 forward passes: about 1,130 mallocs and frees in every one, mostly small bookkeeping objects
+- And about 145 mutex locks per forward pass
+- Allocations are bad a lock is worse: our audio thread can end up waiting for a completely different thread
+- Not a mistake: the engine is built for throughput, not for real-time
 
 ---
 
 <div class="tag">Problem</div>
 
-## The allocation is inside the engine<br><span class="then">Nothing on our side reaches it.</span>
+## Can we fix it?<br>
 
 <div class="attempts">
   <div class="attempt"><b>Custom allocator</b><span>other memory, same locks</span></div>

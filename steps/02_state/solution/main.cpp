@@ -38,6 +38,8 @@ int main() {
 
         // ---- TODO 1 --------------------------------------------------------
         // What is the state size, and how should it be initialized?
+        //
+        // Hint: look at the struct above
         // --------------------------------------------------------------------
         std::vector<float> state(k_model.m_state_size, 0.0f);  // <- solution
 

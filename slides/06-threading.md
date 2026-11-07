@@ -111,8 +111,8 @@ Note:
 ## The host <span class="then">A DAW, minus the DAW, at audio rate.</span>
 
 ```cpp
-for (size_t start = 0; start < output.size(); start += 512) {
-    processor.process_block(output.data() + start, 512);    // Your callback, in place
+for (size_t start = 0; start < buffer.size(); start += 512) {
+    processor.process_block(buffer.data() + start, 512);    // Your callback, in place
     std::this_thread::sleep_for(block_duration(512, 44100)); // New: one block every 11.6 ms
 }
 ```

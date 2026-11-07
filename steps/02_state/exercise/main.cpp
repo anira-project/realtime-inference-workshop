@@ -34,7 +34,7 @@ int main() {
         const size_t num_blocks = k_signal_length / k_model.m_input_size;
 
         // The whole signal, processed in place block by block.
-        std::vector<float> audio(k_input_signal.begin(), k_input_signal.end());
+        std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());
 
         // ---- TODO 1 --------------------------------------------------------
         // What is the state size, and how should it be initialized?
@@ -45,13 +45,13 @@ int main() {
 
         for (size_t i = 0; i < num_blocks; ++i) {
             // ---- TODO 2 ----------------------------------------------------
-            // What should be passed next to audio in process()?
+            // What should be passed next to the buffer in process()?
             // ----------------------------------------------------------------
-            engine.process(audio.data() + i * k_model.m_input_size, k_model.m_input_size,
+            engine.process(buffer.data() + i * k_model.m_input_size, k_model.m_input_size,
                            ?, ?);  // <- fill out
         }
 
-        return report_blocks(audio, k_target_output_signal, k_model.m_input_size);
+        return report_blocks(buffer, k_target_output_signal, k_model.m_input_size);
     } catch (const std::exception& error) {
         std::printf("FAILED: %s\n", error.what());
         return 1;

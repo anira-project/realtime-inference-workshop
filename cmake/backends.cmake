@@ -144,12 +144,22 @@ macro(workshop_setup_onnxruntime)
     endif()
 endmacro()
 
-# Copy the ONNX Runtime shared library next to an executable.
+# Copy the ONNX Runtime shared library next to an executable. Every executable
+# lands in the same folder, so one target copies it once for all of them: a
+# copy per executable runs in parallel builds at the same time into the same
+# files, and fails.
 function(workshop_copy_onnxruntime_runtime target)
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${WORKSHOP_ONNXRUNTIME_LIB_DIR}" "$<TARGET_FILE_DIR:${target}>"
-        COMMENT "Copying the ONNX Runtime next to ${target}"
-        VERBATIM
-    )
+    if(NOT TARGET workshop_onnxruntime_runtime)
+        set(destination "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+        get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+        if(multi_config)
+            string(APPEND destination "/$<CONFIG>")  # bin/Release, as the executables
+        endif()
+        add_custom_target(workshop_onnxruntime_runtime
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${WORKSHOP_ONNXRUNTIME_LIB_DIR}" "${destination}"
+            COMMENT "Copying the ONNX Runtime next to the executables"
+            VERBATIM
+        )
+    endif()
+    add_dependencies(${target} workshop_onnxruntime_runtime)
 endfunction()

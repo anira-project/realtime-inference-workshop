@@ -106,15 +106,15 @@ int main() {
 
     // The host, as in step 3. With RTSan, the run stops in the fourth callback,
     // the first one that runs the model.
-    std::vector<float> output(k_input_signal.begin(), k_input_signal.end());
-    for (size_t start = 0; start < output.size(); start += k_host_block_size) {
-        processor.process_block(output.data() + start, k_host_block_size);
+    std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());
+    for (size_t start = 0; start < buffer.size(); start += k_host_block_size) {
+        processor.process_block(buffer.data() + start, k_host_block_size);
     }
 
     // Without RTSan the run gets here: the engine is still correct, just not safe.
     const size_t latency = k_model.m_input_size - k_host_block_size;
-    return report_with_latency(output.data(),
+    return report_with_latency(buffer.data(),
                                k_target_output_signal.data(),
-                               output.size(),
+                               buffer.size(),
                                latency);
 }

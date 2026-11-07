@@ -205,16 +205,16 @@ int main() {
         processor.set_mix(k_mix);
 
         // The host, as in step 6.
-        std::vector<float> output(k_input_signal.begin(), k_input_signal.end());
-        for (size_t start = 0; start < output.size(); start += k_host_block_size) {
-            processor.process_block(output.data() + start, k_host_block_size);
+        std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());
+        for (size_t start = 0; start < buffer.size(); start += k_host_block_size) {
+            processor.process_block(buffer.data() + start, k_host_block_size);
             std::this_thread::sleep_for(block_duration(k_host_block_size, k_model.m_sample_rate));
         }
 
         processor.stop();
 
         // Dry and wet, both late by exactly the reported latency.
-        return report_mix(output,
+        return report_mix(buffer,
                           k_input_signal,
                           k_target_output_signal,
                           k_mix,

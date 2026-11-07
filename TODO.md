@@ -1,6 +1,6 @@
 # TODOs
 
-- rename audio to output
+- Remove the Claude trailer from commit 72833ee (Lina, 2026-11-04, "Renumber part 1 to steps 1-8 and drop the shipping step"): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, the only one in the history. Rewrites the 70 commits after it and needs a force push of main; Lina resets her main to origin/main afterwards.
 - Benchmark fillout muss nach oben, rest muss in andere header file
 - Worker thread grafik step 6 fixen
 - Threadsafe Ringbuffers ohne one writer, one reader
@@ -20,6 +20,7 @@
 
 ## Done (2026-11-07)
 
+- rename audio to output: the signal processed in place is `buffer` in every step (1, 2, 3, 5, 6, 7), in the checks of steps 1 and 2 and in host.h; the slides follow. The engine's parameter stays `audio`.
 - Exercises: every blank is a ?, in steps 1–3, 6, 7, 9 and 10, C++ and model files; step 9's commented-out calls are real lines now. The exercises stay out of the default build, scripts/fill_exercise.py fills each from its solution (stepNN_exercise_filled, step09/10_exercise_filled_check), and CI runs them: an exercise committed filled in or drifted from its solution fails, naming the line.
 - Process_size not copy in first example / Don't get why we need the process_size?: step 1 has two TODOs, `OnnxEngine engine(?)` and `engine.process(?, ?)`; no model_path or process_size copies, no check_todos. A wrong size still gets the engine's "the model takes exactly 2048 samples per call".
 - Why are there the quotes for stings in the path: step 1's TODO 1 was `model_path = ""`, now `model_path = ?`; the solution is `k_model.m_path`. Only the CMake define keeps its quotes, it makes the path a string literal.

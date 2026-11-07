@@ -44,14 +44,14 @@ inline std::vector<float> run_host(const float* signal,
                                    size_t block_size,
                                    const std::function<void(float*, size_t)>& callback,
                                    double sample_rate = 0.0) {
-    std::vector<float> audio(signal, signal + num_samples);
+    std::vector<float> buffer(signal, signal + num_samples);
 
     const auto block_period =
         sample_rate > 0.0 ? block_duration(block_size, sample_rate) : std::chrono::nanoseconds(0);
     auto deadline = std::chrono::steady_clock::now();
 
     for (size_t offset = 0; offset + block_size <= num_samples; offset += block_size) {
-        callback(audio.data() + offset, block_size);
+        callback(buffer.data() + offset, block_size);
 
         if (block_period.count() > 0) {
             deadline += block_period;
@@ -59,5 +59,5 @@ inline std::vector<float> run_host(const float* signal,
         }
     }
 
-    return audio;
+    return buffer;
 }

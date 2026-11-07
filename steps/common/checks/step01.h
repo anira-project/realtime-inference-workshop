@@ -18,16 +18,16 @@
 constexpr float k_block_tolerance = 1e-6f;
 
 // TODO 2, then the comparison. Returns what main should exit with.
-// @audio: the signal, its first block processed in place
+// @buffer: the signal, its first block processed in place
 // @input: what went in
 // @target: what the model produced in Python
 // @process_size: samples in that block
-inline int report_first_block(const std::vector<float>& audio,
+inline int report_first_block(const std::vector<float>& buffer,
                               const std::array<float, k_signal_length>& input,
                               const std::array<float, k_signal_length>& target,
                               size_t process_size) {
-    if (std::equal(audio.data(), audio.data() + process_size, input.data())) {
+    if (std::equal(buffer.data(), buffer.data() + process_size, input.data())) {
         throw std::runtime_error("TODO 2: run the first block through the engine");
     }
-    return report(audio.data(), target.data(), process_size, k_block_tolerance);
+    return report(buffer.data(), target.data(), process_size, k_block_tolerance);
 }

@@ -51,23 +51,23 @@ reference give the same output, and the steps can check against it.
 
 ## Why not in git
 
-380 MB of weights make every clone slow, and Git LFS has a bandwidth quota
+250 MB of weights make every clone slow, and Git LFS has a bandwidth quota
 (1 GB per month on the free plan) that a roomful of people runs through in an
 hour. Release assets have neither problem.
 
 ## How the download works
 
-[`cmake/models.cmake`](../../../../cmake/models.cmake) fetches the files as
-three archives from the release tagged `workshop-model`, one per set of steps,
-and only those the enabled steps need:
+[`cmake/models.cmake`](../../../../cmake/models.cmake) fetches one archive,
+`workshop-models.zip` (about 245 MB), from the release tagged
+`workshop-model`. It holds every model the steps load, and nothing else:
 
 ```
-workshop-models-forward-2.zip   rave/model_forward.onnx                     steps 1 to 9
-workshop-models-split.zip       rave/model_encoder.onnx, model_decoder.onnx steps 10, 11
-workshop-models-hands.zip       handtracking/, four models                  step 11
+rave/model_forward.onnx                         steps 1 to 9
+rave/model_encoder.onnx, rave/model_decoder.onnx steps 10 and 11
+handtracking/, four models                      step 11
 ```
 
-Each archive and each file in it is checked against its SHA-256, and a failed
+The archive and each file in it are checked against their SHA-256, and a failed
 download is retried. The archive goes to the build folder and is deleted once
 its files are here. Files that are already here and intact are left alone, so a
 second configure needs no network. To use a model file from somewhere else:

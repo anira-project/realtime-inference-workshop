@@ -171,7 +171,7 @@ Note:
   <div class="given-column">
     <div class="given-label">Models</div>
     <div class="given-folder">common/assets/models/</div>
-    {{FILE:model_decoder_noise.onnx|new}}
+    {{FILE:model_decoder.onnx}}
   </div>
   <div class="given-column many">
     <div class="given-label">Helpers</div>
@@ -190,11 +190,10 @@ Note:
 </div>
 
 Note:
-- One new model: the decoder with noise.
+- No new model: step 10's decoder, on its own.
 - The model has 128 latents; we kept the 8 that matter most. The decoder still needs all 128.
-- Step 10's decoder fills the other 120 with zeros, so the output is always the same and the check can compare it with a reference.
-- This one fills them with fresh random numbers on every call, once per 2048 samples, as the model's own decode does.
-- Those 120 carry only about 7 % of the variation, so it is the same sound, just a bit more alive. There is no reference to check against, and here we don't need one.
+- It fills the other 120 with zeros, as in step 10.
+- Those 120 carry only about 7 % of the variation: the 8 we kept make the sound.
 - The hands library in common/hands is the camera and the hand tracking, with its four small models compiled in: you never open it. HandTracker.h is the one header worth a look.
 - HandControls.cpp decides which hand leads, calls your function and smooths the result.
 - Your file is HandMapping.cpp: the mappings, from the hands to the latents.

@@ -25,6 +25,18 @@
   - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
 
 
+## Done (2026-11-07)
+
+- alle ringbuffer try_push and try_pop: RingBuffer and ThreadSafeRingBuffer have only try_push and try_pop (plus available, space), no block push/pop, no throws.
+- Ringbuffer kürzer: ring_buffer.h without the block functions and their exceptions.
+- has block raus / Bei ringbuffer has block in if cases: the check sits in the if, steps 3 and 5.
+- Prefill muss in step 3 schon erwähnt werden: step 3's TODO 1 is the prefill, 2048 − 512.
+- TODO 1 wird prefill und capacity wird automatisch berechnet: steps 3 and 6, the ring buffer sizes are given.
+- If prefill is wrong assert: check_prefill throws "TODO 1: the prefill is too small/large" (asserts are off in release); the try_ calls that cannot fail are a bool plus assert.
+- In step 3 ist wierd, dass man nicht die max_block_size benutzt: the prefill is k_model.m_input_size - max_block_size.
+- TODO 3 bei threading raus, hot spinning muss gemacht werden: TODO 3 is the worker's hot spin on try_pop and try_push, with a running() check so stop() returns.
+- Not consistent that some todos it is commented out like engine.process others not: every exercise uses ? placeholders.
+
 ## Done (2026-11-06)
 
 - Ab after process überarbeiten: inline execution moved from Process into the Outlook, opened by the latency question and the step 4 deadline graph (512 ✗, 2048 ✓); the outlook also gets the restored "Which combination is fastest?" and a 4K zero-copy example. Slides corrected against alpha.3 (ABI 0.3, v2 shim, frames, Async, ring dtype, warm-up threads, pool lifetime).

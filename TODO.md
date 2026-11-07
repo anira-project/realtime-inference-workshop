@@ -1,8 +1,6 @@
 # TODOs
 
 - Remove the Claude trailer from commit 72833ee (Lina, 2026-11-04, "Renumber part 1 to steps 1-8 and drop the shipping step"): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, the only one in the history. Rewrites the 70 commits after it and needs a force push of main; Lina resets her main to origin/main afterwards.
-- Worker thread grafik step 6 fixen
-- Three places the host talks to us ersätzen
 
 - Bypass nichts abspuielen
 - Report, siehe anria example
@@ -17,6 +15,7 @@
 
 ## Done (2026-11-07)
 
+- Worker thread grafik step 6 fixen: the two-lane graphic (step 6 motivation and the part 2 recap) is a timeline of 12 callbacks, every row aligned: callbacks, m_input filling, the worker spinning with a model run after every fourth, m_output starting with the 5 prefill blocks, what the host hears; a playhead sweeps over it ({{THREADS}} in scripts/build.js). The points below: its own clock, its own rules.
 - Model latency erst bei latency einbringen / Latency einfach erklären ohne exercise: step 3's bonus slide asks for the algorithmic latency only, 2048 − 512 = 1536, the prefill. Step 7 is a demonstration, solution only (exercise and its filled check gone): its slides bring in the model's own 2224 through the dry/wet mix, the dry path delayed by the whole latency.
 - Threadsafe Ringbuffers ohne one writer, one reader: the table slide in step 6 became one flow animation, "Every callback 512 in, 512 out", in two lanes: the callback's host block (not a ring) into m_input, the worker spinning on try_pop until a model block is whole, the model, the result into m_output, the audio thread taking the prefill first. One writer, one reader is a line below it and in the notes.
 - Benchmark fillout muss nach oben, rest muss in andere header file: inference_time.h holds only k_max_inference_ms. Step 4 prints and shows milliseconds only; the 46.4 ms check stays below it. Step 6 introduces the worker's time: an explainer slide, and `worker_time` computed in two given lines at the top of prepare(); steps 7 and 8 compute it the same way.

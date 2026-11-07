@@ -1076,129 +1076,156 @@ html.tanh .run-step.is-on .mix-fader i { animation: mix-knob 4.4s var(--ease) bo
 }
 
 /*********************************************
- * Step 6 · two threads: the audio lane ticks at its own steady pace, a block
- * goes down to the worker, the model runs there, the result comes back up
+ * Step 6 · the threads on one time axis ({{THREADS}}): every row aligned on
+ * the callbacks, a playhead sweeping over them
  *********************************************/
 
-html.tanh .lanes + .statement-points {
+html.tanh .tline + .statement-points {
   margin-top: var(--space-9);
 }
 
-html.tanh .lanes {
+html.tanh .tline {
   display: grid;
-  grid-template-columns: 200px 1fr;
-  grid-template-rows: 56px 150px 56px;
+  grid-template-columns: 260px minmax(0, 1fr);
   column-gap: var(--space-5);
-  align-items: center;
   margin-top: var(--space-7);
+  --row-gap: 14px;
 }
 
-html.tanh .lane-label {
-  font-family: var(--fs-heading-font);
-  font-size: 0.55em;
-  font-weight: 600;
-  text-align: right;
-}
-
-html.tanh .lane {
-  position: relative;
-  height: 100%;
-  border-radius: var(--radius-small);
-  background: var(--wash);
-  overflow: hidden;
-}
-
-/* One tick per callback, moving at a steady pace */
-html.tanh .lane.audio {
-  background:
-    repeating-linear-gradient(90deg, var(--mark-exercise) 0 22px, transparent 22px 60px),
-    var(--wash);
-  background-size: 60px 100%;
-}
-
-html.tanh .reveal section.present .lane.audio { animation: lane-tick 1.2s linear infinite; }
-
-@keyframes lane-tick {
-  from { background-position: 0 0; }
-  to { background-position: 60px 0; }
-}
-
-html.tanh .lane-run {
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 30%;
-  width: 40%;
+html.tanh .tline-labels,
+html.tanh .tline-time {
   display: grid;
-  place-items: center;
-  border-radius: 6px;
-  background: var(--ink);
-  color: var(--paper);
+  grid-template-rows: 56px 50px 64px 70px 40px;
+  row-gap: var(--row-gap);
+}
+
+html.tanh .tline-labels span {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
   font-family: var(--fs-heading-font);
   font-size: 0.5em;
   font-weight: 600;
-  transform: scaleX(0);
-  transform-origin: left;
-}
-
-html.tanh .reveal section.present .lane-run { animation: lane-run 5s var(--ease) infinite; }
-
-@keyframes lane-run {
-  0%, 22% { transform: scaleX(0); opacity: 1; }
-  62% { transform: scaleX(1); opacity: 1; }
-  75%, 100% { transform: scaleX(1); opacity: 0; }
-}
-
-html.tanh .lane-gap {
-  position: relative;
-  height: 100%;
-}
-
-html.tanh .lane-queue {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-left: 2px dashed var(--fs-border-strong);
-}
-
-html.tanh .lane-queue.to { left: 30%; }
-html.tanh .lane-queue.from { left: 70%; }
-
-html.tanh .lane-queue span {
-  position: absolute;
-  top: 50%;
-  left: 14px;
-  transform: translateY(-50%);
-  font-family: var(--fs-code-font);
-  font-size: 0.42em;
-  color: var(--fs-text-muted-color);
   white-space: nowrap;
 }
 
-html.tanh .lane-queue i {
-  position: absolute;
-  left: -15px;
-  width: 28px;
-  height: 22px;
+html.tanh .tline-labels small {
+  font-weight: 400;
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+html.tanh .tline-time { position: relative; }
+
+html.tanh .tline-row {
+  display: grid;
+  grid-template-columns: repeat(var(--callbacks), minmax(0, 1fr));
+  column-gap: 6px;
+}
+
+html.tanh .tline-callback {
   border-radius: 4px;
   background: var(--mark-exercise);
-  opacity: 0;
 }
 
-html.tanh .reveal section.present .lane-queue.to i { animation: lane-down 5s var(--ease) infinite; }
-html.tanh .reveal section.present .lane-queue.from i { animation: lane-up 5s var(--ease) infinite; }
-
-@keyframes lane-down {
-  0% { top: -22px; opacity: 1; }
-  20% { top: calc(100% + 2px); opacity: 1; }
-  24%, 100% { top: calc(100% + 2px); opacity: 0; }
+html.tanh .tline-ring {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
 }
 
-@keyframes lane-up {
-  0%, 62% { top: calc(100% + 2px); opacity: 0; }
-  64% { top: calc(100% + 2px); opacity: 1; }
-  84% { top: -22px; opacity: 1; }
-  88%, 100% { top: -22px; opacity: 0; }
+/* The rings as stacks, one host block per row, the same size in both rings,
+   filled from the bottom: the next block out is the lowest */
+html.tanh .tline-ring {
+  justify-self: center;
+  flex-direction: column-reverse;
+  width: 44px;
+}
+
+html.tanh .tline-ring b {
+  flex: none;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--wash);
+}
+
+html.tanh .tline-ring b.in { background: var(--mark-exercise); }
+html.tanh .tline-ring b.res { background: var(--mark-model); }
+html.tanh .tline-ring b.pre { background: var(--wash); box-shadow: inset 0 0 0 1.5px var(--ink); }
+
+html.tanh .tline-hear { border-radius: 4px; }
+html.tanh .tline-hear.pre { background: var(--wash); box-shadow: inset 0 0 0 1.5px var(--ink); }
+html.tanh .tline-hear.res { background: var(--mark-model); }
+
+/* The worker: spinning the whole time, the model runs on top */
+html.tanh .tline-worker {
+  position: relative;
+  border-radius: 4px;
+  background: repeating-linear-gradient(135deg, var(--wash) 0 10px, transparent 10px 20px);
+}
+
+html.tanh .tline-worker span {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.42em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+html.tanh .tline-worker b {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  font-weight: 600;
+  z-index: 1;
+}
+
+/* Ahead of the playhead the time is still to come: dimmed */
+html.tanh .tline-mask {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  background: var(--paper);
+  opacity: 0.8;
+  transform-origin: right;
+  z-index: 2;
+}
+
+html.tanh .tline-playhead {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 0;
+  width: 3px;
+  background: var(--ink);
+  z-index: 3;
+}
+
+html.tanh .reveal section.present .tline-mask { animation: tline-mask 12s linear infinite; }
+html.tanh .reveal section.present .tline-playhead { animation: tline-playhead 12s linear infinite; }
+
+@keyframes tline-mask {
+  0% { transform: scaleX(1); }
+  92%, 100% { transform: scaleX(0); }
+}
+@keyframes tline-playhead {
+  0% { left: 0; opacity: 1; }
+  92% { left: 100%; opacity: 1; }
+  96%, 100% { left: 100%; opacity: 0; }
 }
 
 /*********************************************
@@ -1981,11 +2008,11 @@ html.tanh .congrats .confetti {
   html.tanh .reveal section.present .run-solved *,
   html.tanh .reveal section.present .stream *,
   html.tanh .reveal section.present .align *,
-  html.tanh .reveal section.present .lanes *,
   html.tanh .reveal section.present .deadline *,
   html.tanh .reveal section.present .warmup *,
   html.tanh .reveal section.present .meters *,
   html.tanh .reveal section.present .flow *,
+  html.tanh .reveal section.present .tline *,
   html.tanh .reveal section.present .congrats * {
     animation-duration: 0.01ms !important;
     animation-delay: 0s !important;

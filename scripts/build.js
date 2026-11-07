@@ -66,7 +66,7 @@ async function generateHTML(isDev = false) {
     let content = chapter.content.replace(/\{\{AGENDA\}\}/g, agenda);
     content = renderIntegration(content, integrationTemplate);
     content = renderMaps(content, mapTemplate);
-    content = renderStreams(renderIcons(await renderWaveforms(content)));
+    content = renderThreads(renderStreams(renderIcons(await renderWaveforms(content))));
     content = await renderQrCodes(content);
     // data-part lets the chapter overview (Esc) group the chapters by part
     const partAttribute = chapter.part ? ` data-part="${chapter.part}"` : '';
@@ -205,6 +205,54 @@ function renderStreams(content) {
       `<div class="stream-cells stream-lit" style="${cellsWidth}">${cells(true)}</div></div>` +
       (model ? `<div class="stream-label">model</div><div class="stream-model">${blocks}</div>` : '') +
       `</div>`;
+  });
+}
+
+// {{THREADS}} → step 6 on a time axis of 12 callbacks: the audio thread's callbacks, m_input
+// filling a quarter per callback, the worker spinning with a model run after every fourth,
+// m_output starting with the prefill (5 blocks: 1536 + 1024 samples), and what the host
+// hears: the prefill's silence, then the model's stream. A playhead sweeps over it.
+// The rings are stacks: one host block per row, the same size in both rings.
+function renderThreads(content) {
+  return content.replace(/\{\{THREADS\}\}/g, () => {
+    const callbacks = 12;
+    const blocksPerModel = 4;
+    const prefill = 5;
+    const runs = [];  // a model run starts right after the callback that completes a block
+    for (let k = blocksPerModel - 1; k < callbacks; k += blocksPerModel) {
+      runs.push({ start: k + 0.25, end: Math.min(k + 1.75, callbacks) });
+    }
+    const row = cells => `<div class="tline-row">${cells.join('')}</div>`;
+    const slots = (count, filled) => Array.from({ length: count }, (_, i) =>
+      `<b class="${filled[i] || ''}"></b>`).join('');
+
+    const audio = Array.from({ length: callbacks }, () => '<i class="tline-callback"></i>');
+    const input = Array.from({ length: callbacks }, (_, k) => {
+      const level = (k % blocksPerModel) + 1;
+      return `<i class="tline-ring">${slots(blocksPerModel, Array(level).fill('in'))}</i>`;
+    });
+    // m_output at the start of each callback, before it takes its block: what is waiting
+    const output = [];
+    let waiting = Array(prefill).fill('pre');
+    for (let k = 0; k < callbacks; k++) {
+      for (const run of runs) {
+        if (run.end <= k && run.end > k - 1) { waiting = waiting.concat(Array(blocksPerModel).fill('res')); }
+      }
+      output.push(`<i class="tline-ring">${slots(prefill + 1, waiting)}</i>`);
+      waiting = waiting.slice(1);
+    }
+    const hears = Array.from({ length: callbacks }, (_, k) =>
+      `<i class="tline-hear ${k < prefill ? 'pre' : 'res'}"></i>`);
+    const worker = `<div class="tline-worker">` + runs.map(run =>
+      `<b style="left:${(run.start / callbacks * 100).toFixed(3)}%;width:${((run.end - run.start) / callbacks * 100).toFixed(3)}%">model</b>`).join('') +
+      `<span>spinning on <code>try_pop()</code></span></div>`;
+
+    return `<div class="tline" style="--callbacks:${callbacks}">` +
+      `<div class="tline-labels"><span>audio thread<small>a callback every 512 samples</small></span>` +
+      `<span><code>m_input</code></span><span>worker thread</span>` +
+      `<span><code>m_output</code><small>the prefill first</small></span><span>the host hears</span></div>` +
+      `<div class="tline-time">${row(audio)}${row(input)}${worker}${row(output)}${row(hears)}` +
+      `<div class="tline-mask"></div><div class="tline-playhead"></div></div></div>`;
   });
 }
 

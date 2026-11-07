@@ -61,7 +61,7 @@ anira's report, model (at prepare, on this machine):
 
 The report and the latency are this machine's: prepare measures the budget while it warms the model up, and the latency follows from it. The load is the inference time over the audio it produces: below 75 % comfortable, below 100 % marginal, else not real-time. The model carries its state, so its inferences run one after another, over 1 inference. Yours differ; a slower machine gets a larger latency, not dropouts. 5295 covers host blocks from 1 to 512, as the contract declares: the host may call with any block up to its largest, so the latency covers the worst one. With every block exactly 512 it would be 4784, the number of step 7.
 
-The check runs twice. First offline, like a bounce: the host calls as fast as it can and every block waits for its result, so nothing is missed and the comparison is exact: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. Then once live, at the host's pace, with your `process` line: it only has to process the blocks. Live, a block that is not back in time goes out as the miss policy's fill, here the input itself (`"on_miss": "bypass"`).
+The check runs twice. First offline, like a bounce: the host calls as fast as it can, with blocks of changing size up to 512 (any size up to its largest may come), and every block waits for its result, so nothing is missed and the comparison is exact: the output against the reference, shifted by the reported latency less the model's own 2224, which the reference already contains. Then once live, at the host's pace, with your `process` line: it only has to process the blocks. Live, a block that is not back in time goes out as the miss policy's fill, here the input itself (`"on_miss": "bypass"`).
 
 ## If you're stuck
 
@@ -79,6 +79,7 @@ The check runs twice. First offline, like a bounce: the host calls as fast as it
 - **`TODO 1: audio_out declares no latency`** — `"latency"` in `model.json` is 0.
 - **`TODO 3: offline, the output is the input`** — TODO 3.3: the block goes out untouched; the offline call does not process it.
 - **`TODO 3: offline, N blocks were missed`** — TODO 3.3: the offline call does not wait; give it `ANIRA_WAIT_FOREVER`.
+- **`TODO 3: offline, N blocks were missed once they changed size`** — TODO 3.1: the contract does not cover every block the host may send; its smallest is 1.
 - **`TODO 3: live, the output is the input`** — TODO 3.4: the live call does not process the block.
 - **`the output does not match the reference: max abs diff 0.158`** with the latency reported — the state is not carried: block 0 matches, every block after it does not. Same failure as a fresh engine per block in step 1. Check `state_source`.
 - **Many late callbacks** — the machine was busier during the stream than while prepare measured. Close what else runs, or give the budget headroom by hand, `"budget": {"ms": 20}`; the latency grows with it.

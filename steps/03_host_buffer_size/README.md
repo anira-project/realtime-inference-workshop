@@ -58,6 +58,8 @@ The exercise builds once every `?` is filled in. Then each TODO says so when it 
 - **`TODO 1: the prefill is too small, …`** — the host would find `m_output` empty before the model's first block is in. Count the samples the host takes until then.
 - **`TODO 1: the prefill is too large, …`** — it works, but the host hears the model later than it has to.
 - **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but the check for it is not filled in yet, or the block is not popped from `m_input`.
+- **`TODO 2: m_input holds 0 samples, but 512 arrived …`** — the host's samples do not all stay in `m_input` until a whole model block is in: they are not pushed, or the model runs too early.
+- **`TODO 2: the model's result does not reach m_output`** — the model runs, but its block is not pushed into `m_output`, or not all of it.
 - **`TODO 3: give the host its samples back`** — the output is piling up instead of being popped into the host's buffer.
 
 - **`the output does not match the reference: …`** — every TODO is filled in, but the host did not get the model's stream back: the samples are not the right ones, or not in the right place.

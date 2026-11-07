@@ -60,14 +60,9 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     render_source(buffer);
 
     if (bypassed()) { return; }
-    if (static_cast<size_t>(buffer.getNumSamples()) != k_host_block_size) {
-        bypass(
-            "The host sent a buffer that is not 512 samples. This plugin is built for 512 "
-            "only. Arbitrary buffer sizes: part 2, anira.");
-        buffer.clear();  // Nothing plays from here on
-        return;
-    }
 
+    // Up to the 512 prepareToPlay announced. A shorter block now and then is
+    // fine: the ring buffers move sample by sample, the stream stays in place.
     float* mono = to_mono(buffer);
     m_processor->set_mix(mix());
     m_processor->process_block(mono, static_cast<size_t>(buffer.getNumSamples()));

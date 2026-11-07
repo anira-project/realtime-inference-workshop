@@ -1,12 +1,11 @@
 // Step 9 — the plugin around AniraProcessor, given complete.
 //
 // Goal: step 8's plugin, with AniraProcessor in place of ProcessorExample. The
-//       same places where the host talks to us: prepareToPlay plans,
-//       processBlock moves one block, the latency is reported. The window, the
-//       source player and the boilerplate are PluginBase, shared with step 8.
+//       same three places: the constructor creates, prepare() plans and
+//       returns the latency, process() moves one mono block. The window, the
+//       source player, the bypass, the mono mix-down and the boilerplate are
+//       PluginBase, shared with steps 8 and 10.
 #pragma once
-
-#include <memory>
 
 #include "AniraProcessor.h"
 #include "DryWet.h"
@@ -16,11 +15,10 @@ class PluginProcessor final : public PluginBase {
 public:
     PluginProcessor();
 
-    void prepareToPlay(double sample_rate, int samples_per_block) override;
-    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override;
-    void releaseResources() override {}
-
 private:
-    std::unique_ptr<AniraProcessor> m_anira;
+    size_t prepare(double sample_rate, size_t max_block_size) override;
+    void process(float* samples, size_t num_samples) override;
+
+    AniraProcessor m_anira{WORKSHOP_STEP_DIR};
     DryWet m_dry_wet;  // Step 7's dry path: anira returns the wet signal only
 };

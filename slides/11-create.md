@@ -147,7 +147,7 @@ std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());  // ste
 m_model_block.assign(k_model.m_input_size, 0.0f);                        // step 3
 m_state.assign(k_model.m_state_size, 0.0f);                              // the state, too
 m_engine.process(m_model_block.data(), k_model.m_input_size,
-                 m_state.data(), m_state.size());
+                 m_state.data(), k_model.m_state_size);
 ```
 
 Note:

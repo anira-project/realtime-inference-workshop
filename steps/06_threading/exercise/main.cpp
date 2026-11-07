@@ -162,7 +162,8 @@ private:
             }
         }
 
-        m_engine.process(m_model_block.data(), k_model.m_input_size, m_state.data(), m_state.size());
+        m_engine.process(m_model_block.data(), k_model.m_input_size,
+                         m_state.data(), k_model.m_state_size);
 
         for (size_t i = 0; i < k_model.m_input_size; ++i) {
             while (?) {  // <- 2. fill out: spin until try_push() worked

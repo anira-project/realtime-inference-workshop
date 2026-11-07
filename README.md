@@ -23,6 +23,9 @@ about 500 MB, and the room's network is shared by everyone.
 - the models, from this repository's release, into `steps/common/assets/models/`
 - JUCE, ONNX Runtime and anira, with CMake's `FetchContent`, into the build folder
 
+On Windows, paths stop at 260 characters: clone into a short folder, such as
+`C:\code\rtiw`, and use CMake 3.30 or newer.
+
 ```bash
 cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
 cmake --build build/release -j       # the libraries and every solution

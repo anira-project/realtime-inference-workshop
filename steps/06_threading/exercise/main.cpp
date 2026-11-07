@@ -25,13 +25,12 @@
 #include "common/inference_time.h"
 
 // Model settings taken from the export metadata, as in step 1.
-struct ModelConfig {
+constexpr struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
-};
-constexpr ModelConfig k_model{};
+} k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;

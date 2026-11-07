@@ -17,7 +17,7 @@ Note:
 
 | Host call | What happens | Steps |
 |---|---|---|
-| **constructor** | make the engine and the processor: nothing loaded, nothing allocated | 1,&nbsp;7 |
+| **constructor** | make the processor with the model; it makes its engine: nothing loaded, nothing allocated | 1,&nbsp;7 |
 | **`prepare`** ← `prepareToPlay` | load the model, size the buffers, start the worker, return the latency | 1,&nbsp;2,&nbsp;3,&nbsp;4,&nbsp;7 |
 | **`process`** ← `processBlock` | one mono block: in and out between threads, dry/wet mix | 6,&nbsp;7 |
 
@@ -25,8 +25,8 @@ Note:
 
 Note:
 - What did we add? Not much: the host talks to us in three places
-- Constructor: the engine and the processor are plain members, made with the plugin. They load and allocate nothing, because the host may construct the plugin just to scan it
-- `prepare`, from `prepareToPlay`: load the model once with `m_engine.load`, size buffers, start the worker thread, return the latency; the host may call it again at any time
+- Constructor: the processor is a plain member, made with the plugin and `k_model`, and it owns the engine. Nothing is loaded or allocated, because the host may construct the plugin just to scan it
+- `prepare`, from `prepareToPlay`: `m_processor.prepare(host_block_size, k_max_inference_ms)` loads the model once, sizes the buffers, starts the worker thread; we return the latency. The host may call it again at any time
 - `process`, from `processBlock`: callback from step 7, unchanged, on the input mixed down to mono
 - `release`, from `releaseResources`: stop the worker thread
 - PluginBase does the rest: the bypass, mono to stereo, telling the host the latency

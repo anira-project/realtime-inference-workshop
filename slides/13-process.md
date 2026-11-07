@@ -8,7 +8,7 @@ One block through anira
 Note:
 - Process: one block through anira.
 - This is the third row of the map, the part that runs in every callback.
-- We go through the two kinds of thread, the path of one block, the stages, the waiting, a miss, and the real-time rules.
+- We go through the two kinds of thread, the path of one block, the stages, the waiting on both sides, a miss, and the real-time rules.
 
 ---
 
@@ -279,6 +279,66 @@ Note:
 - The model is done after a third, the audio thread wakes up, and the dequeue takes this window's result right away.
 - The result goes out in the same callback: the silence at the start is shorter, and the latency is one block lower.
 - It buys latency with callback time: fine for one instance on a quiet machine, dangerous for ten.
+
+---
+
+<!-- .slide: class="recap" -->
+
+<div class="tag">Part 1 · Step 6</div>
+
+## The worker spins, the audio thread never waits.<br><span class="then">One fixed way to wait, on both sides.</span>
+
+{{THREADS}}
+
+```cpp
+// the worker hot-spins: a sample not there yet, it tries again at once, no sleep
+while (!m_input.try_pop(m_model_block[i])) { if (!m_worker.running()) { return; } }
+// the audio thread never waits: a sample not there yet is a zero, and a debt
+const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
+```
+
+Note:
+- The other wait: the pool's. In step 6 we made two decisions without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
+- The timeline from step 6: between two runs the worker spins on try_pop the whole time, no sleep, no pause, one core at 100 percent, even while idle.
+- The audio thread only pushes and pops. If a sample is not there yet, it writes zeros for the rest of the callback and owes them: the debt.
+- Both were fixed in the code, the same for every instance.
+
+---
+
+<!-- .slide: class="answer" -->
+
+<div class="tag">anira · Pool</div>
+
+## The pool waits for work.<br><span class="then">Spin with backoff, or block. Declared once, at create.</span>
+
+<div class="policies">
+  <div class="policy-head"></div><div class="policy-head"></div><div class="policy-head">audio thread, on enqueue</div><div class="policy-head">pool, while idle</div>
+
+  <div class="policy-name"><code>SPIN_BACKOFF</code></div>
+  <div class="wait-bar spin"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="policy-cell ok">an atomic, nothing else</div>
+  <div class="policy-cell warn">polls: 4 retries, 32 with a CPU pause, then yield and sleep 100 µs</div>
+
+  <div class="policy-name"><code>BLOCKING</code></div>
+  <div class="wait-bar block"><i></i></div>
+  <div class="policy-cell warn">an atomic, plus one wake syscall when a thread is blocked</div>
+  <div class="policy-cell ok">spins up to 10,000 tries, then blocks on a semaphore</div>
+</div>
+
+<div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
+
+Note:
+- In anira the pool's wait is one setting for the whole process, declared at create in ContextConfig::threads: spin with backoff, or block.
+- Not the wait from the slides before: wait_ratio is the audio thread waiting for a result, per handler, in the contract. This is the pool waiting for work.
+- SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool pays by polling.
+- Its backoff: 4 retries at once, 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry. So an idle thread picks up new work within about 100 µs.
+- BLOCKING waits in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
+- It wakes up every 5 ms on its own, only to check whether it should exit. While blocked, it uses no CPU.
+- The price is on the audio thread: if a pool thread is blocked, the enqueue makes one wake syscall.
+- Under load the threads rarely sleep, so that is rare; on an idle pool it is nearly every job.
+- [click] We recommend BLOCKING: one bounded wake instead of threads polling while idle.
+- It takes no lock and never waits, but no OS documents the wake as real-time safe, RTSan does not check it, and we have not yet measured its worst case per platform.
+- SPIN_BACKOFF stays the default because the OS clocks a sleeping core down, and whatever runs next on it starts slow; spinning keeps the core warm.
 
 ---
 

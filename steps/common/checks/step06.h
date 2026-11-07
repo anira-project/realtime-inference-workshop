@@ -18,14 +18,14 @@
 // TODO 1, in prepare(): step 3's prefill, plus the worker's time to run the
 // model block.
 // @prefill: the samples of silence m_output starts with
-// @max_block_size: the largest block the callback will be given
+// @host_block_size: the samples the host gives every callback, always the same
 // @model_block_size: samples the model takes per forward pass
 // @worker_samples: the worker's time, worker_time
 inline void check_prefill(size_t prefill,
-                          size_t max_block_size,
+                          size_t host_block_size,
                           size_t model_block_size,
                           size_t worker_samples) {
-    const size_t needed = (model_block_size - max_block_size) + worker_samples;
+    const size_t needed = (model_block_size - host_block_size) + worker_samples;
     if (prefill < needed) {
         throw std::runtime_error(
             "TODO 1: the prefill is too small, the worker's first block would come too late");

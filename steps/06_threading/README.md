@@ -24,7 +24,7 @@ The thread itself is given: [`WorkerThread`](../common/helpers/worker_thread.h) 
 
 The worker needs time, and the host must always find something to take. So `m_output` starts with silence, the prefill: step 3's prefill, 2048 − 512, plus the worker's time. Working it out is TODO 1, and step 7 takes it apart.
 
-The worker's time is `worker_time`, given in `prepare()`: your worst case from step 4, `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), in samples and rounded up to whole callbacks, because the audio thread only picks results up once per callback. Two lines at the top of `prepare()` do it: 18 ms are 794 samples at 44.1 kHz, two 512-sample callbacks, 1024. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
+The worker's time is `worker_time`, given in `prepare()`: your worst case from step 4, `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), which `main` passes into `prepare()` as `max_inference_ms`, in samples and rounded up to whole callbacks, because the audio thread only picks results up once per callback. Two lines at the top of `prepare()` do it: 18 ms are 794 samples at 44.1 kHz, two 512-sample callbacks, 1024. Until you do, it is the largest worst case that can work at all, one model block of time, 46.4 ms: everything runs, with more latency.
 
 ## What to do
 

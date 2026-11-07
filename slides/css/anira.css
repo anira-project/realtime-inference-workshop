@@ -2129,6 +2129,43 @@ html.tanh .reveal .slides section.answer::before {
   color: var(--fs-text-muted-color);
 }
 
+/* Create: where a declaration takes effect, a second tag pinned top right,
+   opposite the chapter tag: "→ prepare: the model loads" */
+html.tanh .reveal .slides section .when {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: var(--space-1) var(--space-3);
+  border: var(--hairline) solid var(--fs-border-strong);
+  border-radius: var(--radius-small);
+  font-family: var(--fs-main-font);
+  font-size: 0.45em;
+  line-height: 1.4;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .reveal .slides section .when b {
+  font-weight: 600;
+  color: var(--mark-check);
+}
+
+/* Create's closing table: what was declared, what create did, when it takes
+   effect. Six rows, so a size down from the default table */
+html.tanh .reveal table.declared {
+  margin-top: var(--space-5);
+  font-size: 0.8em;
+}
+
+html.tanh .reveal table.declared th,
+html.tanh .reveal table.declared td {
+  padding: 8px 16px;
+}
+
+html.tanh .reveal table.declared td b {
+  font-weight: 600;
+  color: var(--mark-check);
+}
+
 /*********************************************
  * Outlook: inline execution, three checks and two threads
  *********************************************/

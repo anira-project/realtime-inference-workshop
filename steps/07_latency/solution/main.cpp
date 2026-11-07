@@ -26,13 +26,14 @@
 
 // Model settings taken from the export metadata, as in step 1.
 // @m_latency: the model's own delay, how much later its output answers its input
-constexpr struct {
+struct ModelConfig {
     const char* m_path = WORKSHOP_ONNX_MODEL_PATH;
     size_t m_input_size = 2048;
     size_t m_state_size = 63488;
     double m_sample_rate = 44100.0;
     size_t m_latency = 2224;
-} k_model{};
+};
+constexpr ModelConfig k_model{};
 
 // What the host hands over per callback: four callbacks make one model block.
 constexpr size_t k_host_block_size = 512;
@@ -49,39 +50,46 @@ constexpr float k_mix = 0.5f;
 // m_dry is a plain RingBuffer: only the audio thread uses it.
 class ProcessorExample {
 public:
-    explicit ProcessorExample(OnnxEngine& engine) : m_engine(engine) {}
+    // Keeps the model and makes the engine, which loads nothing yet:
+    // prepare() loads the model.
+    explicit ProcessorExample(const ModelConfig& model) : m_model(model) {}
 
-    void prepare(size_t max_block_size) {
+    void prepare(size_t host_block_size, double max_inference_ms) {
         m_worker.stop();
 
+        // The model, loaded the first time: it takes a while and allocates.
+        if (!m_engine.loaded()) { m_engine.load(m_model.m_path); }
+
         // Step 6's worker time: your worst case, in samples, in whole callbacks
-        const double worst_case_samples = k_max_inference_ms * k_model.m_sample_rate / 1000.0;
+        const double worst_case_samples = max_inference_ms * m_model.m_sample_rate / 1000.0;
         const size_t worker_time =
-            static_cast<size_t>(std::ceil(worst_case_samples / max_block_size)) * max_block_size;
-        adaptation = (k_model.m_input_size - max_block_size);
+            static_cast<size_t>(std::ceil(worst_case_samples / host_block_size)) * host_block_size;
+        // The buffer adaptation, step 3: the samples it takes until the worker
+        // has its first whole block
+        const size_t adaptation = m_model.m_input_size - host_block_size;
         m_prefill = adaptation + worker_time;
-        const size_t output_capacity = worker_time + k_model.m_input_size;
+        const size_t output_capacity = worker_time + m_model.m_input_size;
 
         // The latency: how late the wet signal is, the number the host is told;
         // in a plugin it goes to setLatencySamples(). Three things delay it, and
         // all are fixed:
         //   - the buffer adaptation (step 3)
         //   - the time the worker is given (step 6)
-        //   - the model itself answers late: k_model.m_latency, from the export
-        m_latency = m_prefill + k_model.m_latency;
+        //   - the model itself answers late: m_model.m_latency, from the export
+        m_latency = m_prefill + m_model.m_latency;
 
-        m_input = ThreadSafeRingBuffer(k_model.m_input_size);
+        m_input = ThreadSafeRingBuffer(m_model.m_input_size);
         m_output = ThreadSafeRingBuffer(output_capacity);
         for (size_t i = 0; i < m_prefill; ++i) {
             const bool pushed = m_output.try_push(0.0f);  // The prefill
             assert(pushed);  // never fails: m_output has room for the prefill
         }
-        m_model_block.assign(k_model.m_input_size, 0.0f);
-        m_state.assign(k_model.m_state_size, 0.0f);
+        m_model_block.assign(m_model.m_input_size, 0.0f);
+        m_state.assign(m_model.m_state_size, 0.0f);
 
         // The dry path: room for the delay and one callback more.
-        m_dry = RingBuffer(m_latency + max_block_size);
-        m_dry_block.assign(max_block_size, 0.0f);
+        m_dry = RingBuffer(m_latency + host_block_size);
+        m_dry_block.assign(host_block_size, 0.0f);
 
         // The dry delay: m_dry starts with the whole latency in silence, so dry
         // and wet line up. The model's own delay is already inside what the
@@ -163,29 +171,29 @@ private:
     void process_model() {
         // Step 6's hot spin: try again right away until a whole model block
         // is in, and until the result is out.
-        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        for (size_t i = 0; i < m_model.m_input_size; ++i) {
             while (!m_input.try_pop(m_model_block[i])) {
                 if (!m_worker.running()) { return; }  // so stop() never waits forever
             }
         }
 
-        m_engine.process(m_model_block.data(), k_model.m_input_size,
-                         m_state.data(), k_model.m_state_size);
+        m_engine.process(m_model_block.data(), m_model.m_input_size,
+                         m_state.data(), m_model.m_state_size);
 
-        for (size_t i = 0; i < k_model.m_input_size; ++i) {
+        for (size_t i = 0; i < m_model.m_input_size; ++i) {
             while (!m_output.try_push(m_model_block[i])) {
                 if (!m_worker.running()) { return; }
             }
         }
     }
 
-    OnnxEngine& m_engine;
+    OnnxEngine m_engine;               // Made with the processor, loaded in prepare()
+    const ModelConfig m_model;         // Given at construction, never changes
     ThreadSafeRingBuffer m_input{0};   // Audio thread -> worker
     ThreadSafeRingBuffer m_output{0};  // Worker -> audio thread
     std::vector<float> m_model_block;  // The worker's
     std::vector<float> m_state;        // The worker's
     WorkerThread m_worker;
-    size_t adaptation = 0;           // How many samples it takes for the worker to get the first block, to fill the output ring buffer
     size_t m_prefill = 0;            // Samples of silence m_output starts with: buffer adaptation + the worker's time
     size_t m_unpushed = 0;           // Samples that did not fit into m_input, owed as zeros
     size_t m_debt = 0;               // Samples that went out as zeros, thrown away when they arrive
@@ -197,11 +205,8 @@ private:
 
 int main() {
     try {
-        OnnxEngine engine;
-        engine.load(k_model.m_path);
-
-        ProcessorExample processor(engine);
-        processor.prepare(k_host_block_size);
+        ProcessorExample processor(k_model);  // Keeps the model, loads nothing yet
+        processor.prepare(k_host_block_size, k_max_inference_ms);  // Loads the model
         processor.set_mix(k_mix);
 
         // The host, as in step 6.

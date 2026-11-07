@@ -13,10 +13,10 @@
 // gives a whole model block back only once one is in. m_output starts with
 // exactly the samples the host takes until then.
 // @prefill: the zeros m_output starts with
-// @max_block_size: the largest block the callback will be given
+// @host_block_size: the samples the host gives every callback, always the same
 // @model_input_size: samples the model takes per forward pass
-inline void check_prefill(size_t prefill, size_t max_block_size, size_t model_input_size) {
-    const size_t needed = model_input_size - max_block_size;
+inline void check_prefill(size_t prefill, size_t host_block_size, size_t model_input_size) {
+    const size_t needed = model_input_size - host_block_size;
     if (prefill < needed) {
         throw std::runtime_error(
             "TODO 1: the prefill is too small, the host would find m_output empty");

@@ -27,9 +27,9 @@ Note:
 
 ```cpp
 // in prepare(): step 6's prefill, given
-adaptation = (k_model.m_input_size - max_block_size);
+const size_t adaptation = m_model.m_input_size - host_block_size;
 m_prefill = adaptation + worker_time;
-m_latency = m_prefill + k_model.m_latency;  // the number the host is told
+m_latency = m_prefill + m_model.m_latency;  // the number the host is told
 ```
 
 </div>
@@ -40,7 +40,7 @@ Note:
 - Together, the prefill: that is how late the host hears the model's stream
 - New: the model itself answers late. 2224 samples: 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. From the export script, not visible from C++
 - Up to now it did not matter: we compared against the reference, which has it too. For the dry/wet mix it does: the dry signal has no such delay
-- So the latency is our prefill from step 6 plus `k_model.m_latency`
+- So the latency is our prefill from step 6 plus `m_model.m_latency`
 - Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE
 - Only for 512: other block sizes give other numbers, part 2
 - Honest: fine for mixing, can't play through it live. Part 2 comes back to it

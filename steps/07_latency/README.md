@@ -23,7 +23,7 @@ The first two are step 6's prefill. The second is a choice: it buys the worker t
 
 [`solution/main.cpp`](solution/main.cpp) is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses. Your number from step 4 comes from [`common/inference_time.h`](../common/inference_time.h), as in step 6. Two lines in `prepare()` are what this step is about:
 
-1. **`m_latency = m_prefill + k_model.m_latency`**: the number above, what the host is told. Step 6's prefill holds the first two parts; the model's own delay comes on top. The wet path only gets the prefill: the model's own delay is already inside what it returns.
+1. **`m_latency = m_prefill + m_model.m_latency`**: the number above, what the host is told. Step 6's prefill holds the first two parts; the model's own delay comes on top. The wet path only gets the prefill: the model's own delay is already inside what it returns.
 2. **The dry delay**: `m_dry` starts with the full latency in silence.
 
 The mix in `process_block()` is a plain crossfade between the delayed dry signal and the wet one: both paths are equally late. The check behind the output lives in [`common/checks/step07.h`](../common/checks/step07.h).

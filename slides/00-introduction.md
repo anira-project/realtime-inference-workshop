@@ -26,32 +26,34 @@ Note:
 
 <div class="tag">Teaser · A</div>
 
-## Fighting the clock<br><span class="then">Fixed model blocks, and a runtime that is not real-time safe.</span>
+## Every callback has a deadline<br><span class="then">An FFT on 2048 samples: cheap, and equally cheap every time.</span>
 
-<div class="teaser" data-teaser="clock"><canvas></canvas></div>
+<div class="teaser" data-teaser="clock" data-work="fft"><canvas></canvas></div>
 
 Note:
 - What you see: one turn of the clock is one callback. The host gives us 512 samples, and the next 512 are due one turn later
-- The model needs 2048 samples: three callbacks only collect, the 4th runs the network
-- Problem 1: the block sizes don't match. The host decides its block size, the model has its own
-- Problem 2: the forward pass takes about 570 samples' worth of time, sometimes far more. It doesn't fit into 512, and by how much it misses changes every time: the runtime is not deterministic
-- The question: how do we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline? That is today's workshop
+- An FFT on blocks of 2048: three callbacks only collect, the 4th runs FFT and IFFT
+- That is the pattern you know from STFT and FFT convolution: a FIFO collects the block, the callback that completes it does the transform, and we report 2048 samples of latency to the host
+- The block sizes don't match, and that only costs latency
+- FFT and IFFT take about 1 sample's worth of time: measured with numpy, 2048-point rfft, multiply, irfft, 22 µs on our laptop, Python's overhead included. The tick on the clock is drawn thicker than that
+- And it takes the same time for every block: an FFT does the same operations, whatever the audio is
+- Three callbacks idle, one does all the work. Spiky, but with about 500 times headroom it doesn't matter. Every callback is on time
 
 ---
 
 <div class="tag">Teaser · B</div>
 
-## Fighting the clock<br><span class="then">An FFT costs the same for every block. A neural network does not.</span>
+## Every callback has a deadline<br><span class="then">A network on 2048 samples: too slow, and never the same twice.</span>
 
-<div class="teaser" data-teaser="codec" data-in="assets/audio/demo_input.wav" data-out="assets/audio/demo_output.wav"><canvas></canvas></div>
+<div class="teaser" data-teaser="clock" data-work="nn"><canvas></canvas></div>
 
 Note:
-- What you see: the host calls us with 512 samples. An FFT and our neural network both need 2048, so four callbacks fill one block
-- The FFT is fine in a callback: it does the same operations for every block, so it always takes the same time
-- The network looks the same from the outside: encoder, latent, decoder, 2048 in and 2048 out
-- Problem 1: the block sizes don't match, 512 from the host, 2048 for the model
-- Problem 2: the forward pass varies from call to call, around 570 samples, sometimes far more. Above the 512 line, the callback is late
-- Times are illustrative, after step 3's measurements; the latent shading is illustrative too
+- Same clock, same 2048-sample block. Only the FFT is replaced by our neural network
+- The block sizes don't match, as with the FFT: four callbacks collect, the 4th runs the network. That part we know how to handle
+- New problem 1: the forward pass takes about 570 samples' worth of time (13 ms on ONNX Runtime, step 3), more than the 512 a callback has. It doesn't fit
+- New problem 2: by how much it misses changes every time, sometimes far more. The runtime is not deterministic
+- The times shown are illustrative, after step 3's measurements
+- The question: how do we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline? That is today's workshop
 - The question: how do we fit that into a callback with varying block sizes and a hard deadline? That is today's workshop
 
 ---

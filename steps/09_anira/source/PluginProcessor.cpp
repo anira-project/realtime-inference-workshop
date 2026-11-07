@@ -24,9 +24,12 @@ size_t PluginProcessor::prepare(double sample_rate, size_t max_block_size) {
 // The audio callback, on the mono mix-down: no allocation, no lock, no wait.
 void PluginProcessor::process(float* samples, size_t num_samples) {
     m_dry_wet.store(samples, num_samples);
-    // A bounce (isNonRealtime) waits for every result; live never waits
-    m_anira.process(samples, num_samples, isNonRealtime());
-    m_dry_wet.mix(samples, num_samples, mix());  // Dry only while held back
+    // Held back, the model does not run: only the dry signal goes out
+    if (processing()) {
+        // A bounce (isNonRealtime) waits for every result; live never waits
+        m_anira.process(samples, num_samples, isNonRealtime());
+    }
+    m_dry_wet.mix(samples, num_samples, mix());  // 0 while held back
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {

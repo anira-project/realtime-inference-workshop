@@ -140,17 +140,9 @@ protected:
     // host to do exactly that. Not on the audio thread.
     void set_report(std::vector<ReportRow> rows);
 
-    // The dry/wet position, 0 dry to 1 wet; dry only while the plugin is
-    // held back. Audio thread.
-    float mix() const { return processing() ? m_mix->load() : 0.0f; }
-
-    // The value of the step's knob at `index`, in the order given. Audio thread.
-    float knob(size_t index) const { return m_knob_values[index]->load(); }
-
-private:
     // Whether this block goes through the model: not bypassed, and not held
-    // back; a hold that is live only lets a bounce (isNonRealtime) through.
-    // Audio thread.
+    // back until the user agrees; a hold that is live only lets a bounce
+    // (isNonRealtime) through. Audio thread.
     bool processing() const {
         if (bypassed()) { return false; }
         if (!held_back()) { return true; }
@@ -162,6 +154,14 @@ private:
         return true;  // Only live holds wait: a bounce goes through
     }
 
+    // The dry/wet position, 0 dry to 1 wet; dry only while the plugin is
+    // held back. Audio thread.
+    float mix() const { return processing() ? m_mix->load() : 0.0f; }
+
+    // The value of the step's knob at `index`, in the order given. Audio thread.
+    float knob(size_t index) const { return m_knob_values[index]->load(); }
+
+private:
     // The example or your file replaces the input; the input stays as it is.
     // While the plugin does not process, the example or your file stops:
     // silence, and the player waits at the start, so it starts over once the

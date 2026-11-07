@@ -43,9 +43,12 @@ void PluginProcessor::process(float* samples, size_t num_samples) {
     for (size_t i = 0; i < offsets.size(); ++i) { offsets[i] = knob(i); }
 
     m_dry_wet.store(samples, num_samples);
-    // A bounce (isNonRealtime) waits for every result; live never waits
-    m_split.process(samples, num_samples, offsets, isNonRealtime());
-    m_dry_wet.mix(samples, num_samples, mix());  // Dry only while held back
+    // Held back, the model does not run: only the dry signal goes out
+    if (processing()) {
+        // A bounce (isNonRealtime) waits for every result; live never waits
+        m_split.process(samples, num_samples, offsets, isNonRealtime());
+    }
+    m_dry_wet.mix(samples, num_samples, mix());  // 0 while held back
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {

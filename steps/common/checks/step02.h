@@ -7,11 +7,29 @@
 #include <array>
 #include <cstddef>
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "common/assets/test_signal.h"
 #include "common/helpers/support.h"
+
+// TODO 1, before the first block: the engine gets a pointer and a size, and
+// cannot see how large the vector really is. Too small, and it would read past
+// its end.
+// @state: the vector from TODO 1
+// @state_size: the floats in the model's state
+inline void check_state(const std::vector<float>& state, size_t state_size) {
+    if (state.size() != state_size) {
+        throw std::runtime_error("TODO 1: the state has " + std::to_string(state.size()) +
+                                 " floats, the model's state is " + std::to_string(state_size));
+    }
+    for (const float value : state) {
+        if (value != 0.0f) {
+            throw std::runtime_error("TODO 1: the state starts at zero, before the first block");
+        }
+    }
+}
 
 // One line per block, then the whole signal. Returns what main should exit with.
 // @buffer: the whole signal, processed in place
@@ -35,7 +53,8 @@ inline int report_blocks(const std::vector<float>& buffer,
 
     // Right at the start, wrong after it: every block starts from a zero state.
     if (first_block_ok && later_blocks_fail) {
-        fail("TODO 1 and 2: block 0 is right, the blocks after it are not");
+        fail("TODO 2: block 0 is right, the blocks after it are not: pass the state with\n"
+             "every block, so each one starts where the one before stopped");
         return 1;
     }
     return report(buffer.data(), target.data(), buffer.size());

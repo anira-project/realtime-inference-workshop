@@ -43,6 +43,7 @@ int main() {
         // Hint: look at the struct above
         // --------------------------------------------------------------------
         std::vector<float> state(?, ?);  // <- fill out
+        check_state(state, k_model.m_state_size);  // Given: names TODO 1 if it is off
 
         for (size_t i = 0; i < num_blocks; ++i) {
             // ---- TODO 2 ----------------------------------------------------

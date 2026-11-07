@@ -1,7 +1,6 @@
 # TODOs
 
 - I like the first teaser slide, but maybe we could have first the same slide with an fft, where it is deterministic and always fast enough. And then as a second example the model where there is not enough time...
-- Brauchen wir diese Slide? Exported to ONNX The model used in this repository.
 - Why copy the floats in example 1? Why not bind tensors?
 - Process_size not copy in first example
 - Why are there the quotes for stings in the path

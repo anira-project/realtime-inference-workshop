@@ -195,30 +195,6 @@ Note:
 
 <div class="tag">Our model</div>
 
-## Exported to ONNX<br><span class="then">The model used in this repository.</span>
-
-<div class="cards">
-  <div class="card">{{ICON:model}}<div class="card-title">TorchScript model</div><div class="card-text">Intelligent Instruments Lab, magnetic resonator piano</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:code}}<div class="card-title">Export</div><div class="card-text"><code>scripts/export_model.py</code></div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:folder}}<div class="card-title">ONNX file</div><div class="card-text"><code>model_forward.onnx</code>, 126 MB</div></div>
-</div>
-
-<div class="cards-note">2048 samples in, 2048 out, 44.1 kHz, mono. Downloaded by CMake when you configure.</div>
-
-Note:
-- The model comes from the Intelligent Instruments Lab, trained on the magnetic resonator piano, as TorchScript.
-- Our export script turns it into ONNX: `model_forward.onnx`, 126 MB.
-- 2048 samples in, 2048 out, at 44.1 kHz, one channel.
-- The state goes in and out as tensors too; that is step 2.
-- The export is deterministic, so Python and C++ give the same output, and the steps can check against it.
-- The file is not in git: CMake downloads it from the repository's release when you configure.
-
----
-
-<div class="tag">Our model</div>
-
 ## Where we are in the process<br><span class="then">Training and export have been completed.</span>
 
 {{INTEGRATION:implement}}

@@ -51,25 +51,26 @@ public:
     const juce::String& title() const { return m_title; }
     const juce::String& subtitle() const { return m_subtitle; }
     const std::vector<Knob>& knobs() const { return m_knobs; }
-    // Why nothing plays, or nullptr while the plugin processes.
+    // Why the plugin does not process, or nullptr while it does.
     const char* bypass_reason() const { return m_bypass.load(std::memory_order_acquire); }
     // Reads a file as your file and plays it, with the audio thread held off
     // while it changes. Returns false if it cannot be read.
     bool load_file(const juce::File& file);
 
 protected:
-    // Nothing plays: the output is silent, and the window says why. A string
-    // literal, so this is safe on the audio thread too.
+    // The plugin does not process: the example or your file stops, the input
+    // goes out unprocessed, and the window says why. A string literal, so this
+    // is safe on the audio thread too.
     void bypass(const char* reason) { m_bypass.store(reason, std::memory_order_release); }
     void process_normally() { m_bypass.store(nullptr, std::memory_order_release); }
     bool bypassed() const { return m_bypass.load(std::memory_order_acquire) != nullptr; }
 
     // The example or your file replaces the input; the input stays as it is.
-    // While bypassed, nothing plays: the buffer is cleared and the player waits
-    // at the start, so it starts over once the plugin processes again. Audio
-    // thread.
+    // While bypassed, the example or your file stops: silence, and the player
+    // waits at the start, so it starts over once the plugin processes again.
+    // The input still passes through. Audio thread.
     void render_source(juce::AudioBuffer<float>& buffer) {
-        if (bypassed()) {
+        if (bypassed() && m_player.selected() != SourcePlayer::Source::input) {
             buffer.clear();
             m_player.rewind();
             return;

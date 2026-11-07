@@ -38,7 +38,7 @@
 
 - Ab after process überarbeiten: inline execution moved from Process into the Outlook, opened by the latency question and the step 4 deadline graph (512 ✗, 2048 ✓); the outlook also gets the restored "Which combination is fastest?" and a 4K zero-copy example. Slides corrected against alpha.3 (ABI 0.3, v2 shim, frames, Async, ring dtype, warm-up threads, pool lifetime).
 - Benchmark -> convert to samples (Lina, bdfeb70 and 0f27866): step 4 prints and shows the worst case in samples and rounded to whole callbacks; k_max_inference_samples_rounded feeds steps 6 to 8.
-- anira pinned to the head of M2b PR 4 (anira-project/anira#241, 131b75de: v3.0.0-alpha.3, ABI 0.3, tag not pushed yet; measured budget, until-stable warm-up, optional window, latency fixes); an old alpha.2 pin in a build cache moves along. Steps 9, 10 and 11 run "budget": "measured" and "warmup": "until_stable", the checks print the measured budget.
+- anira pinned to the v3.0.0-alpha.3 tag (ABI 0.3; anira-project/anira#241 merged: measured budget, until-stable warm-up, optional window, latency fixes, real-time promise per phase); an older pin in a build cache moves along. Steps 9, 10 and 11 run "budget": "measured" and "warmup": "until_stable", the checks print the measured budget.
 - window not necessary: dropped from every model file of steps 9 to 11 and from the slides.
 - anira latency fix: a state output no longer rounds the latency to whole model blocks (#235). Step 9 on my machine: 5295 instead of 6320 (measured 12.7 ms; exactly 512 → 4784, step 7's number). Slides and READMEs give the new numbers as this machine's.
 

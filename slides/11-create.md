@@ -242,17 +242,7 @@ Note:
 
 ## A worker per instance.<br><span class="then">It grows with every instance the host adds.</span>
 
-<div class="lanes">
-  <div class="lane-label">audio thread</div>
-  <div class="lane audio"></div>
-  <div class="lane-label"></div>
-  <div class="lane-gap">
-    <div class="lane-queue to"><span>m_input</span><i></i></div>
-    <div class="lane-queue from"><span>m_output</span><i></i></div>
-  </div>
-  <div class="lane-label">worker thread</div>
-  <div class="lane worker"><div class="lane-run">model</div></div>
-</div>
+{{THREADS}}
 
 Note:
 - Threads: in step 6 we had a worker per instance; the plugin mixes down to mono, so one is enough.

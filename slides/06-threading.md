@@ -15,37 +15,22 @@ Note:
 
 ## The audio thread moves samples<br><span class="then">The worker runs the model.</span>
 
-<div class="lanes">
-  <div class="lane-label">audio thread</div>
-  <div class="lane audio"></div>
-  <div class="lane-label"></div>
-  <div class="lane-gap">
-    <div class="lane-queue to"><span>m_input</span><i></i></div>
-    <div class="lane-queue from"><span>m_output</span><i></i></div>
-  </div>
-  <div class="lane-label">worker thread</div>
-  <div class="lane worker"><div class="lane-run">model</div></div>
-</div>
+{{THREADS}}
 
 <div class="statement-points two fragment">
-  <div><strong>Real-time capable</strong><br>The worker gets its own time: your worst case (step 4)</div>
-  <div><strong>Real-time safe</strong><br>Allocations and locks leave the audio thread (step 5)</div>
+  <div><strong>Its own clock</strong><br>The worker is not tied to the callbacks: a forward pass may take longer than one (step 4)</div>
+  <div><strong>Its own rules</strong><br>The worker may allocate and lock: the audio thread stays real-time safe, never overloaded (step 5)</div>
 </div>
 
 Note:
-- Two threads
-- Audio thread keeps its pace, only moves samples
-- Worker thread runs the model
-- How does the audio get there and back, within the rules?
-- Two ring buffers as in step 3, now thread-safe, between two threads
-- Audio thread pushes into `m_input`, the worker takes 2048 out once they are there
-- Worker runs the model, pushes the result into `m_output`, the audio thread pops it
-- Worker may allocate. No per-callback deadline, but a budget of 46.4ms.
-- The audio thread never waits for it
-- Click: this solves our two problems
-- Real-time capable, step 4: even a typical call of 13 ms is longer than our host callback; the worker isn't inside any callback, it gets its own time
-- Real-time safe, step 5: the engine's allocations and locks leave the audio thread
-
+- Two threads, on one time axis: every row lines up on the same callbacks
+- Audio thread: every 512 samples a callback. It pushes its block into `m_input` and takes one out of `m_output`, nothing else
+- `m_input` fills a quarter per callback; at the fourth, a whole model block of 2048 is there and the worker takes it
+- Worker thread: it spins on `try_pop` the whole time, and runs the model as soon as a block is whole. It is not tied to the callbacks: the run may take longer than one callback
+- `m_output` starts with the prefill, 5 blocks: the host hears silence first. The model's result arrives before the prefill runs out, and from then on the host hears the model's stream
+- Click: what this buys us
+- Its own clock, step 4: even a typical forward pass of 13 ms is longer than our 11.6 ms callback. On the worker that is fine, it has the time of the prefill
+- Its own rules, step 5: the engine allocates and locks. On the worker that is allowed; the audio thread stays real-time safe and never waits, never overloaded
 ---
 
 <div class="tag">Goal</div>

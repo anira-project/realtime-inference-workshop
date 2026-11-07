@@ -258,11 +258,11 @@ for (size_t i = 0; i < num_blocks; ++i) {
 ```
 
 ```
-block 0    max abs diff 2.33e-10   OK
-block 1    max abs diff 0.0802     <-- FAILED
-block 2    max abs diff 0.0791     <-- FAILED
-block 3    max abs diff 0.053      <-- FAILED
-block 4    max abs diff 0.113      <-- FAILED
+PASS  block 0    max abs diff 2.33e-10
+FAIL  block 1    max abs diff 0.0802
+FAIL  block 2    max abs diff 0.0791
+FAIL  block 3    max abs diff 0.053
+FAIL  block 4    max abs diff 0.113
 ...
 ```
 

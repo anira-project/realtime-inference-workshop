@@ -99,11 +99,12 @@ private:
 };
 
 int main() {
+    const char* unchecked = nullptr;  // What the result adds to SOLVED
 #ifndef WORKSHOP_HAS_RTSAN
-    std::printf(
-        "WARNING: built without RealtimeSanitizer, so nothing is checked.\n"
-        "It needs clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux)\n"
-        "and -DWORKSHOP_RTSAN=ON. See the README.\n\n");
+    unchecked = "but real-time safety is not checked: no RealtimeSanitizer";
+    note("built without RealtimeSanitizer, so real-time safety is not checked. It needs\n"
+         "clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux) and\n"
+         "-DWORKSHOP_RTSAN=ON. See the README.");
 #endif
 
     ProcessorExample processor(k_model);  // Keeps the model, loads nothing yet
@@ -118,8 +119,9 @@ int main() {
 
     // Without RTSan the run gets here: the engine is still correct, just not safe.
     const size_t latency = k_model.m_input_size - k_host_block_size;
-    return report_with_latency(buffer.data(),
-                               k_target_output_signal.data(),
-                               buffer.size(),
-                               latency);
+    return step_result(5, report_with_latency(buffer.data(),
+                                              k_target_output_signal.data(),
+                                              buffer.size(),
+                                              latency),
+                       unchecked);
 }

@@ -34,11 +34,15 @@ Then open [`exercise/main.cpp`](exercise/main.cpp) and fill in the two TODO bann
 ## Expected output
 
 ```
-  block 0                  max abs diff 2.33e-10   OK
-  block 1                  max abs diff 1.27e-07   OK
+  PASS  block 0    max abs diff 2.33e-10
+  PASS  block 1    max abs diff 1.27e-07
   ...
-  block 7                  max abs diff 3.58e-07   OK
-OK: max abs diff 3.87e-07, within 0.0001 of the reference.
+  PASS  block 7    max abs diff 3.58e-07
+  PASS  the output matches the reference: max abs diff 3.87e-07, tolerance 0.0001
+
+==============================================================
+  STEP 2 SOLVED
+==============================================================
 ```
 
 ## If you're stuck
@@ -46,7 +50,7 @@ OK: max abs diff 3.87e-07, within 0.0001 of the reference.
 The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
 
 - **`TODO 1 and 2: block 0 is right, the blocks after it are not`** — the model only gets the audio, so every block starts from a zero state: every block is the first block.
-- **`FAILED: the state is exactly 63488 floats, got ...`** — the state vector has the wrong size.
+- **`the state is exactly 63488 floats, got ...`** — the state vector has the wrong size.
 - **The same failure after adding the state** — the state is being created inside the loop, so it starts at zero on every block. It belongs above the loop.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.

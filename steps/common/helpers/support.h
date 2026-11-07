@@ -9,6 +9,8 @@
 #include <limits>
 #include <vector>
 
+#include "verdict.h"
+
 // Everything below this counts as the same signal. The reference comes from a
 // different runtime (ONNX Runtime in Python), so the numbers are close but not
 // bit-identical.
@@ -26,7 +28,11 @@ inline float max_abs_diff(const float* a, const float* b, size_t num_samples) {
 // Returns true if it is within tolerance.
 inline bool report_line(const char* label, float diff) {
     const bool ok = diff <= k_tolerance;
-    std::printf("  %-24s max abs diff %-10.3g %s\n", label, diff, ok ? "OK" : "<-- FAILED");
+    if (ok) {
+        pass("%-10s max abs diff %.3g", label, diff);
+    } else {
+        fail("%-10s max abs diff %.3g", label, diff);
+    }
     return ok;
 }
 
@@ -39,10 +45,10 @@ inline int report(const float* got, const float* want, size_t num_samples, float
     const float worst = max_abs_diff(got, want, num_samples);
 
     if (worst <= tolerance) {
-        std::printf("OK: max abs diff %.3g, within %g of the reference.\n", worst, tolerance);
+        pass("the output matches the reference: max abs diff %.3g, tolerance %g", worst, tolerance);
         return 0;
     }
-    std::printf("FAILED: max abs diff %.3g, tolerance %g.\n", worst, tolerance);
+    fail("the output does not match the reference: max abs diff %.3g, tolerance %g", worst, tolerance);
     return 1;
 }
 
@@ -58,7 +64,7 @@ inline int report_with_latency(const float* got,
                                size_t num_samples,
                                size_t latency) {
     if (latency >= num_samples) {
-        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n",
+        fail("a latency of %zu samples leaves nothing of %zu to compare",
                     latency,
                     num_samples);
         return 1;
@@ -78,7 +84,7 @@ inline int report_with_latency(const float* got,
                                const std::vector<size_t>& late,
                                size_t block_size) {
     if (latency >= num_samples) {
-        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n",
+        fail("a latency of %zu samples leaves nothing of %zu to compare",
                     latency,
                     num_samples);
         return 1;
@@ -95,14 +101,14 @@ inline int report_with_latency(const float* got,
         std::printf("  late callbacks, left out     %zu of %zu\n", late.size(), callbacks);
     }
     if (late.size() * 4 > callbacks) {
-        std::printf("FAILED: more than a quarter of the callbacks were late.\n");
+        fail("more than a quarter of the callbacks were late");
         return 1;
     }
     if (worst <= k_tolerance) {
-        std::printf("OK: max abs diff %.3g, within %g of the reference.\n", worst, k_tolerance);
+        pass("the output matches the reference: max abs diff %.3g, tolerance %g", worst, k_tolerance);
         return 0;
     }
-    std::printf("FAILED: max abs diff %.3g, tolerance %g.\n", worst, k_tolerance);
+    fail("the output does not match the reference: max abs diff %.3g, tolerance %g", worst, k_tolerance);
     return 1;
 }
 
@@ -138,7 +144,7 @@ inline int report_with_dropouts(const float* got,
                                 size_t latency,
                                 size_t block_size) {
     if (latency >= num_samples) {
-        std::printf("FAILED: a latency of %zu samples leaves nothing of %zu to compare.\n",
+        fail("a latency of %zu samples leaves nothing of %zu to compare",
                     latency,
                     num_samples);
         return 1;
@@ -171,16 +177,17 @@ inline int report_with_dropouts(const float* got,
         std::printf("  callbacks with a dropout     %zu of %zu\n", dropouts, callbacks);
     }
     if (wrong > 0) {
-        std::printf(
-            "FAILED: %zu samples are neither the reference nor silence, max abs diff %.3g.\n",
-            wrong,
-            worst);
+        fail("%zu samples are neither the reference nor silence, max abs diff %.3g: samples\n"
+             "are lost or out of order between the threads",
+             wrong,
+             worst);
         return 1;
     }
     if (dropouts * 4 > callbacks) {
-        std::printf("FAILED: more than a quarter of the callbacks had a dropout.\n");
+        fail("more than a quarter of the callbacks had a dropout: the worker was late, raise\n"
+             "k_max_inference_ms in common/inference_time.h to the worst case of a few step 4 runs");
         return 1;
     }
-    std::printf("OK: max abs diff %.3g, within %g of the reference.\n", worst, k_tolerance);
+    pass("the output matches the reference: max abs diff %.3g, tolerance %g", worst, k_tolerance);
     return 0;
 }

@@ -49,7 +49,7 @@ std::vector<float> run(SplitProcessor& processor, const Offsets& offsets, std::v
 
 }  // namespace
 
-int main() try {
+static int check() try {
     std::vector<float> output;
     size_t latency = 0;
     std::vector<size_t> late;
@@ -59,7 +59,8 @@ int main() try {
         latency = processor.latency();
         print_report("encoder", processor.encoder_plan());
         print_report("decoder", processor.decoder_plan());
-        std::printf("Reported latency: %zu samples (%.1f ms at %.0f Hz)\n\n",
+        std::printf("  %-28s %zu samples (%.1f ms at %.0f Hz)\n",
+                    "reported latency",
                     latency,
                     1000.0 * static_cast<double>(latency) / k_host.m_sample_rate,
                     k_host.m_sample_rate);
@@ -70,7 +71,7 @@ int main() try {
                     processor.encoder_latency_frames());
     }
     if (!late.empty()) {
-        std::fprintf(stderr, "Offline, %zu blocks were missed: that should not happen.\n", late.size());
+        fail("offline, %zu blocks were missed: that should not happen", late.size());
         return 2;
     }
 
@@ -87,13 +88,17 @@ int main() try {
     std::vector<size_t> late_with_offset;
     const std::vector<float> with_offset = run(processor, offsets, late_with_offset);
     if (with_offset == output) {
-        std::fprintf(stderr, "TODO 2: the offsets do not change the output: add offsets[i] to each latent.\n");
+        fail("TODO 2: the offsets do not change the output: add offsets[i] to each latent");
         return 2;
     }
-    std::printf("OK: the offsets change the output.\n");
+    pass("the offsets change the output");
     return 0;
 } catch (const std::exception& error) {
     // Every refusal, from the files to prepare, names what it refused
-    std::fprintf(stderr, "%s\n", error.what());
+    fail("%s", error.what());
     return 2;
+}
+
+int main() {
+    return step_result(10, check());
 }

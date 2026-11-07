@@ -31,9 +31,13 @@ The mix in `process_block()` is a plain crossfade between the delayed dry signal
 ## What it prints
 
 ```
-Reported latency: 5808 samples (131.7 ms at 44100 Hz)
-OK: max abs diff 1.49e-07 at mix 0.5: dry and wet are both late by exactly the
-reported latency, so they line up.
+  reported latency             5808 samples (131.7 ms at 44100 Hz)
+  PASS  dry and wet are both late by exactly the reported latency, so they line up:
+        max abs diff 1.49e-07 at mix 0.5
+
+==============================================================
+  STEP 7 SOLVED
+==============================================================
 ```
 
 That is with `k_max_inference_ms` still at 46.4 ms; with your number it will be smaller: 4784 samples from 11.6 to 23.2 ms. Every callback more or less of worst case changes it by 512. The host runs as in step 6, at a mix of 0.5. The check builds what the host should hear: half the input, delayed by the reported latency, plus half the model's stream, delayed by the rest of it (the reference already carries the model's own delay). If either path is off by a single sample, the two do not line up and the run fails. A callback where the worker was late has only the dry half: that is a dropout, and more than a quarter of them fail the run.

@@ -35,7 +35,7 @@ inline int report_blocks(const std::vector<float>& buffer,
 
     // Right at the start, wrong after it: every block starts from a zero state.
     if (first_block_ok && later_blocks_fail) {
-        std::printf("FAILED: TODO 1 and 2: block 0 is right, the blocks after it are not\n");
+        fail("TODO 1 and 2: block 0 is right, the blocks after it are not");
         return 1;
     }
     return report(buffer.data(), target.data(), buffer.size());

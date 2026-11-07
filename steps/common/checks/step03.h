@@ -37,6 +37,8 @@ inline void check_todos(const RingBuffer& input, const RingBuffer& output, size_
         throw std::runtime_error("TODO 2: run the model on the samples that arrived");
     }
     if (output.available() >= model_input_size) {
-        throw std::runtime_error("TODO 3: give the host its samples back");
+        throw std::runtime_error(
+            "TODO 3: give the host its samples back. Or TODO 2 pushes more than one\n"
+            "model block, once a whole one is in");
     }
 }

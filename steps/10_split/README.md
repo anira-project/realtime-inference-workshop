@@ -46,11 +46,14 @@ anira's report, decoder (at prepare, on this machine):
   warm-up 6 inferences, until stable
   load 14 % (real-time factor 0.14 over 1 inference): comfortable
 
-Reported latency: 6873 samples (155.9 ms at 44100 Hz)
-
+  reported latency             6873 samples (155.9 ms at 44100 Hz)
   latent frames                8, 1 of them priming
-OK: max abs diff 2.31e-07, within 0.0001 of the reference.
-OK: the offsets change the output.
+  PASS  the output matches the reference: max abs diff 2.31e-07, tolerance 0.0001
+  PASS  the offsets change the output
+
+==============================================================
+  STEP 10 SOLVED
+==============================================================
 ```
 
 The latency is this machine's: both budgets are measured at prepare. The check runs offline, as a bounce: every block waits for its result, so nothing is missed and the comparison is exact. It compares against step 10's own reference, [`target_split_signal.h`](../common/assets/target_split_signal.h): encoder and decoder as anira's example runs them, the encoder's priming frame included. That frame changes the decoder's state, so this output differs from the forward model's by about 0.014; `scripts/make_test_data.py` writes both references.

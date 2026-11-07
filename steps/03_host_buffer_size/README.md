@@ -42,7 +42,11 @@ cmake --build --preset release --target step03_exercise
 ## Expected output
 
 ```
-OK: max abs diff 3.87e-07, within 0.0001 of the reference.
+  PASS  the output matches the reference: max abs diff 3.87e-07, tolerance 0.0001
+
+==============================================================
+  STEP 3 SOLVED
+==============================================================
 ```
 
 `main` plays the host: a loop that hands `process_block` 512 samples at a time, in place, like the loop in step 2. What came back has to be the model's stream from step 1, sample for sample, after a stretch of silence.
@@ -56,7 +60,7 @@ The exercise builds once every `?` is filled in. Then each TODO says so when it 
 - **`TODO 2: run the model on the samples that arrived`** — the input is piling up: a whole model block is waiting, but the check for it is not filled in yet, or the block is not popped from `m_input`.
 - **`TODO 3: give the host its samples back`** — the output is piling up instead of being popped into the host's buffer.
 
-- **`FAILED: max abs diff …`** — every TODO is filled in, but the host did not get the model's stream back: the samples are not the right ones, or not in the right place.
+- **`the output does not match the reference: …`** — every TODO is filled in, but the host did not get the model's stream back: the samples are not the right ones, or not in the right place.
 
 Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 

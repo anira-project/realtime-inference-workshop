@@ -45,10 +45,12 @@ Given, around your lines: the worker's time, the ring buffer sizes, starting and
 The exercise builds once every `?` is filled in. Then each TODO says so while it is off:
 
 ```
-FAILED: TODO 1: the prefill is too small, the worker's first block would come too late
-FAILED: TODO 1: the prefill is too large, the host would hear the model later than needed
-FAILED: TODO 2 or 3: the host only got silence. ...
+  FAIL  TODO 1: the prefill is too small, the worker's first block would come too late
+  FAIL  TODO 1: the prefill is too large, the host would hear the model later than needed
+  FAIL  TODO 2 or 3: the host only got silence. ...
 ```
+
+Each is followed by `STEP 6 NOT SOLVED`.
 
 The checks behind these messages live in [`common/checks/step06.h`](../common/checks/step06.h), so `main.cpp` shows only the exercise.
 
@@ -56,9 +58,13 @@ The checks behind these messages live in [`common/checks/step06.h`](../common/ch
 
 ```
   prefill                      3584 samples (81.3 ms)
-OK: max abs diff 2.91e-07, within 0.0001 of the reference.
-OK: inference ran on the worker thread, the host got the model's stream back
-3584 samples late.
+  PASS  the output matches the reference: max abs diff 2.91e-07, tolerance 0.0001
+  PASS  inference ran on the worker thread, the host got the model's stream back
+        3584 samples late
+
+==============================================================
+  STEP 6 SOLVED
+==============================================================
 ```
 
 That is with `k_max_inference_ms` still at 46.4 ms; with your number it will be smaller. The check listens like the host: first the prefill in silence, then the model's stream, to about 3e-07 of the reference. A callback with zeros where the reference is not silent is a dropout: the worker was late. More than a quarter of them fail the run, and so does any sample that is neither the reference nor a zero.

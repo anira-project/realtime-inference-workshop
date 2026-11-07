@@ -280,7 +280,7 @@ The last step: give it a spin in `steps/11_hands/exercise/HandMapping.cpp`
 
 ```bash
 cmake --build --preset release --target step11_exercise
-open build/steps/11_hands/step11_exercise_artefacts/Release/*.app
+open build/release/steps/11_hands/step11_exercise_artefacts/Release/*.app
 ```
 
 <div class="run">

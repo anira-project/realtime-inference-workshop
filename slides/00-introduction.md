@@ -244,7 +244,7 @@ Note:
 - Configuring downloads about 500 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
 - It runs while we talk. Building every step takes a while too, so start the build right after.
 - Why release? There is a benchmark in the examples, which is only meaningful in release.
-- Debugging works too: `cmake --preset debug` builds into `build-debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so please do it at another moment, not now on the shared network.
+- Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so please do it at another moment, not now on the shared network.
 - If configuring fails, raise your hand and we come to you.
 - Please! do not wait for the first exercise: that is the worst moment to start a download.
 

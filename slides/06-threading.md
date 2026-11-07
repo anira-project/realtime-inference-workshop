@@ -178,7 +178,7 @@ Fill in the TODOs in `steps/06_threading/exercise/main.cpp`
 
 ```bash
 cmake --build --preset release --target step06_exercise
-./build/bin/step06_exercise
+./build/release/bin/step06_exercise
 ```
 
 <div class="run">

@@ -24,13 +24,13 @@ RTSan needs a clang that has it — on macOS the Homebrew LLVM, not Apple Clang:
 
 ```bash
 brew install llvm
-cmake -S . -B build-rtsan -DCMAKE_BUILD_TYPE=Release \
+cmake -S . -B build/rtsan -DCMAKE_BUILD_TYPE=Release \
   -DWORKSHOP_RTSAN=ON \
   -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
   -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" \
   -DWORKSHOP_STEP=05
-cmake --build build-rtsan -j
-./build-rtsan/bin/step05_solution
+cmake --build build/rtsan -j
+./build/rtsan/bin/step05_solution
 ```
 
 ## What comes out
@@ -56,7 +56,7 @@ RTSan stops at the first violation, which says *that* it happens, not *how often
 
 ```bash
 RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false \
-  ./build-rtsan/bin/step05_solution 2>&1 >/dev/null \
+  ./build/rtsan/bin/step05_solution 2>&1 >/dev/null \
   | grep -oE 'unsafe function `[a-z_]+`' | sort | uniq -c | sort -rn
 ```
 

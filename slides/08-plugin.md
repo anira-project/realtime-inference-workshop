@@ -44,9 +44,9 @@ cmake --build --preset release --target step08_plugin_Standalone # for the stand
 cmake --build --preset release --target step08_plugin_VST3       # for the VST3 plugin
 
 #open the standalone app with:
-open build/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/*.app
+open build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/*.app
 ```
-<p class="path-note">The VST3 plugin is in <code>build/steps/08_juce_plugin/step08_plugin_artefacts/Release/VST3</code>.</p>
+<p class="path-note">The VST3 plugin is in <code>build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/VST3</code>.</p>
 
 <div class="cards-note corner-note">Only 44.1 or 48 kHz and 512-sample buffers: anything else is bypassed, and the window says why.</div>
 

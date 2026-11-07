@@ -94,7 +94,7 @@ Note:
 
 ```bash
 RTSAN_OPTIONS=halt_on_error=false:suppress_equal_stacks=false \
-  ./build-rtsan/bin/step05_solution
+  ./build/rtsan/bin/step05_solution
 ```
 
 | | per forward pass | total |

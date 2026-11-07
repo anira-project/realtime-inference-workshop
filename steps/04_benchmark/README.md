@@ -27,7 +27,7 @@ Build and run from the repository root:
 ```bash
 cmake --preset release
 cmake --build --preset release --target step04_solution
-./build/bin/step04_solution
+./build/release/bin/step04_solution
 ```
 
 ## Expected output

@@ -111,7 +111,7 @@ Fill in the TODOs in `steps/02_state/exercise/main.cpp`
 
 ```bash
 cmake --build --preset release --target step02_exercise
-./build/bin/step02_exercise
+./build/release/bin/step02_exercise
 ```
 
 <div class="run" style="grid-template-columns: 1fr 1.5fr">

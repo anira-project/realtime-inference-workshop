@@ -7,6 +7,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # for clangd, see .clangd
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+include(compile-commands)
+workshop_link_compile_commands()  # build/compile_commands.json -> this tree's
 include(backends)
 include(readerwriterqueue)
 include(juce)

@@ -22,7 +22,7 @@ Build and run from the repository root:
 
 ```bash
 cmake --build --preset release --target step10_exercise_check
-./build/bin/step10_exercise_check
+./build/release/bin/step10_exercise_check
 ```
 
 Once it passes, play: the plugin, eight knobs, one per latent.
@@ -31,7 +31,7 @@ Once it passes, play: the plugin, eight knobs, one per latent.
 cmake --build --preset release --target step10_exercise_Standalone   # or step10_exercise_VST3
 ```
 
-The result is in `build/steps/10_split/step10_exercise_artefacts/Release/`. A double-click on a knob sets it back to 0. Turn one at a time: in this model z0 changes the loudness and z2 the brightness.
+The result is in `build/release/steps/10_split/step10_exercise_artefacts/Release/`. A double-click on a knob sets it back to 0. Turn one at a time: in this model z0 changes the loudness and z2 the brightness.
 
 ## Expected output
 

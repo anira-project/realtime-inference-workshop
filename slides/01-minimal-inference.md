@@ -134,7 +134,7 @@ Fill in the TODOs in `steps/01_minimal_inference/exercise/main.cpp`
 ```bash
 cmake --preset release      # once
 cmake --build --preset release --target step01_exercise
-./build/bin/step01_exercise
+./build/release/bin/step01_exercise
 ```
 
 <div class="run" style="grid-template-columns: 1fr 1.5fr 1.5fr">

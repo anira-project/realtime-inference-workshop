@@ -263,7 +263,7 @@ Nothing to edit, `steps/04_benchmark/solution/main.cpp` is ready to run
 
 ```bash
 cmake --build --preset release --target step04_solution
-./build/bin/step04_solution
+./build/release/bin/step04_solution
 ```
 
 Note:

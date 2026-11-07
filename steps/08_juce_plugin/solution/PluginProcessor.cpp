@@ -61,12 +61,14 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     juce::ScopedNoDenormals no_denormals;
     render_source(buffer);
 
-    if (!processing()) { return; }
+    if (bypassed()) { return; }  // Latency 0: the input goes out as it is
 
     // Up to the 512 prepareToPlay announced. A shorter block now and then is
     // fine: the ring buffers move sample by sample, the stream stays in place.
     float* mono = to_mono(buffer);
-    m_processor->set_mix(mix());
+    // Held back at 48 kHz: the dry path only, as late as the host was told,
+    // so the track stays in line with the others
+    m_processor->set_mix(processing() ? mix() : 0.0f);
     m_processor->process_block(mono, static_cast<size_t>(buffer.getNumSamples()));
     to_all_channels(buffer);
 }

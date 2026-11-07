@@ -8,6 +8,7 @@ Model types, and the model we use today
 
 Note:
 - Before we write code, a quick look at the models themselves.
+- I already said, that this not the main topic of the course, so here is just a very quick overview.
 
 ---
 
@@ -20,10 +21,7 @@ Note:
 <span class="fragment integration-focus"></span>
 
 Note:
-- Getting a neural network into a product has three stages: train, export and implement.
-- This workshop is about the last one: implementing the model in C++.
-- But before we can do that, let us first talk about the model we will integrate.
-- We start with the fundamentals, and with the model we chose for this workshop.
+- So basically these first two steps in the typical integration process..
 
 ---
 
@@ -70,10 +68,11 @@ Note:
 </div>
 
 Note:
-- What a model takes in and gives out decides how it behaves in real time.
-- Audio to audio is an effect: it runs every block, and its latency is the plugin's latency.
-- Controls to audio is synthesis: control signals go in, and it has to deliver audio every block.
-- Audio to features is analysis: the result often leaves the audio thread, to a UI, MIDI or a file.
+- There are very different types of neural network models for audio evironements
+- Here are three common shapes.
+- A model which takes audio in and gives audio out is like an audio effect. Common ones are models for timbre transfer, source separation, amp models
+- Then there are other models that take controls values to synthesize audio, those can behave like synthesizers for example.
+- And then the last example here are models that take audio in and compute some features. I.e. some models that do pitch tracking..
 
 <!-- ---
 
@@ -149,11 +148,12 @@ Note:
 </div>
 
 Note:
-- Today we use a Realtime Audio Variational autoEncoder.
+- Today we use a neural audio codec.
 - The figure shows what happens inside it, for a real 220 Hz sine.
 - First, a filter bank splits each block of 2048 samples into 16 frequency bands.
-- Then each layer of the encoder trades time for channels, until a single step is left.
-- That step becomes the latent: 128 numbers, of which our export keeps the first 8.
+- Then each layer of the encoder trades time for channels, until a single time step is left for 2048 samples
+- That bootleneck is called a latent
+- Thanks to a dimensionality reduction technique we can only keep 8 dimensions that explain the majority of the varience in the dataset.
 - The decoder mirrors this, and an inverse filter bank merges the bands back into 2048 samples.
 - The model is stateful: each block depends on the blocks before it.
 
@@ -173,7 +173,7 @@ Note:
 <div class="mrp-caption">Recorded for <em>Strengjavera</em> (Jack Armitage, AIMC 2023), where artificial life plays the piano · model: Intelligent Instruments Lab, CC BY-NC 4.0 · photos: Aurelien Guichard, CC BY-SA 2.0</div>
 
 Note:
-- It was trained on a magnetic resonator piano.
+- The model we use in this exercise was trained on a magnetic resonator piano.
 - Electromagnets above the strings let the piano sustain, swell and bend, without loudspeakers.
 - The recordings come from Strengjavera, an installation where artificial life plays the piano.
 
@@ -226,6 +226,5 @@ Note:
 <span class="fragment integration-focus"></span>
 
 Note:
-- Where are we in the process?
-- Training and export are done, and we start from the exported file.
-- From here on, everything is implementation.
+- Ok thats all about the model.
+- Lets talk about the implementation now!

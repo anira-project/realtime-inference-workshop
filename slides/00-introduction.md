@@ -20,7 +20,7 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 Note:
 - Hi all
 - Welcome to our workshop on real-time inference of neural networks.
-- Today we take an exported neural network model and implement it in an audio plugin that does exactly that.
+- Today we take an exported neural network model and implement it in an audio environement in a real-time safe manner
 
 ---
 
@@ -85,13 +85,11 @@ Note:
 </div>
 
 Note:
-- This is anira, our open-source library for real-time inference.
+- The short answer to solve this problem, you can use our anira library.
+- It is an open-source library for real-time inference.
 - You give it a model for LibTorch, ONNX Runtime, LiteRT or ExecuTorch, and it takes care of the threads, the buffering and the latency.
-- We have been working on real-time inference since 2020, and anira is what came out of it.
-- It comes up throughout the workshop, so here is the short version.
-- At ADC23 we showed how to run real-time inference in a plugin.
-- At ADC24 we presented anira itself.
-- We share these slides, so you can click through to both talks later.
+- It is the outcome of our work and research about real-time inference since 2020.
+- If you want you can also look at our earlier implementation proposals, which we presented at ADC23 and ADC24.
 
 ---
 
@@ -109,7 +107,7 @@ Note:
   <div class="person">
     <img class="person-photo" src="assets/images/people/fares.jpg" alt="Fares Schulz">
     <div class="person-name">Fares Schulz<span class="person-pronouns">he/him</span></div>
-    <div class="person-role">Research Associate</div>
+    <div class="person-role">Research Associate & Freelance Software Developer</div>
     <div class="person-affiliation">TU Berlin · tanh lab</div>
   </div>
   <div class="person">
@@ -123,8 +121,8 @@ Note:
 Note:
 - So who are we?
 - Lina is a student assistant at TU Berlin.
-- I am a research associate at TU Berlin, and together with Valentin I run tanh lab.
-- Valentin runs tanh lab with me and works as an audio software developer at Baby Audio.
+- I am a research associate at TU Berlin leading the Computer Music and Neural Audio Systems research team, and together with Valentin I run tanh lab.
+- In addition Valentin also works as an audio software developer at Baby Audio.
 
 ---
 
@@ -145,11 +143,11 @@ Note:
 </div>
 
 Note:
-- Who builds and maintains anira?
-- That is us, tanh lab, an audio software studio.
+- So whats tanh lab.
+- Tanh lab is an audio software studio based in berlin.
 - We take ideas from research all the way to a product.
-- On the research side, we design custom AI models that run in real time, for audio and video.
-- On the product side, we build the plugins and mobile apps they run in, full stack.
+- Our work ranges from applied research, evaluating the feasibility of an idea to the full stack implementation and deployment of the product.
+- We are also the maintaining the open source and permissively licensed anira library.
 
 ---
 
@@ -172,13 +170,13 @@ Note:
 <div class="cards-note">Not today: training, exporting, ML fundamentals, Python.</div>
 
 Note:
-- Today's path: from an exported model to real-time safe inference in a plugin.
-- We start from a model that is already trained and exported.
-- We run it in C++, and see what the engine, the block size and the worst case mean for us.
+- Now lets talk about the workshop.
+- Today's path starts from an exported model (get it from data scientist) already trained and exported.
+- We will run this model in C++, and see what the engine, the block size and the worst case mean for us.
 - We make it real-time safe, with a worker thread and an honest latency.
 - And we put all of it into a plugin that runs in your host.
-- anira solves these three steps, and today you build them by hand first.
-- Not today: training, exporting, machine learning basics or Python.
+- anira solves these three steps, but in order to understand why it is usefull, today you will build it by hand first.
+- So today we are not going to cover: training, exporting, machine learning basics or Python.
 
 ---
 
@@ -243,10 +241,10 @@ Note:
 - If not: please start now. Clone, configure, build.
 - Configuring downloads about 500 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
 - It runs while we talk. Building every step takes a while too, so start the build right after.
-- Why release: the benchmark in step 3 measures how long a forward pass takes, and those timings only mean something in a release build.
-- Debugging works too: `cmake --preset debug` builds into `build-debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so do that later, not now on the shared network.
+- Why release? There is a benchmark in the examples, which is only meaningful in release.
+- Debugging works too: `cmake --preset debug` builds into `build-debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so please do it at another moment, not now on the shared network.
 - If configuring fails, raise your hand and we come to you.
-- Do not wait for the first exercise: that is the worst moment to start a download.
+- Please! do not wait for the first exercise: that is the worst moment to start a download.
 
 ---
 
@@ -280,6 +278,6 @@ Note:
 - Every step follows the same pattern.
 - On the slides we show the problem and the idea for fixing it.
 - Then you fill in the TODOs in exercise/.
-- Each exercise tells you which TODO is still open when you run it.
+- You can check if you got the right solution by running the exercise.
 - If you get stuck, or want to compare, the solution is in solution/.
 

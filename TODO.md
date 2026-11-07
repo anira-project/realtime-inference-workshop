@@ -1,11 +1,37 @@
 # TODOs
 
+- I like the first teaser slide, but maybe we could have first the same slide with an fft, where it is deterministic and always fast enough. And then as a second example the model where there is not enough time...
+- Brauchen wir diese Slide? Exported to ONNX The model used in this repository.
+- Why copy the floats in example 1? Why not bind tensors?
+- Process_size not copy in first example
+- Why are there the quotes for stings in the path
+- Not consistent that some todos it is commented out like engine.process others not
+- Don't get why we need the process_size? Can't we just put it directly when doing the engine.process?
+- In step 3 ist wierd, dass man nicht die max_block_size benutzt
+- Was ist mit .clangd pointing to compile_commands.json symlink in build folder am besten und release and debug sollten am besten in unterordnern sein
+- rename audio to output
+- Ringbuffer kürzer
+- Bei ringbuffer has block in if cases..
+- Benchmark fillout muss nach oben, rest muss in andere header file
+- Worker thread grafik step 6 fixen
+- Threadsafe Ringbuffers ohne one writer, one reader
+- alle ringbuffer try_push and try_pop
+- Prefill muss in step 3 schon erwähnt werden
+- has block raus
+- TODO 1 wird prefill und capacity wird automatisch berechnet
+- If prefill is wrong assert
+- TODO 3 bei threading raus, hot spinning muss gemacht werden
+- Model latency erst bei latency einbringen
+- Latency einfach erklären ohne exercise
+- Three places the host talks to us ersätzen
+
+
+## Old
+
 - Signs between tanh lab slide and scope shall be consistent..
   - (Valentin) Not clear what is meant here: the icons (chip = Research there, Inference in C++ here), the layout, or something else?
 - Change the audio example
   - (Valentin) Tried many, most sound really bad with this model. Keeping the current one for now, maybe a last-minute change.
-
-
 
 
 ## Done (2026-11-06)

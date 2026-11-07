@@ -27,7 +27,7 @@ Note:
 - `processBlock`: callback from step 7, unchanged
 - `releaseResources`: stop the worker thread
 - Everything else: JUCE boilerplate
-- Only 44.1 or 48 kHz and 512: our prefill and latency are only right for that block size. Anything else: bypassed, the input goes out unprocessed, with an overlay that says why
+- Only 44.1 or 48 kHz and 512: our prefill and latency are only right for that block size. Anything else: bypassed, nothing plays, with an overlay that says why; the player starts over once the settings fit
 - Takeaway: arbitrary buffer sizes need a different design, part 2
 - One change: ONNX Runtime is handled a bit differently
 

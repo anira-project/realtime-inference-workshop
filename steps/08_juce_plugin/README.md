@@ -38,7 +38,7 @@ That one line is what lets the host line our track up with every other track: 15
 
 ## Only 44.1 or 48 kHz, only 512 samples
 
-The prefill and the latency from steps 6 and 7 are only right for a host block of 512, and the model is trained at 44.1 kHz (at 48 kHz it runs, a little higher). For anything else the plugin is **bypassed**: the input goes out unprocessed, the latency is 0, and the window shows an overlay that says why. The same happens to a block of another size in the middle of playback. Arbitrary rates and buffer sizes need a different design; that is part 2.
+The prefill and the latency from steps 6 and 7 are only right for a host block of 512, and the model is trained at 44.1 kHz (at 48 kHz it runs, a little higher). For anything else the plugin is **bypassed**: nothing plays, the output is silent, the latency is 0, and the window shows an overlay that says why. Once the settings fit again, the player starts over from the beginning. The same happens to a block of another size in the middle of playback. Arbitrary rates and buffer sizes need a different design; that is part 2.
 
 ## One engine, mono
 

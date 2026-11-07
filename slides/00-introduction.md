@@ -43,7 +43,7 @@ Note:
 
 <div class="tag">Teaser · B</div>
 
-## Every callback has a deadline<br><span class="then">A network on 2048 samples: too slow, and never the same twice.</span>
+## Every callback has a deadline<br><span class="then">A network on 2048 samples: too slow, and its time varies.</span>
 
 <div class="teaser" data-teaser="clock" data-work="nn"><canvas></canvas></div>
 

@@ -195,6 +195,25 @@ Note:
 
 <div class="tag">Our model</div>
 
+## Shipped as an ONNX file<br><span class="then">ONNX: Open Neural Network Exchange.</span>
+
+<div class="cards">
+  <div class="card">{{ICON:folder}}<div class="card-title">ONNX file</div><div class="card-text"><code>model_forward.onnx</code></div></div>
+  <div class="card-arrow">=</div>
+  <div class="card">{{ICON:model}}<div class="card-title">Architecture</div><div class="card-text">The layers and how they connect</div></div>
+  <div class="card-arrow">+</div>
+  <div class="card">{{ICON:sliders}}<div class="card-title">Weights</div><div class="card-text">The numbers learned in training</div></div>
+</div>
+
+Note:
+- The trained model is shipped as one file, an .onnx file.
+- ONNX stands for Open Neural Network Exchange, an open format that many inference engines can load.
+- The file contains both: the architecture, the layers and how they connect, and the weights, the numbers learned in training.
+
+---
+
+<div class="tag">Our model</div>
+
 ## Where we are in the process<br><span class="then">Training and export have been completed.</span>
 
 {{INTEGRATION:implement}}

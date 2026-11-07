@@ -70,7 +70,8 @@ public:
                 const bool popped = m_input.try_pop(m_model_block[i]);
                 assert(popped);  // never fails: a whole block is there
             }
-            m_engine.process(m_model_block.data(), k_model.m_input_size, m_state.data(), m_state.size());
+            m_engine.process(m_model_block.data(), k_model.m_input_size,
+                             m_state.data(), k_model.m_state_size);
             for (size_t i = 0; i < k_model.m_input_size; ++i) {
                 const bool pushed = m_output.try_push(m_model_block[i]);
                 assert(pushed);  // never fails: m_output has room for a whole block
@@ -99,7 +100,8 @@ int main() {
         "and -DWORKSHOP_RTSAN=ON. See the README.\n\n");
 #endif
 
-    OnnxEngine engine(k_model.m_path);
+    OnnxEngine engine;
+    engine.load(k_model.m_path);
 
     ProcessorExample processor(engine);
     processor.prepare(k_host_block_size);

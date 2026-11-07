@@ -72,7 +72,7 @@ m_handler-&gt;process(block, 0, block, 0);</code></pre></div>
 
 Note:
 - Three places in a plugin, and three calls: the constructor, prepareToPlay and processBlock, as in step 8.
-- In the constructor we create: the model config, a pipeline with it, and the handler. Create checks the files and builds the slots; it loads nothing yet.
+- In the constructor we create: the model config, a pipeline with it, and the handler. Create checks the model config and builds the slots; it loads nothing yet.
 - In prepareToPlay the host's blocks go into the contract, 1 up to the block size it announces, we prepare the handler, and we report its latency to the host. Prepare runs again whenever the host changes its blocks.
 - In processBlock one tensor goes over the host's channels as they are, planar: channels is a span with one pointer per channel, filled from the buffer every block, and shape is the channel count and the sample count. float32 comes from the pointers. process then runs it in place.
 - Our model in steps 9 and 10 is mono, one channel in the model file, so there we mix down first, as in step 8. A stereo model takes the buffer as it is.

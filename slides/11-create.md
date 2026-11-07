@@ -6,9 +6,8 @@ What you declare: engines, tensors, state, the pool
 <!-- kind: talk -->
 
 Note:
-- Create: what we declare, the engines, the tensors, the state and the pool.
-- This is the first row of the map: what exists once the plugin is constructed.
-- We go pair by pair: first what we built by hand in part 1, then what anira does instead.
+- The first stage we talk about the creation of the InferenceHandler
+- To create it, we declare everything it needs: the engines, the tensors and the state in the ModelConfig, and the thread pool in the optional ContextConfig.
 
 ---
 
@@ -21,9 +20,11 @@ Note:
 Note:
 - Create runs once, on the main thread: the plugin's constructor.
 - The files go in, the handler comes out.
-- Create checks the files and builds the handler's slots, one per tensor, the state pairs among them.
-- Nothing is loaded yet: the models, the plans and the pool's threads come at prepare. This chapter is about what we declare for them.
-- Nothing in this row runs on the audio thread, so all of it may load files and allocate.
+- Create checks the model config: the tensors, the axes, and which engines and providers this build can run. Then it builds the handler's slots, one per tensor, the state pairs among them.
+- It opens no model file: the models, the plans and the pool's threads all come at prepare.
+- As in step 8: there the constructor makes the engine, which loads nothing, and prepare loads the model. anira's create does a little more, it checks the configs and builds the slots, but it loads no model either.
+- This chapter is about what we declare for prepare: the engines, the tensors, the state and the pool.
+- Nothing in this row runs on the audio thread, so all of it may read files and allocate.
 
 ---
 
@@ -42,6 +43,7 @@ Note:
 - It loads the session, owns the tensors, copies the state, and runs the model.
 - Another engine, LibTorch, ExecuTorch, LiteRT or your own code, would mean another class like it, with its own API and its own way of handling the state.
 - The plugin is built for that one engine, at compile time.
+- In step 8 the plugin makes this class in its constructor, where it loads nothing, and calls its load in prepare.
 
 ---
 
@@ -76,6 +78,8 @@ Note:
 - Measured: the libraries unpacked from the anira-project/backends releases, macOS arm64 (LibTorch 2.12.0, ONNX Runtime 1.30.0, ExecuTorch 1.3.1, LiteRT 2.2.0, TensorFlow Lite 2.17.0). LibTorch ships only shared, ExecuTorch only static; less of a static library ends up in a linked plugin.
 - anira's public interface is a C ABI, and everything else is hidden: only the anira_ symbols are exported. So two plugins with different versions of anira, next to a host that ships its own ONNX Runtime, do not clash.
 - An entry for an engine the build does not have is skipped.
+- Built in or your own, every engine loads its model at prepare; create only checks that this build can run it.
+- A custom engine mirrors our OnnxEngine from step 8: you make it and add it to the pipeline before create, as the plugin makes the OnnxEngine in its constructor. anira calls its load at prepare, like our load in the plugin's prepare, and its process on an inference thread, like ours on the worker.
 
 ---
 
@@ -143,7 +147,7 @@ std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());  // ste
 m_model_block.assign(k_model.m_input_size, 0.0f);                        // step 3
 m_state.assign(k_model.m_state_size, 0.0f);                              // the state, too
 m_engine.process(m_model_block.data(), k_model.m_input_size,
-                 m_state.data(), m_state.size());
+                 m_state.data(), k_model.m_state_size);
 ```
 
 Note:
@@ -359,15 +363,18 @@ Note:
 ## An engine per instance.<br><span class="then">Every instance loads the model again.</span>
 
 ```cpp
-if (m_engine == nullptr) {
-    m_engine = std::make_unique<OnnxEngine>(k_model.m_path);
+OnnxEngine m_engine;                      // one per plugin instance, nothing loaded
+ProcessorExample m_processor{m_engine};
+
+size_t PluginProcessor::prepare(…) {
+    if (!m_engine.loaded()) { m_engine.load(k_model.m_path); }  // every instance loads it
     …
 }
 ```
 
 Note:
 - Memory: step 8's plugin mixes its input down to mono and runs one engine, but that engine belongs to the instance.
-- Every instance loads the model again: ten instances hold ten copies of the same model.
+- Every instance loads the model again, in its prepare: ten instances hold ten copies of the same model.
 - Memory grows with the instances the host adds, like the threads did.
 
 ---
@@ -396,12 +403,12 @@ Note:
 
 <div class="tag">The map</div>
 
-## After create:<br><span class="then">checked files, slots and state pairs.</span>
+## After create:<br><span class="then">a checked config, slots and state pairs.</span>
 
 {{MAP:show=create|memory}}
 
 Note:
-- After create we have checked files, a slot per tensor, and the state pairs.
+- After create we have a checked model config, a slot per tensor, and the state pairs.
 - Marked is what holds memory from here on: the state pairs, both buffers of each.
 - Nothing is loaded yet: no model, no plan, no thread. All of that needs the contract, and the contract comes with the host's blocks.
 - That is the next row.

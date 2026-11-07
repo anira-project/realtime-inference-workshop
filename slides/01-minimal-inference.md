@@ -81,14 +81,15 @@ Note:
 ## The engine<br><span class="then">Load the model, then process the data.</span>
 
 ```cpp
-OnnxEngine engine(path);                  // Loads the model
+OnnxEngine engine;                        // Nothing loaded yet
+engine.load(path);                        // Loads the model
 
 engine.process(audio, num_samples);       // Overwrites the block in place
 ```
 
 Note:
-- The onnx engine wrapper has a constructor and one method, `process`
-- Constructor loads the model from its path
+- The onnx engine wrapper has a constructor and two methods, `load` and `process`
+- The constructor does nothing; `load` reads the model from its path
 - `process` takes where the block starts and how many samples it has
 - The audio is processed in place
 
@@ -180,11 +181,12 @@ constexpr struct {
 ```
 
 ```cpp
-OnnxEngine engine(«k_model.m_path»);  // <- solution
+OnnxEngine engine;
+engine.load(«k_model.m_path»);  // <- solution
 ```
 
 Note:
-- The engine takes the path to the .onnx file, from the struct
+- `load` takes the path to the .onnx file, from the struct
 - The engine loads it once: 126 MB, too slow to do per block
 
 ---

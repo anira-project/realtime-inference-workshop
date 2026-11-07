@@ -86,7 +86,8 @@ Note:
 ## The engine<br><span class="then">The same call, with one more argument.</span>
 
 ```cpp
-OnnxEngine engine(path);
+OnnxEngine engine;
+engine.load(path);
 
 engine.process(audio, num_samples);                     // without the state
 engine.process(audio, num_samples, state, state_size);  // with the state of 63488 floats
@@ -174,12 +175,12 @@ Note:
 ```cpp
 for (size_t i = 0; i < num_blocks; ++i) {
     engine.process(buffer.data() + i * k_model.m_input_size, k_model.m_input_size,
-                   «state.data()», «state.size()»);  // <- solution
+                   «state.data()», «k_model.m_state_size»);  // <- solution
 }
 ```
 
 Note:
-- Need to pass the state, `state.data()` and `state.size()`, after the audio
+- Need to pass the state, `state.data()` and `k_model.m_state_size`, after the audio
 - It is overwritten on every call, so the next block continues where this one ended
 - Every block now matches, to below 1e-6
 

@@ -29,7 +29,8 @@ constexpr struct {
 
 int main() {
     try {
-        OnnxEngine engine(k_model.m_path);
+        OnnxEngine engine;
+        engine.load(k_model.m_path);
 
         const size_t num_blocks = k_signal_length / k_model.m_input_size;
 

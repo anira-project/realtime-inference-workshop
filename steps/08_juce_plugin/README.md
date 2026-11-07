@@ -20,25 +20,27 @@ The VST3 passes `pluginval --strictness-level 5`.
 
 [`solution/ProcessorExample.h`](solution/ProcessorExample.h) is step 7's `ProcessorExample`, filled in, one-to-one: the same constants, the same `prepare`, `process_block` and `process_model`, with its `WorkerThread` inside. [`solution/PluginProcessor`](solution/PluginProcessor.cpp) owns the engine and that one processor, as step 7's `main` does, and writes only the places where the host talks to us.
 
-Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), shared with step 9: `PluginBase` (buses, the dry/wet parameter, the host boilerplate), the window in `ui/`, and the source player in `dsp/`. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
+Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), shared with steps 9 and 10: `PluginBase` (buses, the dry/wet parameter, the bypass, the mono mix-down, the host boilerplate), the window in `ui/`, and the source player in `dsp/`. `PluginBase` takes the host's `prepareToPlay`, `processBlock` and `releaseResources` and calls the step's `prepare`, `process` and `release`. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
 
 ## The three places the host talks to us
 
-**`prepareToPlay`**: everything that allocates. Load the model once, `prepare` the processor, which sizes the ring buffers and starts the worker thread. Then the number from step 7:
+**The constructor** creates: the engine and the processor are plain members, made with the plugin, as in step 7's `main`. They load and allocate nothing: a host may construct a plugin just to scan it.
+
+**`prepare`**, from the host's `prepareToPlay`: everything that allocates or depends on the host's settings, and may run again whenever they change. The first time, load the model with `m_engine.load`; if it does not load, the window says so. Then `prepare` the processor, which sizes the ring buffers and starts the worker thread. Then it returns the number from step 7:
 
 ```cpp
-setLatencySamples(static_cast<int>(m_processor->latency_samples()));
+return m_processor.latency_samples();
 ```
 
-That one line is what lets the host line our track up with every other track: 1536 + the worker's time + 2224, 4784 samples with `k_max_inference_ms` from 11.6 to 23.2 ms.
+`PluginBase` hands it to the host (`setLatencySamples`), so the host lines our track up with every other track: 1536 + the worker's time + 2224, 4784 samples with `k_max_inference_ms` from 11.6 to 23.2 ms.
 
-**`processBlock`**: the mono mix-down, then step 7's `process_block`, unchanged. No engine, no allocation, no lock.
+**`process`**, from the host's `processBlock`: step 7's `process_block`, unchanged, on the input mixed down to mono; the result goes out on every channel. No engine, no allocation, no lock.
 
-**`releaseResources`**: stop the worker thread.
+And **`release`**, from `releaseResources`, stops the worker thread again.
 
 ## Only 44.1 kHz, only 512 samples
 
-The prefill and the latency from steps 6 and 7 are only right for a host block of 512, and the model is trained at 44.1 kHz, as is your step 4 number. At **48 kHz** the window asks first: the model would sound higher and the worker's time is off, and a resampler does not fit our fixed 512 and 2048 blocks. **Process anyway** plays it as it is; until then the input goes out dry, as late as the reported latency, so the track stays in line with the others. For anything else the plugin is **bypassed**: the example or your file stops, the input goes out unprocessed, the latency is 0, and the window shows an overlay that says why. Once the settings fit again, the player starts over from the beginning. A block shorter than 512 now and then during playback is processed like any other: the ring buffers move sample by sample, so the stream stays in place. Arbitrary rates and buffer sizes need a different design; that is part 2.
+The prefill and the latency from steps 6 and 7 are only right for a host block of 512, and the model is trained at 44.1 kHz, as is your step 4 number. At **48 kHz** the window asks first: the model would sound higher and the worker's time is off, and a resampler does not fit our fixed 512 and 2048 blocks. **Process anyway** plays it as it is; until then the input goes out dry, as late as the reported latency, so the track stays in line with the others. For anything else the plugin is **bypassed**: the example or your file stops, the input goes out unprocessed, the latency is 0, and the window shows an overlay that says why. Once the settings fit again, the player starts over from the beginning. Arbitrary rates and buffer sizes need a different design; that is part 2.
 
 ## One engine, mono
 

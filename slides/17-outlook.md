@@ -102,7 +102,9 @@ Note:
 - Both conditions met: the audio thread runs it, and the latency is only the model's own, 2224.
 - Otherwise the pool runs it, as today: 4272.
 - Almost half the latency. Depending on your use case, that can matter a lot.
-- In the contract this is execution: worker, inline or auto, fixed at prepare.
+- But inline only works for some buffer sizes: the host block has to be large enough for the model to fit.
+- So prepare decides: each time the host announces its blocks, it switches between inline and the pool.
+- In the contract this is execution: worker, inline or auto.
 
 ---
 

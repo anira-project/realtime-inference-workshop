@@ -165,11 +165,13 @@ Three keys. The host's blocks come in at `prepare`.
 <div class="note-box">The third config, the context: nothing to write. One pool per process, with its defaults.</div>
 
 Note:
-- The second file, contract.json, is already complete.
-- Hard: a stream, every callback has a deadline.
-- Budget measured: anira benchmarks the model on this machine, in prepare.
-- Warm-up until stable: the slow first runs happen in prepare, before the audio starts.
-- On a miss, bypass: the input block goes out instead of zeros.
+- The second file, contract.json, is already filled in for you.
+- Hard means a stream: every callback has a deadline.
+- Budget measured: we no longer benchmark by hand.
+- anira benchmarks the model inside our product, on the user's machine.
+- That is handy once you ship it: every machine gets its own number.
+- Warm-up until stable: the slow first runs happen before the audio starts.
+- On a miss, bypass: the dry input goes out instead of silence.
 - [pause] The block sizes are not here: that is your blank, in prepare.
 - That is both files: now fill in the gaps.
 

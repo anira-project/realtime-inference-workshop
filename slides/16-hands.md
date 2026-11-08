@@ -197,13 +197,11 @@ open build/release/steps/10_hands/step10_solution_artefacts/Release/*.app
 
 Note:
 - [before: the room's speakers on, the lectern app open]
-- Everything is in place: now it is yours to play with, and to build on.
-- Build and open the app with these two commands, or a double-click.
-- Not from the IDE: otherwise macOS asks the wrong program for the camera.
-- No camera: the mouse plays the hand.
-- [start the timer] Ten minutes, all of us at once.
-- Use your loudspeakers: I want to hear fifty of you playing one synth.
-- Want another sound? Change map_hands, rebuild, play.
+- This is the final code we run today, so no exercise.
+- We'd like to jam with all of you together.
+- Build the standalone app with these two commands.
+- Get a feel for how it works: the camera and your hands control the synth.
+- [start the timer] Use your laptop loudspeakers, so we all play together, and jam!
 - [let it run, walk through the room] And now: hands down.
 - [silence: the latent vector glides to rest and the room fades out; wait for it]
 

@@ -168,6 +168,7 @@ Note:
 - Budget measured: we no longer benchmark by hand.
 - anira benchmarks the model inside our product, on the user's machine.
 - That is handy once you ship it: every machine gets its own number.
+- It also generates a report inside the plugin's UI, with all the stats for you to look at.
 - Warm-up until stable: the slow first runs happen before the audio starts.
 - On a miss, bypass: the dry input goes out instead of silence.
 

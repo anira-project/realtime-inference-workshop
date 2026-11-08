@@ -44,9 +44,9 @@ void prepare(size_t host_block_size, double max_inference_ms) {
 Note:
 - Lets recap the prepare function of part 1, in step 8
 - It took two arguments: the host's block size and our max inference time
-- From these two we calculated everything else: how many callbacks the worker gets, the prefill, the latency and the size of the output buffer
+- From these two we calculated everything else: how many callbacks the worker gets, the prefill, the latency and the size of the buffers
 - The block size came from the host, in prepareToPlay
-- But where did the max inference time come from?
+- But we needed to measure the max_inference_time with a benchmark beforehand
 
 ---
 
@@ -66,10 +66,7 @@ constexpr double k_max_inference_ms = 46.4;  // <- fill out after step 4
 | the max decides | our worst case, on our machine, for ONNX Runtime |
 
 Note:
-- It came from step 4: we benchmarked the model by hand
-- Many runs, and the max of them decides: our worst case
-- And then we copied that number into the code by hand
-- But it only holds for our machine and for ONNX Runtime: another machine, another engine or another model, and we benchmark again
+- But this number only holds for our machine and for ONNX Runtime: another machine, another engine or another model, and we need to benchmark again
 
 ---
 
@@ -96,11 +93,13 @@ const anira::PlanReport report = m_handler->prepare(m_contract);
 
 Note:
 - In anira prepare does not take two numbers, it takes a contract
-- Hard is the contract of a stream: blocks in and blocks out, in every callback
-- This is the file from step 9. It carries no host blocks: we fill them in from prepareToPlay, the smallest and the largest block the host may send, and the sample rate
-- And instead of a max inference time we write "measured": anira measures it at prepare, on the user's machine
-- And the dots: the contract has more options, for process, and we come to them in the next chapter
-- (A second kind, Async, a job with a deadline instead of a stream, is not in this release: prepare refuses it)
+- Hard is the contract of a real-time stream
+- The file on top is a json defining parts of the contract.
+- Instead of a max inference time we can write "measured" and anira measures the max_inference_time at prepare, on the user's machine
+- The json contract file carries no information about the host blocks. This will is filled in prepareToPlay.
+- In anira you can define a range for the blocaksize from the smallest and the largest block the host may send, and the sample rate
+- We will soon also allow a second kind of contract in anira
+- The Async contract will define a job with a deadline instead of a stream
 
 ---
 

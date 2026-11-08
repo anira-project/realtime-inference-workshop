@@ -3,12 +3,12 @@
 Eight numbers to play
 
 <!-- .slide: data-state="no-header" -->
-<!-- kind: demo, exercise -->
+<!-- kind: demo -->
 
 Note:
 - [before: the step 10 app open behind the slides, camera allowed, sound on the room's speakers]
 - This is our model's decoder alone, and a hand moves its eight numbers.
-- No TODO this step, one file to play with: at the end we all play together.
+- The fun part: everything is in place, now we play with it and build on it.
 
 ---
 
@@ -151,23 +151,6 @@ Note:
 
 ---
 
-<div class="tag">Goal</div>
-
-## The goal<br><span class="then">Play the model with your hands.</span>
-
-<div class="statement-points">
-  <div><small>1</small>Pick one of five mappings</div>
-  <div><small>2</small>Change it, or write your own</div>
-  <div><small>3</small>Then we jam</div>
-</div>
-
-Note:
-- The last step, and a playground: nothing to get right.
-- One file holds five ready-made mappings, from the hand to the latent vector's eight dimensions.
-- First, what is given.
-
----
-
 <div class="tag">Given</div>
 
 ## What we get<br><span class="then">1 model, 1 library, 1 file to play with.</span>
@@ -188,8 +171,8 @@ Note:
     {{FILE:decoder.json}}
   </div>
   <div class="given-column exercise">
-    <div class="given-label">Exercise</div>
-    <div class="given-folder">10_hands/exercise/</div>
+    <div class="given-label">To play with</div>
+    <div class="given-folder">10_hands/solution/</div>
     {{FILE:HandMapping.cpp|new}}
   </div>
 </div>
@@ -201,7 +184,7 @@ Note:
 - The camera behind it: AVFoundation on macOS, JUCE on Windows, OpenCV on Linux.
 - HandControls.cpp decides which hand leads, calls your mapping, and smooths the result.
 - LatentDecoder.cpp is that generator, rendering at 44.1 kHz, resampled if your device runs another rate.
-- [point at Exercise] And your file, HandMapping.cpp: the five mappings live there.
+- [point at the right] And HandMapping.cpp: the one mapping, yours to change.
 - First the hand, as the tracker gives it to you.
 
 ---
@@ -258,113 +241,58 @@ Note:
 
 ---
 
-<div class="tag">Play: <code>HandMapping.cpp</code></div>
+<div class="tag">Play with it: <code>HandMapping.cpp</code></div>
 
-## Five mappings<br><span class="then">One line to switch.</span>
+## One mapping.<br><span class="then">Change it, rebuild, play.</span>
 
 ```cpp
-Latents classic(lead, texture);    // open is loud, high is bright
-Latents inverted(lead, texture);   // the fist is loud, low is bright
-Latents steps(lead, texture);      // the height in five fixed levels
-Latents two_hands(lead, texture);  // right: loudness, left: brightness
-Latents bow(lead, texture);        // the pinch is the loudness
-Latents yours(lead, texture);      // start from here
-
-z[0] = map_range(lead.openness, -2.5F, 2.0F);  // in classic: a fist is quiet
-
 Latents map_hands(const HandFeatures& lead, const std::optional<HandFeatures>& texture) {
-    return classic(lead, texture);  // <- or inverted, steps, two_hands, bow, yours
+    Latents z{};
+    z[0] = map_range(lead.openness, -2.5F, 2.0F);  // loudness: a fist is quiet
+    z[2] = map_range(lead.y, -2.5F, 3.0F);         // brightness: low dark, high bright
+    // … body, colour and tilt from the lead hand, texture from the second one
+    return z;
 }
 ```
 
 Note:
-- Each mapping is one small function: the lead hand in, the latent vector back.
-- The texture hand is optional: it is only there while a second hand is tracked.
-- [point at the list] The comments cover the first four: bow and yours need a word.
-- bow plays the loudness with the pinch squared, so it stays quiet longer.
-- And it zeroes the body: bow starts from classic, where the pinch drives the body too.
-- yours starts with the loudness alone, the rest is your choice.
-- Inside each one, map_range draws a straight line between two ends.
-- [point at the z0 line] Openness: a fist gives minus 2.5, an open palm gives 2.
-- The other six you find by ear.
-- [pause] On z0, plus 1 is about 5.5 dB louder.
-- Minus 3 is rest, the near silence you heard.
-- [pause] Each latent lives between about minus 2 and plus 2.
-- Far past plus or minus 3 the sound turns loud and strange: shrink the range.
-- Switch the line, rebuild, play.
+- One function: the lead hand in, the latent vector back.
+- map_range draws a straight line between two ends.
+- [point at the z0 line] A fist gives minus 2.5, an open palm gives 2.
+- On z0, plus 1 is about 5.5 dB louder; minus 3 is near silent.
+- The other six you find by ear; keep each between about minus 2 and plus 2.
 
 ---
 
-<div class="tag">Play: <code>HandMapping.cpp</code></div>
+<div class="tag">Play</div>
 
-## Task
+## Ten minutes,<br><span class="then">fifty synths, one room.</span>
 
 <div class="task-timer" data-minutes="10"></div>
 
-The last step: give it a spin in `steps/10_hands/exercise/HandMapping.cpp`
-
 ```bash
-cmake --build --preset release --target step10_exercise
-open build/release/steps/10_hands/step10_exercise_artefacts/Release/*.app
+cmake --build --preset release --target step10_solution
+open build/release/steps/10_hands/step10_solution_artefacts/Release/*.app
 ```
 
-<div class="cards-note">macOS: start it with <code>open</code> or a double-click, so it can ask for the camera · no camera: the mouse plays the hand · left hand leads: <strong>Swap hands</strong></div>
-
-<div class="run">
-  <div class="run-step" data-seconds="2.6">
-    <div class="run-title"><span>1</span>Pick a mapping</div>
-    <div class="run-visual run-setup">
-      <div class="run-note">classic · inverted · steps · two hands · bow</div>
-    </div>
-  </div>
-  <div class="run-step" data-seconds="3">
-    <div class="run-title"><span>2</span>Make it yours</div>
-    <div class="run-visual run-setup">
-      <div class="run-note">another feature, another range</div>
-    </div>
-  </div>
-  <div class="run-step" data-seconds="3">
-    <div class="run-title"><span>3</span>Play</div>
-    <div class="run-visual run-setup">
-      <div class="run-note">no check: your ears</div>
-    </div>
-  </div>
-</div>
-
-Note:
-- The task: one file, HandMapping.cpp.
-- Your setup build already built the app: after each change, the first command rebuilds it.
-- Then the second command, or a double-click: not from the IDE, not the binary inside the bundle.
-- Otherwise macOS asks the wrong program for the camera.
-- If you refused once: allow it under Privacy & Security, Camera, and restart the app.
-- On Linux: the OpenCV dev package before configuring, and your user in the video group.
-- No camera, no permission: the video area is a pad, and the mouse is the hand.
-- Drag to move it, hold the button to open the hand, right button to pinch.
-- Step two: make it yours, or bring in the texture hand.
-- [start the timer] Ten minutes, we walk around, and then we all jam together.
-
----
-
-<div class="tag">Jam</div>
-
-## Fifty laptops, one room.<br><span class="then">Play.</span>
-
 <div class="statement-points">
-  <div><small>1</small>Open your step 10 app</div>
-  <div><small>2</small>Laptop speakers, half volume</div>
+  <div><small>1</small>Open the app</div>
+  <div><small>2</small>Loudspeakers on</div>
   <div><small>3</small>Both hands up, and play</div>
 </div>
 
+<div class="cards-note">macOS: start it with <code>open</code> or a double-click, so it can ask for the camera · no camera: the mouse plays the hand · left hand leads: <strong>Swap hands</strong></div>
+
 Note:
 - [before: the room's speakers on, the lectern app open]
-- Now all of us, together.
-- Play the mapping you liked best, or simply your last build.
-- If your app is closed: open it the same way as before.
-- Laptop speakers, half volume: fifty laptops add up.
-- Your right hand plays, your left hand adds texture if your mapping uses it.
-- [wait until most screens show the camera; help the two or three that do not] Both hands up, and play.
-- Fifty decoders in one room: listen to the room, not only to your laptop.
-- [let it run about two minutes, walk through the room] And now: hands down.
+- Everything is in place: now it is yours to play with, and to build on.
+- Build and open the app with these two commands, or a double-click.
+- Not from the IDE: otherwise macOS asks the wrong program for the camera.
+- No camera: the mouse plays the hand.
+- [start the timer] Ten minutes, all of us at once.
+- Use your loudspeakers: I want to hear fifty of you playing one synth.
+- Want another sound? Change map_hands, rebuild, play.
+- [let it run, walk through the room] And now: hands down.
 - [silence: the latent vector glides to rest and the room fades out; wait for it]
 
 ---
@@ -386,4 +314,4 @@ Note:
 - The same configs and calls you know, and push and pop carry frames that are not audio.
 - One copy remains: every camera frame is copied to the CPU, then to the engine.
 - A frame that stays where it is: zero copy, one of the four things ahead.
-- That was the last exercise of the day; the rest is the outlook.
+- That was the fun part; the rest is the outlook.

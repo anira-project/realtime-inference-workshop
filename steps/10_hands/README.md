@@ -10,8 +10,8 @@ A JUCE app (JUCE is built once, the first time, a few minutes):
 
 ```bash
 cmake --preset release
-cmake --build --preset release --target step10_exercise
-open "build/release/steps/10_hands/step10_exercise_artefacts/Release/Workshop Hands (exercise).app"
+cmake --build --preset release --target step10_solution
+open "build/release/steps/10_hands/step10_solution_artefacts/Release/Workshop Hands (solution).app"
 ```
 
 - [`../common/hands/`](../common/hands/) — the camera and the hand tracking, given and hidden: you never open them. [`HandTracker.h`](../common/hands/HandTracker.h) is the one header worth a look. It gives you up to two hands, each with five features from 0 to 1 (left-right, height, open, pinch, tilt), which hand it is, a gesture, and 21 landmarks for drawing.
@@ -23,15 +23,9 @@ open "build/release/steps/10_hands/step10_exercise_artefacts/Release/Workshop Ha
 
 ## What to do
 
-The last step, and a playground: no TODO, no check. Open [`exercise/HandMapping.cpp`](exercise/HandMapping.cpp): five mappings from the hands to the eight latents, and `yours()` to start from. `map_hands` at the bottom returns one of them; switch that line, rebuild, play.
+The fun part: no TODO, no check. Build the app, open it, play. [`solution/HandMapping.cpp`](solution/HandMapping.cpp) holds the one mapping from the hands to the latent vector: open is loud, high is bright, a second hand adds texture. Change it, rebuild, play.
 
-- `classic` — open is loud, high is bright, a second hand adds texture.
-- `inverted` — the fist is loud, low is bright.
-- `steps` — the height in five fixed levels.
-- `two_hands` — the right hand sets the loudness, the left one the brightness.
-- `bow` — the pinch is the loudness.
-
-`map_range(feature, at_0, at_1)` is the straight line from `at_0` (feature 0) to `at_1` (feature 1). z0 is the loudness (+1 is about +5.5 dB, −3 close to silent), z2 the brightness; the other six you find by ear. About ±2 is each latent's natural range.
+`map_range(feature, at_0, at_1)` is the straight line from `at_0` (feature 0) to `at_1` (feature 1). z0 is the loudness (+1 is about +5.5 dB, −3 close to silent), z2 the brightness; the other six you find by ear. About ±2 is each dimension's natural range.
 
 ## What to look at while it runs
 

@@ -110,7 +110,7 @@ Bonus, for after the workshop, with its own [slides](https://anira-project.githu
 
 ## Layout
 
-- `steps/` — one folder per step, with `exercise/` and `solution/`; steps 4, 5, 7 and 8 are solution only, step 10 exercise only
+- `steps/` — one folder per step, with `exercise/` and `solution/`; steps 4, 5, 7 and 8 are solution only, step 10 solution only
 - `steps/common/` — what the steps share: the engine, the ring buffers, the fake host and the reporting in `helpers/`, the test signal, audio and models in `assets/`
 - `cmake/` — the dependencies: ONNX Runtime, the models, anira, JUCE
 - `slides/` — the Reveal.js slides, built by `scripts/build.js`

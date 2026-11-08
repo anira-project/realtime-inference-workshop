@@ -18,9 +18,10 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 <!-- .slide: data-state="no-header" -->
 
 Note:
-- Hi all
-- Welcome to our workshop on real-time inference of neural networks.
-- Today we take an exported neural network model and implement it in an audio environment in a real-time safe manner
+
+- Hi all,
+- And welcome to our workshop on real-time inference of neural networks.
+- Today we take a neural network that has already been trained and exported, and step by step turn it into a real-time safe audio plugin.
 
 ---
 
@@ -240,12 +241,13 @@ cmake --build --preset release   # libraries and solutions
 Note:
 - We sent the setup instructions by email. If you did it at home: thank you, just pull and configure again.
 - If not: please start now. Clone, configure, build.
+- The instructions are also in our workshop discord channel or the github README
 - Configuring downloads about 350 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
-- Idealy the build is then finished in time for the first exercise
+- Ideally the build is then finished in time for the first exercise
 - Why release? There is a benchmark in the examples, which is only meaningful in release.
-- Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches the dependencies a second time, so please do it at another moment, not now on the shared network.
+- Debugging works too, But it fetches the dependencies a second time, so please do it at another moment, not now on the shared network.
 - If configuring fails, raise your hand and we come to you.
-- Please! Do not wait for the first exercise.
+- Again .. please! Do not wait for the first exercise.
 
 ---
 

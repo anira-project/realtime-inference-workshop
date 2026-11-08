@@ -1,15 +1,28 @@
 /**
  * TODO marks: in every code block, a blank of the exercise files (TODO1,
- * "TODO2", ...) is marked, so a slide that shows a file as handed out shows
- * where the work is. Runs once highlight.js has split the code into tokens:
+ * "TODO2", ..., and a ? where a value goes) is marked, so a slide that shows
+ * a file as handed out shows where the work is. Runs once highlight.js has split the code into tokens:
  * a blank may sit in a token of its own or inside plain text.
  */
 
 (function () {
-    const BLANK = /"?TODO\d+"?/g;
+    // A ? counts only as a value on its own: after ( [ , : = and before , ) ] } ;
+    // or quoted, so a C++ ternary stays unmarked
+    const BLANK = /"?TODO\d+"?|"\?"|(?<=[(\[,:=]\s*)\?(?=\s*[,)\]};])/g;
 
     function wrap(textNode) {
         const text = textNode.nodeValue;
+        // A ? alone between two tokens (["time",?]): highlight.js gives it a text node of its own
+        if (text.trim() === '?' && textNode.parentElement.closest('code')) {
+            const [, before, after] = text.match(/^(\s*)\?(\s*)$/);
+            const mark = document.createElement('span');
+            mark.className = 'todo-mark';
+            mark.textContent = '?';
+            const parts = document.createDocumentFragment();
+            parts.append(before, mark, after);  // the spaces stay outside the mark
+            textNode.parentNode.replaceChild(parts, textNode);
+            return;
+        }
         BLANK.lastIndex = 0;
         if (!BLANK.test(text)) { return; }
         const parts = document.createDocumentFragment();

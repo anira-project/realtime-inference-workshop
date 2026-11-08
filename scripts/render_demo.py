@@ -139,7 +139,6 @@ def main():
     loop = int(LOOP_BEATS * BEAT * SAMPLE_RATE)
     dry_all = synthesize(PASSES + 1)
     wet_all = run_model(args.model, dry_all)
-    no_state_all = run_model(args.model, dry_all, carry_state=False)
     cleared_all = run_model(args.model, dry_all, clear_every=CLEAR_EVERY)
     lag = latency(args.model)
 
@@ -147,7 +146,6 @@ def main():
     begin = loop
     dry = seamless(dry_all[begin:begin + loop + FADE])
     wet = seamless(wet_all[begin + lag:begin + lag + loop + FADE])
-    no_state = seamless(no_state_all[begin + lag:begin + lag + loop + FADE])
     # Played once, not looped, so no crossfade: three drop-outs' worth, starting and ending quiet
     cleared = cleared_all[begin + lag:begin + lag + int(CLEARED_SECONDS * SAMPLE_RATE)]
     # The same cut with the state carried, faded so it does not start or stop with a click
@@ -160,12 +158,10 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     sf.write(args.out / "demo_input.wav", dry, SAMPLE_RATE, subtype="PCM_16")
     sf.write(args.out / "demo_output.wav", wet, SAMPLE_RATE, subtype="PCM_16")
-    sf.write(args.out / "demo_output_no_state.wav", no_state, SAMPLE_RATE, subtype="PCM_16")
     sf.write(args.out / "demo_output_state_cleared.wav", cleared, SAMPLE_RATE, subtype="PCM_16")
     sf.write(args.out / "demo_output_with_state.wav", with_state, SAMPLE_RATE, subtype="PCM_16")
     print(f"{duration:.1f} s loop, latency {lag} samples ({1000 * lag / SAMPLE_RATE:.1f} ms), "
           f"peak in {np.abs(dry).max():.2f}, peak out {np.abs(wet).max():.2f}, "
-          f"peak out without state {np.abs(no_state).max():.2e}, "
           f"peak out with the state cleared {np.abs(cleared).max():.2f}")
 
 

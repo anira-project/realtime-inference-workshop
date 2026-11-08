@@ -54,6 +54,35 @@ Note:
 
 ---
 
+<div class="tag">The export</div>
+
+## One model, cut in two.<br><span class="then">We only need the decoder.</span>
+
+<div class="split-files">
+  <div class="sf-row">
+    <div class="sf-file">{{FILE:model_forward.onnx}}</div>
+    <div class="sf-io"><span>audio · 2048</span><span>+ state · 63,488</span></div>
+    <div class="sf-arrow">→</div>
+    <div class="sf-io"><span>audio · 2048</span><span>+ state</span></div>
+    <div class="sf-note">steps 1 to 9</div>
+  </div>
+  <div class="sf-cut">split at z</div>
+  <div class="sf-row">
+    <div class="sf-file">{{FILE:model_decoder.onnx|new}}</div>
+    <div class="sf-io z"><span>latents · 8</span><span>+ state · 29,184</span></div>
+    <div class="sf-arrow">→</div>
+    <div class="sf-io"><span>audio · 2048</span><span>+ state</span></div>
+  </div>
+</div>
+
+Note:
+- Until now, one file, model_forward: audio in, audio out, with its state.
+- For this step we cut it in the middle, at z.
+- We only keep the second half: model_decoder.onnx.
+- Eight latents in, 2048 samples out, with its own state.
+
+---
+
 <div class="tag">Coming with v3.0</div>
 
 ## anira foundation models.<br><span class="then">Ready-made models, easy to integrate.</span>

@@ -25,12 +25,11 @@ Note:
 </div>
 
 Note:
-- Here are the six things again that we built by hand in part 1.
-- Inference: which model, which engine, which tensors, now all defined in model.json.
-- Benchmarking: defined in our contract.json.
-- Real-time safety and threading are built into anira: one thread pool, from the anira context.
-- Latency: anira calculates it, and we only read it.
-- Real-time guarantees: what happens on a missed deadline is also in the contract.
+- here we see the six steps from part 1 again, which we do now in one go
+- Inference goes into model.json.
+- The benchmark goes into contract.json.
+- Real-time safety, threading, latency and real-time safety is handled by anira
+- and if we fall behind in inference, our contract file defines the fallback
 - [pause] So what is left for us to write?
 
 ---

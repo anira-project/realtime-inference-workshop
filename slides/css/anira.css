@@ -2592,3 +2592,6 @@ html.tanh .hm-feat small { display: block; font-weight: 400; font-size: 0.8em; c
 html.tanh .hm-z { background: var(--tint-exercise); }
 html.tanh .hm-z b { margin-right: var(--space-2); font-family: var(--fs-code-font); }
 html.tanh .hm-arrow { color: var(--fs-text-subtle-color); }
+
+/* Process · misses: the last note closer to the one above, so the slide clears the footer */
+html.tanh .reveal section.miss .click-note + .cards-note { margin-top: var(--space-2); }

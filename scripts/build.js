@@ -140,9 +140,13 @@ function renderMaps(content, template) {
         classes.push(`map-${key}-${row}`);
       }
     }
-    return template.replace('{{MAP_CLASSES}}', classes.join(' '));
+    // Every map gets its own marker id: a shared one resolves to the first map in the
+    // deck, on a hidden slide, and the arrowheads of the others do not render
+    const id = `ov-arrow-${++mapCount}`;
+    return template.replace('{{MAP_CLASSES}}', classes.join(' ')).replace(/ov-arrow(?!head)/g, id);
   });
 }
+let mapCount = 0;
 
 // {{WAVEFORM:steps/common/assets/test_signal.h|blocks=2048|height=200|from=2|to=4}} → an SVG of the
 // float array in that header as one line, a divider every `blocks` samples

@@ -193,7 +193,7 @@ m_contract.hard_host_blocks(?, ?, ?);   // in prepare()
 
 </div>
 
-<div class="note-box">anira's latency holds for the worst block in that range.</div>
+<div class="note-box">We fill in the worst block size possible: at a loop point, for example, the smallest one you could get.</div>
 
 Note:
 - The other half of the contract comes from the host, in prepare: TODO 3's first blank.

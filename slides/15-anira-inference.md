@@ -333,7 +333,7 @@ Note:
 - On this machine that is 5295 samples [say: fifty-two ninety-five]; yours depends on your machine.
 - Blank 3, offline, a bounce: process_wait waits for every result.
 - Blank 4, live, in the callback: process never waits.
-TODO valentin; support all buffer sizes?
+- And with blank 1, the plugin now supports every buffer size the host sends, from 1 up to the largest.
 
 ---
 

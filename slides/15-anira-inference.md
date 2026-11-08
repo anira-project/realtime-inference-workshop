@@ -60,11 +60,13 @@ Note:
 <span class="fragment rows-focus"></span>
 
 Note:
-- What is left: three configs on top, three calls below.
+- What is left: fill gaps in the configs on top and in the three calls below:
+
 - First, let's define the three configuration files.
 - model.json has gaps for you: the tensor sizes, and how to handle the state.
 - contract.json defines how the model runs; it is complete, and we look into it in a second.
 - And the context: we use its defaults, so the thread pool is half the number of logical cores.
+
 - [click] Then the three calls: create, prepare and process.
 - Create is already done for you, in the constructor.
 - In prepare you fill two blanks: tell the contract the host's blocks, and read back the latency.
@@ -188,7 +190,8 @@ m_contract.hard_host_blocks(?, ?, ?);   // in prepare()
 <div class="note-box">We fill in the worst block size possible: at a loop point, for example, the smallest one you could get.</div>
 
 Note:
-- The other half of the contract comes from the host, in prepare: TODO 3's first blank.
+- Next to the contract file, we also need to tell anira what the host sends: the block sizes and the sample rate.
+- That happens in prepare, and it's TODO 3's first blank.
 - Three values: the smallest block, the largest block, and the sample rate.
 - The largest and the rate come from prepareToPlay.
 - Since this is a plugin, we have to handle a DAW that sends a smaller block than it announced.

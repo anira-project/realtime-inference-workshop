@@ -129,6 +129,7 @@ Note:
 - The groundwork for this is already done in anira.
 - What's still missing are the back ends and their memory, like CUDA or WebGPU.
 - With it comes zero copy: data already on the GPU, like a camera image, goes into the model without being copied.
+- That is the hard part: moving data from one API to another, say CUDA to WebGPU and back to CUDA, is difficult and costs copies.
 - So you can move the inference to a GPU or an NPU to make it faster, or, if your data is already on the GPU, run the inference there directly.
 - GPU through CUDA, Metal, Vulkan or GL; NPU through the hardware back ends of LiteRT and ExecuTorch.
 - The provider is picked with the engine: one plan per engine and provider, at prepare.

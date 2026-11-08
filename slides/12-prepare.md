@@ -166,15 +166,16 @@ Note:
 
 <div class="tag">anira · Prepare</div>
 
-## What else <code>prepare</code> does.<br><span class="then">Load the models, allocate the buffers.</span>
+## What else <code>prepare</code> does.<br><span class="then">Load the models, allocate the buffers, start the pool.</span>
 
-<div class="statement-points">
+<div class="statement-points two">
   <div>Loads every model this build can run, pooled per process</div>
   <div>Sizes and allocates every buffer: a ring per streamed tensor, slots for the jobs in flight</div>
+  <div>Starts the thread pool with the first <code>prepare</code> in the process; it runs until the last handler is gone</div>
   <div>Nothing after: <code>process</code> allocates nothing; new host blocks, <code>prepare</code> again</div>
 </div>
 
-<div class="cards-note">Part 1 did both by hand: one model loaded the first time, two rings sized from the worst moment we could think of.</div>
+<div class="cards-note">Part 1 did all of it by hand: one model loaded the first time, two rings sized from the worst moment we could think of, a worker thread started per instance.</div>
 
 Note:
 - So what else does prepare do for us?
@@ -225,9 +226,9 @@ Note:
   <div class="lat-part">the model itself</div>
   <div class="lat-plus">=</div>
   <div class="lat-part total">latency</div>
-  <span class="lat-host">host <b>512</b></span><strong>1536</strong><span></span><strong>2 × 512 = 1024</strong><span></span><strong>2224</strong><span></span><strong class="total">4784</strong>
-  <span class="lat-host">host <b>768</b></span><strong>1792</strong><span></span><strong>1 × 768 = 768</strong><span></span><strong>2224</strong><span></span><strong class="total">4784</strong>
-  <span class="lat-host">host <b>441</b></span><strong>2047</strong><span></span><strong>2 × 441 = 882</strong><span></span><strong>2224</strong><span></span><strong class="total">5153</strong>
+  <span class="lat-host">host <b>512</b></span><strong>1536</strong><span></span><strong>⌈1.09⌉ × 512 = 1024</strong><span></span><strong>2224</strong><span></span><strong class="total">4784</strong>
+  <span class="lat-host">host <b>768</b></span><strong>1792</strong><span></span><strong>⌈0.73⌉ × 768 = 768</strong><span></span><strong>2224</strong><span></span><strong class="total">4784</strong>
+  <span class="lat-host">host <b>441</b></span><strong>2047</strong><span></span><strong>⌈1.27⌉ × 441 = 882</strong><span></span><strong>2224</strong><span></span><strong class="total">5153</strong>
 </div>
 
 <div class="lat-why">The budget: 12.7 ms, measured at prepare. Host blocks of 11.6 ms (512), 17.4 ms (768) and 10 ms (441).</div>

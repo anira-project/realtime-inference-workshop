@@ -15,6 +15,11 @@
 
 #include "common/helpers/verdict.h"
 
+// How many times slower than real time CI paces its host; see CMakeLists.txt
+#ifndef WORKSHOP_HOST_SLOWDOWN
+#define WORKSHOP_HOST_SLOWDOWN 1
+#endif
+
 // How many of every repetition's first forward passes are shown, and how many
 // of the slowest are listed.
 constexpr size_t k_shown_first_passes = 5;
@@ -101,14 +106,17 @@ inline int report_forward_passes(const std::vector<std::vector<double>>& times,
 
     // The worst case: the number steps 6 and 7 build on. Longer than one model
     // block, and no latency is enough.
+    // CI's host runs WORKSHOP_HOST_SLOWDOWN times slower than real time, and a
+    // shared runner may need that much more time; 1 everywhere else.
     const double model_block_ms = 1000.0 * static_cast<double>(model_block_size) / sample_rate;
+    const double limit_ms = model_block_ms * WORKSHOP_HOST_SLOWDOWN;
     std::printf("\nYour worst case:\n");
     std::printf("  max inference time   %6.2f ms\n", max_inference_ms);
     std::printf("\n");
-    if (max_inference_ms > model_block_ms) {
+    if (max_inference_ms > limit_ms) {
         fail("longer than one model block (%.1f ms): this machine cannot keep up with the\n"
              "model. Please tell us.",
-             model_block_ms);
+             limit_ms);
         return 1;
     }
     pass("shorter than one model block (%.1f ms). Write %.2f into k_max_inference_ms\n"

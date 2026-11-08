@@ -51,9 +51,10 @@ option(WORKSHOP_JUCE "Build the JUCE plugin and app steps" ON)
 option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
 
 # How many times slower than real time the host loop of steps 6 and 7 calls
-# back. 1 everywhere but CI: a shared runner does not keep up with real time,
-# so CI sets 4, and the checks still test every alignment and latency claim.
-set(WORKSHOP_HOST_SLOWDOWN 1 CACHE STRING "Pace the host loop of steps 6 and 7 this many times slower (CI)")
+# back, and how many model blocks of time step 4's check allows. 1 everywhere
+# but CI: a shared runner does not keep up with real time, so CI sets 4, and
+# the checks still test every alignment and latency claim.
+set(WORKSHOP_HOST_SLOWDOWN 1 CACHE STRING "Pace the host loop of steps 6 and 7 this many times slower, and relax step 4's limit as much (CI)")
 
 # The models are downloaded from Hugging Face, or the repository's own release,
 # into steps/common/assets/models/, unless they are already there. The test

@@ -2600,3 +2600,8 @@ html.tanh .reveal section.miss .click-note + .cards-note { margin-top: var(--spa
 html.tanh .cards.ht .ht-pic { height: 110px; display: flex; align-items: center; justify-content: center; }
 html.tanh .cards.ht .ht-pic svg { height: 100%; width: auto; }
 html.tanh .cards.ht .card { justify-content: flex-end; }
+html.tanh .ht-box { fill: none; stroke: var(--mark-over, #d24); stroke-width: 3; }
+html.tanh .ht-tag { fill: var(--ink); }
+html.tanh .ht-tag-text { fill: var(--paper); font-family: var(--fs-heading-font); font-size: 11px; font-weight: 600; text-anchor: middle; }
+html.tanh .ht-bar-bg { fill: var(--fs-text-subtle-color); opacity: 0.25; }
+html.tanh .ht-bar { fill: var(--ink); }

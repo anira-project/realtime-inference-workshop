@@ -101,14 +101,10 @@ Note:
 </div>
 
 Note:
-- Assets, as in step 1: the model, the test signal and the reference.
-- CMake fetches anira, pinned to v3 alpha 3, with ONNX Runtime built in.
-- Your setup build already did that.
-- A fresh build folder clones and compiles it again: a couple of minutes.
-- The check compares like step 7: support.h, in common/helpers, skips any callback that came back late.
-- The contract is complete, the model file has gaps.
-- Its tensors are named: their shapes and the state pair are your task.
-- Your other file is AniraProcessor.cpp: four blanks, in two functions.
+- Same assets as in part 1: the model, the test signal and the reference.
+- New in the helpers: anira itself, fetched by CMake, and contract.json, already complete.
+- Your setup build already compiled anira, so this build is fast.
+- You edit two files: the gaps in model.json, and four blanks in AniraProcessor.cpp.
 
 ---
 

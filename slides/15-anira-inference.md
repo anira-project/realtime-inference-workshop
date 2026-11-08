@@ -177,18 +177,18 @@ Note:
 
 <div class="tag">Contract: <code>hard_host_blocks</code></div>
 
-## What the host may send.<br><span class="then">Any block, up to the announced one.</span>
+## What the host may send.<br><span class="then">We want the worst case here.</span>
 
 <div class="mj">
 
 ```cpp
-m_contract.hard_host_blocks(1, max_block_size, sample_rate);   // in prepare()
+m_contract.hard_host_blocks(?, ?, ?);   // in prepare()
 ```
 
 <div class="mj-keys three">
-  <div><b><code>1</code></b>the smallest block: a DAW may send less than it announced</div>
-  <div><b><code>max_block_size</code></b>the largest block, announced in <code>prepareToPlay</code></div>
-  <div><b><code>sample_rate</code></b>the host's rate, also from <code>prepareToPlay</code></div>
+  <div><b>smallest block</b>a DAW may send less than it announced: the worst case</div>
+  <div><b>largest block</b>announced in <code>prepareToPlay</code></div>
+  <div><b>sample rate</b>the host's rate, also from <code>prepareToPlay</code></div>
 </div>
 
 </div>
@@ -199,12 +199,11 @@ Note:
 - The other half of the contract comes from the host, in prepare: TODO 3's first blank.
 - Three values: the smallest block, the largest block, and the sample rate.
 - The largest and the rate come from prepareToPlay.
-- [pause] But why 1 as the smallest, and not 512?
 - Since this is a plugin, we have to handle a DAW that sends a smaller block than it announced.
 - At a loop point, for example, the callback is shorter.
-- So we declare everything from 1 up to the announced size.
+- [pause] So for the smallest block, we want the worst case scenario here.
 - anira then computes a latency that holds for the worst of those blocks, as Fares showed.
-- The check tests exactly that: blocks of 512 first, then changing sizes, down to a single sample.
+- The check tests exactly that: blocks of 512 first, then changing sizes, some much smaller.
 
 ---
 

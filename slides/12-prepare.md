@@ -363,22 +363,5 @@ Note:
 - After prepare the models are loaded, pooled, and the plans exist
 - The latency went to the host, the rings and slots exist, and the pool threads run
 - From here on only the audio thread's calls remain: the third row
-
----
-
-<div class="tag">Take away</div>
-
-## The host promises its blocks.<br><span class="then">anira answers with a latency.</span>
-
-<div class="statement-points">
-  <div>The contract: host blocks, budget, warm-up, and what a miss delivers</div>
-  <div>Latency: computed from block size, budget and the model, at <code>prepare</code></div>
-  <div>Memory: sized and allocated at <code>prepare</code>, never in the callback</div>
-</div>
-
-Note:
-- The host promises its blocks, and anira answers with a latency.
-- The contract holds the host blocks, the budget, the warm-up, and what a miss delivers.
-- The latency is computed at prepare, from the block size, the budget and the model.
-- The memory is sized and allocated at prepare, never in the callback.
-- Next: process, one block through all of it.
+- In short: the host promises its blocks, and anira answers with a latency, measured, sized and allocated at prepare
+- Next: process, one block through all of it

@@ -58,17 +58,17 @@ Note:
       <path d="M0 0 L10 5 L0 10z" class="ov-arrowhead"/>
     </marker>
   </defs>
-  <rect class="st-lane audio" x="20" y="40" width="1570" height="200" rx="10"/>
+  <rect class="st-lane audio" x="20" y="40" width="1570" height="220" rx="10"/>
   <text x="40" y="70" class="st-lane-label">audio thread · real-time: no allocation, no lock, no wait</text>
   <rect class="st-lane pool" x="20" y="300" width="1570" height="200" rx="10"/>
   <text x="40" y="330" class="st-lane-label">inference thread · may allocate, lock and block</text>
   <g class="fragment" data-fragment-index="1">
     <rect class="ov-pill" x="50" y="132" width="130" height="56" rx="8"/><text x="115" y="166" class="st-text">host block</text>
     <line class="ov-flow strong" x1="180" y1="160" x2="226" y2="160" marker-end="url(#st-arrow)"/>
-    <circle class="ov-ring" cx="250" cy="160" r="24"/><text x="250" y="228" class="st-caption">input ring</text>
+    <circle class="ov-ring" cx="250" cy="160" r="24"/><text x="250" y="222" class="st-caption">input ring</text>
     <line class="ov-flow strong" x1="274" y1="160" x2="300" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="300" y="132" width="170" height="56" rx="8"/><text x="385" y="166" class="st-text">pre_process</text>
-    <text x="385" y="228" class="st-caption">a window out of the ring</text>
+    <text x="385" y="222" class="st-caption">a window out of the ring</text>
     <line class="ov-flow strong" x1="470" y1="160" x2="510" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill tensor" x="510" y="132" width="180" height="56" rx="8"/><text x="600" y="166" class="st-text">model tensor in</text>
   </g>
@@ -83,12 +83,12 @@ Note:
     <path class="ov-flow strong" d="M1040 380 V188" marker-end="url(#st-arrow)"/>
     <text x="1056" y="286" class="st-caption left">the slot, back</text>
     <rect class="ov-pill tensor" x="945" y="132" width="190" height="56" rx="8"/><text x="1040" y="166" class="st-text">model tensor out</text>
-    <text x="1040" y="228" class="st-caption on-audio">the next stamp</text>
+    <text x="1040" y="222" class="st-caption on-audio">the next stamp</text>
     <line class="ov-flow strong" x1="1135" y1="160" x2="1180" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="1180" y="132" width="170" height="56" rx="8"/><text x="1265" y="166" class="st-text">post_process</text>
-    <text x="1265" y="228" class="st-caption">the result into the ring</text>
+    <text x="1265" y="222" class="st-caption">the result into the ring</text>
     <line class="ov-flow strong" x1="1350" y1="160" x2="1376" y2="160" marker-end="url(#st-arrow)"/>
-    <circle class="ov-ring" cx="1400" cy="160" r="24"/><text x="1400" y="228" class="st-caption">output ring</text>
+    <circle class="ov-ring" cx="1400" cy="160" r="24"/><text x="1400" y="222" class="st-caption">output ring</text>
     <line class="ov-flow strong" x1="1424" y1="160" x2="1450" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill" x="1450" y="132" width="130" height="56" rx="8"/><text x="1515" y="166" class="st-text">host block</text>
   </g>
@@ -99,7 +99,7 @@ Note:
   </g>
   <!-- drawn last, so the queue line passes behind it -->
   <g class="fragment" data-fragment-index="1">
-    <text x="600" y="228" class="st-caption on-audio">a slot, stamped</text>
+    <text x="600" y="222" class="st-caption on-audio">a slot, stamped</text>
   </g>
 </svg>
 

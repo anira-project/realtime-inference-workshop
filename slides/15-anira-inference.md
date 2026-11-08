@@ -4,10 +4,10 @@
 <!-- kind: exercise -->
 
 Note:
-- Thank you, Fares for all the details!
-- Let's go back to coding!
-- Step 9, we do all steps from part I,
-- the Same model, same test signal, same check, but with anira now.
+- Thank you, Fares, for the overview.
+- Let's go back to coding.
+- In step 9 we redo part 1, now with anira.
+- Same model, same test signal, same check.
 
 ---
 

@@ -126,6 +126,8 @@ Note:
 - Next: memory beyond the CPU.
 - Today every tensor lives in host memory, and that is what you ran today.
 - With v3 a tensor says where it lives: CPU, GPU or NPU.
+- The groundwork for this is already done in anira.
+- What's still missing are the back ends and their memory, like CUDA or WebGPU.
 - So you can move the inference to a GPU or an NPU to make it faster, or, if your data is already on the GPU, run the inference there directly.
 - GPU through CUDA, Metal, Vulkan or GL; NPU through the hardware back ends of LiteRT and ExecuTorch.
 - The provider is picked with the engine: one plan per engine and provider, at prepare.

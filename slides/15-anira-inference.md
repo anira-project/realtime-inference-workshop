@@ -190,15 +190,13 @@ m_contract.hard_host_blocks(?, ?, ?);   // in prepare()
 <div class="note-box">We fill in the worst block size possible: at a loop point, for example, the smallest one you could get.</div>
 
 Note:
-- Next to the contract file, we also need to tell anira what the host sends: the block sizes and the sample rate.
+- Next to the contract file, we also need to tell anira what the host config
 - That happens in prepare, and it's TODO 3's first blank.
 - Three values: the smallest block, the largest block, and the sample rate.
 - The largest and the rate come from prepareToPlay.
 - Since this is a plugin, we have to handle a DAW that sends a smaller block than it announced.
 - At a loop point, for example, the callback is shorter.
 - [pause] So for the smallest block, we want the worst case scenario here.
-- anira then computes a latency that holds for the worst of those blocks, as Fares showed.
-- The check tests exactly that: blocks of 512 first, then changing sizes, some much smaller.
 
 ---
 
@@ -247,16 +245,18 @@ cmake --build --preset release --target step09_exercise_Standalone
 
 Note:
 - Okay, now we've reached the step 9 task: fill out the TODOs.
+
 - There are three of them.
-- TODO 1: declare the audio tensors.
-- TODO 2: declare the state, so it is fed back after every inference.
-- TODO 3: pass everything prepare and process need.
+- TODO 1: audio tensors.
+- TODO 2: state
+- TODO 3: prepare and process
+
 - Before you start the plugin, build and run the exercise check first.
 - It validates that all your blanks are filled in correctly.
-- Once it is green, play with the plugin; the standalone is the easiest.
-- The model still runs at 44.1 kHz: at 48 the plugin asks first, and it won't sound accurate.
-- But now any buffer size from the host works.
-- [start the timer] Ten minutes; we walk around, wave if you get stuck.
+
+- Also once you have the plugin running there is a button to see the auto benchmark results in a report!
+
+- [start the timer] Ten minutes; wave if you get stuck.
 
 Time is up: let's go to the solution.
 
@@ -304,7 +304,6 @@ Note:
 - First, its size: 63,488 floats, in and out, as in part 1.
 - Second, its state_source: the output that feeds state_in after every inference.
 - We look at the names of our output tensors, and find state_out.
-- With the pair in place, anira runs the inferences one after another: each needs the state of the one before.
 
 ---
 
@@ -361,7 +360,12 @@ Note:
 
 Note:
 - If you clicked the report button, you probably saw this screen.
-- It shows the benchmark anira ran inside the application, on your machine.
+- It's the benchmark anira ran inside the plugin, on your machine, before the first block.
+- First a warm-up, until the times are stable; then it measures.
+- Here the worst case is 12.9 ms, and that becomes the budget.
+- That's 28 % of one model block: comfortable.
+- Under 75 % is comfortable, under 100 % marginal, and above that the plugin holds back until you click Try nonetheless.
+- [point at the last line] And at 48 kHz it asks first: the model is trained at 44.1 kHz.
 
 ---
 

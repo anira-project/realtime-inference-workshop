@@ -255,9 +255,6 @@ Note:
 - In TODO 1 we had to fill in the size of the input and output audio tensors, and the latency.
 - We know it from part 1: 2048 samples in and out.
 - And the model's own latency is 2224 samples.
-- A wrong size is refused at prepare, when anira opens the ONNX file.
-- [pause] A wrong latency is not refused: the ONNX file has no delay to check against.
-- But the check catches it: the output no longer lines up with the reference.
 ---
 
 <div class="tag">Solution</div>
@@ -274,11 +271,10 @@ Note:
 ```
 
 Note:
-- TODO 2: step 2's state size, in and out, and the state_source.
-- [ask the room, hands up] Who tried a wrong one first, and read the message?
-- The answer is state_out.
-- audio_in is no output at all, and audio_out is streamed audio, not state.
-- Create refuses both, and says why.
+- In TODO 2, we know the state size from part 1: 63,488 floats, in and out.
+- And we have to make sure the state is fed back after every inference.
+- So we look at the names of our output tensors, and find state_out.
+- That is the state_source for state_in.
 - With the pair in place, anira runs the inferences one after another: each needs the state of the one before.
 
 ---

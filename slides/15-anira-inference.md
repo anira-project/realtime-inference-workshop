@@ -162,8 +162,6 @@ Note:
 
 Three keys. The host's blocks come in at `prepare`.
 
-<div class="note-box">The third config, the context: nothing to write. One pool per process, with its defaults.</div>
-
 Note:
 - The second file, contract.json, is already filled in for you.
 - Hard means a stream: every callback has a deadline.

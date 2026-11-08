@@ -193,6 +193,8 @@ open build/release/steps/10_hands/step10_solution_artefacts/Release/*.app
   <div><small>3</small>Both hands up, and play</div>
 </div>
 
+<button class="live-share">Show the demo</button>
+
 <div class="cards-note">macOS: start it with <code>open</code> or a double-click, so it can ask for the camera · no camera: the mouse plays the hand · left hand leads: <strong>Swap hands</strong></div>
 
 Note:
@@ -202,6 +204,7 @@ Note:
 - Build the standalone app with these two commands.
 - Get a feel for how it works: the camera and your hands control the synth.
 - [start the timer] Use your laptop loudspeakers, so we all play together, and jam!
+- [click Show the demo, pick the app window] So you can see me playing, too; the × closes it.
 - We have ten minutes now; afterwards we wrap it up.
 
 on macOs you might need to open the application via finder in order to have camera permissions!

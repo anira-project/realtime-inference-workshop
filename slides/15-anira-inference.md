@@ -356,7 +356,6 @@ Note:
 </div>
 
 <div class="cards-note">The check prints it, the plugin shows it under <strong>report</strong>: <code>handler.plan_report()</code></div>
-<div class="cards-note">At 48 kHz the plugin asks first: a 44.1 kHz model, no resampler. <strong>Process anyway</strong> plays it as it is.</div>
 
 Note:
 - The report button shows this.
@@ -365,7 +364,6 @@ Note:
 - Worst case 12.9 ms: that is the budget.
 - 28 % of a model block: comfortable.
 - Over 100 %, the plugin holds back.
-- [point at the last line] 48 kHz: it asks first.
 
 ---
 

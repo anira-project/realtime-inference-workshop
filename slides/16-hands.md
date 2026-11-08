@@ -69,7 +69,7 @@ Note:
   <div class="sf-cut">split at z</div>
   <div class="sf-row">
     <div class="sf-file">{{FILE:model_decoder.onnx|new}}</div>
-    <div class="sf-io z"><span>latents · 8</span><span>+ state · 29,184</span></div>
+    <div class="sf-io z"><span>latent vector · 8</span><span>+ state · 29,184</span></div>
     <div class="sf-arrow">→</div>
     <div class="sf-io"><span>audio · 2048</span><span>+ state</span></div>
   </div>
@@ -79,7 +79,7 @@ Note:
 - Until now, one file, model_forward: audio in, audio out, with its state.
 - For this step we cut it in the middle, at z.
 - We only keep the second half: model_decoder.onnx.
-- Eight latents in, 2048 samples out, with its own state.
+- One latent vector with eight dimensions in, 2048 samples out, with its own state.
 
 ---
 
@@ -133,7 +133,7 @@ Note:
 - [move sideways] Left to right, the colour.
 - [tilt] Tilt the hand, and the sound tilts: the names are found by ear.
 - [second hand in] My second hand sets the texture: swell, dark or bright, resonance.
-- [hands away] Hands away: the latents glide to rest, and the sound with them. [wait for the silence]
+- [hands away] Hands away: the latent vector glides to rest, and the sound with it. [wait for the silence]
 - Alongside it, one switch fades the output out in about a second: Silence without hands, on by default.
 - [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
 - [point at the latent panel] Eight bars, one per latent, more on the tick later.
@@ -144,8 +144,8 @@ Note:
 - It pushes an image down into the pool and pops the prediction, the 21 points of each hand: it never waits.
 - The newest hands go to the message thread through a lock-free triple buffer.
 - The message thread is JUCE's GUI thread: 60 times a second it reads the hands, runs your mapping, and draws.
-- The eight latents reach the audio thread as eight atomic floats.
-- The audio thread pushes control data, the eight latents, once per 2048 samples, and pops the decoder's audio.
+- The latent vector reaches the audio thread as eight atomic floats, one per dimension.
+- The audio thread pushes control data, the latent vector, once per 2048 samples, and pops the decoder's audio.
 - Down is push, up is pop: only the camera and the audio thread call anira, the message thread never does.
 - Now your part.
 
@@ -163,7 +163,7 @@ Note:
 
 Note:
 - The last step, and a playground: nothing to get right.
-- One file holds five ready-made mappings, from the hand to the eight latents.
+- One file holds five ready-made mappings, from the hand to the latent vector's eight dimensions.
 - First, what is given.
 
 ---
@@ -195,7 +195,7 @@ Note:
 </div>
 
 Note:
-- No new model: eight latents in, and inside, the decoder fills the other 120 with zeros.
+- No new model: a latent vector with eight dimensions in, and inside, the decoder fills the other 120 with zeros.
 - [point at Helpers] The hands library: the camera and the tracking, four models compiled in.
 - You never open it: HandTracker.h is the one header worth a look.
 - The camera behind it: AVFoundation on macOS, JUCE on Windows, OpenCV on Linux.
@@ -247,14 +247,14 @@ Note:
 - [point at the timer block] The GUI timer, on the main thread, asks for the newest hands, up to two.
 - HandControls gives them roles: your right hand leads, the other one is the texture hand.
 - A single hand always leads, and the Swap hands box in the app makes the left one lead.
-- It calls your map_hands with both, and gets eight latents back.
+- It calls your map_hands with both, and gets the latent vector back.
 - Why smooth: so the eight numbers do not jump, and can glide when the hand leaves.
 - A one-pole filter per latent, 80 ms by default, and the Smoothing slider changes it.
 - In the panel the tick is your mapping's number, the target, and the bar is the smoothed value.
-- Lead hand gone for a fifth of a second, and the latents head for rest.
+- Lead hand gone for a fifth of a second, and the latent vector heads for rest.
 - Rest is z0 at minus 3, near silent, and the other seven at zero.
 - The smoother slows to 600 ms: quick while you play, slow when you leave.
-- Smoothed latents reach the decoder as atomics; the audio thread pushes them once per model block, as one latent frame.
+- The smoothed vector reaches the decoder as atomics; the audio thread pushes them once per model block, as one latent frame.
 
 ---
 
@@ -278,7 +278,7 @@ Latents map_hands(const HandFeatures& lead, const std::optional<HandFeatures>& t
 ```
 
 Note:
-- Each mapping is one small function: the lead hand in, eight latents back.
+- Each mapping is one small function: the lead hand in, the latent vector back.
 - The texture hand is optional: it is only there while a second hand is tracked.
 - [point at the list] The comments cover the first four: bow and yours need a word.
 - bow plays the loudness with the pinch squared, so it stays quiet longer.
@@ -365,7 +365,7 @@ Note:
 - [wait until most screens show the camera; help the two or three that do not] Both hands up, and play.
 - Fifty decoders in one room: listen to the room, not only to your laptop.
 - [let it run about two minutes, walk through the room] And now: hands down.
-- [silence: the latents glide to rest and the room fades out; wait for it]
+- [silence: the latent vector glides to rest and the room fades out; wait for it]
 
 ---
 

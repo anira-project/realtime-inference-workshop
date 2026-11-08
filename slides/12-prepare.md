@@ -80,8 +80,7 @@ Note:
 ## <code>prepare</code> takes a contract.<br><span class="then">What the host promises, how to measure.</span>
 
 ```json
-{ "hard": { "budget": "measured", "warmup": "until_stable",
-            "on_miss": "bypass" } }
+{ "hard": { "budget": "measured", "warmup": "until_stable", … } }
 ```
 
 ```cpp
@@ -92,7 +91,7 @@ const anira::PlanReport report = m_handler->prepare(m_contract);
 <div class="statement-points">
   <div>Host blocks: the smallest and the largest the host may send, and the rate</div>
   <div><code>"budget": "measured"</code>: the max inference time, measured at <code>prepare</code></div>
-  <div><code>on_miss</code>: what a late result delivers, in Process</div>
+  <div><code>…</code>: more options, for process, in the next chapter</div>
 </div>
 
 Note:
@@ -100,7 +99,7 @@ Note:
 - Hard is the contract of a stream: blocks in and blocks out, in every callback
 - This is the file from step 9. It carries no host blocks: we fill them in from prepareToPlay, the smallest and the largest block the host may send, and the sample rate
 - And instead of a max inference time we write "measured": anira measures it at prepare, on the user's machine
-- on_miss says what a late result delivers, here bypass, the input block in place of the late one. We come to that in Process
+- And the dots: the contract has more options, for process, and we come to them in the next chapter
 - (A second kind, Async, a job with a deadline instead of a stream, is not in this release: prepare refuses it)
 
 ---

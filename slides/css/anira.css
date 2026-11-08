@@ -2465,3 +2465,6 @@ html.tanh .reveal section:not(:has(section)):has(.rows-focus:not(.visible)) .row
 html.tanh .reveal section:not(:has(section)):has(.rows-focus.visible) .rows-top {
   opacity: 0.25;
 }
+
+/* Three keys instead of five, as on step 9's hard_host_blocks slide */
+html.tanh .mj-keys.three { grid-template-columns: repeat(3, 1fr); font-size: 0.75em; }

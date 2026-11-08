@@ -300,12 +300,46 @@ if (offline) {   // <- 3. solution: a bounce, wait for the result
 
 Note:
 - TODO 3: where our plugin talks to anira.
-- Blank 1, the host's blocks: why 1 and not 512? [pause]
-- Any block size may come, down to a single sample, and the check sends exactly that.
+- Blank 1, the host's blocks: we look at it on the next slide.
 - Blank 2: the latency of output slot 0, audio_out.
 - On this machine that is 5295 samples [say: fifty-two ninety-five]; yours depends on your machine.
 - Blank 3, offline, a bounce: process_wait waits for every result.
 - Blank 4, live, in the callback: process never waits.
+
+---
+
+<!-- .slide: class="dense-code" -->
+
+<div class="tag">Solution: <code>hard_host_blocks</code></div>
+
+## What the host may send.<br><span class="then">Any block, up to the announced one.</span>
+
+<div class="mj">
+
+```cpp
+m_contract.hard_host_blocks(1, max_block_size, sample_rate);   // in prepare()
+```
+
+<div class="mj-keys three">
+  <div><b><code>1</code></b>the smallest block: a DAW may send less than it announced</div>
+  <div><b><code>max_block_size</code></b>the largest block, announced in <code>prepareToPlay</code></div>
+  <div><b><code>sample_rate</code></b>the host's rate, also from <code>prepareToPlay</code></div>
+</div>
+
+</div>
+
+<div class="note-box">anira's latency holds for the worst block in that range.</div>
+
+Note:
+- Blank 1: what we tell the contract about the host.
+- Three values: the smallest block, the largest block, and the sample rate.
+- The largest and the rate come from prepareToPlay.
+- [pause] But why 1 as the smallest, and not 512?
+- Since this is a plugin, we have to handle a DAW that sends a smaller block than it announced.
+- At a loop point, for example, the callback is shorter.
+- So we declare everything from 1 up to the announced size.
+- anira then computes a latency that holds for the worst of those blocks, as Fares showed.
+- The check tests exactly that: blocks of 512 first, then changing sizes, down to a single sample.
 
 ---
 

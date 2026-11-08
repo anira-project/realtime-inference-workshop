@@ -59,13 +59,10 @@ Note:
 <span class="fragment rows-focus"></span>
 
 Note:
-- Well, of the three config files, we left only one with gaps: model.json.
-- And a few blanks in the three calls below.
-
-- First, let's define the three configuration files.
-- model.json has gaps for you: the tensor sizes, and how to handle the state.
-- contract.json defines how the model runs; it is complete, and we look into it in a second.
-- And the context: we use its defaults, so the thread pool is half the number of logical cores.
+- First of all, our three config files: model.json, the contract and the context.
+- We left only one of them with gaps: model.json, where you define the tensors.
+- The contract is complete: it says how the model runs, and we look into it in a second.
+- And the context uses its defaults: a thread pool of half the logical cores.
 
 - [click] Then the three calls: create, prepare and process.
 - Create is already done for you, in the constructor.

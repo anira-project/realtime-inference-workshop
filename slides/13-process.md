@@ -71,7 +71,6 @@ Note:
     <text x="385" y="194" class="st-caption">a window out of the ring</text>
     <line class="ov-flow strong" x1="470" y1="140" x2="510" y2="140" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill tensor" x="510" y="112" width="180" height="56" rx="8"/><text x="600" y="146" class="st-text">model tensor in</text>
-    <text x="600" y="194" class="st-caption on-audio">a slot, stamped</text>
   </g>
   <g class="fragment" data-fragment-index="2">
     <path class="ov-flow strong" d="M600 168 V380" marker-end="url(#st-arrow)"/>
@@ -97,6 +96,10 @@ Note:
     <path class="ov-flow state" d="M880 444 V482 H760 V444" marker-end="url(#st-arrow)"/>
     <text x="820" y="470" class="st-caption on-pool">state_out → state_in</text>
     <text x="820" y="530" class="st-caption">the declared pair swaps around each inference, no copy</text>
+  </g>
+  <!-- drawn last, so the queue line passes behind it -->
+  <g class="fragment" data-fragment-index="1">
+    <text x="600" y="194" class="st-caption on-audio">a slot, stamped</text>
   </g>
 </svg>
 

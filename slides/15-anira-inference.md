@@ -195,13 +195,12 @@ Three keys. The host's blocks come in at `prepare`.
 <div class="note-box">The third config, the context: nothing to write. One pool per process, with its defaults.</div>
 
 Note:
-- Hard: the stream from the prepare chapter, every callback with a deadline.
-- Budget measured: prepare benchmarks it on this machine, and we read its report after the task.
-- Warm-up until stable: remember Lina's benchmark, the first pass 18 ms, then 13.
-- Those slow passes now run inside prepare, before the audio starts.
-- On a miss, bypass: where step 7's late callback left the wet path as zeros, the input block goes out.
-- No wait_ratio line: its default is 0, the callback never waits for a result.
-- [pause] No block sizes here: that is your blank, in prepare.
+- The second file, contract.json, is already complete.
+- Hard: a stream, every callback has a deadline.
+- Budget measured: anira benchmarks the model on this machine, in prepare.
+- Warm-up until stable: the slow first runs happen in prepare, before the audio starts.
+- On a miss, bypass: the input block goes out instead of zeros.
+- [pause] The block sizes are not here: that is your blank, in prepare.
 - That is both files: now fill in the gaps.
 
 ---
@@ -251,16 +250,15 @@ cmake --build --preset release --target step09_exercise_Standalone
 
 Note:
 - Ten minutes, three TODOs, two files.
-- TODO 1 and 2, in model.json: replace every question mark, numbers without quotes, names in quotes.
-- Each comment says where its value comes from: a step of part 1, the matching tensor, or the three options.
-- The state size is on step 2's slide, or in its main.cpp, the k_model constant.
+- TODO 1 and 2 are in model.json: replace every question mark.
+- Numbers without quotes, names in quotes.
+- The comment next to each blank says where its value comes from.
 - TODO 3 is in AniraProcessor.cpp: four blanks, marked "fill out".
-- For the first one mind the order: smallest block, largest block, sample rate.
+- For the first one, mind the order: smallest block, largest block, sample rate.
 - The C++ file does not compile until all four blanks are filled.
-- The check reports the model file's blanks, with the line number.
-- It also prints anira's plan report: we read that together afterwards.
-- Don't worry if you don't finish: we solve it together, the solution sits next to the exercise.
-- [start the timer] We walk around: wave if the check refuses something you don't understand.
+- The check tells you which blank is still wrong.
+- Don't worry if you don't finish: we solve it together.
+- [start the timer] We walk around: wave if you get stuck.
 
 ---
 
@@ -283,15 +281,11 @@ Note:
 ```
 
 Note:
-- TODO 1, the audio: 2048 in and out, one model block, step 1's fixed size.
+- TODO 1: 2048 in and out, one model block, as in step 1.
 - On audio_out, the model's own latency: 2224 samples, as in step 7.
-- The same wrong size in and out is refused at prepare, not at create.
-- Prepare is when anira first opens the ONNX file: create reads only your declaration.
-- The refusal names the tensor and both shapes, the model's and yours.
-- Two different sizes create refuses already: one streamed block, one hop.
-- [pause] A wrong latency, though, is not refused: the ONNX file carries no delay figure to check against.
-- The check finds it: your latency moves anira's number, not the audio, so the output lines up at another shift.
-- And its message names both numbers, yours and the model's own.
+- A wrong size is refused at prepare, when anira opens the ONNX file.
+- [pause] A wrong latency is not refused: the ONNX file has no delay to check against.
+- But the check catches it: the output no longer lines up with the reference.
 ---
 
 <div class="tag">Solution</div>
@@ -308,13 +302,12 @@ Note:
 ```
 
 Note:
-- TODO 2, the state: step 2's number in and out, and the pairing, one field, state_source.
+- TODO 2: step 2's state size, in and out, and the state_source.
 - [ask the room, hands up] Who tried a wrong one first, and read the message?
 - The answer is state_out.
 - audio is no output at all, and audio_out is streamed audio, not state.
-- Create refuses both, and says why, by name.
-- Leave it out, and create refuses that too: a state input needs a source.
-- With the pair in place, anira runs the inferences one after another: each needs the state before it.
+- Create refuses both, and says why.
+- With the pair in place, anira runs the inferences one after another: each needs the state of the one before.
 
 ---
 
@@ -338,19 +331,13 @@ if (offline) {   // <- 3. solution: a bounce, wait for the result
 ```
 
 Note:
-- TODO 3: where the main thread and the audio thread talk to anira.
-- Above this code, given: the constructor reads the model file, drops its comments, builds the pipeline and handler.
-- A pipeline, the class from the architecture slide: what one handler runs, here the one model alone.
-- Blank 1, the host's promise in the contract: why 1 and not 512? [pause]
-- Remember the loop point from the prepare chapter: the largest block is not the only one.
-- And the check itself sends blocks of 512 first, then changing sizes, one of them a single sample.
-- prepare is given too, and the line below keeps the plan report's measured time.
-- Blank 2: the latency of output slot 0, audio_out, the first output in the file.
-- On this machine get_latency returns 5295 [say: fifty-two ninety-five], Fares's number: it covers any block up to 512.
-- Yours follows your machine's budget.
-- Blank 3, offline, a bounce: process_wait with ANIRA_WAIT_FOREVER waits for every result.
-- Blank 4, live, in the callback: process over the block, in place.
-- The check runs offline first, where nothing is missed, so the comparison is exact, then once live.
+- TODO 3: where our plugin talks to anira.
+- Blank 1, the host's blocks: why 1 and not 512? [pause]
+- Any block size may come, down to a single sample, and the check sends exactly that.
+- Blank 2: the latency of output slot 0, audio_out.
+- On this machine that is 5295 samples [say: fifty-two ninety-five]; yours depends on your machine.
+- Blank 3, offline, a bounce: process_wait waits for every result.
+- Blank 4, live, in the callback: process never waits.
 
 ---
 
@@ -377,15 +364,12 @@ Note:
 <div class="cards-note">At 48 kHz the plugin asks first: a 44.1 kHz model, no resampler. <strong>Process anyway</strong> plays it as it is.</div>
 
 Note:
-- [before: step09_exercise_Standalone built, interface at 48 kHz, as prepared at slide 1]
-- prepare's plan report, one row per plan.
-- Budget equals measured: the max of the last four warm-up runs.
-- They differ only when the budget is given by hand, in milliseconds.
-- The median sits right under the max: the times hardly spread.
-- Four inferences, because the first four already agreed: within 20 percent of their median.
-- Fares's slide said 12.7 ms, on his machine: either budget takes two callbacks, so the same latency.
-- Over 1 inference: the state keeps the runs in order, one at a time.
-- Try nonetheless plays a not-real-time model all the same, dropouts and clicks included.
+- [before: step09_exercise_Standalone built, interface at 48 kHz]
+- This is what prepare measured on this machine, before the first block.
+- Budget and measured are the same: the slowest of the last four warm-up runs.
+- The warm-up stopped after four runs, because they already agreed.
+- A load of 28 percent: comfortable.
+- A model that is not real-time is held back, until you press Try nonetheless.
 - [ask the room] Your check printed yours: anyone marginal, or not real-time?
 - [if time: open step09_exercise_Standalone at 48 kHz: the rate ask, Process anyway, then report]
 - [in the demo] The window asks at any rate but 44.1 kHz, as step 8 did at 48: no resampler.
@@ -404,6 +388,7 @@ Note:
 </div>
 
 Note:
+- In two files, we replaced steps 3, 6 and 7.
 - Gone: the ring buffer, the worker, the latency arithmetic, and step 2's state copy.
-- And step 7's check passes, with anira's latency instead of ours.
+- And step 7's check still passes, with anira's latency instead of ours.
 - Next, step 10: we cut the model in the middle.

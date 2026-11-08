@@ -166,7 +166,7 @@ Note:
 
 <div class="tag">anira · Prepare</div>
 
-## What <code>prepare</code> does.<br><span class="then">Load the models, allocate the buffers.</span>
+## What else <code>prepare</code> does.<br><span class="then">Load the models, allocate the buffers.</span>
 
 <div class="statement-points">
   <div>Loads every model this build can run, pooled per process</div>

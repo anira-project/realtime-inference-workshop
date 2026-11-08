@@ -26,8 +26,8 @@ Note:
 
 Note:
 - Here are the six things again that we built by hand in part 1.
-- Inference: which model, which engine, which tensors, all defined in model.json.
-- Benchmarking: the worst-case execution time is declared in our contract.
+- Inference: which model, which engine, which tensors, now all defined in model.json.
+- Benchmarking: the worst-case execution time is declared in our contract.json.
 - Real-time safety is built into anira's design.
 - Threading is handled by anira too: one thread pool, from the anira context.
 - Latency: anira calculates it, and we only read it.

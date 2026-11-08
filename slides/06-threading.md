@@ -24,13 +24,13 @@ Note:
 
 Note:
 - Now we have 2 threads
+- We move the audio between the threads with thread safe ring buffers.
 - Audio thread, which only moves the samples. It pushes its whole sample blocks into `m_input` and takes samples out of `m_output`, one at a time, nothing else
 - Worker thread spins on `try_pop` the whole time, and runs the model as soon as a whole block is available. 
-- The now we use thread safe ring buffers.
 - Our input ringbuffer has the capacity of one model block again, like in step 3
-- `m_output` starts with the prefill again, like in step 3, but this now bigger then in our synchronous case in step 3. We now take our max inference time into account. 
-- So our output ringbuffer needs a larger capacity.
-- Click: We solve 2 problems:
+- `m_output` starts with the prefill again, like in step 3, but this now bigger then in our synchronous case in step 3. We now need to take our max inference time into account. 
+- So our output ringbuffer needs a larger capacity now.
+- Click: With this set up we solve the 2 problems:
 - Its own clock, step 4: even a typical forward pass of 13 ms is longer than our 11.6 ms callback. On the worker that is fine, it has the time of the prefill
 - Its own rules, step 5: the engine allocates and locks. On the worker that is allowed; the audio thread stays real-time safe and never waits, never overloaded
 ---
@@ -161,8 +161,8 @@ cmake --build --preset release --target step06_exercise
 Note:
 - First: make sure your number from step 4 into `k_max_inference_ms` in `steps/common/inference_time.h`, if not done yet
 - Then define the prefill in `prepare`. This is step 3's, plus the max inference time
-- Set up the audio thread, push the host’s samples in, pop the model’s samples out
-- Then set up the worker thread: collect a full block, run the model, push the result back, without waiting 
+- Set up the audio thread.
+- Then set up the worker thread.
 - `main.cpp` in steps/06_threading/exercise, build commands on the slide
 - The biggest task so far, 10 minutes
 - Solution is in the `solution` folder
@@ -227,9 +227,8 @@ Note:
 - Same job as step 3's `process_block`, minus the engine
 - host samples are pushed into `m_input` with try_push, one sample at a time
 - model samples popped out of `m_output`, try_pop, one sample at a time
-- If the model is late two things can happen.
 - If `try_push` fails: The rest of the block is lost. We count it in `m_unpushed` and write as many zeros into the output buffer.
-- If `try_pop` fails: we need to catch up on that time later, so we count it in `m_debt`
+- If `try_pop` fails: The model is late. We need to catch up on that time later, so we count it in `m_debt`
 - This makes sure we stay time aligned, even if the worker is late.
 
 ---

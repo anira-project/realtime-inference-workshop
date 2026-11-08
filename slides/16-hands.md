@@ -133,8 +133,7 @@ Note:
 </div>
 
 Note:
-- And here is what's nice about anira.
-- Once the configs are in place, we just register our handlers.
+- This is where anira pays off: with the configs ready, all we do is register the handlers.
 - Four for the webcam models on the camera thread, one for the audio model on the audio thread.
 - All five share the same thread pool.
 - [point at the middle] And our message thread syncs the detection with the audio thread, to control the latents.

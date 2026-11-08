@@ -14,13 +14,25 @@ You need git, CMake 3.22 or newer, and a C++17 compiler.
 
 - **macOS**: Xcode or the Command Line Tools (`xcode-select --install`), and CMake (`brew install cmake`).
 - **Windows**: Visual Studio 2022 with the *Desktop development with C++* workload, and CMake 3.30 or newer.
-- **Linux**: `gcc` or `clang`, CMake, and what JUCE needs:
+- **Linux**: `gcc` or `clang`, CMake, and what JUCE needs. Debian and Ubuntu:
 
   ```bash
   sudo apt install build-essential pkg-config cmake git libasound2-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev libxcomposite-dev libxrender-dev libxi-dev libfreetype-dev libfontconfig-dev libopencv-dev
   ```
 
-  `libopencv-dev` is for the camera in the last step; without it the step still builds, with the mouse instead of a hand.
+  Fedora:
+
+  ```bash
+  sudo dnf install gcc-c++ make pkgconf-pkg-config cmake git alsa-lib-devel libX11-devel libXext-devel libXrandr-devel libXinerama-devel libXcursor-devel libXcomposite-devel libXrender-devel libXi-devel freetype-devel fontconfig-devel opencv-devel
+  ```
+
+  Arch:
+
+  ```bash
+  sudo pacman -S --needed base-devel cmake git alsa-lib libx11 libxext libxrandr libxinerama libxcursor libxcomposite libxrender libxi freetype2 fontconfig opencv
+  ```
+
+  OpenCV (`libopencv-dev`, `opencv-devel`, `opencv`) is for the camera in the last step; without it the step still builds, with the mouse instead of a hand.
 
 ### 2. Clone, configure, build
 

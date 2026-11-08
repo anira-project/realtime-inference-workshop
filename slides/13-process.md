@@ -105,19 +105,13 @@ Note:
     <text x="820" y="520" class="st-caption">state_in ← state_out</text>
     <text x="820" y="556" class="st-caption">the declared pair swaps around each inference, no copy</text>
   </g>
-  <!-- reset: on the audio thread, before the first pre_process of a new stream -->
-  <g class="fragment" data-fragment-index="6">
-    <rect class="ov-pill stage" x="760" y="132" width="120" height="56" rx="8"/><text x="820" y="166" class="st-text">reset</text>
-    <text x="820" y="222" class="st-caption">a new stream</text>
-    <path class="ov-flow state" d="M820 126 V106 H385 V126" marker-end="url(#st-arrow)"/>
-  </g>
   <!-- drawn last, so the queue line passes behind it -->
   <g class="fragment" data-fragment-index="1">
     <text x="600" y="222" class="st-caption on-audio">a slot, stamped</text>
   </g>
 </svg>
 
-<div class="cards-note">The defaults are part 1's push and pop. Fill a phase for more, like the FFT from the start: in <code>before_inference</code>, on the model's window. <code>reset</code> starts a new stream.</div>
+<div class="cards-note">The defaults are part 1's push and pop. Fill a phase for more, like the FFT from the start: in <code>before_inference</code>, on the model's window.</div>
 
 Note:
 - anira does all of this automatically in the process callback, and
@@ -127,7 +121,6 @@ Note:
 - After the engine, after_inference runs on the same inference thread: there we can postprocess the model's output, for example the inverse FFT. Then the slot goes back to the audio thread
 - There post_process writes the result into the output ring, and the host block comes out of it. Like pre_process it runs on the audio thread and has to be real-time safe
 - But where is the state handled? Automatically: anira binds the state pair before before_inference and swaps it after after_inference, no copy, so both stages see it
-- And finally reset: before the first block of a new stream, after prepare or after a reset of the handler, it runs on the audio thread right before pre_process, so it has to be real-time safe too. There our stage starts its own history over, an overlap buffer or a filter. The model's state pair anira sets to zero by itself
 
 ---
 

@@ -66,7 +66,7 @@ Note:
 - contract.json defines how the model runs; it is complete, and we look into it in a second.
 - And the context: we use its defaults, so the thread pool is half the number of logical cores.
 - [click] Then the three calls: create, prepare and process.
-- Create runs in the constructor and is given: the model goes into a pipeline, the handler on top.
+- Create is already done for you, in the constructor.
 - In prepare you fill two blanks: tell the contract the host's blocks, and read back the latency.
 - In process you fill two more: one call per callback, live or offline.
 - The check runs process offline and waits for each result.

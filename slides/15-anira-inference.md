@@ -59,7 +59,8 @@ Note:
 <span class="fragment rows-focus"></span>
 
 Note:
-- What is left: fill gaps in the configs on top and in the three calls below:
+- Well, of the three config files, we left only one with gaps: model.json.
+- And a few blanks in the three calls below.
 
 - First, let's define the three configuration files.
 - model.json has gaps for you: the tensor sizes, and how to handle the state.

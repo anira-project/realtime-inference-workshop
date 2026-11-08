@@ -71,7 +71,7 @@ Note:
     <text x="385" y="194" class="st-caption">a window out of the ring</text>
     <line class="ov-flow strong" x1="470" y1="140" x2="510" y2="140" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill tensor" x="510" y="112" width="180" height="56" rx="8"/><text x="600" y="146" class="st-text">model tensor in</text>
-    <text x="600" y="194" class="st-caption">a slot, stamped</text>
+    <text x="588" y="194" class="st-caption right">a slot, stamped</text>
   </g>
   <g class="fragment" data-fragment-index="2">
     <path class="ov-flow strong" d="M600 168 V380" marker-end="url(#st-arrow)"/>
@@ -84,7 +84,7 @@ Note:
     <path class="ov-flow strong" d="M1040 380 V168" marker-end="url(#st-arrow)"/>
     <text x="1056" y="262" class="st-caption left">the slot, back</text>
     <rect class="ov-pill tensor" x="945" y="112" width="190" height="56" rx="8"/><text x="1040" y="146" class="st-text">model tensor out</text>
-    <text x="1040" y="194" class="st-caption">the next stamp</text>
+    <text x="1052" y="194" class="st-caption left">the next stamp</text>
     <line class="ov-flow strong" x1="1135" y1="140" x2="1180" y2="140" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="1180" y="112" width="170" height="56" rx="8"/><text x="1265" y="146" class="st-text">post_process</text>
     <text x="1265" y="194" class="st-caption">the result into the ring</text>
@@ -95,8 +95,7 @@ Note:
   </g>
   <g class="fragment" data-fragment-index="3">
     <path class="ov-flow state" d="M880 444 V482 H760 V444" marker-end="url(#st-arrow)"/>
-    <text x="820" y="470" class="st-caption">state_out → state_in</text>
-    <text x="820" y="530" class="st-caption">the declared pair swaps around each inference, no copy</text>
+    <text x="896" y="478" class="st-caption left">state_out → state_in, swapped around each inference, no copy</text>
   </g>
 </svg>
 

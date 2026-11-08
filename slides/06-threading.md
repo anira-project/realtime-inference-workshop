@@ -70,7 +70,6 @@ Note:
     <div class="given-label">Helpers</div>
     <div class="given-folder">common/helpers/ · CMake</div>
     {{FILE:onnx_engine.h}}
-    {{FILE:host.h|new}}
     {{FILE:threadsafe_ring_buffer.h|new}}
     {{FILE:worker_thread.h|new}}
   </div>
@@ -83,7 +82,7 @@ Note:
 
 Note:
 - Still the model, signals and engine
-- New: `host.h`, how long one block lasts: step 3's host loop sleeps one host block long after every callback, like an audio device
+- New in `main`: step 3's host loop sleeps one host block long after every callback, like an audio device
 - New: `ThreadSafeRingBuffer`, step 3's ring buffer safe between two threads, on moodycamel, fetched by CMake
 - New: `WorkerThread`, `start` and `stop` the worker thread
 
@@ -91,7 +90,7 @@ Note:
 
 <!-- .slide: data-visibility="hidden" -->
 
-<div class="tag">Helpers: <code>host.h</code></div>
+<div class="tag">Exercise: <code>main.cpp</code></div>
 
 ## The host <span class="then">A DAW, minus the DAW, at audio rate.</span>
 
@@ -109,7 +108,7 @@ for (size_t start = 0; start < buffer.size(); start += 512) {
 Note:
 - A DAW without the DAW: it calls your callback block by block
 - Overwrite the samples in place, like an audio callback
-- There is a sleep after every callback, one block of audio, 11.6 ms. `block_duration()` from `host.h`
+- There is a sleep after every callback, one block of audio, 11.6 ms: `block_duration()`, above `main`
 - Without it the loop calls the audio thread as fast as it can, the worker could never keep up
 - Block size is just a parameter: 512 for the whole first part
 

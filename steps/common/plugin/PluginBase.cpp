@@ -14,8 +14,8 @@ constexpr const char* k_mix_id = "mix";
 constexpr PluginBase::Hold k_not_realtime{
     "Not real-time",
     "anira measured this model slower than real time on this machine: live, it would drop "
-    "out, and you would hear clicks. Run anyway plays it nonetheless.",
-    "Run anyway, with dropouts",
+    "out, and you would hear clicks. Try nonetheless plays it all the same.",
+    "Try nonetheless",
     true};
 
 // The host's rate is not the model's 44.1 kHz (steps 9 and 10): the model

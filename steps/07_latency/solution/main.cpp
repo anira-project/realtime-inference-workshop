@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -17,7 +18,6 @@
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/checks/step07.h"
-#include "common/helpers/host.h"
 #include "common/helpers/onnx_engine.h"
 #include "common/helpers/ring_buffer.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
@@ -201,6 +201,14 @@ private:
     size_t m_latency = 0;
     float m_mix = 1.0f;
 };
+
+// How long one block of audio lasts, what a device waits between two
+// callbacks: 11.6 ms for 512 samples at 44.1 kHz. CI configures the host
+// slower (WORKSHOP_HOST_SLOWDOWN): a shared runner does not keep up with real time.
+static std::chrono::nanoseconds block_duration(size_t block_size, double sample_rate) {
+    return std::chrono::nanoseconds(static_cast<long long>(
+        1e9 * WORKSHOP_HOST_SLOWDOWN * static_cast<double>(block_size) / sample_rate));
+}
 
 int main() {
     try {

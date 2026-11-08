@@ -69,6 +69,7 @@ jobs:
         shell: bash
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWORKSHOP_JUCE=ON -DWORKSHOP_CHECK_EXERCISES=ON \
+            -DWORKSHOP_HOST_SLOWDOWN=4 \
             ${{ runner.os == 'Linux' && '-DWORKSHOP_OPENCV_CAMERA=ON' || '' }}
 
       # A bare --parallel is an unbounded make -j: on the smaller runners the
@@ -82,10 +83,8 @@ jobs:
       # is what we say it is. A non-zero exit fails the run.
       - name: Run the solutions
         shell: bash
-        # A shared runner does not keep up with real time; four times slower
-        # still checks every alignment and latency claim (host.h)
-        env:
-          WORKSHOP_HOST_SLOWDOWN: 4
+        # Steps 6 and 7 pace their host four times slower here, configured
+        # above: a shared runner does not keep up with real time
         run: |
           for binary in step01_solution step02_solution step03_solution step04_solution step06_solution step07_solution step09_solution_check step10_solution_check; do
             path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)
@@ -108,8 +107,6 @@ jobs:
       # match, and no exercise was committed filled in.
       - name: Filled-in exercises pass
         shell: bash
-        env:
-          WORKSHOP_HOST_SLOWDOWN: 4
         run: |
           for binary in step01_exercise_filled step02_exercise_filled step03_exercise_filled \
                         step06_exercise_filled \

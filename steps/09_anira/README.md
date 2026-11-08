@@ -9,7 +9,6 @@
 - `steps/common/assets/models/rave/model_forward.onnx` — the model as in step 1: audio plus a state tensor in, audio plus the new state out.
 - [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named and their roles given. Every `?` is a blank: replace it with the value, a number as it is (`2048`, no quotes), a name in its quotes (`"audio"`). The comment next to each blank says which TODO it belongs to and where the value comes from.
 - [`exercise/contract.json`](exercise/contract.json) — how it runs: the budget measured at prepare on this machine (`"budget": "measured"`), warm-up runs until their times are stable (`"warmup": "until_stable"`), the input block on a miss (`"on_miss": "bypass"`). Complete.
-- [`common/helpers/host.h`](../common/helpers/host.h) — the fake host from step 6, pacing its callbacks.
 - [`common/helpers/support.h`](../common/helpers/support.h) — `report_with_latency`: the step 7 comparison, with the late callbacks left out.
 - anira, fetched and built by CMake ([`cmake/anira.cmake`](../../cmake/anira.cmake)), with ONNX Runtime built in. The first configure clones it and builds it once; a couple of minutes.
 
@@ -44,7 +43,7 @@ In the window:
 
 - **report**, top right, shows what `prepare` measured on your machine: the budget, the measured and the median inference time, the warm-up, and the load.
 - The load is the inference time over the audio one inference produces. Its verdict: comfortable below 75 %, marginal below 100 %, else not real-time.
-- A model that is not real-time does not play live; the overlay says so. **Run anyway** plays it nonetheless, with dropouts and clicks. A bounce always processes: it waits for every result.
+- A model that is not real-time does not play live; the overlay says so. **Try nonetheless** plays it all the same, with dropouts and clicks. A bounce always processes: it waits for every result.
 - A sample rate other than 44.1 kHz asks first too. The model is trained at 44.1 kHz and would sound higher or lower, and the plugin has no resampler. **Process anyway** plays it as it is.
 - If both apply, the window asks for one, then for the other.
 

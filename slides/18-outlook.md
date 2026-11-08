@@ -6,11 +6,9 @@ v3: inline execution, GPU, NPU, zero copy
 <!-- kind: talk -->
 
 Note:
-- We have reached the outlook.
-- We covered a lot today.
-- As we said, the final anira v3 comes out at the end of this month.
-- It has a few more features that were not part of this workshop.
-- Here they are, so you know what is coming.
+- [before: straight on from step 11's done slide, no break]
+- All four are planned for the final v3, due this month.
+- Zero copy, the frame that stays where it is, comes last; first, the latency and inline execution.
 
 ---
 
@@ -28,15 +26,16 @@ Note:
   <div class="lat-part total">latency<strong>4784</strong></div>
 </div>
 
+<div class="cards-note">host blocks of exactly 512 · declared 1 to 512, as in step 9: 5295</div>
+
 <div class="lat-why">Run it on the audio thread, inside <code>process</code>: does anira support that?</div>
 
 Note:
-- First: we want to lower the latency further.
-- Look at the sum anira computed at prepare.
-- 1536 for the block adaptation, 1024 for the inference, 2224 for the model itself.
-- A big part comes from moving the inference to a separate thread.
-- If the engine is real-time safe and fast, we could skip that trip.
-- Then the inference runs directly on the audio thread.
+- Can we lower the latency further?
+- This is step 7's sum, host blocks of exactly 512; step 9 declared one to 512, hence its higher number.
+- The middle term, step 6's worker, is about a fifth: it is there because the pool runs the model.
+- [pause] A fast, real-time safe engine could skip the pool and run the model in the callback itself.
+- Step 4 tells us when that would fit at all.
 
 ---
 
@@ -53,21 +52,20 @@ Note:
     <div class="deadline-axis"><span>callbacks 1–3 · only copy</span><span>callback 4 · runs the model</span></div>
   </div>
   <div class="deadline fits fragment" data-fragment-index="2">
-    <div class="deadline-budget" style="bottom: calc(40px + (100% - 40px) * 0.97)"><span>host block 2048 · 46.4 ms</span></div>
+    <div class="deadline-budget" style="bottom: calc(40px + (100% - 40px) * 0.97)"><span>host block 2048 · 46.4 ms · worst case 18 ms ✓</span></div>
     <div class="deadline-bars"><i class="runs" style="--i:0;height:33.5%"><span>forward pass<br>13 ms ✓</span></i></div>
     <div class="deadline-axis"><span></span><span>every callback · runs the model</span></div>
   </div>
 </div>
 
 Note:
-- Back to part 1, step 4.
-- [click] With host blocks of 512, every fourth callback completes a model block and runs the whole forward pass.
-- That is 13 ms in a callback of 11.6 ms.
-- Too late.
-- [click] With host blocks of 2048, every callback runs the model.
-- 13 ms in 46.4 ms.
-- It fits, with plenty of headroom.
-- In that case it makes sense to run the model on the audio thread.
+- Back to part 1, step 4, with Lina's numbers from this morning.
+- [click] Host blocks of 512: too long for the fourth callback, and 13 ms is only the average.
+- [click] With host blocks of 2048, one whole model block, even Lina's worst case of 18 ms fits easily.
+- Yours too: if step 4's header holds your worst case, the static assert already proved it under 46.4 ms.
+- So with a host block the size of the model block, the model could run inline.
+- Could, because step 5 still stands: the engine has to keep the audio thread's rules.
+- Two conditions, then, the rules and the time: the next slide checks both.
 
 ---
 
@@ -77,7 +75,7 @@ Note:
 
 <div class="inline-tree">
   <div class="it-checks">
-    <div class="it-check fragment" data-fragment-index="1"><span class="it-box">✓</span><div><b>real-time safe</b><small>the engine declares it: <code>REALTIME_SAFE</code></small></div></div>
+    <div class="it-check fragment" data-fragment-index="1"><span class="it-box">✓</span><div><b>real-time safe</b><small>the engine declares it: <code>REALTIME_SAFE</code> · none of the built-in engines does, your own can</small></div></div>
     <div class="it-check fragment" data-fragment-index="2"><span class="it-box">✓</span><div><b>fits into the callback</b><small>measured at <code>prepare</code>, within <code>inline_ratio</code> of the block period</small></div></div>
   </div>
   <div class="it-example fragment" data-fragment-index="3">Host blocks of 2048, the model's block size: nothing to adapt</div>
@@ -95,21 +93,20 @@ Note:
   </div>
 </div>
 
+<div class="cards-note">Planned contract key: <code>execution: worker | inline | auto</code>, fixed at <code>prepare</code></div>
+
 <div class="cards-note">Not yet: it comes with the final v3 release, together with GPU and NPU accelerators. Until then every inference runs on the pool.</div>
 
 Note:
-- That option comes with the final v3: inline execution.
-- [click] First condition: you declare the engine real-time safe, the flag REALTIME_SAFE.
-- [click] Second: it fits into the callback.
-- prepare measures that, within inline_ratio of the block period.
-- [click] Our example, host blocks of 2048.
-- Nothing to adapt on either side.
-- Both conditions met: the audio thread runs it.
-- The latency is only the model's own, 2224.
-- Otherwise the pool runs it, as today: 4272.
-- Almost half the latency.
-- Depending on your use case, that can matter a lot.
-- In the contract this is execution: worker, inline or auto, fixed at prepare.
+- [click] First condition: real-time safe is the engine's promise; anira cannot check it.
+- None of the built-in engines sets it: step 5 showed why, for ONNX Runtime.
+- Your own engine can: a small model behind Fares's four calls, written to step 5's rules.
+- [click] Second, it fits: a planned inline ratio caps the model's share of the callback.
+- [click] Both met, the audio thread runs it; if either fails, the pool: one host block of waiting.
+- [pause] Inline is almost half the latency: 50 ms instead of 97.
+- On a mix bus that hardly matters; playing live, it does.
+- A planned contract key, execution, picks the mode: worker, inline or auto; you just saw auto.
+- In that plan, a forced inline that does not fit is refused at prepare.
 
 ---
 
@@ -128,16 +125,16 @@ Note:
 <div class="cards-note">The provider is the engine's twin: one plan per engine and provider, picked at prepare.</div>
 
 Note:
-- Next: memory beyond the CPU.
-- Today every tensor lives in host memory.
-- That is what you ran today.
-- With the final v3 a tensor says where it lives: CPU, GPU or NPU.
-- So you can move the inference to a GPU or an NPU, to make it faster.
-- Or, if your data is already on the GPU, you run the inference there directly.
-- GPU through CUDA, Metal, Vulkan or GL.
-- NPU through the hardware back ends of LiteRT and ExecuTorch.
-- The provider is picked with the engine.
-- One plan per engine and provider, at prepare.
+- Where the memory is: today every tensor lives in host memory, the memory of the CPU.
+- Beside pointer, dtype, shape and strides, a tensor names where its memory is.
+- With the final v3 that may be a buffer on the GPU.
+- Why move it?
+- Either the inference is faster there, or the data already is, as with a camera frame.
+- The NPU card differs: a tensor cannot live on an NPU; anira reaches it through a provider.
+- A provider is the engine's way onto the hardware, ONNX Runtime with CUDA or CoreML.
+- The delegates on the card are the same thing: a hardware back end.
+- One plan per engine and provider, as Fares said.
+- alpha.3 already runs a device provider, from host memory: the engine's runtime moves the bytes.
 
 ---
 
@@ -159,24 +156,21 @@ Note:
 <div class="combos-invite fragment">Measured some of these already? We would like to compare notes.</div>
 
 Note:
-- That gives us many options: hardware, execution provider, engine.
-- [click] Which path is fastest?
-- Each line here is a question, not an answer.
-- After v3.0 we will measure these combinations in our research.
-- For audio, and also for video.
-- [click] For audio, most work today runs on the CPU.
-- Those paths meet real time.
-- On the GPU it is barely studied.
-- There are a few examples.
-- [click] If you have run inference on the GPU already, we would like to hear from you.
-- Find us during the conference, and let's compare notes.
-- When the paper is out, we will post it on our channels.
+- Every line here is a possible path, and a question, not an answer.
+- [click] The marked chains are examples of what we benchmark after v3.0, for audio and video.
+- [click] For audio, most work today runs on the CPU, and those paths meet real time.
+- You measured one of them yourself today: ONNX Runtime on the CPU.
+- On the GPU: a few examples, no systematic comparison that we know of.
+- [ask the room, hands up] Who has run a model on the GPU inside a plugin?
+- [click] If you have, find us during the conference.
+- When that benchmark is published, we post it on our channels.
+- One likely reason GPUs are rare in audio: the data's trip there and back; the next slide counts it.
 
 ---
 
 <div class="tag">Zero copy</div>
 
-## The frame stays where it is.<br><span class="then">Only the latents cross over.</span>
+## The frame stays where it is.<br><span class="then">Only the landmarks cross over.</span>
 
 <div class="zc">
   <div class="zc-row">
@@ -191,32 +185,31 @@ Note:
       <div class="lat-part total">moved<strong>≈ 2 GB/s</strong></div>
     </div>
   </div>
-  <div class="zc-row fragment">
+  <div class="zc-row fragment" data-fragment-index="1">
     <div class="zc-label">Zero copy</div>
     <div class="lat-sum zc-sum">
-      <div class="lat-part">8 latents<small>8 × 4 B</small><strong>32 B</strong></div>
+      <div class="lat-part">landmarks<small>2 hands × 21 × 3 × 4 B</small><strong>504 B</strong></div>
       <div class="lat-plus">×</div>
       <div class="lat-part">frames<small>a second</small><strong>30</strong></div>
       <div class="lat-plus">=</div>
-      <div class="lat-part total">moved<strong>960 B/s</strong></div>
+      <div class="lat-part total">moved<strong>≈ 15 KB/s</strong></div>
     </div>
   </div>
 </div>
 
-<div class="cards-note">The camera texture is the hand tracker's tensor on the GPU. Only what the decoder on the CPU needs crosses over: about two million times less.</div>
+<div class="cards-note fragment" data-fragment-index="1">The camera texture is the hand tracker's tensor on the GPU. Only its landmarks cross over to the CPU: about 130,000 times less.</div>
 
 Note:
-- The last feature: zero copy.
-- Take step 11 with a 4K camera at 30 frames a second.
-- One frame is 3840 by 2160 pixels, 4 bytes each: 33 MB.
-- Today every frame is copied from the GPU to the CPU.
-- For a GPU plan, back again.
-- That is about 2 GB every second, before the model has done anything.
-- [click] With zero copy, the texture on the GPU is the tensor.
-- We pass a pointer, nothing is copied.
-- Only the eight latents cross over to the decoder on the CPU.
-- Under a kilobyte a second.
-- That removes the overhead of the copies: the time and the memory bandwidth.
+- Zero copy, the last feature: in step 11 every frame is copied to the CPU, then to the engine.
+- Take a 4K camera that can hand over each frame as a GPU texture.
+- Today its pixels are copied out of the capture buffer for the tracker; a GPU plan copies them up again.
+- [pause] About 2 gigabytes every second, bytes, not bits, before the model has done anything.
+- [click] Zero copy: that camera texture feeds the tracker's tensor on the GPU; a handle travels, no pixels.
+- That is what a tensor's location is for.
+- Only the landmarks cross over, 21 points per hand: your mapping turns them into latents on the CPU.
+- About 15 kilobytes a second instead of 2 gigabytes.
+- Both costs of the copy go away: the time and the memory bandwidth.
+- So much for the outlook; one slide on today's code.
 
 ---
 
@@ -230,15 +223,14 @@ Note:
   <div>The real-time rules do not change: the pool runs the model, inline only an engine that declares itself real-time safe</div>
 </div>
 
+<div class="cards-note">Start today on v3.0.0-alpha.3: the calls stay, details may still move until 3.0, the changelog says how.</div>
+
 Note:
-- All of this comes with the same API as today.
-- The configs and the three calls stay as you wrote them.
-- A plan gains a provider, a tensor gains a location.
-- The real-time rules stay.
-- The pool runs the model.
-- Only an engine declared real-time safe runs inline.
-- So you do not have to wait.
-- Start with v3.0.0-alpha.3, the version from this workshop, right after ADC.
+- The configs and the three calls are meant to stay as you wrote them: create, prepare, process.
+- And the real-time rules from this morning do not change.
+- So you do not have to wait for 3.0: start on alpha.3, today's version, right after ADC.
+- Before then a pre-release may still rename a detail: the changelog says how, and you rebuild, as Fares said.
+- [pause] And behind you lies the day: the model by hand, on anira, taken apart, and played with your hands.
 
 ---
 
@@ -258,8 +250,10 @@ Note:
 </div>
 
 Note:
-- Thank you very much for attending this workshop.
-- The two QR codes: the workshop repository, with every solution, and anira.
-- We would love your feedback on this workshop.
-- Find us during the next three days.
+- Thank you very much for spending this day with us.
+- Thanks to Lina and Fares, and to everyone who walked around and helped.
+- Left, the workshop repository: every step, every solution and these slides; right, anira.
+- [pause, let them scan]
+- Your feedback helps us: open an issue there, or find us in the next three days.
+- [ask the room, Lina and Fares come up, the QR codes stay up] Questions?
 - Enjoy the conference.

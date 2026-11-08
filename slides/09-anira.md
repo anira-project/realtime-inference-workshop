@@ -7,9 +7,10 @@ Replacing the hand-built parts
 <!-- part: anira -->
 
 Note:
-- Welcome back, this is part 2.
-- In part 1 you built every piece by hand, for one plugin on one track.
-- In part 2 we look at anira, the library that replaces those hand-built parts.
+- Welcome back.
+- Lina said it before the break: you'd write all of it again for every new model.
+- That is anira's job.
+- What it is, where it comes from; then Fares shows the inside; then you build with it.
 
 ---
 
@@ -28,11 +29,16 @@ Note:
 </div>
 
 Note:
-- Here is part 1 in one picture: six things real-time inference needs.
-- Inference, benchmarking, real-time safety, threading, minimal latency, and real-time guarantees.
-- We solved each one the simple way: one engine, one machine, one plugin instance.
-- [click] anira covers all six, and often improves on our simple implementations. We will show that soon.
-- First, what anira is and where it comes from.
+- Here is part 1 in one picture.
+- Inference: the model's state, carried by hand.
+- Benchmarking: twenty passes on your laptop, and a number typed into a header.
+- Real-time safety: run once, on the step 5 demo, never on your plugin.
+- Threading: and what happens when one session runs eight instances?
+- Minimal latency: right only for a host block of 512.
+- Real-time guarantees: that header number, `k_max_inference_ms` [say: k-max-inference-m-s], is the budget on every user's machine too.
+- Nobody measures there, and a miss becomes a dropout.
+- [pause, then click] Step 9, your first anira exercise, shows you how, on this same picture.
+- So: what is anira?
 
 ---
 
@@ -85,12 +91,15 @@ Note:
 </div>
 
 Note:
-- anira is a C++ library.
-- You describe the model, and what the host promises.
-- anira takes care of threads, buffers and latency.
-- [click] It runs LibTorch, ONNX Runtime, LiteRT, ExecuTorch, or your own engine.
-- [click] On desktop, mobile, in the browser, and on boards like Bela.
-- [click] In plugins, standalone apps, Max/MSP, and on real-time video.
+- You write two files: model.json describes the model, contract.json how it runs.
+- The contract is what the host promises and what one inference may cost: Fares goes through it.
+- From those, anira does what you built in steps 3 to 7.
+- Underneath is one C ABI [say: C, A-B-I]: plain exported C functions, with C++ and TypeScript on top.
+- [click] Four built-in engines or your own; today we use ONNX Runtime, the engine of part 1.
+- LiteRT is TensorFlow Lite's new name: one runtime, two APIs, and anira builds with one of them.
+- ExecuTorch is the PyTorch runtime for phones and boards.
+- [click] It runs on all of these, from the browser via WebAssembly to a Bela board.
+- [click] Of the hosts, the last one, real-time video, is your step 11: a hand tracker.
 
 ---
 
@@ -105,11 +114,11 @@ Note:
 </div>
 
 Note:
-- anira started as a research project, but is now established in released products.
-- Here is a selection.
-- [click] Sonnox Oxford Drum Gate 2, which classifies drum hits by timbre.
+- anira started as a research project, and today it ships in released products.
+- [click] Sonnox Oxford Drum Gate 2 classifies drum hits by their timbre.
 - [click] Baby Audio SubCulture, a pitch-tracking bass enhancer.
 - [click] And Project LYDIA by Neutone, a pedal on a Raspberry Pi 5.
+- So how did we get here: not in one go.
 
 ---
 
@@ -120,9 +129,9 @@ Note:
 <div class="history">
   <div class="history-item current"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
   <div class="history-item later"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
-  <div class="history-item later"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
+  <div class="history-item later"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira v1 on stage</div></div>
   <div class="history-item later"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
-  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
+  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile · Web</div><div class="history-text">iOS, Android and the web</div></div>
   <div class="history-item later"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
   <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
 </div>
@@ -130,12 +139,12 @@ Note:
 <div class="history-ask fragment">Have you thought about many instances?<br>Every plugin opens its own real-time thread.<span>the sonible team, after the talk</span></div>
 
 Note:
-- How did we get here? Not in one go.
-- At ADC23 we showed a template with one inference thread per plugin.
-- That is the design you built in part 1.
+- The timeline runs from 2023 to the end of this month, and we stop five times.
+- First stop, ADC23: we showed a plugin template.
+- It is the design you built in part 1: a worker, a ring buffer each way, a prefill.
 - It worked, for one plugin.
-- [click] After the talk the sonible team asked us: have you thought about many instances?
-- Every plugin opens its own real-time thread.
+- [click] After the talk the sonible team asked: have you thought about many instances?
+- [pause, let them read the second line] A fair question, so let's look at what it means.
 
 ---
 
@@ -167,9 +176,13 @@ Note:
 </div>
 
 Note:
-- One plugin, one thread: eight instances on four cores make eight real-time threads.
-- Four of them have to wait, and their blocks come too late.
-- [click] A plugin cannot fix this, a library can: one thread pool for the whole process.
+- [ask the room, hands up] Who runs eight or more instances of one plugin in a session?
+- Then this picture is yours.
+- Each thread alone is fine, but together there are more real-time threads than cores.
+- They compete with each other and with the host's audio thread, so one waits and its block comes late.
+- [pause] Step 4 taught you the worst case decides, and it grows with every instance.
+- [click] So the fix has to live one level up, in the library.
+- The pool is sized by the cores, not by the instances: eight plugins, and still no more threads than cores.
 - That was anira v1.
 
 ---
@@ -181,16 +194,17 @@ Note:
 <div class="history">
   <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
   <div class="history-item current"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
-  <div class="history-item current"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
+  <div class="history-item current"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira v1 on stage</div></div>
   <div class="history-item later"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
-  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
+  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile · Web</div><div class="history-text">iOS, Android and the web</div></div>
   <div class="history-item later"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
   <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
 </div>
 
 Note:
-- That is what we presented at ADC24.
-- We published it as a paper at IS², where it won the Industry Award.
+- Back on the timeline, second stop: 2024, two entries.
+- First the paper at IS² [say: I-S-two], the Internet of Sounds symposium, where it won the Industry Award.
+- Then, in November, ADC24: anira v1 on stage, with the shared pool you just saw.
 
 ---
 
@@ -201,19 +215,20 @@ Note:
 <div class="history">
   <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
   <div class="history-item"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
-  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
+  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira v1 on stage</div></div>
   <div class="history-item current"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
-  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
+  <div class="history-item later"><div class="history-year">2026</div><div class="history-name">Mobile · Web</div><div class="history-text">iOS, Android and the web</div></div>
   <div class="history-item later"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
   <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
 </div>
 
 Note:
-- In July 2025 came v2.
-- It expanded anira from audio-to-audio to any kind of data.
-- So we support models which take control inputs next to the audio, like pitch and loudness.
-- One value per frame, instead of one per sample.
-- In v2, every input and output became a tensor, with its own shape and its own rate.
+- July 2025, v2.
+- [pause] Until then anira moved audio in and audio out, one block each.
+- With v2 a model can take control inputs next to the audio, like pitch and loudness.
+- Those come slower: a few values per block, not one per sample.
+- So every input and output became a tensor, with its own shape and its own rate.
+- Still float, and still no phone and no browser: the next two stops.
 
 ---
 
@@ -224,9 +239,9 @@ Note:
 <div class="history">
   <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
   <div class="history-item"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
-  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
+  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira v1 on stage</div></div>
   <div class="history-item"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
-  <div class="history-item current"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
+  <div class="history-item current"><div class="history-year">2026</div><div class="history-name">Mobile · Web</div><div class="history-text">iOS, Android and the web</div></div>
   <div class="history-item later"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
   <div class="history-item later upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
 </div>
@@ -234,11 +249,12 @@ Note:
 <div class="history-note">funded by the BMFTR since 2026</div>
 
 Note:
-- In 2026 we added WebAssembly support, so anira runs in the browser.
-- And we got public funding to develop anira further.
-- From an audio-only library to video, images and text.
-- With that came iOS and Android.
-- And a new design: v3.
+- 2026, and anira reaches phones and the browser.
+- In June came the browser, anira compiled to WebAssembly.
+- Nine days later, iOS and Android, still on v2.
+- [point at the note] anira is now publicly funded, [pause] by the German Federal Ministry of Research, Technology and Space.
+- The funding has a goal: video, images and text, not only audio.
+- v2 could not stretch that far, so we started a new design: v3.
 
 ---
 
@@ -270,13 +286,15 @@ Note:
 </div>
 
 Note:
-- v2 was built for audio plugins on the desktop, and that is where it reached its limits.
-- [click] v3 takes any data: audio, images and text.
-- [click] One C ABI at the core, and C++ and TypeScript sit on top of it.
-- [click] Two contracts: Hard for a stream, Async for jobs.
-- Async is not in this pre-release yet, it comes later.
-- Everything today is Hard.
-- [click] And one tensor type for CPU, GPU and NPU.
+- Four limits, four changes.
+- [click] Why ten dtypes [say: d-types]: an image comes as eight-bit integers, text as token IDs.
+- [click] The C ABI from the overview: both languages now sit on the same C functions.
+- [click] Two kinds of contract now, both written in contract.json.
+- Hard is the stream you know: blocks in and out, every callback.
+- Async is one job without a callback, an image for example.
+- [click] One tensor type that says where its memory lives, on the CPU or a GPU.
+- Today every tensor lives in CPU memory.
+- GPU and NPU, your laptop's neural engine, are the outlook chapter's topic.
 
 ---
 
@@ -287,16 +305,18 @@ Note:
 <div class="history">
   <div class="history-item"><div class="history-year">2023</div><div class="history-name">ADC23</div><div class="history-text">one inference thread per plugin</div></div>
   <div class="history-item"><div class="history-year">2024</div><div class="history-name">IS² paper</div><div class="history-text">anira, presented scientifically</div></div>
-  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira on stage</div></div>
+  <div class="history-item"><div class="history-year">2024</div><div class="history-name">ADC24</div><div class="history-text">anira v1 on stage</div></div>
   <div class="history-item"><div class="history-year">07/2025</div><div class="history-name">v2</div><div class="history-text">any tensor, not only audio</div></div>
-  <div class="history-item"><div class="history-year">2026</div><div class="history-name">Mobile</div><div class="history-text">iOS, Android and the web</div></div>
+  <div class="history-item"><div class="history-year">2026</div><div class="history-name">Mobile · Web</div><div class="history-text">iOS, Android and the web</div></div>
   <div class="history-item current"><div class="history-year">2026</div><div class="history-name">v3 pre-release</div><div class="history-text">one C ABI; what this workshop runs</div></div>
   <div class="history-item current upcoming"><div class="history-year">end of 11/2026</div><div class="history-name">v3.0</div><div class="history-text">the release</div></div>
 </div>
 
-<div class="history-note">Apache 2.0 · tanh lab, TU Berlin</div>
+<div class="history-note">Apache 2.0</div>
 
 Note:
-- Today you run a v3 pre-release. v3.0 ships at the end of November.
-- Now Fares shows you how anira works inside.
+- Last stop: today you run alpha 3, pinned in the workshop's CMake.
+- v3.0 is planned for the end of the month.
+- The licence is Apache 2.0: free to use in commercial products, like the three you saw.
+- That is the history; Fares, over to you for the inside.
 

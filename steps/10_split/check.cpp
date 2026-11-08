@@ -17,7 +17,6 @@
 #include "common/assets/target_split_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/checks/anira_report.h"
-#include "common/helpers/host.h"
 #include "common/helpers/support.h"
 
 // What the fake host does, in samples at its rate.
@@ -37,14 +36,13 @@ using Offsets = std::array<float, SplitProcessor::k_num_latents>;
 // The test signal through the processor, offline, with these offsets. `late`
 // collects where the miss policy filled a block: offline it has to stay empty.
 std::vector<float> run(SplitProcessor& processor, const Offsets& offsets, std::vector<size_t>& late) {
-    size_t position = 0;
-    return run_host(k_input_signal.data(), k_input_signal.size(), k_host.m_block_size,
-                    [&](float* samples, size_t num_samples) {
-                        if (processor.process(samples, num_samples, offsets, true) == ANIRA_MISSED) {
-                            late.push_back(position);
-                        }
-                        position += num_samples;
-                    });
+    std::vector<float> buffer(k_input_signal.begin(), k_input_signal.end());
+    for (size_t start = 0; start + k_host.m_block_size <= buffer.size(); start += k_host.m_block_size) {
+        if (processor.process(buffer.data() + start, k_host.m_block_size, offsets, true) == ANIRA_MISSED) {
+            late.push_back(start);
+        }
+    }
+    return buffer;
 }
 
 }  // namespace

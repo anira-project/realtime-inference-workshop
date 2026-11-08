@@ -175,14 +175,8 @@ Note:
 
 Note:
 - In anira every tensor - in or out - has a slot with a name and role
-- I.e. our input audio is a streamed tensor (it needs to be feed as a continuous stream with a time axis)
-
-
-- anira_tensor is a plain C struct: a data pointer, a dtype, a shape and strides.
-- The dtype codes are DLPack's, the standard that PyTorch and the other frameworks share, so int and bool fit, and so do token IDs.
-- The spec in the model file names each slot, its dtype, its axes and its role.
-- The axes have names, so anira knows which one is time and which one is channels, and adapts the host's blocks without guessing a layout.
-- Create checks the shapes and builds a slot per tensor. The host's blocks go through them in process.
+- I.e. our input audio is a streamed tensor named "audio_in". It's role is streamed because (it represents a continuous stream with a time axis)
+- We define the channel number as 1 and the fixed time window of 2048
 
 ---
 
@@ -201,9 +195,9 @@ std::vector<Ort::Value> m_outputs;  // audio, state
 ```
 
 Note:
-- Then the state. In part 1 it was declared as a size and two tensors in the engine, and that was all the code could say about it.
-- That the state output feeds the state input was declared nowhere: OnnxEngine::process copies it over, every block, by hand, 63,488 floats, and the order of the calls is ours to guarantee.
-- A TorchScript export can hide the state inside the model; an ONNX export cannot, so here it is ours.
+- Now recap how the state was handled in part 1
+- It was declared as a size and two tensors in the engine, and that was all the code could say about it.
+- That the state output feeds the state input was declared nowhere it was later implemented in the OnnxEngine::process call
 
 ---
 
@@ -234,14 +228,14 @@ Note:
 </div>
 
 Note:
-- In anira every tensor has a role, and state is one of them.
-- This is the whole declaration of our model, nothing left out. The dtype is not written: float32 is the default.
-- Streamed has a time axis and is consumed window by window.
-- Static is one value per run, like a gain or a conditioning vector.
-- State is a pair, declared once: state_out feeds state_in. Create resolves the pair and gives it its two buffers.
-- What happens with them is process's: after every run anira swaps them, what came out goes in next, no copy and no code of yours. The stages slide shows it.
-- The model's own latency is declared here too, on the output: 2224 samples. Prepare adds it to the latency the host is told.
-- The tensors are declared once, for every entry of the file: each engine's export has to take the state in and give it out, like our ONNX file.
+- In anira state is just another role, next to streamed
+- State tensors are declared as a pair:
+- Here state_out feeds state_in.
+- We can also see another information which we can provide in the anira ModelConfig:
+- That is whether a streamed output tensor has a latency
+- Appart from streamed and state anira also allows a third tensor role. Static tensors:
+- Static tensors keep the same value in every inference run until overwritten and then keep this value for the next inference. I.e. this can be some parameter that the user can tweak (i.e. the decay time in a reverb emulation neural network model)
+- The tensor specifications are known when the model is exported. So this is something that your data scientist can fill out for you ideally..
 
 ---
 
@@ -262,9 +256,13 @@ ProcessorExample m_processor{k_model};       // step 8: one processor per plugin
 ```
 
 Note:
-- Threads. In step 6 the worker is a member of the processor: one thread per processor, and in step 8 one processor per plugin instance.
-- One worker, two ring buffers, one engine: correct, but it does not scale. The host decides how many instances there are, so the threads grow with every instance it adds.
-- How that worker waits for work, and that the audio thread never waits for it, were two more decisions of the code. We look at them in Process.
+- Ok we have now defined our model
+- What else did we declare in our ProcessorExample
+- We have been declaring the worker thread
+- In our example one thread per processor, and in step 8 one processor per plugin instance.
+- But as Valentin already pointed out this does not scale well
+- And apart from that we have been using a "dirty" hot spinning loop on the worker thread which is burning our full cpu compute of one thread while waiting for data.
+- How is this handled by anira?
 
 ---
 
@@ -287,7 +285,6 @@ Note:
 - In step 6 we made two decisions without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
 - The timeline from step 6: between two runs the worker spins on try_pop the whole time, no sleep, no pause, one core at 100 percent, even while idle.
 - The audio thread only pushes and pops. If a sample is not there yet, it writes zeros for the rest of the callback and owes them: the debt.
-- Both were fixed in the code, the same for every instance.
 
 ---
 
@@ -321,13 +318,8 @@ Note:
 ```
 
 Note:
-- In anira there is one pool per process, and every instance queues into it.
-- Declared once, in the ContextConfig: how many threads, and how they wait for work while idle.
-- The first one sizes the pool, and every later one shares it; one asking for fewer threads shrinks it. The threads start with the first prepare and run until the last handler is destroyed.
-- Strictly, it is one pool per copy of anira: every instance of your plugin shares it, and another plugin that links its own anira has its own.
-- Here, ten instances, one pool, four threads. In the animation, an instance flashes when it enqueues, and a thread is lit while its model runs.
-- How a job travels from the audio thread through the queue to a thread: Process.
-- The default is half the cores. The second argument, how the idle threads wait, we come back to in Process as well, next to the audio thread's own wait.
+- In anira there is one configurable thread pool per process, and every instance queues into it.
+- It is declared once, in the ContextConfig with the information of how many threads, and how they wait for work while idle.
 
 ---
 
@@ -352,20 +344,17 @@ Note:
   <div class="policy-cell ok">spins up to 10,000 tries, then blocks on a semaphore</div>
 </div>
 
-<div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
+<div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle.</div>
 
 Note:
-- In anira the pool's wait is one setting for the whole process, declared at create in the ContextConfig, its wait_strategy: spin with backoff, or block.
-- Not to be confused with wait_ratio, which comes in Process: the audio thread waiting for a result, per handler, in the contract. This is the pool waiting for work.
-- SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool pays by polling.
-- Its backoff: 4 retries at once, 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry. So an idle thread picks up new work within about 100 µs.
-- BLOCKING waits in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
-- It wakes up every 5 ms on its own, only to check whether it should exit. While blocked, it uses no CPU.
-- The price is on the audio thread: if a pool thread is blocked, the enqueue makes one wake syscall.
-- Under load the threads rarely sleep, so that is rare; on an idle pool it is nearly every job.
-- [click] We recommend BLOCKING: one bounded wake instead of threads polling while idle.
-- It takes no lock and never waits, but no OS documents the wake as real-time safe, RTSan does not check it, and we have not yet measured its worst case per platform.
-- SPIN_BACKOFF stays the default because the OS clocks a sleeping core down, and whatever runs next on it starts slow; spinning keeps the core warm.
+- anira has two waiting strategies, declared process wide
+- SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool with socalled exponential backoff
+- With this technique, the balence between pooling for new data and leaving compute to other threads becomes bigger and bigger.
+- first we have 4 hot spinning retries consuming all compute, then 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry
+- So an idle thread picks up new work within about 100 µs.
+- In BLOCKING mode, the WorkerThreads wait in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
+- The price is on the audio thread: if a pool thread is blocked, enqueuing a new job to the thread pool makes one wake syscall.
+- This is not strictly real-time safe but the idle thread can pick up work usually faster in the last idle phase, which is also why we recommend it in most use cases.
 
 ---
 
@@ -389,7 +378,7 @@ size_t PluginProcessor::prepare(…) {
 ```
 
 Note:
-- Memory. In step 8 the processor is a member of the plugin, and the engine a member of the processor: one engine per instance, fixed by the classes.
+- And finally lets talk about memory. In step 8 the processor is a member of the plugin, and the engine a member of the processor: so there it is one engine per instance, fixed by the classes.
 - Each instance loads the model in its prepare, so ten instances hold ten copies of the same model. Memory grows with the instances the host adds, like the threads did.
 
 ---
@@ -415,15 +404,12 @@ Note:
 <div class="cards-note">On the pool of four threads from the context file. A copy is one ONNX Runtime session with its own weights; anira shares only the environment and the session options.</div>
 
 Note:
-- Back to the memory. In step 8 every instance's prepare created its own ONNX Runtime session, and a session holds its own copy of the weights: ten instances, ten copies.
-- anira loads the weights at prepare as well. How many copies it makes depends on one thing: whether the model has state.
+- anira loads the weights at prepare as well but How many copies are loaded depends on whether the model has state.
 - With state, like ours: the state belongs to one stream, so every handler gets its own session at its prepare, and its inferences run one at a time, in order. One handler per plugin instance: ten instances, ten copies, the same as part 1.
-- Without state: the first handler's prepare loads the model once for the whole process, as max_instances sessions, by default one per pool thread, since more could never run at once. Every later handler with an equal model config on the same engine and provider shares those sessions and loads nothing.
-- So ten instances on our four threads hold four copies, not ten. But a single instance holds four as well: below four instances that is more than part 1.
-- max_instances is the knob: a large model can set it to 1, one copy for the whole process, one inference at a time.
-- The shared sessions live as long as a handler uses them: the last handler that goes frees them.
-- What anira changes for our model is therefore not the memory: it carries the state, keeps the order, and runs the inferences on the one pool instead of a worker per instance.
-- All of it is declared here and loaded at prepare: a file with two enabled engines holds both. Prepare's memory slide.
+- Without state: the first handler's prepare loads the model for the whole process. A model setting, max_instances, by default one per pool thread, then says how many engine instances that load creates
+- With ONNX Runtime one session each, and every session reads the file and keeps its own copy of the weights. Every later handler shares them and loads nothing.
+- So ten instances on our four threads would hold four copies, not ten.
+- And similarly a single instance would hold four engines as well: This means that for a stateless model anira would allow multiple parallel inferences at once for one instance
 
 ---
 
@@ -448,6 +434,5 @@ Note:
 Note:
 - After create: everything is declared and checked, and nothing runs yet.
 - Left, what we declared; right, all create did with it: it checked, it built the slots, and it allocated the state pair's two buffers.
-- No model, no plan, no thread yet: all of that needs the contract, and the contract comes with the host's blocks.
-- In short: declare once, share what can be shared. The engines are entries in a file, every slot is a typed tensor, one pool serves every instance, and a model without state is loaded once for all of them.
-- Next: prepare, when the host says which blocks it will deliver.
+- There is no model loaded, no ringbuffer allocated or no thread started yet
+- Next up is prepare, where the host will provide us information about the blocks that it will deliver.

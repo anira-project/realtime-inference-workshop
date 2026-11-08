@@ -36,7 +36,7 @@ Note:
 - First the engines.
 - In part 1 we wrote one class for one engine, ONNX Runtime, by hand: it owns the session and the tensors, and later loads and runs the model.
 - The engine was a decision of the code: another engine would be another class like it, with its own API and its own way of handling the state. The plugin is built for one engine, at compile time.
-- Starting from step 3 the ProcessorExample owns the class
+- Starting from step 3 the ProcessorExample owns the engine, as a member
 
 ---
 
@@ -240,7 +240,7 @@ Note:
 
 <div class="tag">Part 1 · Step 6</div>
 
-## A worker per instance.<br><span class="then">Fixed by the class. The host decides how many instances.</span>
+## A worker per plugin instance.<br><span class="then">Fixed by the class. The host decides how many.</span>
 
 ```cpp
 class ProcessorExample {                     // step 6
@@ -287,7 +287,7 @@ Note:
 <div class="tag">anira · Threads</div>
 <div class="when">→ <b>prepare</b>: the threads start</div>
 
-## One pool per process.<br><span class="then">Every instance queues into it.</span>
+## One pool per process.<br><span class="then">Every plugin instance queues into it.</span>
 
 <div class="pool">
   <div class="pool-instances">
@@ -312,7 +312,7 @@ Note:
 ```
 
 Note:
-- In anira there is one configurable thread pool per process, and every instance queues into it.
+- In anira there is one configurable thread pool per process, and every plugin instance queues into it.
 - It is declared once, in the ContextConfig, in which you can declare how many threads to use, and how those should wait for work while idle.
 
 ---
@@ -356,24 +356,24 @@ Note:
 
 <div class="tag">Part 1 · Step 8</div>
 
-## An engine per instance.<br><span class="then">Ten instances, ten copies of the model.</span>
+## A copy of the model per plugin instance.<br><span class="then">Ten plugin instances, ten copies.</span>
 
 ```cpp
 class PluginProcessor final : public PluginBase {
     …
-    ProcessorExample m_processor{k_model};  // one per instance, its engine inside
+    ProcessorExample m_processor{k_model};  // one per plugin instance, its engine inside
 };
 
 size_t PluginProcessor::prepare(…) {
-    // every instance loads the model: ten instances, ten copies
+    // every plugin instance loads the model: ten plugin instances, ten copies
     m_processor.prepare(host_block_size, k_max_inference_ms);
     …
 }
 ```
 
 Note:
-- And finally let's talk about memory. In step 8 the processor is a member of the plugin, and the engine a member of the processor: so there it is one engine per instance, fixed by the classes.
-- Each instance loads the model in its prepare, so ten instances hold ten copies of the same model. Memory grows with the instances the host adds, like the threads did.
+- And finally let's talk about memory. In step 8 the processor is a member of the plugin, and the engine a member of the processor: so every plugin instance has its own engine, and with it its own copy of the model, fixed by the classes.
+- Each plugin instance loads the model in its prepare, so ten plugin instances hold ten copies of the same model. Memory grows with the plugin instances the host adds, like the threads did.
 
 ---
 
@@ -382,27 +382,27 @@ Note:
 <div class="tag">anira · Memory</div>
 <div class="when">→ <b>prepare</b>: the weights load</div>
 
-## Ten instances, four copies.<br><span class="then">If the model has no state. Ours has: still ten.</span>
+## Ten plugin instances, four copies.<br><span class="then">If the model has no state. Ours has: still ten.</span>
 
 <table class="copies">
   <thead>
-    <tr><th></th><th>Who loads the weights, at prepare</th><th>10 instances</th><th>1 instance</th></tr>
+    <tr><th></th><th>Who loads the weights, at prepare</th><th>10 plugin instances</th><th>1 plugin instance</th></tr>
   </thead>
   <tbody>
-    <tr><td>Part 1, step 8</td><td>every instance: its own session</td><td>10 copies</td><td>1 copy</td></tr>
-    <tr><td>anira, with state<br>like ours</td><td>every handler: its own session</td><td>10 copies</td><td>1 copy</td></tr>
-    <tr><td>anira, without state</td><td>the first handler: <code>max_instances</code> sessions, by default one per pool thread; every later one shares them</td><td><b>4 copies</b></td><td>4 copies</td></tr>
+    <tr><td>Part 1, step 8</td><td>every plugin instance: its own copy</td><td>10 copies</td><td>1 copy</td></tr>
+    <tr><td>anira, with state<br>like ours</td><td>every handler: its own model instance</td><td>10 copies</td><td>1 copy</td></tr>
+    <tr><td>anira, without state</td><td>the first handler: <code>max_instances</code> model instances, by default one per pool thread; every later one shares them</td><td><b>4 copies</b></td><td>4 copies</td></tr>
   </tbody>
 </table>
 
-<div class="cards-note">On the pool of four threads from the context file. A copy is one ONNX Runtime session with its own weights; anira shares only the environment and the session options.</div>
+<div class="cards-note">On the pool of four threads from the context file. A model instance is a full copy of the weights, in ONNX Runtime one <code>Ort::Session</code>; anira shares only the environment and the session options.</div>
 
 Note:
 - anira loads the weights at prepare as well, but how many copies are loaded depends on whether the model has state.
-- With state, like ours: the state belongs to one stream, so every handler gets its own session at its prepare, and its inferences run one at a time, in order. One handler per plugin instance: ten instances, ten copies, the same as part 1.
-- Without state: the first handler's prepare loads the model for the whole process. A model setting, max_instances, by default one per pool thread, then says how many engine instances that load creates
-- So ten instances on our four threads would hold four copies, not ten.
-- And similarly a single instance would hold four engines as well: This means that for a stateless model anira would allow multiple parallel inferences at once for one instance
+- With state, like ours: the state belongs to one stream, so every handler gets its own model instance at its prepare, and its inferences run one at a time, in order. One handler per plugin instance: ten plugin instances, ten copies, the same as part 1.
+- Without state: the first handler's prepare loads the model for the whole process. A model setting, max_instances, by default one per pool thread, then says how many model instances that load creates
+- So ten plugin instances on our four threads would hold four copies, not ten.
+- And a single plugin instance would have all four model instances too: This means that for a stateless model anira can run several inferences of one plugin instance in parallel
 
 ---
 
@@ -419,7 +419,7 @@ Note:
     <tr><td>the tensors: name, dtype, axes, role<br><code>inputs</code>, <code>outputs</code></td><td>checks the shapes, builds a slot each</td></tr>
     <tr><td>the state, a pair<br><code>role: state</code>, <code>state_source</code></td><td>resolves the pair, allocates its buffers</td></tr>
     <tr><td>the model's own latency<br><code>latency</code> on the output</td><td>keeps it</td></tr>
-    <tr><td>the instances<br><code>max_instances</code></td><td>keeps it</td></tr>
+    <tr><td>the model instances<br><code>max_instances</code></td><td>keeps it</td></tr>
     <tr><td>the pool: threads, how they wait<br><code>ContextConfig</code></td><td>registers the settings</td></tr>
   </tbody>
 </table>

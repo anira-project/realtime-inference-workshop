@@ -176,29 +176,6 @@ Note:
 
 ---
 
-<div class="tag">Play with it: <code>HandMapping.cpp</code></div>
-
-## One mapping.<br><span class="then">Change it, rebuild, play.</span>
-
-```cpp
-Latents map_hands(const HandFeatures& lead, const std::optional<HandFeatures>& texture) {
-    Latents z{};
-    z[0] = map_range(lead.openness, -2.5F, 2.0F);  // loudness: a fist is quiet
-    z[2] = map_range(lead.y, -2.5F, 3.0F);         // brightness: low dark, high bright
-    // … body, colour and tilt from the lead hand, texture from the second one
-    return z;
-}
-```
-
-Note:
-- One function: the lead hand in, the latent vector back.
-- map_range draws a straight line between two ends.
-- [point at the z0 line] A fist gives minus 2.5, an open palm gives 2.
-- On z0, plus 1 is about 5.5 dB louder; minus 3 is near silent.
-- The other six you find by ear; keep each between about minus 2 and plus 2.
-
----
-
 <div class="tag">Play</div>
 
 ## Ten minutes,<br><span class="then">fifty synths, one room.</span>

@@ -217,16 +217,17 @@ cmake --build --preset release --target step09_exercise_Standalone
 </div>
 
 Note:
-- Ten minutes, three TODOs, two files.
-- TODO 1 and 2 are in model.json: replace every question mark.
-- Numbers without quotes, names in quotes.
-- The comment next to each blank says where its value comes from.
-- TODO 3 is in AniraProcessor.cpp: four blanks, marked "fill out".
-- For the first one, mind the order: smallest block, largest block, sample rate.
-- The C++ file does not compile until all four blanks are filled.
-- The check tells you which blank is still wrong.
-- Don't worry if you don't finish: we solve it together.
-- [start the timer] We walk around: wave if you get stuck.
+- Okay, now we've reached the step 9 task: fill out the TODOs.
+- There are three of them.
+- TODO 1: declare the audio tensors.
+- TODO 2: declare the state, so it is fed back after every inference.
+- TODO 3: pass everything prepare and process need.
+- Before you start the plugin, build and run the exercise check first.
+- It validates that all your blanks are filled in correctly.
+- Once it is green, play with the plugin; the standalone is the easiest.
+- The model still runs at 44.1 kHz: at 48 the plugin asks first, and it won't sound accurate.
+- But now any buffer size from the host works.
+- [start the timer] Ten minutes; we walk around, wave if you get stuck.
 
 ---
 

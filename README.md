@@ -13,7 +13,7 @@ Please set up at home. The first configure downloads about 350 MB (the models, O
 You need git, CMake 3.22 or newer, and a C++17 compiler.
 
 - **macOS**: Xcode or the Command Line Tools (`xcode-select --install`), and CMake (`brew install cmake`).
-- **Windows**: Visual Studio 2022 with the *Desktop development with C++* workload, and CMake 3.30 or newer. Clone into a short path, such as `C:\code\rtiw`: Windows paths stop at 260 characters.
+- **Windows**: Visual Studio 2022 with the *Desktop development with C++* workload, and CMake 3.30 or newer.
 - **Linux**: `gcc` or `clang`, CMake, and what JUCE needs:
 
   ```bash

@@ -19,7 +19,7 @@ Note:
   <div class="card need">{{ICON:model}}<div class="card-title">Inference</div><div class="card-text">steps 1–3 · engine, block, state by hand</div><div class="need-how decl">declared · <code>model.json</code></div></div>
   <div class="card need">{{ICON:gauge}}<div class="card-title">Benchmarking</div><div class="card-text">step 4 · one run, on our machine</div><div class="need-how decl">declared · <code>contract.json</code>: <code>"measured"</code></div></div>
   <div class="card need">{{ICON:shield}}<div class="card-title">Real-time safety</div><div class="card-text">step 5 · RTSan, run once</div><div class="need-how auto">handled by anira · nonblocking audio-thread calls</div></div>
-  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 6, 8 · a worker per instance</div><div class="need-how auto">handled by anira · one pool per process</div></div>
+  <div class="card need">{{ICON:threads}}<div class="card-title">Threading</div><div class="card-text">steps 6, 8 · a worker per plugin instance</div><div class="need-how auto">handled by anira · one pool per process</div></div>
   <div class="card need">{{ICON:clock}}<div class="card-title">Minimal latency</div><div class="card-text">step 7 · a prefill, counted by hand</div><div class="need-how auto">handled by anira · you read <code>get_latency()</code></div></div>
   <div class="card need">{{ICON:flag}}<div class="card-title">Real-time guarantees</div><div class="card-text">steps 4, 7 · hoping the budget holds</div><div class="need-how decl">declared · <code>contract.json</code>: <code>on_miss</code></div></div>
 </div>
@@ -333,7 +333,7 @@ Note:
 - On this machine that is 5295 samples [say: fifty-two ninety-five]; yours depends on your machine.
 - Blank 3, offline, a bounce: process_wait waits for every result.
 - Blank 4, live, in the callback: process never waits.
-TODO valentin; support all buffer sizes?
+- And with blank 1, the plugin now supports every buffer size the host sends, from 1 up to the largest.
 
 ---
 

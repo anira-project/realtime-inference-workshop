@@ -149,7 +149,7 @@ Note:
   <div>Nothing after: <code>process</code> allocates nothing; new host blocks, <code>prepare</code> again</div>
 </div>
 
-<div class="cards-note">Part 1 did all of it by hand: one model loaded the first time, two rings sized from the worst moment we could think of, a worker thread started per instance.</div>
+<div class="cards-note">Part 1 did all of it by hand: one model loaded the first time, two rings sized from the worst moment we could think of, a worker thread started per plugin instance.</div>
 
 Note:
 - What else does prepare do for us in anira automatically

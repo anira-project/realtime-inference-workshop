@@ -345,7 +345,12 @@ Note:
 <div class="cards-note">Step 8 in a bounce: the output ring runs dry and goes out as silence, and the input ring fills up and drops samples.</div>
 
 Note:
-- And finally I want to talk about offline bouncing...
+- And finally I want to talk about offline bouncing
+- When we bounce, the host no longer runs on the clock: it calls our callback as fast as it can
+- Live, a callback covers 11.6 ms of audio and the inference takes 12.7 ms, but thanks to our latency the result is back before the host needs it
+- In a bounce, the callbacks come back to back and each one takes only a fraction of a millisecond
+- So all these callbacks run before the first inference is back, and every one of them misses
+- In anira we can mitigate this problem by calling another process function
 
 ---
 
@@ -370,6 +375,8 @@ if (isNonRealtime()) {   // a bounce: no deadline, nothing to miss
 </div>
 
 Note:
-- In anira when the host renders offline, in JUCE i.e. isNonRealtime is true, we call process_wait instead of process
-- The same call, but it blocks until the inference threads have delivered this block's result. ANIRA_WAIT_FOREVER means as long as it takes
+- In JUCE in the processBlock function we can ask for isNonRealtime.
+- And if it is true, we call process_wait instead of process
+- It is the same call as process, but it blocks until the inference threads have delivered this block's result.
+- With ANIRA_WAIT_FOREVER for as long as it takes for the inference threads to deliver the results
 

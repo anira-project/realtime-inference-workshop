@@ -314,7 +314,7 @@ Note:
 m_contract.hard_host_blocks(«1», «max_block_size», «sample_rate»);  // <- 1. solution
 const anira::PlanReport report = m_handler->prepare(m_contract);  // warm-up runs here
 m_budget_ms = report.plans().front().measured_ms;
-m_latency = «m_handler->get_latency(0)»;  // <- 2. solution: output slot 0 · here: 5295
+m_latency = «m_handler->get_latency()»;  // <- 2. solution: the first output · here: 5295
 
 // process()
 if (offline) {   // <- 3. solution: a bounce, wait for the result

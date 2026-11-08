@@ -47,7 +47,7 @@ public:
         // Any block up to the resampler's largest request, at the model's rate
         m_contract.hard_host_blocks(1, static_cast<uint32_t>(m_max_block), k_model_sample_rate);
         m_handler.prepare(m_contract);  // Throws with anira's reason
-        m_latency = m_handler.get_latency(0);
+        m_latency = m_handler.get_latency();
 
         m_pulled = 0;
         m_pushed = 0;

@@ -162,88 +162,26 @@ Note:
 
 ---
 
-<!-- .slide: class="recap" -->
-
-<div class="tag">Part 1 · Step 8</div>
-
-## One model, loaded by hand.<br><span class="then">In prepare, the first time.</span>
-
-```cpp
-void prepare(size_t host_block_size, double max_inference_ms) {
-    m_worker.stop();
-    // The model, loaded the first time: it takes a while and allocates.
-    if (!m_engine.loaded()) { m_engine.load(m_model.m_path); }
-    …
-}
-```
-
-Note:
-- Before all of that, part 1's prepare loaded the model
-- By hand: one engine, one file, the first time prepare is called
-- Loading takes a while and allocates, so it belongs in prepare and not in the callback
-
----
-
 <!-- .slide: class="answer" -->
 
-<div class="tag">anira · Models</div>
+<div class="tag">anira · Prepare</div>
 
-## Every model, loaded at <code>prepare</code>.<br><span class="then">Before the warm-up measures it.</span>
-
-<div class="statement-points">
-  <div>Every entry this build can run: its model loads, a plan per engine and provider</div>
-  <div>Pooled: a second handler with an equal model shares the load</div>
-  <div>A model that does not load fails <code>prepare</code>, with the file and the reason</div>
-</div>
-
-Note:
-- In anira we load nothing ourselves: prepare loads every model of the file
-- Every entry this build can run, so a file with two enabled engines loads both, and we can switch between them later
-- Pooled per process: a second handler with an equal model shares the load, as we saw in Create
-- And only then the warm-up runs, on what was loaded
-- A model that does not load fails prepare, and the error names the file and the reason
-
----
-
-<!-- .slide: class="recap" -->
-
-<div class="tag">Part 1 · Steps 3 and 6</div>
-
-## Every buffer sized by hand.<br><span class="then">From the worst moment we could think of.</span>
-
-```cpp
-m_input  = ThreadSafeRingBuffer(m_model.m_input_size);
-m_output = ThreadSafeRingBuffer(worker_time + m_model.m_input_size);
-```
-
-Note:
-- In part 1 we also sized every buffer by hand
-- Step 3 by thinking through the worst moment, step 6 from what we knew: one model block in, and the worker's time plus one model block out
-- All of it allocated in prepare, never in the callback: a rule that was ours to keep
-
----
-
-<!-- .slide: class="answer" -->
-
-<div class="tag">anira · Memory</div>
-
-## Allocated at <code>prepare</code>.<br><span class="then">Nothing after.</span>
+## What <code>prepare</code> does.<br><span class="then">Load the models, allocate the buffers.</span>
 
 <div class="statement-points">
-  <div>A ring per streamed tensor, sized from the host blocks, the model block and the budget</div>
-  <div>Slots: two per inference that can be in flight</div>
-  <div>After <code>prepare</code>: <code>process</code>, <code>push</code> and <code>pop</code> allocate nothing</div>
+  <div>Loads every model this build can run, pooled per process</div>
+  <div>Sizes and allocates every buffer: a ring per streamed tensor, slots for the jobs in flight</div>
+  <div>Nothing after: <code>process</code> allocates nothing; new host blocks, <code>prepare</code> again</div>
 </div>
 
-<div class="cards-note">The host changes its blocks: <code>prepare</code> again. It is the one call that may allocate.</div>
+<div class="cards-note">Part 1 did both by hand: one model loaded the first time, two rings sized from the worst moment we could think of.</div>
 
 Note:
-- anira does all of this for us: it sizes and allocates everything at prepare, and nothing after
-- It sizes from what we declared: the host blocks from the contract, the model block from the model file, and the budget it just measured
-- A ring per streamed tensor, and slots for the jobs between the audio thread and the pool, two per inference that can be in flight
-- The state pairs got their two buffers at create; prepare sets both to zero, a new stream
-- After prepare, process, push and pop allocate nothing
-- When the host changes its blocks we call prepare again: it is the one call that may allocate
+- So what else does prepare do for us?
+- It loads the models: every entry this build can run, pooled per process. In part 1 we loaded our one model by hand
+- It sizes and allocates every buffer: a ring per streamed tensor, from the host blocks, the model block and the measured budget, and the slots for the jobs in flight. In part 1 we sized our two rings by hand
+- And it sets the state to zero: a new stream
+- After prepare, process allocates nothing. When the host changes its blocks we call prepare again: it is the one call that may allocate
 
 ---
 
@@ -333,18 +271,18 @@ Note:
 
 ```cpp
 m_handler->prepare(m_contract);
-m_latency = m_handler->get_latency(0);   // output slot 0, audio_out: for the host
+m_latency = m_handler->get_latency();   // the first output, audio_out: for the host
 ```
 
 <div class="statement-points">
-  <div><code>get_latency(slot)</code>: one output's latency in its samples, valid from <code>prepare</code> on</div>
+  <div><code>get_latency()</code>: the first output's latency in samples, valid from <code>prepare</code> on</div>
   <div>The output starts with zeros: the latency minus the model's own 2224, like step 8's prefill</div>
   <div>From then on every result comes out exactly that late</div>
 </div>
 
 Note:
 - So what is left for us: after prepare we ask the handler for the latency, and tell the host
-- get_latency gives it per output, in samples, here output slot 0, audio_out
+- get_latency gives it in samples, by default for the first output, our audio_out
 - And anira prefills the output for us, as we did by hand in step 8: zeros, the latency minus the model's own delay, and the model's 2224 come on top by themselves
 - So the first samples out are those zeros, and from then on every result arrives exactly as late as get_latency says
 

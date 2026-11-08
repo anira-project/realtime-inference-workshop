@@ -50,8 +50,8 @@ void SplitProcessor::prepare(double sample_rate, size_t max_block_size) {
 
     // What the host is told: the encoder's latency comes in latent frames,
     // k_frame_size samples each; the decoder's in samples
-    m_encoder_latency_frames = m_encoder->get_latency(0);
-    m_latency = m_encoder_latency_frames * k_frame_size + m_decoder->get_latency(0);
+    m_encoder_latency_frames = m_encoder->get_latency();
+    m_latency = m_encoder_latency_frames * k_frame_size + m_decoder->get_latency();
 
     // A new stream on both handlers: the count towards the next latent frame starts over
     m_input_samples = 0;

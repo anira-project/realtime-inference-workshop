@@ -30,7 +30,7 @@ void AniraProcessor::prepare(double sample_rate, size_t max_block_size) {
 
     const anira::PlanReport report = m_handler->prepare(m_contract);  // Warm-up and measurement run here
     m_budget_ms = report.plans().front().measured_ms;                  // This machine's
-    m_latency = m_handler->get_latency(0);       // Output slot 0: audio_out
+    m_latency = m_handler->get_latency();        // The first output: audio_out
     // ------------------------------------------------------------------------
 }
 

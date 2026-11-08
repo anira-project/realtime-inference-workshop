@@ -345,7 +345,7 @@ while (m_input_samples >= k_frame_size) {        // one latent frame per 2048 sa
 m_decoder->pop_data(block, 0);                   // this callback's audio out
 
 // prepare: the encoder counts in frames, the decoder in samples
-m_latency = m_encoder->get_latency(0) * k_frame_size + m_decoder->get_latency(0);
+m_latency = m_encoder->get_latency() * k_frame_size + m_decoder->get_latency();
 ```
 
 Note:

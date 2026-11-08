@@ -63,7 +63,7 @@ m_handler.emplace(m_context, pipeline);</code></pre></div>
   <div class="place"><div class="place-head"><b>prepareToPlay</b> · prepare</div>
 <pre><code class="language-cpp">m_contract.hard_host_blocks(1, block, sample_rate);
 m_handler-&gt;prepare(m_contract);
-setLatencySamples(int(m_handler-&gt;get_latency(0)));</code></pre></div>
+setLatencySamples(int(m_handler-&gt;get_latency()));</code></pre></div>
   <div class="place"><div class="place-head"><b>processBlock</b> · process</div>
 <pre><code class="language-cpp">// one planar tensor over the host's channels
 auto block = anira::Tensor::from_host_planar(channels, shape);

@@ -6,7 +6,7 @@ One picture, one C ABI, three places
 <!-- kind: talk -->
 
 Note:
-- Now lets put it all together
+- Now let's put it all together
 - Everything from create, prepare and process in one picture, the C ABI underneath it, and the three places in a plugin where we call it
 
 ---

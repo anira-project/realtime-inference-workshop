@@ -8,7 +8,7 @@ Model types, and the model we use today
 
 Note:
 - Before we write code, a quick look at the models themselves.
-- I already said, that this not the main topic of the course, so here is just a very quick overview.
+- I already said that this is not the main topic of the course, so here is just a very quick overview.
 
 ---
 
@@ -68,11 +68,11 @@ Note:
 </div>
 
 Note:
-- There are very different types of neural network models for audio evironements
+- There are very different types of neural network models for audio environments
 - Here are three common shapes.
 - A model which takes audio in and gives audio out is like an audio effect. Common ones are models for timbre transfer, source separation, amp models
-- Then there are other models that take controls values to synthesize audio, those can behave like synthesizers for example.
-- And then the last example here are models that take audio in and compute some features. I.e. some models that do pitch tracking..
+- Then there are other models that take control values to synthesize audio, those can behave like synthesizers for example.
+- And then the last example here are models that take audio in and compute some features. E.g. some models that do pitch tracking..
 
 <!-- ---
 
@@ -152,8 +152,8 @@ Note:
 - The figure shows what happens inside it, for a real 220 Hz sine.
 - First, a filter bank splits each block of 2048 samples into 16 frequency bands.
 - Then each layer of the encoder trades time for channels, until a single time step is left for 2048 samples
-- That bootleneck is called a latent
-- Thanks to a dimensionality reduction technique we can only keep 8 dimensions that explain the majority of the varience in the dataset.
+- That bottleneck is called a latent
+- Thanks to a dimensionality reduction technique we can only keep 8 dimensions that explain the majority of the variance in the dataset.
 - The decoder mirrors this, back into 2048 samples.
 - The model is stateful: each block depends on the blocks before it.
 
@@ -219,5 +219,5 @@ Note:
 <span class="fragment integration-focus"></span>
 
 Note:
-- Ok thats all about the model.
-- Lets talk about the implementation now!
+- Ok that's all about the model.
+- Let's talk about the implementation now!

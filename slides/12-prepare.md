@@ -6,7 +6,7 @@ Contract, latency, memory
 <!-- kind: talk -->
 
 Note:
-- Prepare basically checks everything again, now with the contract (the hosts block information), loads the models, allocates everything and starts the pool's threads with the first prepare in the process
+- Prepare basically checks everything again, now with the contract (the host's block information), loads the models, allocates everything and starts the pool's threads with the first prepare in the process
 
 ---
 
@@ -17,7 +17,7 @@ Note:
 {{MAP:show=create|focus=prepare}}
 
 Note:
-- Prepare typically runs on the main thread as well, in juce you would call prepare in your prepareToPlay callback
+- Prepare typically runs on the main thread as well, in JUCE you would call prepare in your prepareToPlay callback
 
 ---
 
@@ -42,7 +42,7 @@ void prepare(size_t host_block_size, double max_inference_ms) {
 ```
 
 Note:
-- Lets recap the prepare function of part 1, in step 8
+- Let's recap the prepare function of part 1, in step 8
 - It took two arguments: the host's block size and our max inference time
 - From these two we calculated everything else: the prefill, the latency and the size of our buffer
 - The block size came from the host, in prepareToPlay
@@ -95,7 +95,7 @@ const anira::PlanReport report = m_handler->prepare(m_contract);
 Note:
 - In anira prepare does not take two numbers, it takes a contract
 - The contract is the declaration of the stream
-- This is an example json contract file for a hard contract.
+- This is an example JSON contract file for a hard contract.
 - A hard contract is for a real-time stream
 - Instead of a max inference time the budget can be defined as "measured"
 - This means anira will measure the inference time at prepare, on the user's machine
@@ -103,8 +103,8 @@ Note:
 - We have seen that our model took longer in the first inference, which is typical for inference engines.
 - This is why we offer the option until stable - until_stable runs the model on the inference threads until its last four times lie within 20 percent of their median, at most 32 runs
 - And the dots: the contract has more options, for process, and we come to them in the next chapter
-- But the json contract file carries no host blocks: we fill them at runtime in prepareToPlay
-- In anira the blocksize does not need to be fixed, it can be a range from minimum to maximum block size
+- But the JSON contract file carries no host blocks: we fill them at runtime in prepareToPlay
+- In anira the block size does not need to be fixed, it can be a range from minimum to maximum block size
 - Soon we will also provide a second contract kind, Async for jobs with a deadline instead of a stream
 
 ---
@@ -128,9 +128,9 @@ Note:
 
 Note:
 - And then prepare reports back to us
-- It tells use whether on average the model can keep up with our real-time stream
-- And whats its real-time threshold
-- Remember the real-time threshold in the first time was 1 when our model inference time took 46.4 ms
+- It tells us whether on average the model can keep up with our real-time stream
+- And what's its real-time threshold
+- Remember the real-time threshold in the first part was 1 when our model inference time took 46.4 ms
 - The anira library user can then decide what to do with this information.
 - Display a warning or bypass the inference
 
@@ -154,7 +154,7 @@ Note:
 Note:
 - What else does prepare do for us in anira automatically
 - It loads all models according to the way we have discussed in create
-- It sizes and allocates the ringbuffers, the slots for the jobs in flight to a minimal size
+- It sizes and allocates the ring buffers, the slots for the jobs in flight to a minimal size
 - So that then nothing after allocates, so that our process function is real-time safe
 - But what about the overall latency now?
 
@@ -207,7 +207,7 @@ Note:
 <div class="lat-why">The budget: 12.7 ms, measured at prepare. Host blocks of 11.6 ms (512), 17.4 ms (768) and 10 ms (441).</div>
 
 Note:
-- But in a real host the host buffersize can take multiple values
+- But in a real host the host buffer size can take multiple values
 - So we need a general formula, which is displayed here
 
 ---
@@ -227,10 +227,10 @@ contract.hard_host_blocks(1, max_block_size, sample_rate);   // 1 up to the anno
 
 
 Note:
-- And if the host blocksize is variable, we need to take this into account as well.
-- This is why in the anira contract you can define a minimum and maximum blocksize, this means all blocksizes in between are allowed. (i.e. if the daw loops, blocksizes can be smaller.)
+- And if the host block size is variable, we need to take this into account as well.
+- This is why in the anira contract you can define a minimum and maximum block size, this means all block sizes in between are allowed. (e.g. if the DAW loops, block sizes can be smaller.)
 - Typically this raises the minimum possible latency.
-- In this example from 4784 for a fixed 512 blocksize to 5295 for the case where all blocksizes up to 512 are allowed
+- In this example from 4784 for a fixed 512 block size to 5295 for the case where all block sizes up to 512 are allowed
 
 ---
 
@@ -250,8 +250,8 @@ m_latency = m_handler->get_latency();   // the first output, audio_out: for the 
 </div>
 
 Note:
-- After prepare the output ringbuffer is automatically prefilled with zeros
-- And we can ask for the latency to compensate i.e. our dry / wet mixer
+- After prepare the output ring buffer is automatically prefilled with zeros
+- And we can ask for the latency to compensate, e.g. our dry / wet mixer
 
 ---
 
@@ -262,6 +262,6 @@ Note:
 {{MAP:show=create,prepare}}
 
 Note:
-- So now all models are loaded and the threadpool has started
+- So now all models are loaded and the thread pool has started
 - The rings and slots are allocated, and the latency is reported
 - From here on only the audio thread's calls remain

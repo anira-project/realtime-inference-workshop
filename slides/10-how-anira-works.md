@@ -6,9 +6,9 @@ Create, prepare, process
 <!-- kind: talk -->
 
 Note:
-- Thanks valentin for the history overview of anira
+- Thanks Valentin for the history overview of anira
 - In the next part I want to show you the inner workings of the anira library
-- You start using anira, by declaring up to three configs
+- You start using anira by declaring up to three configs
 - And then the InferenceHandler is your API to anira's inference thread pool.
 
 ---
@@ -46,7 +46,7 @@ Note:
 
 Note:
 - The three handler calls, create, prepare and process, can be directly mapped onto the plugin calls from step 8: the constructor, prepareToPlay and processBlock.
-- The columns run from your code on the left, through the language api of your choice (C++, Typescript, C), through the C ABI, to anira's private session and context on the right
+- The columns run from your code on the left, through the language API of your choice (C++, TypeScript, C), through the C ABI, to anira's private session and context on the right
 - Typically create and prepare run on the main thread and the process function is called from the audio thread.
 - In the following we will fill each row
-- We'll start with the implementations from the first workshop part and see how its implemented in anira for general use case
+- We'll start with the implementations from the first workshop part and see how it's implemented in anira for the general use case

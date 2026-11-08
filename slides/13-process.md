@@ -36,11 +36,11 @@ m_output.try_pop(samples[i]);       // host out, sample by sample
 ```
 
 Note:
-- Lets recap process in part 1
+- Let's recap process in part 1
 - We wrote every step by hand: we pushed the host block into the input ring, sample by sample on the audio thread
 - Then the worker popped the samples out and called the model inference on the worker thread
-- The result got pushed back to the output ringbuffer
-- And back on the audio thread the host block popped the output ringbuffer to fill its host block
+- The result got pushed back to the output ring buffer
+- And back on the audio thread the host block popped the output ring buffer to fill its host block
 - All of it inside our processor, and it only knew one shape: audio in, audio out
 - How does anira do this?
 
@@ -125,6 +125,7 @@ Note:
 - After the engine, after_inference runs on the same inference thread: there we can postprocess the model's output, for example the inverse FFT. Then the slot goes back to the audio thread
 - There post_process writes the result into the output ring, and the host block comes out of it. Like pre_process it runs on the audio thread and has to be real-time safe
 - But where is the state handled? Automatically: anira binds the state pair before before_inference and swaps it after after_inference, no copy, so both stages see it
+- Ok so that's the plan if the worker keeps up, but what if an inference takes too long?
 
 ---
 
@@ -159,10 +160,9 @@ if (!popped) {                                         // the result is late
 <div class="click-note"><b>click</b> Two clicks per miss. The audio after it stays in line.</div>
 
 Note:
-- Lets look at part 1 first
+- Let's look at part 1 first
 - When the worker is late, the output ring is empty when the audio thread pops
 - Then the rest of the block goes out as zeros, and we count them as our debt
-- Into the zeros and out of them: two clicks
 - The late samples are dropped as soon as they arrive, so the audio after the miss stays in line
 
 ---
@@ -285,9 +285,7 @@ Note:
   </div>
 </div>
 
-<div class="click-note fill"><b>no shift</b> A late result or a full queue: the block is filled, the late result is dropped, the audio after it stays in line.</div>
-
-<div class="cards-note"><code>"on_miss"</code> in the contract picks the fill; <code>bypass</code> is the default.</div>
+<div class="click-note fill"><b>no shift</b> A late result or a full queue: the contract's <code>"on_miss"</code> fills the block, the late result is dropped, the audio after it stays in line.</div>
 
 Note:
 - anira handles both cases the same way: the missed block is filled in place, and nothing shifts

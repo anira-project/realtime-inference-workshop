@@ -2505,11 +2505,14 @@ html.tanh .cards.fm-grid .card.accent { grid-column: 2; }
 /* Step 10 · the forward model above the decoder, not needed here: faded */
 html.tanh .sf-row.sf-dim { opacity: 0.35; }
 
-/* Step 10 · the app's three threads, one lane each, and what passes between them */
-html.tanh .lanes { margin-top: var(--space-5); font-size: 0.85em; }
-html.tanh .lane { display: grid; grid-template-columns: 300px 1fr auto 1fr auto 1fr; align-items: stretch; gap: var(--space-3); }
-html.tanh .lane .card { padding: var(--space-3) var(--space-4); gap: var(--space-1); }
-html.tanh .lane .card-arrow { align-self: center; color: var(--fs-text-subtle-color); }
-html.tanh .lane-name { align-self: center; font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.8em; }
-html.tanh .lane-name small { display: block; font-weight: 400; color: var(--fs-text-muted-color); }
-html.tanh .lane-pass { margin: var(--space-2) 0 var(--space-2) 300px; padding-left: var(--space-3); font-size: 0.65em; color: var(--ink); }
+/* Step 10 · the app's threads, one row each, and anira's pool beside them */
+html.tanh .threads { display: grid; grid-template-columns: 250px 1fr auto 1fr auto 1fr auto 260px; column-gap: var(--space-3); row-gap: var(--space-2); align-items: stretch; margin-top: var(--space-5); font-size: 0.8em; }
+html.tanh .threads .card { padding: var(--space-3) var(--space-4); gap: var(--space-1); }
+html.tanh .th-name { align-self: center; font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.85em; }
+html.tanh .th-name small, html.tanh .th-pool small { display: block; font-weight: 400; font-size: 0.8em; color: var(--fs-text-muted-color); }
+html.tanh .th-arr { align-self: center; color: var(--fs-text-subtle-color); }
+html.tanh .th-arr.pool { color: var(--ink); }
+html.tanh .th-pass { padding-left: var(--space-3); font-size: 0.7em; color: var(--ink); }
+html.tanh .th-pool { display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-main); background: var(--tint-exercise); }
+html.tanh .th-pool-name { font-family: var(--fs-heading-font); font-weight: 600; text-align: center; }
+html.tanh .th-pool-model { padding: var(--space-2) var(--space-3); border: var(--hairline) solid var(--fs-border-strong); border-radius: var(--radius-small); background: var(--fs-background-color, #fff); font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.85em; }

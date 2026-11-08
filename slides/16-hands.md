@@ -107,34 +107,37 @@ Note:
 
 ---
 
-<div class="tag">Two models</div>
+<div class="tag">Threads</div>
 
 ## A camera at 30 fps,<br><span class="then">audio at 44.1 kHz, one pool.</span>
 
-<div class="lanes">
-  <div class="lane">
-    <div class="lane-name">camera thread<small>30 frames a second</small></div>
-    <div class="card"><div class="card-title">camera frame</div></div>
-    <div class="card-arrow">→</div>
-    <div class="card"><div class="card-title">hand tracking</div><div class="card-text">push, never waits · on the pool</div></div>
-  </div>
-  <div class="lane-pass">↓ the newest hands · lock-free triple buffer</div>
-  <div class="lane">
-    <div class="lane-name">message thread<small>GUI timer, 60 a second</small></div>
-    <div class="card"><div class="card-title">hands</div><div class="card-text">features, 0 to 1</div></div>
-    <div class="card-arrow">→</div>
-    <div class="card accent"><div class="card-title">your mapping</div><div class="card-text">HandMapping.cpp</div></div>
-    <div class="card-arrow">→</div>
-    <div class="card"><div class="card-title">8 latents</div><div class="card-text">smoothed</div></div>
-  </div>
-  <div class="lane-pass">↓ 8 × <code>std::atomic&amp;lt;float&amp;gt;</code> · relaxed</div>
-  <div class="lane">
-    <div class="lane-name">audio thread<small>44.1 kHz</small></div>
-    <div class="card"><div class="card-title">load the 8</div><div class="card-text">once per 2048 samples</div></div>
-    <div class="card-arrow">→</div>
-    <div class="card"><div class="card-title">decoder</div><div class="card-text">push_data · on the pool</div></div>
-    <div class="card-arrow">→</div>
-    <div class="card"><div class="card-title">audio out</div><div class="card-text">pop_data</div></div>
+<div class="threads">
+  <div class="th-name" style="grid-area: 1 / 1">camera thread<small>capture queue · 30 a second</small></div>
+  <div class="card" style="grid-area: 1 / 2"><div class="card-title">frame</div><div class="card-text">from the camera</div></div>
+  <div class="th-arr" style="grid-area: 1 / 3">→</div>
+  <div class="card" style="grid-area: 1 / 4"><div class="card-title">push_data</div><div class="card-text">the frame, returns at once</div></div>
+  <div class="th-arr" style="grid-area: 1 / 5">→</div>
+  <div class="card" style="grid-area: 1 / 6"><div class="card-title">pop_data</div><div class="card-text">what has finished</div></div>
+  <div class="th-arr pool" style="grid-area: 1 / 7">⇄</div>
+  <div class="th-pass" style="grid-area: 2 / 2 / 3 / 7">↓ the newest hands · lock-free triple buffer</div>
+  <div class="th-name" style="grid-area: 3 / 1">message thread<small>GUI timer · 60 a second</small></div>
+  <div class="card" style="grid-area: 3 / 2"><div class="card-title">hands</div><div class="card-text">features, 0 to 1</div></div>
+  <div class="th-arr" style="grid-area: 3 / 3">→</div>
+  <div class="card accent" style="grid-area: 3 / 4"><div class="card-title">your mapping</div><div class="card-text">HandMapping.cpp</div></div>
+  <div class="th-arr" style="grid-area: 3 / 5">→</div>
+  <div class="card" style="grid-area: 3 / 6"><div class="card-title">8 latents</div><div class="card-text">smoothed</div></div>
+  <div class="th-pass" style="grid-area: 4 / 2 / 5 / 7">↓ 8 × <code>std::atomic&amp;lt;float&amp;gt;</code> · relaxed</div>
+  <div class="th-name" style="grid-area: 5 / 1">audio thread<small>44.1 kHz</small></div>
+  <div class="card" style="grid-area: 5 / 2"><div class="card-title">load the 8</div><div class="card-text">one latent frame</div></div>
+  <div class="th-arr" style="grid-area: 5 / 3">→</div>
+  <div class="card" style="grid-area: 5 / 4"><div class="card-title">push_data</div><div class="card-text">once per 2048 samples</div></div>
+  <div class="th-arr" style="grid-area: 5 / 5">→</div>
+  <div class="card" style="grid-area: 5 / 6"><div class="card-title">pop_data</div><div class="card-text">this callback's audio</div></div>
+  <div class="th-arr pool" style="grid-area: 5 / 7">⇄</div>
+  <div class="th-pool" style="grid-area: 1 / 8 / 6 / 9">
+    <div class="th-pool-model">hand tracking<small>4 models</small></div>
+    <div class="th-pool-name">anira pool<small>one thread per core</small></div>
+    <div class="th-pool-model">decoder<small>1 model</small></div>
   </div>
 </div>
 
@@ -150,13 +153,14 @@ Note:
 - Alongside it, one switch fades the output out in about a second: Silence without hands, on by default.
 - [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
 - [point at the latent panel] Eight bars, one per latent, more on the tick later.
-- [back to the slide] Three threads, and none waits for another.
-- The camera thread pushes every frame to the tracker and goes on.
-- The message thread, a timer 60 times a second, takes the newest hands from a lock-free triple buffer.
-- There your mapping turns them into eight latents.
-- It hands them to the audio thread as eight atomic floats.
-- The audio thread loads them once per 2048 samples, pushes them to the decoder, and pops the audio.
-- Tracker and decoder share one anira pool.
+- [back to the slide] Three threads of ours, and anira's pool on the right.
+- The camera thread is not the GUI: the system's capture queue hands it every frame.
+- It pushes the frame to the tracker and pops what has finished: it never waits.
+- The newest hands go to the message thread through a lock-free triple buffer.
+- There, 60 times a second, your mapping turns them into eight latents.
+- They reach the audio thread as eight atomic floats.
+- The audio thread pushes one latent frame per 2048 samples to the decoder and pops its audio.
+- The message thread never touches anira: only the camera and the audio thread push and pop, on one pool.
 - Now your part.
 
 ---

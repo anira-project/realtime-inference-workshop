@@ -58,10 +58,10 @@ Note:
 
 ## anira foundation models.<br><span class="then">Ready-made models, easy to integrate.</span>
 
-<div class="cards">
+<div class="cards fm-grid">
   <div class="card">{{ICON:model}}<div class="card-title">our own</div><div class="card-text">models we train</div></div>
   <div class="card">{{ICON:model}}<div class="card-title">open source</div><div class="card-text">models already out there</div></div>
-  <div class="card-arrow">→</div>
+  <div class="card-arrow">↓</div>
   <div class="card accent">{{ICON:people}}<div class="card-title">hand tracking</div><div class="card-text">Google's model, provided</div></div>
 </div>
 

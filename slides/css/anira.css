@@ -2496,3 +2496,8 @@ html.tanh .reveal section:not(:has(section)):has(.rows-focus.visible) .rows-top 
 
 /* Three keys instead of five, as on step 9's hard_host_blocks slide */
 html.tanh .mj-keys.three { grid-template-columns: repeat(3, 1fr); font-size: 0.75em; }
+
+/* Step 10 · foundation models: hand tracking below open source, the arrow between them */
+html.tanh .cards.fm-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: var(--space-2); }
+html.tanh .cards.fm-grid .card-arrow { grid-column: 2; justify-self: center; }
+html.tanh .cards.fm-grid .card.accent { grid-column: 2; }

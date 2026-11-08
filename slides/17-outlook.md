@@ -200,7 +200,7 @@ Note:
 
 ---
 
-## Thank you.
+## Thank you.<br><span class="then">Any questions?</span>
 
 <div class="qr-row">
   <div class="qr">
@@ -219,4 +219,5 @@ Note:
 - Thank you very much for attending this workshop.
 - The two QR codes: the workshop repository, with every solution, and anira.
 - We would love your feedback on this workshop. Find us during the next three days.
+- [pause] Any questions?
 - Enjoy the conference.

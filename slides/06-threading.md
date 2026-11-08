@@ -27,10 +27,10 @@ Note:
 - We move the audio between the threads with thread safe ring buffers.
 - Audio thread, which only moves the samples. It pushes its whole sample blocks into `m_input` and takes samples out of `m_output`, one at a time, nothing else
 - Worker thread spins on `try_pop` the whole time, and runs the model as soon as a whole block is available. 
-- Our input ringbuffer has the capacity of one model block again, like in step 3
-- `m_output` starts with the prefill again, like in step 3, but this now bigger then in our synchronous case in step 3. We now need to take our max inference time into account. 
-- So our output ringbuffer needs a larger capacity now.
-- Click: With this set up we solve the 2 problems:
+- Our input ring buffer has the capacity of one model block again, like in step 3
+- `m_output` starts with the prefill again, like in step 3, but this time it is bigger than in our synchronous case. We now need to take our max inference time into account. 
+- So our output ring buffer needs a larger capacity now.
+- Click: With this setup we solve the 2 problems:
 - Its own clock, step 4: even a typical forward pass of 13 ms is longer than our 11.6 ms callback. On the worker that is fine, it has the time of the prefill
 - Its own rules, step 5: the engine allocates and locks. On the worker that is allowed; the audio thread stays real-time safe and never waits, never overloaded
 ---
@@ -85,7 +85,7 @@ Note:
 Note:
 - Still the model, signals and engine
 - New: `host.h`, how long one block lasts: step 3's host loop sleeps one host block long after every callback, like an audio device
-- New: `ThreadSafeRingBuffer`, It has the same api as our ringbuffer from step 3. step 3's ring buffer safe between two threads. Underneath is moodycamel’s single-producer single-consumer circular buffer. 
+- New: `ThreadSafeRingBuffer`, it has the same API as our ring buffer from step 3. step 3's ring buffer safe between two threads. Underneath is moodycamel’s single-producer single-consumer circular buffer. 
 - New: `WorkerThread`: `start()` launches the thread and repeatedly calls our job, `running()` lets the job check whether it should keep going, and stop() waits for the current call to finish and then ends the thread
 
 ---
@@ -187,7 +187,7 @@ Note:
 - The prefill is the sum of:
   - the same prefill as in step 3, so the buffer adaptation: one model block minus one host block
   - in our asynchronous set up we also need to take inference time into account, so we need an to add `rounded_max_inference_samples`: the block still has to go through the model.
-- The sizes of the ringbuffers are given: `m_input` one model block, `m_output` the rounded max inference samples plus one model block, so the prefill fits
+- The sizes of the ring buffers are given: `m_input` one model block, `m_output` the rounded max inference samples plus one model block, so the prefill fits
 ---
 
 <div class="tag">Solution</div>
@@ -255,8 +255,8 @@ for (size_t i = 0; i < m_model.m_input_size; ++i) {
 
 Note:
 - On the worker thread we process our samples
-- We try to pop samples from the input ringbuffer all the time whithout waiting until we have one model block.
-- Once we have one model block we process the samples and push the results onto the output ringbuffer.
+- We try to pop samples from the input ring buffer all the time without waiting until we have one model block.
+- Once we have one model block we process the samples and push the results onto the output ring buffer.
 - Be careful, this is not the best way to do it. This spins on one CPU core until a full model block has arrived, wasting that core while it waits; part 2 does it better
 
 ---

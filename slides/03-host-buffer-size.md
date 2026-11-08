@@ -49,7 +49,7 @@ Note:
 Note:
 - we need a reliable way of passing the samples, that makes sure the model always get a block of 2048 and the host will always get 512 samples
 - The approach: A ring buffer on each side of the model
-- Host pushes whatever it has into the first ringbuffer
+- Host pushes whatever it has into the first ring buffer
 - The model takes a full block, as soon as it's available. 
 - The model processes and writes 2048 to the output ring buffer
 
@@ -107,7 +107,7 @@ Note:
 
 <div class="tag">Helpers: <code>ring_buffer.h</code></div>
 
-## The ringbuffer <span class="then">3 methods are given</span>
+## The ring buffer <span class="then">3 methods are given</span>
 
 ```cpp
 RingBuffer buffer(capacity);           // Allocates once, never again
@@ -127,7 +127,7 @@ Note:
 - We use 3 methods: 
 - The available() method checks if there are samples in the buffer
 - `try_push` at the back, `try_pop` from the front: first in, first out method, , one sample at a time
-- `try` means they never throw: they return a boolian telling us whether it worked. Even if we try to push and the RB is full or the other way around, nothing changes
+- `try` means they never throw: they return a boolean telling us whether it worked. Even if we try to push and the RB is full or the other way around, nothing changes
 
 ---
 
@@ -176,8 +176,8 @@ cmake --build --preset release --target step03_exercise
 
 Note:
 - Your task is to work out how many samples we need to prefill, pump a whole block, hand the samples back
-- A small hint for todo 1: callbacks 1 to 3 only collect samples, nothing else happens. 
--In callback 4 the block is complete, the model runs inside the callback and pushes the results in that same callback
+- A small hint for TODO 1: callbacks 1 to 3 only collect samples, nothing else happens.
+- In callback 4 the block is complete, the model runs inside the callback and pushes the results in that same callback
 - How many zeros is the first TODO. Don't give the number away
 - `main.cpp` in steps/03_host_buffer_size/exercise, build commands on the slide
 - 8 minutes, don't worry if you don't finish, we solve it together

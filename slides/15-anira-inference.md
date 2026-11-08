@@ -61,10 +61,14 @@ Note:
 
 Note:
 - What is left: three configs on top, three calls below.
-- In model.json you fill the gaps: the tensor sizes and the state pair.
-- The contract is given, and the context runs on its defaults.
-- [click] Then three calls: create, prepare and process.
-- Create goes in the constructor, prepare in prepareToPlay, process in processBlock.
+- First, the three configs.
+- model.json has gaps for you: the tensor sizes, and how to handle the state.
+- contract.json defines how the model runs; it is complete, and we look into it in a second.
+- And the context: we use its defaults, so the thread pool is half the number of logical cores.
+- [click] Then the three calls: create, prepare and process.
+- Create runs in the constructor and is given: the model goes into a pipeline, the handler on top.
+- In prepare you fill two blanks: tell the contract the host's blocks, and read back the latency.
+- In process you fill two more: one call per callback, live or offline.
 - The check runs process offline and waits for each result.
 - It removes the latency anira adds, so the output lines up with the reference.
 

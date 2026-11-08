@@ -271,10 +271,10 @@ Note:
 ```
 
 Note:
-- In TODO 2, we know the state size from part 1: 63,488 floats, in and out.
-- And we have to make sure the state is fed back after every inference.
-- So we look at the names of our output tensors, and find state_out.
-- That is the state_source for state_in.
+- In TODO 2, we fill out everything about the state.
+- First, its size: 63,488 floats, in and out, as in part 1.
+- Second, its state_source: the output that feeds state_in after every inference.
+- We look at the names of our output tensors, and find state_out.
 - With the pair in place, anira runs the inferences one after another: each needs the state of the one before.
 
 ---

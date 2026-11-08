@@ -30,11 +30,12 @@ Note:
 <div class="cards-note">A model file and a contract file, plus an optional context file, and three calls. For most models that is all.</div>
 
 Note:
-- There is the ModelConfig (remember the constant struct at the beginning of the examples), a stream contract, a ContextConfig.
+- There is the ModelConfig (which has quite a lot of similarities with the constant struct at the beginning of the examples)
+- There is a stream contract and a ContextConfig.
 - The ModelConfig declares the model: its file path or binary, and every tensor with its role.
-- The Contract is the contract for the stream: it contains information about the host's buffer sizes and sample rate, and the inference budget.
-- The optional ContextConfig declares the context of the process: how many threads the pool has and which log level.
-- The InferenceHandler then gives you the three typical calls from step 8: create, prepare and process. It is created with the model config and the context; the contract comes in at prepare, once the host has said its buffer size.
+- The Contract is the contract for the stream: it contains information about the inference time budget and the host's buffer sizes and sample rate
+- The optional ContextConfig declares the context of the process: how many threads the pool has, which waiting strategy and the global log level.
+- The InferenceHandler then gives you the three typical calls from step 8: create, prepare and process. It is created with the model config and the context config; the contract comes in at prepare, once the host has said its buffer size.
 
 ---
 
@@ -49,4 +50,4 @@ Note:
 - The columns run from your code on the left, through the language API of your choice (C++, TypeScript, C), through the C ABI, to anira's private session and context on the right
 - Typically create and prepare run on the main thread and the process function is called from the audio thread.
 - In the following we will fill each row
-- We'll start with the implementations from the first workshop part and see how it's implemented in anira for the general use case
+- We'll start with the implementations from the first workshop part and see how it's implemented in anira for the general use case then

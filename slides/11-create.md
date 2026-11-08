@@ -35,9 +35,8 @@ Note:
 - Let's recap the constructors in the first workshop phase
 - First the engines.
 - In part 1 we wrote one class for one engine, ONNX Runtime, by hand: it owns the session and the tensors, and later loads and runs the model.
-- The engine was a decision of the code: another engine, LibTorch, ExecuTorch, LiteRT or your own, would be another class like it, with its own API and its own way of handling the state. The plugin is built for one engine, at compile time.
+- The engine was a decision of the code: another engine would be another class like it, with its own API and its own way of handling the state. The plugin is built for one engine, at compile time.
 - Starting from step 3 the ProcessorExample owns the class
-- And in step 8 it was constructed in the plugin's constructor
 
 ---
 
@@ -67,7 +66,7 @@ Note:
 
 Note:
 - anira on the other hand comes with multiple engines out of the box: LibTorch, ONNX Runtime, ExecuTorch, LiteRT and TensorFlow Lite, prebuilt .. as static or shared and compiled in or linked at build time.
-- Each one is an adapter behind a unified interface that has four calls, descriptor, load, prepare and process
+- Each one is an adapter behind a unified interface that has four calls, init, load, prepare and process
 - You can also implement your own engine through the interface, so a class like ours from part 1 fits there as it had similar calls
 - One thing worth mentioning: anira keeps the engines' symbols private. They are hidden when your plugin is linked, and the plugin exports only anira's C API.
 - That matters because some hosts ship their own engine; Ableton Live 12, for example, bundles its own ONNX Runtime. If your plugin exported its engine symbols, the dynamic linker could bind your calls to the host's copy, a different version, and the host can crash on the first call.

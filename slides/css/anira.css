@@ -2544,3 +2544,26 @@ html.tanh .th-cam-bones polyline { fill: none; stroke: var(--ink); stroke-width:
 html.tanh .th-cam-dots circle { fill: var(--tint-exercise); stroke: var(--ink); stroke-width: 1.5; }
 html.tanh .th-bar { fill: var(--ink); }
 html.tanh .th-zero { stroke: var(--fs-border-strong); stroke-width: 1.5; }
+
+/* Step 10 · the pictures move: the hand sways like video, its prediction follows a moment
+   later, the latents rise and fall, the audio scrolls */
+html.tanh .th-cam-hand, html.tanh .th-cam-pred { transform-box: view-box; transform-origin: 80px 110px; }
+html.tanh .reveal section.present .th-cam-hand { animation: th-hand 3s ease-in-out infinite alternate; }
+html.tanh .reveal section.present .th-cam-pred { animation: th-hand 3s ease-in-out infinite alternate; animation-delay: 0.24s; }
+@keyframes th-hand {
+  0% { transform: translate(-12px, 2px) rotate(-12deg); }
+  50% { transform: translate(4px, -6px) rotate(2deg); }
+  100% { transform: translate(12px, 0) rotate(12deg); }
+}
+html.tanh .th-bar { transform-box: view-box; transform-origin: 0 60px; }
+html.tanh .reveal section.present .th-bar { animation: th-bar calc(0.9s + var(--k) * 0.17s) ease-in-out infinite alternate; }
+@keyframes th-bar { from { transform: scaleY(1); } to { transform: scaleY(-0.5); } }
+html.tanh .th-call-pic { overflow: hidden; }
+html.tanh .th-scroll { display: flex; width: 200%; height: 100%; flex: none; align-self: stretch; }
+html.tanh .th-scroll svg { width: 50% !important; height: 100%; flex: none; }
+html.tanh .reveal section.present .th-scroll { animation: th-scroll 1.86s linear infinite; }
+@keyframes th-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .th-cam-hand, html.tanh .reveal section.present .th-cam-pred,
+  html.tanh .reveal section.present .th-bar, html.tanh .reveal section.present .th-scroll { animation: none; }
+}

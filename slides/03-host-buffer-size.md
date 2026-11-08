@@ -49,7 +49,7 @@ Note:
 Note:
 - we need a reliable way of passing the samples, that makes sure the model always get a block of 2048 and the host will always get 512 samples
 - The approach: A ring buffer on each side of the model
-- Host pushes whatever it has into the first ringbuffer
+- Host pushes whatever it has into the first ring buffer
 - The model takes a full block, as soon as it's available. 
 - The model processes and writes 2048 to the output ring buffer
 
@@ -107,7 +107,7 @@ Note:
 
 <div class="tag">Helpers: <code>ring_buffer.h</code></div>
 
-## The ringbuffer <span class="then">3 methods are given</span>
+## The ring buffer <span class="then">3 methods are given</span>
 
 ```cpp
 RingBuffer buffer(capacity);           // Allocates once, never again
@@ -127,8 +127,7 @@ Note:
 - We use 3 methods: 
 - The available() method checks if there are samples in the buffer
 - `try_push` at the back, `try_pop` from the front: first in, first out method, , one sample at a time
-- `try` means
-- They never throw: they return a boolian telling us whether it worked. Even if we try to push and the RB is full or the other way around, nothing changes
+- `try` means they never throw: they return a boolean telling us whether it worked. Even if we try to push and the RB is full or the other way around, nothing changes
 
 ---
 
@@ -146,12 +145,14 @@ cmake --build --preset release --target step03_exercise
 ```
 
 <div class="run">
-  <div class="run-step" data-seconds="2.2">
+  <div class="run-step" data-seconds="3.4">
     <div class="run-title"><span>1</span>Prefill the output</div>
-    <div class="run-visual run-size-buffers">
-      <div class="mini-buf grow"></div>
-      <div class="mini-buf grow"></div>
-      <div class="run-size">? samples</div>
+    <div class="run-visual run-callbacks">
+      <div class="run-cb"><span>callback 1</span><strong>zeros</strong></div>
+      <div class="run-cb"><span>callback 2</span><strong>zeros</strong></div>
+      <div class="run-cb"><span>callback 3</span><strong>zeros</strong></div>
+      <div class="run-cb model"><span>callback 4</span><strong>model</strong></div>
+      <div class="run-size">? zeros</div>
     </div>
   </div>
   <div class="run-step" data-seconds="3.4">
@@ -174,7 +175,10 @@ cmake --build --preset release --target step03_exercise
 </div>
 
 Note:
-- Your task is to work out the prefill, pump a whole block, hand the samples back
+- Your task is to work out how many samples we need to prefill, pump a whole block, hand the samples back
+- A small hint for TODO 1: callbacks 1 to 3 only collect samples, nothing else happens.
+- In callback 4 the block is complete, the model runs inside the callback and pushes the results in that same callback
+- How many zeros is the first TODO. Don't give the number away
 - `main.cpp` in steps/03_host_buffer_size/exercise, build commands on the slide
 - 8 minutes, don't worry if you don't finish, we solve it together
 
@@ -183,6 +187,14 @@ Note:
 <div class="tag">Solution</div>
 
 ## TODO 1: The prefill
+
+<div class="lat-add with-code">
+  <div class="lat-term " data-fragment-index="1"><span>model block</span><small>samples</small><strong>2048</strong></div>
+  <div class="lat-op " data-fragment-index="1">−</div>
+  <div class="lat-term " data-fragment-index="1"><span>host block</span><small>samples</small><strong>512</strong></div>
+  <div class="lat-op " data-fragment-index="2">=</div>
+  <div class="lat-term total " data-fragment-index="2"><span>buffer adaptation</span><small>3 callbacks × 512, also our latency</small><strong>1536</strong></div>
+</div>
 
 ```cpp
 const size_t prefill = «m_model.m_input_size - host_block_size»;  // <- solution
@@ -194,6 +206,10 @@ for (size_t i = 0; i < prefill; ++i) {                   // given: the zeros go 
     assert(pushed);  // never fails: m_output has room for the prefill
 }
 ```
+
+
+
+<div class="cards-note corner-note " data-fragment-index="2">For 512 into 2048. Other host block sizes give other numbers: part 2.</div>
 
 Note:
 - The host takes 512 samples every callback, but the model's first block is only complete in the fourth callback
@@ -223,7 +239,6 @@ if (m_input.available() >= «m_model.m_input_size») {  // <- 2. solution
 
 Note:
 - First we push the host's samples into the input ring buffer, sample by sample
-- `try_push` never fails: the model takes a whole block out before `m_input` is full. So we only assert it
 - Check if 2048 samples are available -> only pump one model block at a time
 
 ---
@@ -249,7 +264,6 @@ if (m_input.available() >= m_model.m_input_size) {
 
 Note:
 - Then: pop, process, push to the output ring buffer
-- Those two can't fail: the check said a whole block is there, and `m_output` has room for one. So we only assert it
 
 ---
 
@@ -270,36 +284,6 @@ Note:
 
 ---
 
-<div class="tag">Bonus question</div>
-
-## What is the algorithmic latency?
-
-<div class="callbacks">
-  <div class="callback fragment" data-fragment-index="1"><span>Callback 1</span><small>collect 512</small><strong>zeros out</strong></div>
-  <div class="callback fragment" data-fragment-index="1"><span>Callback 2</span><small>collect 512</small><strong>zeros out</strong></div>
-  <div class="callback fragment" data-fragment-index="1"><span>Callback 3</span><small>collect 512</small><strong>zeros out</strong></div>
-  <div class="callback model fragment" data-fragment-index="2"><span>Callback 4</span><small>block complete, model runs</small><strong>model output</strong></div>
-</div>
-
-<div class="lat-add with-code">
-  <div class="lat-term fragment" data-fragment-index="3"><span>model block</span><small>samples</small><strong>2048</strong></div>
-  <div class="lat-op fragment" data-fragment-index="3">−</div>
-  <div class="lat-term fragment" data-fragment-index="3"><span>host block</span><small>samples</small><strong>512</strong></div>
-  <div class="lat-op fragment" data-fragment-index="4">=</div>
-  <div class="lat-term total fragment" data-fragment-index="4"><span>buffer adaptation</span><small>3 callbacks × 512, the prefill</small><strong>1536</strong></div>
-</div>
-
-<div class="cards-note corner-note fragment" data-fragment-index="4">For 512 into 2048. Other host block sizes give other numbers: part 2.</div>
-
-Note:
-- Ask first: how much latency does our processing add, the way we built it?
-- The model needs 2048, the host brings 512 at a time
-- Click: callbacks 1 to 3: `m_input` only collects samples, the host gets the prefill
-- Click: callback 4 we have enough samples for our forward pass. The block is complete, the model runs inside the callback and pushes the results all in the  same callback
-- So that means that in our last our latency is one model block minus one host block.
-- in other words the model runs in the callback they arrive in
-
----
 
 <div class="tag">Done</div>
 

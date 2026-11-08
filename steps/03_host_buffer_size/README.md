@@ -72,4 +72,4 @@ Compare with [`solution/main.cpp`](solution/main.cpp) when you want to.
 
 ## What broke?
 
-Nothing, but two things are now true that were not before. The host hears the prefill first, 1536 samples of silence: that is part of the latency, the question after the solution. And every fourth callback now runs a whole forward pass. How long does that take, and what is the budget? That is step 4.
+Nothing, but two things are now true that were not before. The host hears the prefill first, 1536 samples of silence: that is part of the latency. And every fourth callback now runs a whole forward pass. How long does that take, and what is the budget? That is step 4.

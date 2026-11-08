@@ -7,8 +7,9 @@ Eight numbers to play
 
 Note:
 - [before: the step 10 app open behind the slides, camera allowed, sound on the room's speakers]
-- This is our model's decoder alone, and a hand moves its eight numbers.
-- The fun part: everything is in place, now we play with it and build on it.
+- We have everything in place, and everything runs.
+- Now it's time to have some fun with the model, and use it in a different way.
+- Only its decoder, and your hands move its eight numbers.
 
 ---
 

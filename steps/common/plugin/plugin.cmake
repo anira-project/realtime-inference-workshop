@@ -1,4 +1,4 @@
-# One plugin on the shared shell of steps/common/plugin, for steps 8 to 10:
+# One plugin on the shared shell of steps/common/plugin, for steps 8 and 9 and the bonus:
 # PluginBase, the source player, the window. The step adds its own sources.
 #
 #   workshop_add_plugin(<target> NAME <product name> CODE <4 chars> [SOURCES ...])

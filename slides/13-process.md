@@ -6,9 +6,7 @@ One block through anira
 <!-- kind: talk -->
 
 Note:
-- Process: one block through anira.
-- This is the third row of the map, the part that runs in every callback.
-- We go through the two kinds of thread, the path of one block, the stages, the waiting on both sides, a miss, and the real-time rules.
+- This leads us to the process function
 
 ---
 
@@ -19,92 +17,15 @@ Note:
 {{MAP:show=create,prepare|focus=process}}
 
 Note:
-- Process runs in every callback, on the audio thread.
-- The row we fill now is processBlock: one call per callback.
-- Everything else in this row is anira's, on the audio thread and in the pool.
-
----
-
-<div class="tag">Two threads</div>
-
-## Two kinds of thread.<br><span class="then">Each has its own rules.</span>
-
-<div class="kinds">
-  <div class="kind audio">
-    <div class="kind-name">Audio thread</div>
-    <div class="kind-role"><code>process</code>, with pre- and post-processing</div>
-    <div class="kind-track"><div class="kind-row callbacks"></div></div>
-    <div class="kind-axis"><span>one callback</span><span>time →</span></div>
-    <div class="kind-rules"><b>no allocation</b><b>no lock</b><b>waits only if asked</b></div>
-  </div>
-  <div class="kind inference">
-    <div class="kind-name">Inference threads</div>
-    <div class="kind-role">the model runs: the heavy, not real-time-safe work</div>
-    <div class="kind-track">
-      <div class="kind-row"><i style="left:2%;width:46%"></i><i style="left:52%;width:40%"></i></div>
-      <div class="kind-row"><i style="left:14%;width:52%"></i><i style="left:70%;width:26%"></i></div>
-      <div class="kind-row"><i style="left:6%;width:30%"></i><i style="left:40%;width:48%"></i></div>
-    </div>
-    <div class="kind-axis"><span>one model run</span><span>time →</span></div>
-    <div class="kind-rules"><b>may allocate, may lock</b><b>as long as it takes</b><b>shared by every instance</b></div>
-  </div>
-</div>
-
-Note:
-- There are two kinds of thread, and each has its own rules.
-- They are the two halves of the process row, and the next slides fill them in.
-- On the left, the audio thread: every callback runs process, with the pre- and post-processing around it.
-- It returns long before its deadline, and it never allocates or locks; it waits only if you ask it to, and we will see how.
-- On the right, the inference threads: one pool per process, shared by every instance.
-- Only the heavy work that is not real-time safe moves there: the model run, inside an engine that may allocate and lock, for as long as it takes.
-- Configs, prepare and the latency run wherever the host calls them, usually its main thread: that is setup before the stream starts, not a thread anira adds.
-
----
-
-<div class="tag">anira · Pipeline</div>
-
-## Audio in, through the pool, audio out.<br><span class="then">Push, then pop, every callback.</span>
-
-<div class="pipeline" data-window="4" data-inference="1.32" data-threads="2" data-slots="4" data-ring="12" data-period="1400" data-loop="40">
-  <div class="pl-in"><div class="pl-label">audio in · 512</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1 fragment" data-fragment-index="1" data-stage="1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in fragment" data-fragment-index="1" data-stage="1"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2 fragment" data-fragment-index="2" data-stage="2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots fragment" data-fragment-index="2" data-stage="2"><div class="pl-label">slots · 2048 each</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both fragment" data-fragment-index="3" data-stage="3"></div>
-  <div class="pl-threads fragment" data-fragment-index="3" data-stage="3"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out fragment" data-fragment-index="5" data-stage="5"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back fragment" data-fragment-index="5" data-stage="5"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out fragment" data-fragment-index="4" data-stage="4"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back fragment" data-fragment-index="4" data-stage="4"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down fragment" data-fragment-index="4" data-stage="4"><span class="pl-then"></span></div>
-</div>
-
-<div class="cards-note fragment" data-fragment-index="5">The output ring starts with 2560 samples of silence, step 7's prefill: 1536 + 1024. Then every block is on time.</div>
-
-Note:
-- Audio in, through the pool, audio out: push, then pop, every callback.
-- We build it up click by click while it runs, with our numbers from part 1: 512 samples per callback, 2048 per model run, and a worst case of 15.3 ms, about 1.3 callbacks.
-- First only the audio coming in: a block per callback, at a steady rate.
-- [click] The push: the audio thread writes every block into the ring buffer, and with nothing taking it out, the ring fills up.
-- [click] The enqueue: whenever the ring holds enough for one model run, that part goes into a free slot, at a different rate than the blocks.
-- With no one running them, the slots fill up.
-- [click] The inference threads: a free thread takes the oldest waiting slot, runs the model and writes the result back.
-- One run takes about 1.3 callbacks, far less than the four callbacks between two windows. Our model has state, so its runs go one at a time anyway.
-- [click] The dequeue: the audio thread's path in one callback is push, enqueue when the ring holds enough, straight down, dequeue.
-- The inference threads on the right run on their own.
-- The slot just handed over is still running, so the dequeue takes an older result, or none yet.
-- [click] The pop: once a slot is done, the dequeue moves its result into the output ring buffer, and every pop plays one block out of it.
-- The output ring starts primed with silence, as in step 6: 2560 samples, 1536 for the block adaptation and 1024 for the worker's two callbacks. It plays out first, and the first result arrives just as it runs out.
-- That silence plus the model's own 2224 is the latency, which anira computes at prepare and reports to the host: 4784, as in step 7.
+- Process runs in every callback, on the audio thread: in JUCE we'd call it in the processBlock function
 
 ---
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Steps 3 and 7</div>
+<div class="tag">Part 1 · Steps 3 and 6</div>
 
-## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
+## Push and pop, by hand.<br><span class="then">Every sample, inside our processor.</span>
 
 ```cpp
 m_input.try_push(samples[i]);       // host in, sample by sample
@@ -115,10 +36,13 @@ m_output.try_pop(samples[i]);       // host out, sample by sample
 ```
 
 Note:
-- In part 1 we did the pre- and post-processing inside the processor, by hand.
-- The host block into the ring, model blocks out of it, the results back, and the host block out of the output ring.
-- That is pre- and post-processing, and ours knew only one shape: audio to audio.
-- anira turns this into stages.
+- Let's recap process in part 1
+- We wrote every step by hand: we pushed the host block into the input ring, sample by sample on the audio thread
+- Then the worker popped the samples out and called the model inference on the worker thread
+- The result got pushed back to the output ring buffer
+- And back on the audio thread the host popped the output ring buffer to fill its host block
+- All of it inside our processor implemented manually
+- How does anira do this?
 
 ---
 
@@ -126,286 +50,82 @@ Note:
 
 <div class="tag">anira · Stages</div>
 
-## Four phases around the engine.<br><span class="then">Two threads, one state loop.</span>
+## The push and pop is anira's.<br><span class="then">The phases around the engine are yours.</span>
 
-<svg class="st" viewBox="0 0 1600 560" aria-label="the stage phases">
+<svg class="st" viewBox="0 0 1600 570" aria-label="the stage phases">
   <defs>
     <marker id="st-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10z" class="ov-arrowhead"/>
     </marker>
   </defs>
-  <rect class="st-lane audio" x="20" y="40" width="1570" height="200" rx="10"/>
-  <text x="40" y="70" class="st-lane-label">audio thread · driver-thread</text>
-  <rect class="st-lane pool" x="20" y="300" width="1570" height="200" rx="10"/>
-  <text x="40" y="330" class="st-lane-label">inference thread · one of the pool</text>
+  <rect class="st-lane audio" x="20" y="40" width="1570" height="220" rx="10"/>
+  <text x="40" y="70" class="st-lane-label">audio thread · real-time: no allocation, no lock, no wait</text>
+  <rect class="st-lane pool" x="20" y="300" width="1570" height="230" rx="10"/>
+  <text x="40" y="330" class="st-lane-label">inference thread · may allocate, lock and block</text>
   <g class="fragment" data-fragment-index="1">
-    <rect class="ov-pill" x="50" y="112" width="130" height="56" rx="8"/><text x="115" y="146" class="st-text">host block</text>
-    <line class="ov-flow strong" x1="180" y1="140" x2="226" y2="140" marker-end="url(#st-arrow)"/>
-    <circle class="ov-ring" cx="250" cy="140" r="24"/><text x="250" y="194" class="st-caption">input ring</text>
-    <line class="ov-flow strong" x1="274" y1="140" x2="300" y2="140" marker-end="url(#st-arrow)"/>
-    <rect class="ov-pill stage" x="300" y="112" width="170" height="56" rx="8"/><text x="385" y="146" class="st-text">pre_process</text>
-    <text x="385" y="194" class="st-caption">a window out of the ring</text>
-    <line class="ov-flow strong" x1="470" y1="140" x2="510" y2="140" marker-end="url(#st-arrow)"/>
-    <rect class="ov-pill tensor" x="510" y="112" width="180" height="56" rx="8"/><text x="600" y="146" class="st-text">model tensor in</text>
-    <text x="600" y="194" class="st-caption">a slot, stamped</text>
+    <rect class="ov-pill" x="50" y="132" width="130" height="56" rx="8"/><text x="115" y="166" class="st-text">host block</text>
+    <line class="ov-flow strong" x1="186" y1="160" x2="218" y2="160" marker-end="url(#st-arrow)"/>
+    <circle class="ov-ring" cx="250" cy="160" r="24"/><text x="250" y="222" class="st-caption">input ring</text>
+    <line class="ov-flow strong" x1="282" y1="160" x2="294" y2="160" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill stage" x="300" y="132" width="170" height="56" rx="8"/><text x="385" y="166" class="st-text">pre_process</text>
+    <text x="385" y="222" class="st-caption">a window out of the ring</text>
+    <line class="ov-flow strong" x1="476" y1="160" x2="504" y2="160" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill tensor" x="510" y="132" width="180" height="56" rx="8"/><text x="600" y="166" class="st-text">model tensor in</text>
   </g>
+  <!-- down the queue to the engine -->
   <g class="fragment" data-fragment-index="2">
-    <path class="ov-flow strong" d="M600 168 V380" marker-end="url(#st-arrow)"/>
-    <text x="616" y="262" class="st-caption left">the queue</text>
+    <path class="ov-flow strong" d="M600 194 V374" marker-end="url(#st-arrow)"/>
+    <text x="616" y="286" class="st-caption left">the queue</text>
     <rect class="ov-pill stage" x="505" y="380" width="190" height="56" rx="8"/><text x="600" y="414" class="st-text">before_inference</text>
-    <line class="ov-flow strong" x1="695" y1="408" x2="745" y2="408" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="701" y1="408" x2="739" y2="408" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill engine" x="745" y="372" width="150" height="72" rx="10"/><text x="820" y="414" class="st-text strong">engine</text>
-    <line class="ov-flow strong" x1="895" y1="408" x2="945" y2="408" marker-end="url(#st-arrow)"/>
+  </g>
+  <!-- after the engine, back up to the model tensor out -->
+  <g class="fragment" data-fragment-index="3">
+    <line class="ov-flow strong" x1="901" y1="408" x2="939" y2="408" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="945" y="380" width="190" height="56" rx="8"/><text x="1040" y="414" class="st-text">after_inference</text>
-    <path class="ov-flow strong" d="M1040 380 V168" marker-end="url(#st-arrow)"/>
-    <text x="1056" y="262" class="st-caption left">the slot, back</text>
-    <rect class="ov-pill tensor" x="945" y="112" width="190" height="56" rx="8"/><text x="1040" y="146" class="st-text">model tensor out</text>
-    <text x="1040" y="194" class="st-caption">the next stamp</text>
-    <line class="ov-flow strong" x1="1135" y1="140" x2="1180" y2="140" marker-end="url(#st-arrow)"/>
-    <rect class="ov-pill stage" x="1180" y="112" width="170" height="56" rx="8"/><text x="1265" y="146" class="st-text">post_process</text>
-    <text x="1265" y="194" class="st-caption">the result into the ring</text>
-    <line class="ov-flow strong" x1="1350" y1="140" x2="1376" y2="140" marker-end="url(#st-arrow)"/>
-    <circle class="ov-ring" cx="1400" cy="140" r="24"/><text x="1400" y="194" class="st-caption">output ring</text>
-    <line class="ov-flow strong" x1="1424" y1="140" x2="1450" y2="140" marker-end="url(#st-arrow)"/>
-    <rect class="ov-pill" x="1450" y="112" width="130" height="56" rx="8"/><text x="1515" y="146" class="st-text">host block</text>
+    <path class="ov-flow strong" d="M1040 374 V194" marker-end="url(#st-arrow)"/>
+    <text x="1056" y="286" class="st-caption left">the slot, back</text>
+    <rect class="ov-pill tensor" x="945" y="132" width="190" height="56" rx="8"/><text x="1040" y="166" class="st-text">model tensor out</text>
+    <text x="1040" y="222" class="st-caption on-audio">the next stamp</text>
   </g>
-  <g class="fragment" data-fragment-index="3">
-    <path class="ov-flow state" d="M880 444 V482 H760 V444" marker-end="url(#st-arrow)"/>
-    <text x="820" y="470" class="st-caption">state_out → state_in</text>
-    <text x="820" y="530" class="st-caption">the declared pair swaps around each inference, no copy</text>
+  <!-- the rest of the audio thread: into the output ring, out to the host -->
+  <g class="fragment" data-fragment-index="4">
+    <line class="ov-flow strong" x1="1141" y1="160" x2="1174" y2="160" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill stage" x="1180" y="132" width="170" height="56" rx="8"/><text x="1265" y="166" class="st-text">post_process</text>
+    <text x="1265" y="222" class="st-caption">the result into the ring</text>
+    <line class="ov-flow strong" x1="1356" y1="160" x2="1368" y2="160" marker-end="url(#st-arrow)"/>
+    <circle class="ov-ring" cx="1400" cy="160" r="24"/><text x="1400" y="222" class="st-caption">output ring</text>
+    <line class="ov-flow strong" x1="1432" y1="160" x2="1444" y2="160" marker-end="url(#st-arrow)"/>
+    <rect class="ov-pill" x="1450" y="132" width="130" height="56" rx="8"/><text x="1515" y="166" class="st-text">host block</text>
   </g>
-</svg>
-
-<div class="cards-note">The default stage is step 3: a window out of the ring, the result back in. <code>before</code> and <code>after</code> are empty. You write a stage for another shape.</div>
-
-Note:
-- anira puts four phases around the engine: pre_process and post_process on the audio thread, before_inference and after_inference on the pool.
-- [click] Top lane: the host block goes into the input ring, and pre_process takes one window out of it as the model tensor.
-- The tensor goes into a slot with a stamp, a running number that keeps the results in order, and the callback returns.
-- [click] Bottom lane: a pool thread runs before_inference, the engine and after_inference on the tensor, and hands the slot back.
-- In a later callback the audio thread takes the next stamp in line, and post_process writes the result into the output ring.
-- [click] The state pair from the create chapter is bound before before_inference and swapped after after_inference: both hooks see the state, and nothing is copied.
-- The default stage is what step 3 did by hand, with before and after empty.
-- You write your own stage only when the model needs another shape than audio in, audio out.
-
----
-
-<div class="tag">anira · Waiting</div>
-
-## Between enqueue and dequeue,<br><span class="then">the audio thread may wait.</span>
-
-<div class="pl-case"><code>wait_ratio = 0</code> the dequeue comes right after the enqueue.</div>
-
-<div class="pipeline" data-window="2" data-inference="0.35" data-wait="0" data-period="2400" data-threads="2" data-slots="4" data-ring="8" data-loop="12">
-  <div class="pl-in"><div class="pl-label">audio in</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots"><div class="pl-label">slots</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both"></div>
-  <div class="pl-threads"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down"><span class="pl-then"></span></div>
-</div>
-
-Note:
-- Between enqueue and dequeue, the audio thread may wait: wait_ratio says how long.
-- process itself never waits; only its waiting twin, process_wait, does: with ANIRA_WAIT_CONTRACT up to wait_ratio of a block, otherwise as long as you pass it.
-- get_latency already counts on that wait: with wait_ratio above 0, a host that calls plain process gets the lower latency and more misses.
-- Why wait at all: if the model is fast, a short wait gets the result out in the same callback, one block earlier.
-- This is the same pipeline with a fast model: a window of two blocks, and one run takes about a third of a block; simplified, not to scale.
-- With wait_ratio 0, the default, the audio thread goes straight from the enqueue to the dequeue.
-- The window it just handed over is still running, so its result comes out one callback later.
-- That callback is latency.
-
----
-
-<div class="tag">anira · Waiting</div>
-
-## Between enqueue and dequeue,<br><span class="then">the audio thread may wait.</span>
-
-<div class="pl-case"><code>wait_ratio = 0.25</code> the audio thread waits a quarter block: not long enough.</div>
-
-<div class="pipeline" data-window="2" data-inference="0.35" data-wait="0.25" data-period="2400" data-threads="2" data-slots="4" data-ring="8" data-loop="12">
-  <div class="pl-in"><div class="pl-label">audio in</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots"><div class="pl-label">slots</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both"></div>
-  <div class="pl-threads"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down"><span class="pl-then"></span><div class="pl-wait" style="--share:0.25"><i class="pl-wait-fill"></i></div></div>
-</div>
-
-Note:
-- With wait_ratio 0.25, process_wait blocks the audio thread for up to a quarter of the block period between enqueue and dequeue.
-- The arrow down stands for one block period, and the dashed box beside it is the share the ratio allows.
-- The model needs a third of a block, so the wait runs out first.
-- The dequeue finds nothing new, and the result comes out one callback later, as before.
-- The quarter block of waiting is gone from the callback for nothing.
-
----
-
-<div class="tag">anira · Waiting</div>
-
-## Between enqueue and dequeue,<br><span class="then">the audio thread may wait.</span>
-
-<div class="pl-case"><code>wait_ratio = 0.5</code> the audio thread waits up to half a block: the result is back in time.</div>
-
-<div class="pipeline" data-window="2" data-inference="0.35" data-wait="0.5" data-period="2400" data-threads="2" data-slots="4" data-ring="8" data-loop="12">
-  <div class="pl-in"><div class="pl-label">audio in</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots"><div class="pl-label">slots</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both"></div>
-  <div class="pl-threads"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down"><span class="pl-then"></span><div class="pl-wait" style="--share:0.5"><i class="pl-wait-fill"></i></div></div>
-</div>
-
-Note:
-- With wait_ratio 0.5, process_wait blocks it for up to half a block.
-- The model is done after a third, the audio thread wakes up, and the dequeue takes this window's result right away.
-- The result goes out in the same callback: the silence at the start is shorter, and the latency is one block lower.
-- It buys latency with callback time: fine for one instance on a quiet machine, dangerous for ten.
-
----
-
-<!-- .slide: class="recap" -->
-
-<div class="tag">Part 1 · Step 6</div>
-
-## The worker spins, the audio thread never waits.<br><span class="then">One fixed way to wait, on both sides.</span>
-
-{{THREADS}}
-
-```cpp
-// the worker hot-spins: a sample not there yet, it tries again at once, no sleep
-while (!m_input.try_pop(m_model_block[i])) { if (!m_worker.running()) { return; } }
-// the audio thread never waits: a sample not there yet is a zero, and a debt
-const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
-```
-
-Note:
-- The other wait: the pool's. In step 6 we made two decisions without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
-- The timeline from step 6: between two runs the worker spins on try_pop the whole time, no sleep, no pause, one core at 100 percent, even while idle.
-- The audio thread only pushes and pops. If a sample is not there yet, it writes zeros for the rest of the callback and owes them: the debt.
-- Both were fixed in the code, the same for every instance.
-
----
-
-<!-- .slide: class="answer" -->
-
-<div class="tag">anira · Pool</div>
-
-## The pool waits for work.<br><span class="then">Spin with backoff, or block. Declared once, at create.</span>
-
-<div class="policies">
-  <div class="policy-head"></div><div class="policy-head"></div><div class="policy-head">audio thread, on enqueue</div><div class="policy-head">pool, while idle</div>
-
-  <div class="policy-name"><code>SPIN_BACKOFF</code></div>
-  <div class="wait-bar spin"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <div class="policy-cell ok">an atomic, nothing else</div>
-  <div class="policy-cell warn">polls: 4 retries, 32 with a CPU pause, then yield and sleep 100 µs</div>
-
-  <div class="policy-name"><code>BLOCKING</code></div>
-  <div class="wait-bar block"><i></i></div>
-  <div class="policy-cell warn">an atomic, plus one wake syscall when a thread is blocked</div>
-  <div class="policy-cell ok">spins up to 10,000 tries, then blocks on a semaphore</div>
-</div>
-
-<div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
-
-Note:
-- In anira the pool's wait is one setting for the whole process, declared at create in ContextConfig::threads: spin with backoff, or block.
-- Not the wait from the slides before: wait_ratio is the audio thread waiting for a result, per handler, in the contract. This is the pool waiting for work.
-- SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool pays by polling.
-- Its backoff: 4 retries at once, 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry. So an idle thread picks up new work within about 100 µs.
-- BLOCKING waits in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
-- It wakes up every 5 ms on its own, only to check whether it should exit. While blocked, it uses no CPU.
-- The price is on the audio thread: if a pool thread is blocked, the enqueue makes one wake syscall.
-- Under load the threads rarely sleep, so that is rare; on an idle pool it is nearly every job.
-- [click] We recommend BLOCKING: one bounded wake instead of threads polling while idle.
-- It takes no lock and never waits, but no OS documents the wake as real-time safe, RTSan does not check it, and we have not yet measured its worst case per platform.
-- SPIN_BACKOFF stays the default because the OS clocks a sleeping core down, and whatever runs next on it starts slow; spinning keeps the core warm.
-
----
-
-<!-- .slide: class="recap miss" -->
-
-<div class="tag">Part 1 · Step 7</div>
-
-## What happens if the input ring is full?<br><span class="then">Zeros, then the audio is late for one latency.</span>
-
-```cpp
-for (size_t i = 0; i < num_samples; ++i) {
-    if (!m_input.try_push(samples[i])) {                    // the worker is behind
-        m_unpushed += num_samples - i;                      // as many zeros go out first
-        break;
-    }
-}
-```
-
-<div class="click">
-  <div class="click-labels"><span class="lane">input</span><span style="left:26.50%;width:12.33%">never pushed</span><span class="fragment" data-fragment-index="3" style="left:43.50%;width:31.50%">one latency later, the gap reaches the output</span></div>
-  <svg class="click-wave" viewBox="0 0 1500 108" aria-hidden="true">
-  <defs><marker id="lost-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" class="lost-arrowhead"/></marker></defs>
-  <rect class="callback-box" x="375.0" y="1" width="187.5" height="106"/>
-  <rect class="shift-band" x="487.5" y="0" width="75.0" height="108"/>
-  <line class="click-div" x1="188" y1="6" x2="188" y2="102"/><line class="click-div" x1="375" y1="6" x2="375" y2="102"/><line class="click-div" x1="562" y1="6" x2="562" y2="102"/><line class="click-div" x1="750" y1="6" x2="750" y2="102"/><line class="click-div" x1="938" y1="6" x2="938" y2="102"/><line class="click-div" x1="1125" y1="6" x2="1125" y2="102"/><line class="click-div" x1="1312" y1="6" x2="1312" y2="102"/>
-  <path class="click-line" d="M0.0 84.2 L2.5 80.9 L5.0 77.3 L7.5 73.4 L10.0 69.3 L12.5 65.1 L15.0 60.7 L17.5 56.2 L20.0 51.8 L22.5 47.3 L25.0 42.9 L27.5 38.7 L30.0 34.6 L32.5 30.7 L35.0 27.1 L37.5 23.8 L40.0 20.8 L42.5 18.1 L45.0 15.9 L47.5 14.1 L50.0 12.7 L52.5 11.8 L55.0 11.3 L57.5 11.3 L60.0 11.8 L62.5 12.7 L65.0 14.1 L67.5 16.0 L70.0 18.2 L72.5 20.8 L75.0 23.8 L77.5 27.2 L80.0 30.8 L82.5 34.6 L85.0 38.7 L87.5 43.0 L90.0 47.3 L92.5 51.8 L95.0 56.2 L97.5 60.7 L100.0 65.0 L102.5 69.2 L105.0 73.3 L107.5 77.1 L110.0 80.7 L112.5 84.0 L115.0 87.0 L117.5 89.6 L120.0 91.8 L122.5 93.5 L125.0 94.9 L127.5 95.8 L130.0 96.2 L132.5 96.2 L135.0 95.7 L137.5 94.8 L140.0 93.4 L142.5 91.6 L145.0 89.3 L147.5 86.7 L150.0 83.7 L152.5 80.5 L155.0 76.9 L157.5 73.1 L160.0 69.0 L162.5 64.8 L165.0 60.6 L167.5 56.2 L170.0 51.8 L172.5 47.5 L175.0 43.2 L177.5 39.1 L180.0 35.1 L182.5 31.3 L185.0 27.8 L187.5 24.6 L190.0 21.7 L192.5 19.2 L195.0 17.1 L197.5 15.4 L200.0 14.1 L202.5 13.2 L205.0 12.8 L207.5 12.8 L210.0 13.3 L212.5 14.3 L215.0 15.6 L217.5 17.4 L220.0 19.6 L222.5 22.2 L225.0 25.1 L227.5 28.3 L230.0 31.8 L232.5 35.5 L235.0 39.4 L237.5 43.5 L240.0 47.7 L242.5 51.9 L245.0 56.1 L247.5 60.3 L250.0 64.4 L252.5 68.4 L255.0 72.3 L257.5 75.9 L260.0 79.3 L262.5 82.4 L265.0 85.1 L267.5 87.5 L270.0 89.6 L272.5 91.2 L275.0 92.4 L277.5 93.3 L280.0 93.6 L282.5 93.6 L285.0 93.1 L287.5 92.1 L290.0 90.8 L292.5 89.1 L295.0 87.0 L297.5 84.5 L300.0 81.7 L302.5 78.6 L305.0 75.3 L307.5 71.7 L310.0 67.9 L312.5 64.1 L315.0 60.1 L317.5 56.0 L320.0 52.0 L322.5 48.0 L325.0 44.0 L327.5 40.2 L330.0 36.6 L332.5 33.2 L335.0 30.0 L337.5 27.0 L340.0 24.4 L342.5 22.1 L345.0 20.2 L347.5 18.7 L350.0 17.5 L352.5 16.8 L355.0 16.4 L357.5 16.5 L360.0 17.0 L362.5 17.9 L365.0 19.2 L367.5 20.8 L370.0 22.8 L372.5 25.2 L375.0 27.8 L377.5 30.8 L380.0 33.9 L382.5 37.3 L385.0 40.9 L387.5 44.5 L390.0 48.3 L392.5 52.1 L395.0 55.9 L397.5 59.7 L400.0 63.4 L402.5 66.9 L405.0 70.3 L407.5 73.6 L410.0 76.6 L412.5 79.3 L415.0 81.7 L417.5 83.8 L420.0 85.6 L422.5 87.1 L425.0 88.1 L427.5 88.8 L430.0 89.1 L432.5 89.0 L435.0 88.5 L437.5 87.7 L440.0 86.5 L442.5 84.9 L445.0 83.0 L447.5 80.8 L450.0 78.3 L452.5 75.6 L455.0 72.6 L457.5 69.5 L460.0 66.2 L462.5 62.8 L465.0 59.3 L467.5 55.8 L470.0 52.2 L472.5 48.7 L475.0 45.3 L477.5 42.0 L480.0 38.9 L482.5 35.9 L485.0 33.2 L487.5 30.6 M562.5 75.3L562.5 75.3 L565.0 77.3 L567.5 79.1 L570.0 80.5 L572.5 81.7 L575.0 82.6 L577.5 83.1 L580.0 83.3 L582.5 83.2 L585.0 82.8 L587.5 82.1 L590.0 81.0 L592.5 79.7 L595.0 78.1 L597.5 76.3 L600.0 74.2 L602.5 71.9 L605.0 69.4 L607.5 66.8 L610.0 64.1 L612.5 61.3 L615.0 58.4 L617.5 55.5 L620.0 52.5 L622.5 49.7 L625.0 46.9 L627.5 44.2 L630.0 41.6 L632.5 39.2 L635.0 36.9 L637.5 34.9 L640.0 33.1 L642.5 31.5 L645.0 30.2 L647.5 29.2 L650.0 28.4 L652.5 27.9 L655.0 27.8 L657.5 27.9 L660.0 28.2 L662.5 28.9 L665.0 29.9 L667.5 31.0 L670.0 32.5 L672.5 34.1 L675.0 36.0 L677.5 38.0 L680.0 40.2 L682.5 42.6 L685.0 45.0 L687.5 47.5 L690.0 50.1 L692.5 52.7 L695.0 55.3 L697.5 57.8 L700.0 60.3 L702.5 62.7 L705.0 65.0 L707.5 67.1 L710.0 69.1 L712.5 70.9 L715.0 72.5 L717.5 73.9 L720.0 75.0 L722.5 76.0 L725.0 76.6 L727.5 77.0 L730.0 77.2 L732.5 77.1 L735.0 76.7 L737.5 76.1 L740.0 75.3 L742.5 74.2 L745.0 73.0 L747.5 71.5 L750.0 69.9 L752.5 68.1 L755.0 66.1 L757.5 64.0 L760.0 61.9 L762.5 59.7 L765.0 57.4 L767.5 55.1 L770.0 52.9 L772.5 50.6 L775.0 48.4 L777.5 46.3 L780.0 44.3 L782.5 42.5 L785.0 40.7 L787.5 39.2 L790.0 37.8 L792.5 36.6 L795.0 35.6 L797.5 34.8 L800.0 34.2 L802.5 33.8 L805.0 33.7 L807.5 33.8 L810.0 34.1 L812.5 34.6 L815.0 35.4 L817.5 36.3 L820.0 37.4 L822.5 38.7 L825.0 40.2 L827.5 41.7 L830.0 43.4 L832.5 45.2 L835.0 47.1 L837.5 49.1 L840.0 51.0 L842.5 53.0 L845.0 55.0 L847.5 56.9 L850.0 58.8 L852.5 60.7 L855.0 62.4 L857.5 64.0 L860.0 65.5 L862.5 66.9 L865.0 68.1 L867.5 69.2 L870.0 70.0 L872.5 70.7 L875.0 71.2 L877.5 71.5 L880.0 71.6 L882.5 71.6 L885.0 71.3 L887.5 70.8 L890.0 70.2 L892.5 69.4 L895.0 68.4 L897.5 67.3 L900.0 66.0 L902.5 64.7 L905.0 63.2 L907.5 61.6 L910.0 60.0 L912.5 58.3 L915.0 56.6 L917.5 54.9 L920.0 53.1 L922.5 51.4 L925.0 49.8 L927.5 48.2 L930.0 46.7 L932.5 45.3 L935.0 44.0 L937.5 42.8 L940.0 41.7 L942.5 40.8 L945.0 40.1 L947.5 39.5 L950.0 39.0 L952.5 38.8 L955.0 38.7 L957.5 38.7 L960.0 39.0 L962.5 39.4 L965.0 39.9 L967.5 40.6 L970.0 41.5 L972.5 42.4 L975.0 43.5 L977.5 44.7 L980.0 46.0 L982.5 47.4 L985.0 48.8 L987.5 50.2 L990.0 51.7 L992.5 53.2 L995.0 54.7 L997.5 56.2 L1000.0 57.7 L1002.5 59.1 L1005.0 60.4 L1007.5 61.6 L1010.0 62.8 L1012.5 63.8 L1015.0 64.8 L1017.5 65.6 L1020.0 66.2 L1022.5 66.8 L1025.0 67.2 L1027.5 67.4 L1030.0 67.5 L1032.5 67.4 L1035.0 67.2 L1037.5 66.9 L1040.0 66.4 L1042.5 65.8 L1045.0 65.1 L1047.5 64.2 L1050.0 63.3 L1052.5 62.2 L1055.0 61.1 L1057.5 59.9 L1060.0 58.6 L1062.5 57.3 L1065.0 56.0 L1067.5 54.7 L1070.0 53.3 L1072.5 52.0 L1075.0 50.7 L1077.5 49.5 L1080.0 48.3 L1082.5 47.2 L1085.0 46.1 L1087.5 45.2 L1090.0 44.4 L1092.5 43.6 L1095.0 43.0 L1097.5 42.5 L1100.0 42.2 L1102.5 41.9 L1105.0 41.8 L1107.5 41.9 L1110.0 42.0 L1112.5 42.3 L1115.0 42.7 L1117.5 43.3 L1120.0 43.9 L1122.5 44.7 L1125.0 45.6 L1127.5 46.5 L1130.0 47.5 L1132.5 48.6 L1135.0 49.8 L1137.5 50.9 L1140.0 52.2 L1142.5 53.4 L1145.0 54.6 L1147.5 55.8 L1150.0 57.0 L1152.5 58.2 L1155.0 59.3 L1157.5 60.3 L1160.0 61.3 L1162.5 62.2 L1165.0 63.0 L1167.5 63.7 L1170.0 64.2 L1172.5 64.7 L1175.0 65.1 L1177.5 65.3 L1180.0 65.4 L1182.5 65.4 L1185.0 65.3 L1187.5 65.0 L1190.0 64.6 L1192.5 64.1 L1195.0 63.5 L1197.5 62.8 L1200.0 62.0 L1202.5 61.1 L1205.0 60.2 L1207.5 59.1 L1210.0 58.0 L1212.5 56.9 L1215.0 55.8 L1217.5 54.6 L1220.0 53.4 L1222.5 52.2 L1225.0 51.1 L1227.5 50.0 L1230.0 48.9 L1232.5 47.9 L1235.0 46.9 L1237.5 46.0 L1240.0 45.3 L1242.5 44.6 L1245.0 44.0 L1247.5 43.5 L1250.0 43.1 L1252.5 42.9 L1255.0 42.7 L1257.5 42.7 L1260.0 42.9 L1262.5 43.1 L1265.0 43.5 L1267.5 43.9 L1270.0 44.5 L1272.5 45.2 L1275.0 46.0 L1277.5 46.9 L1280.0 47.8 L1282.5 48.8 L1285.0 49.9 L1287.5 51.1 L1290.0 52.2 L1292.5 53.4 L1295.0 54.6 L1297.5 55.8 L1300.0 57.0 L1302.5 58.1 L1305.0 59.2 L1307.5 60.3 L1310.0 61.3 L1312.5 62.2 L1315.0 63.0 L1317.5 63.7 L1320.0 64.3 L1322.5 64.9 L1325.0 65.3 L1327.5 65.5 L1330.0 65.7 L1332.5 65.7 L1335.0 65.6 L1337.5 65.4 L1340.0 65.0 L1342.5 64.6 L1345.0 64.0 L1347.5 63.2 L1350.0 62.4 L1352.5 61.5 L1355.0 60.5 L1357.5 59.5 L1360.0 58.3 L1362.5 57.1 L1365.0 55.9 L1367.5 54.6 L1370.0 53.4 L1372.5 52.1 L1375.0 50.8 L1377.5 49.6 L1380.0 48.4 L1382.5 47.3 L1385.0 46.2 L1387.5 45.2 L1390.0 44.3 L1392.5 43.5 L1395.0 42.8 L1397.5 42.2 L1400.0 41.8 L1402.5 41.5 L1405.0 41.3 L1407.5 41.2 L1410.0 41.3 L1412.5 41.6 L1415.0 41.9 L1417.5 42.4 L1420.0 43.1 L1422.5 43.8 L1425.0 44.7 L1427.5 45.7 L1430.0 46.8 L1432.5 48.0 L1435.0 49.2 L1437.5 50.5 L1440.0 51.9 L1442.5 53.3 L1445.0 54.7 L1447.5 56.1 L1450.0 57.5 L1452.5 58.9 L1455.0 60.2 L1457.5 61.5 L1460.0 62.7 L1462.5 63.8 L1465.0 64.9 L1467.5 65.8 L1470.0 66.5 L1472.5 67.2 L1475.0 67.7 L1477.5 68.1 L1480.0 68.3 L1482.5 68.4 L1485.0 68.3 L1487.5 68.0 L1490.0 67.6 L1492.5 67.0 L1495.0 66.3 L1497.5 65.5 L1500.0 64.5"/>
-  <path class="shift-line lost-line" d="M487.5 30.6 L490.0 28.4 L492.5 26.5 L495.0 24.8 L497.5 23.5 L500.0 22.6 L502.5 21.9 L505.0 21.7 L507.5 21.8 L510.0 22.2 L512.5 23.0 L515.0 24.2 L517.5 25.6 L520.0 27.4 L522.5 29.4 L525.0 31.7 L527.5 34.2 L530.0 36.9 L532.5 39.8 L535.0 42.8 L537.5 46.0 L540.0 49.2 L542.5 52.4 L545.0 55.6 L547.5 58.8 L550.0 61.9 L552.5 64.9 L555.0 67.8 L557.5 70.5 L560.0 73.0 L562.5 75.3"/>
-  <g class="fragment" data-fragment-index="3">
-    <line class="lost-link" x1="568.5" y1="14" x2="1121.0" y2="14" marker-end="url(#lost-arrow)"/>
-    <line class="lost-mark" x1="1125.0" y1="0" x2="1125.0" y2="108"/>
+  <!-- the state pair, around the whole inference: bound before before_inference, swapped after
+       after_inference, so both stages see it; captions beside and below the loop, where no line
+       passes behind them -->
+  <g class="fragment" data-fragment-index="5">
+    <path class="ov-flow state" d="M1040 442 V484 H600 V442" marker-end="url(#st-arrow)"/>
+    <text x="1052" y="470" class="st-caption left">swap</text>
+    <text x="588" y="470" class="st-caption" style="text-anchor: end">bind</text>
+    <text x="820" y="512" class="st-caption">state_in ← state_out</text>
+    <text x="820" y="556" class="st-caption">bound before before_inference, swapped after after_inference: both see the state, no copy</text>
   </g>
-</svg>
-</div>
-
-<div class="click lost">
-  <div class="click-labels"><span class="lane">output</span><span style="left:25.00%;width:5.00%">zeros</span><span class="fragment" data-fragment-index="2" style="left:30.00%;width:45.00%">late by the zeros, for one latency</span><span class="fragment" data-fragment-index="3" style="left:65.00%;width:20.00%">back in line</span></div>
-  <svg class="click-wave" viewBox="0 0 1500 148" aria-hidden="true">
-  <rect class="callback-box" x="375.0" y="1" width="187.5" height="146"/>
-  <rect class="click-gap" x="375.0" y="0" width="75.0" height="148"/>
-  <rect class="shift-band fragment" data-fragment-index="2" x="450.0" y="0" width="675.0" height="148"/>
-  <line class="click-div" x1="188" y1="6" x2="188" y2="142"/><line class="click-div" x1="375" y1="6" x2="375" y2="142"/><line class="click-div" x1="562" y1="6" x2="562" y2="142"/><line class="click-div" x1="750" y1="6" x2="750" y2="142"/><line class="click-div" x1="938" y1="6" x2="938" y2="142"/><line class="click-div" x1="1125" y1="6" x2="1125" y2="142"/><line class="click-div" x1="1312" y1="6" x2="1312" y2="142"/>
-  <path class="click-line" d="M0.0 47.3 L2.5 44.5 L5.0 42.1 L7.5 39.9 L10.0 38.2 L12.5 36.8 L15.0 35.8 L17.5 35.2 L20.0 35.1 L22.5 35.4 L25.0 36.1 L27.5 37.2 L30.0 38.8 L32.5 40.7 L35.0 43.1 L37.5 45.7 L40.0 48.8 L42.5 52.1 L45.0 55.7 L47.5 59.5 L50.0 63.5 L52.5 67.6 L55.0 71.9 L57.5 76.2 L60.0 80.5 L62.5 84.7 L65.0 88.9 L67.5 92.9 L70.0 96.8 L72.5 100.4 L75.0 103.8 L77.5 106.8 L80.0 109.5 L82.5 111.9 L85.0 113.8 L87.5 115.3 L90.0 116.4 L92.5 117.0 L95.0 117.2 L97.5 116.8 L100.0 116.0 L102.5 114.7 L105.0 113.0 L107.5 110.8 L110.0 108.2 L112.5 105.3 L115.0 101.9 L117.5 98.2 L120.0 94.3 L122.5 90.0 L125.0 85.6 L127.5 81.0 L130.0 76.4 L132.5 71.6 L135.0 66.9 L137.5 62.2 L140.0 57.6 L142.5 53.2 L145.0 49.0 L147.5 45.0 L150.0 41.3 L152.5 38.0 L155.0 35.0 L157.5 32.4 L160.0 30.3 L162.5 28.7 L165.0 27.5 L167.5 26.9 L170.0 26.8 L172.5 27.2 L175.0 28.1 L177.5 29.5 L180.0 31.4 L182.5 33.8 L185.0 36.6 L187.5 39.9 L190.0 43.6 L192.5 47.6 L195.0 51.9 L197.5 56.5 L200.0 61.4 L202.5 66.3 L205.0 71.4 L207.5 76.6 L210.0 81.7 L212.5 86.8 L215.0 91.8 L217.5 96.6 L220.0 101.1 L222.5 105.4 L225.0 109.4 L227.5 113.0 L230.0 116.2 L232.5 118.9 L235.0 121.2 L237.5 122.9 L240.0 124.1 L242.5 124.8 L245.0 124.9 L247.5 124.5 L250.0 123.5 L252.5 121.9 L255.0 119.8 L257.5 117.2 L260.0 114.2 L262.5 110.6 L265.0 106.7 L267.5 102.3 L270.0 97.7 L272.5 92.7 L275.0 87.5 L277.5 82.2 L280.0 76.8 L282.5 71.2 L285.0 65.7 L287.5 60.3 L290.0 55.0 L292.5 49.9 L295.0 45.0 L297.5 40.5 L300.0 36.2 L302.5 32.4 L305.0 29.1 L307.5 26.2 L310.0 23.8 L312.5 21.9 L315.0 20.7 L317.5 20.0 L320.0 19.9 L322.5 20.4 L325.0 21.5 L327.5 23.1 L330.0 25.4 L332.5 28.2 L335.0 31.4 L337.5 35.2 L340.0 39.4 L342.5 44.0 L345.0 49.0 L347.5 54.2 L350.0 59.7 L352.5 65.3 L355.0 71.1 L357.5 76.9 L360.0 82.7 L362.5 88.4 L365.0 94.0 L367.5 99.4 L370.0 104.5 L372.5 109.3 L375.0 113.7 L375.0 74 L450.0 74L450.0 113.7 L452.5 117.7 L455.0 121.2 L457.5 124.2 L460.0 126.7 L462.5 128.6 L465.0 129.9 L467.5 130.6 L470.0 130.7 L472.5 130.1 L475.0 129.0 L477.5 127.2 L480.0 124.8 L482.5 121.9 L485.0 118.4 L487.5 114.5 L490.0 110.1 L492.5 105.3 L495.0 100.1 L497.5 94.6 L500.0 88.9 L502.5 83.0 L505.0 77.0 L507.5 71.0 L510.0 65.0 L512.5 59.0 L515.0 53.2 L517.5 47.7 L520.0 42.4 L522.5 37.4 L525.0 32.9 L527.5 28.7 L530.0 25.1 L532.5 22.0 L535.0 19.5 L537.5 17.6 L540.0 16.2 L542.5 15.5 L545.0 15.5 L547.5 16.1 L550.0 17.3 L552.5 19.2 L555.0 21.6 L557.5 24.7 L560.0 28.3 L562.5 32.4 L565.0 36.9 L567.5 41.9 L570.0 47.2 L572.5 52.8 L575.0 58.7 L577.5 64.7 L580.0 70.9 L582.5 77.1 L585.0 83.3 L587.5 89.3 L590.0 95.3 L592.5 100.9 L595.0 106.3 L597.5 111.4 L600.0 116.0 L602.5 120.2 L605.0 123.9 L607.5 127.0 L610.0 129.6 L612.5 131.5 L615.0 132.8 L617.5 133.5 L620.0 133.5 L622.5 132.9 L625.0 131.6 L627.5 129.7 L630.0 127.2 L632.5 124.1 L635.0 120.4 L637.5 116.2 L640.0 111.6 L642.5 106.6 L645.0 101.1 L647.5 95.4 L650.0 89.5 L652.5 83.4 L655.0 77.1 L657.5 70.9 L660.0 64.6 L662.5 58.5 L665.0 52.6 L667.5 46.8 L670.0 41.4 L672.5 36.3 L675.0 31.7 L677.5 27.5 L680.0 23.8 L682.5 20.7 L685.0 18.1 L687.5 16.2 L690.0 14.9 L692.5 14.3 L695.0 14.3 L697.5 14.9 L700.0 16.2 L702.5 18.2 L705.0 20.7 L707.5 23.9 L710.0 27.6 L712.5 31.8 L715.0 36.4 L717.5 41.5 L720.0 46.9 L722.5 52.6 L725.0 58.6 L727.5 64.7 L730.0 70.9 L732.5 77.1 L735.0 83.3 L737.5 89.4 L740.0 95.3 L742.5 101.0 L745.0 106.4 L747.5 111.4 L750.0 116.0 L752.5 120.2 L755.0 123.8 L757.5 126.9 L760.0 129.4 L762.5 131.3 L765.0 132.5 L767.5 133.1 L770.0 133.1 L772.5 132.4 L775.0 131.1 L777.5 129.1 L780.0 126.6 L782.5 123.5 L785.0 119.8 L787.5 115.6 L790.0 111.0 L792.5 106.0 L795.0 100.7 L797.5 95.0 L800.0 89.2 L802.5 83.2 L805.0 77.1 L807.5 70.9 L810.0 64.9 L812.5 58.9 L815.0 53.1 L817.5 47.5 L820.0 42.3 L822.5 37.4 L825.0 32.9 L827.5 28.8 L830.0 25.3 L832.5 22.3 L835.0 19.9 L837.5 18.1 L840.0 16.9 L842.5 16.3 L845.0 16.4 L847.5 17.1 L850.0 18.4 L852.5 20.3 L855.0 22.8 L857.5 25.9 L860.0 29.5 L862.5 33.5 L865.0 38.0 L867.5 42.9 L870.0 48.1 L872.5 53.6 L875.0 59.3 L877.5 65.1 L880.0 71.0 L882.5 77.0 L885.0 82.9 L887.5 88.6 L890.0 94.2 L892.5 99.6 L895.0 104.7 L897.5 109.4 L900.0 113.7 L902.5 117.6 L905.0 120.9 L907.5 123.8 L910.0 126.1 L912.5 127.8 L915.0 129.0 L917.5 129.5 L920.0 129.4 L922.5 128.7 L925.0 127.4 L927.5 125.5 L930.0 123.1 L932.5 120.1 L935.0 116.7 L937.5 112.8 L940.0 108.5 L942.5 103.8 L945.0 98.8 L947.5 93.5 L950.0 88.1 L952.5 82.5 L955.0 76.8 L957.5 71.2 L960.0 65.6 L962.5 60.1 L965.0 54.7 L967.5 49.6 L970.0 44.8 L972.5 40.3 L975.0 36.2 L977.5 32.6 L980.0 29.4 L982.5 26.7 L985.0 24.5 L987.5 22.9 L990.0 21.9 L992.5 21.4 L995.0 21.5 L997.5 22.2 L1000.0 23.4 L1002.5 25.2 L1005.0 27.6 L1007.5 30.4 L1010.0 33.7 L1012.5 37.4 L1015.0 41.5 L1017.5 45.9 L1020.0 50.6 L1022.5 55.6 L1025.0 60.7 L1027.5 66.0 L1030.0 71.3 L1032.5 76.7 L1035.0 81.9 L1037.5 87.1 L1040.0 92.1 L1042.5 96.9 L1045.0 101.4 L1047.5 105.6 L1050.0 109.4 L1052.5 112.8 L1055.0 115.8 L1057.5 118.3 L1060.0 120.3 L1062.5 121.8 L1065.0 122.7 L1067.5 123.1 L1070.0 123.0 L1072.5 122.3 L1075.0 121.2 L1077.5 119.5 L1080.0 117.3 L1082.5 114.6 L1085.0 111.6 L1087.5 108.1 L1090.0 104.2 L1092.5 100.1 L1095.0 95.7 L1097.5 91.1 L1100.0 86.3 L1102.5 81.4 L1105.0 76.5 L1107.5 71.5 L1110.0 66.6 L1112.5 61.9 L1115.0 57.2 L1117.5 52.8 L1120.0 48.7 L1122.5 44.8 L1125.0 41.3L1125.0 103.8 L1127.5 106.6 L1130.0 109.1 L1132.5 111.1 L1135.0 112.8 L1137.5 114.0 L1140.0 114.7 L1142.5 115.1 L1145.0 114.9 L1147.5 114.3 L1150.0 113.3 L1152.5 111.8 L1155.0 110.0 L1157.5 107.8 L1160.0 105.2 L1162.5 102.3 L1165.0 99.1 L1167.5 95.6 L1170.0 91.9 L1172.5 88.1 L1175.0 84.2 L1177.5 80.1 L1180.0 76.0 L1182.5 72.0 L1185.0 68.0 L1187.5 64.0 L1190.0 60.2 L1192.5 56.6 L1195.0 53.3 L1197.5 50.1 L1200.0 47.3 L1202.5 44.7 L1205.0 42.5 L1207.5 40.7 L1210.0 39.2 L1212.5 38.2 L1215.0 37.5 L1217.5 37.3 L1220.0 37.4 L1222.5 37.9 L1225.0 38.9 L1227.5 40.2 L1230.0 41.9 L1232.5 43.9 L1235.0 46.2 L1237.5 48.8 L1240.0 51.7 L1242.5 54.7 L1245.0 58.0 L1247.5 61.4 L1250.0 65.0 L1252.5 68.6 L1255.0 72.2 L1257.5 75.8 L1260.0 79.4 L1262.5 82.9 L1265.0 86.2 L1267.5 89.4 L1270.0 92.4 L1272.5 95.2 L1275.0 97.7 L1277.5 99.9 L1280.0 101.9 L1282.5 103.5 L1285.0 104.7 L1287.5 105.7 L1290.0 106.3 L1292.5 106.5 L1295.0 106.3 L1297.5 105.8 L1300.0 105.0 L1302.5 103.8 L1305.0 102.3 L1307.5 100.6 L1310.0 98.5 L1312.5 96.2 L1315.0 93.7 L1317.5 91.0 L1320.0 88.1 L1322.5 85.1 L1325.0 81.9 L1327.5 78.8 L1330.0 75.6 L1332.5 72.4 L1335.0 69.3 L1337.5 66.2 L1340.0 63.3 L1342.5 60.5 L1345.0 57.9 L1347.5 55.4 L1350.0 53.2 L1352.5 51.3 L1355.0 49.6 L1357.5 48.2 L1360.0 47.1 L1362.5 46.3 L1365.0 45.8 L1367.5 45.6 L1370.0 45.7 L1372.5 46.2 L1375.0 46.9 L1377.5 47.9 L1380.0 49.2 L1382.5 50.8 L1385.0 52.6 L1387.5 54.6 L1390.0 56.8 L1392.5 59.2 L1395.0 61.7 L1397.5 64.4 L1400.0 67.1 L1402.5 69.8 L1405.0 72.6 L1407.5 75.4 L1410.0 78.1 L1412.5 80.8 L1415.0 83.3 L1417.5 85.8 L1420.0 88.0 L1422.5 90.2 L1425.0 92.1 L1427.5 93.8 L1430.0 95.2 L1432.5 96.4 L1435.0 97.4 L1437.5 98.1 L1440.0 98.5 L1442.5 98.7 L1445.0 98.6 L1447.5 98.2 L1450.0 97.5 L1452.5 96.7 L1455.0 95.5 L1457.5 94.2 L1460.0 92.6 L1462.5 90.8 L1465.0 88.9 L1467.5 86.8 L1470.0 84.7 L1472.5 82.4 L1475.0 80.0 L1477.5 77.6 L1480.0 75.2 L1482.5 72.8 L1485.0 70.4 L1487.5 68.1 L1490.0 65.9 L1492.5 63.8 L1495.0 61.8 L1497.5 60.0 L1500.0 58.3"/>
-  <g class="fragment" data-fragment-index="2">
-    <path class="shift-ghost" d="M375.0 113.7 L377.5 117.7 L380.0 121.2 L382.5 124.2 L385.0 126.7 L387.5 128.6 L390.0 129.9 L392.5 130.6 L395.0 130.7 L397.5 130.1 L400.0 129.0 L402.5 127.2 L405.0 124.8 L407.5 121.9 L410.0 118.4 L412.5 114.5 L415.0 110.1 L417.5 105.3 L420.0 100.1 L422.5 94.6 L425.0 88.9 L427.5 83.0 L430.0 77.0 L432.5 71.0 L435.0 65.0 L437.5 59.0 L440.0 53.2 L442.5 47.7 L445.0 42.4 L447.5 37.4 L450.0 32.9 L452.5 28.7 L455.0 25.1 L457.5 22.0 L460.0 19.5 L462.5 17.6 L465.0 16.2 L467.5 15.5 L470.0 15.5 L472.5 16.1 L475.0 17.3 L477.5 19.2 L480.0 21.6 L482.5 24.7 L485.0 28.3 L487.5 32.4 L490.0 36.9 L492.5 41.9 L495.0 47.2 L497.5 52.8 L500.0 58.7 L502.5 64.7 L505.0 70.9 L507.5 77.1 L510.0 83.3 L512.5 89.3 L515.0 95.3 L517.5 100.9 L520.0 106.3 L522.5 111.4 L525.0 116.0 L527.5 120.2 L530.0 123.9 L532.5 127.0 L535.0 129.6 L537.5 131.5 L540.0 132.8 L542.5 133.5 L545.0 133.5 L547.5 132.9 L550.0 131.6 L552.5 129.7 L555.0 127.2 L557.5 124.1 L560.0 120.4 L562.5 116.2 L565.0 111.6 L567.5 106.6 L570.0 101.1 L572.5 95.4 L575.0 89.5 L577.5 83.4 L580.0 77.1 L582.5 70.9 L585.0 64.6 L587.5 58.5 L590.0 52.6 L592.5 46.8 L595.0 41.4 L597.5 36.3 L600.0 31.7 L602.5 27.5 L605.0 23.8 L607.5 20.7 L610.0 18.1 L612.5 16.2 L615.0 14.9 L617.5 14.3 L620.0 14.3 L622.5 14.9 L625.0 16.2 L627.5 18.2 L630.0 20.7 L632.5 23.9 L635.0 27.6 L637.5 31.8 L640.0 36.4 L642.5 41.5 L645.0 46.9 L647.5 52.6 L650.0 58.6 L652.5 64.7 L655.0 70.9 L657.5 77.1 L660.0 83.3 L662.5 89.4 L665.0 95.3 L667.5 101.0 L670.0 106.4 L672.5 111.4 L675.0 116.0 L677.5 120.2 L680.0 123.8 L682.5 126.9 L685.0 129.4 L687.5 131.3 L690.0 132.5 L692.5 133.1 L695.0 133.1 L697.5 132.4 L700.0 131.1 L702.5 129.1 L705.0 126.6 L707.5 123.5 L710.0 119.8 L712.5 115.6 L715.0 111.0 L717.5 106.0 L720.0 100.7 L722.5 95.0 L725.0 89.2 L727.5 83.2 L730.0 77.1 L732.5 70.9 L735.0 64.9 L737.5 58.9 L740.0 53.1 L742.5 47.5 L745.0 42.3 L747.5 37.4 L750.0 32.9 L752.5 28.8 L755.0 25.3 L757.5 22.3 L760.0 19.9 L762.5 18.1 L765.0 16.9 L767.5 16.3 L770.0 16.4 L772.5 17.1 L775.0 18.4 L777.5 20.3 L780.0 22.8 L782.5 25.9 L785.0 29.5 L787.5 33.5 L790.0 38.0 L792.5 42.9 L795.0 48.1 L797.5 53.6 L800.0 59.3 L802.5 65.1 L805.0 71.0 L807.5 77.0 L810.0 82.9 L812.5 88.6 L815.0 94.2 L817.5 99.6 L820.0 104.7 L822.5 109.4 L825.0 113.7 L827.5 117.6 L830.0 120.9 L832.5 123.8 L835.0 126.1 L837.5 127.8 L840.0 129.0 L842.5 129.5 L845.0 129.4 L847.5 128.7 L850.0 127.4 L852.5 125.5 L855.0 123.1 L857.5 120.1 L860.0 116.7 L862.5 112.8 L865.0 108.5 L867.5 103.8 L870.0 98.8 L872.5 93.5 L875.0 88.1 L877.5 82.5 L880.0 76.8 L882.5 71.2 L885.0 65.6 L887.5 60.1 L890.0 54.7 L892.5 49.6 L895.0 44.8 L897.5 40.3 L900.0 36.2 L902.5 32.6 L905.0 29.4 L907.5 26.7 L910.0 24.5 L912.5 22.9 L915.0 21.9 L917.5 21.4 L920.0 21.5 L922.5 22.2 L925.0 23.4 L927.5 25.2 L930.0 27.6 L932.5 30.4 L935.0 33.7 L937.5 37.4 L940.0 41.5 L942.5 45.9 L945.0 50.6 L947.5 55.6 L950.0 60.7 L952.5 66.0 L955.0 71.3 L957.5 76.7 L960.0 81.9 L962.5 87.1 L965.0 92.1 L967.5 96.9 L970.0 101.4 L972.5 105.6 L975.0 109.4 L977.5 112.8 L980.0 115.8 L982.5 118.3 L985.0 120.3 L987.5 121.8 L990.0 122.7 L992.5 123.1 L995.0 123.0 L997.5 122.3 L1000.0 121.2 L1002.5 119.5 L1005.0 117.3 L1007.5 114.6 L1010.0 111.6 L1012.5 108.1 L1015.0 104.2 L1017.5 100.1 L1020.0 95.7 L1022.5 91.1 L1025.0 86.3 L1027.5 81.4 L1030.0 76.5 L1032.5 71.5 L1035.0 66.6 L1037.5 61.9 L1040.0 57.2 L1042.5 52.8 L1045.0 48.7 L1047.5 44.8 L1050.0 41.3 L1052.5 38.2 L1055.0 35.4 L1057.5 33.2 L1060.0 31.3 L1062.5 30.0 L1065.0 29.1 L1067.5 28.8 L1070.0 28.9 L1072.5 29.5 L1075.0 30.6 L1077.5 32.2 L1080.0 34.2 L1082.5 36.7 L1085.0 39.5 L1087.5 42.7 L1090.0 46.3 L1092.5 50.1 L1095.0 54.1 L1097.5 58.4 L1100.0 62.7 L1102.5 67.2 L1105.0 71.7 L1107.5 76.3 L1110.0 80.7 L1112.5 85.1 L1115.0 89.3 L1117.5 93.3 L1120.0 97.1 L1122.5 100.6 L1125.0 103.8"/>
-    <path class="shift-line" d="M450.0 113.7 L452.5 117.7 L455.0 121.2 L457.5 124.2 L460.0 126.7 L462.5 128.6 L465.0 129.9 L467.5 130.6 L470.0 130.7 L472.5 130.1 L475.0 129.0 L477.5 127.2 L480.0 124.8 L482.5 121.9 L485.0 118.4 L487.5 114.5 L490.0 110.1 L492.5 105.3 L495.0 100.1 L497.5 94.6 L500.0 88.9 L502.5 83.0 L505.0 77.0 L507.5 71.0 L510.0 65.0 L512.5 59.0 L515.0 53.2 L517.5 47.7 L520.0 42.4 L522.5 37.4 L525.0 32.9 L527.5 28.7 L530.0 25.1 L532.5 22.0 L535.0 19.5 L537.5 17.6 L540.0 16.2 L542.5 15.5 L545.0 15.5 L547.5 16.1 L550.0 17.3 L552.5 19.2 L555.0 21.6 L557.5 24.7 L560.0 28.3 L562.5 32.4 L565.0 36.9 L567.5 41.9 L570.0 47.2 L572.5 52.8 L575.0 58.7 L577.5 64.7 L580.0 70.9 L582.5 77.1 L585.0 83.3 L587.5 89.3 L590.0 95.3 L592.5 100.9 L595.0 106.3 L597.5 111.4 L600.0 116.0 L602.5 120.2 L605.0 123.9 L607.5 127.0 L610.0 129.6 L612.5 131.5 L615.0 132.8 L617.5 133.5 L620.0 133.5 L622.5 132.9 L625.0 131.6 L627.5 129.7 L630.0 127.2 L632.5 124.1 L635.0 120.4 L637.5 116.2 L640.0 111.6 L642.5 106.6 L645.0 101.1 L647.5 95.4 L650.0 89.5 L652.5 83.4 L655.0 77.1 L657.5 70.9 L660.0 64.6 L662.5 58.5 L665.0 52.6 L667.5 46.8 L670.0 41.4 L672.5 36.3 L675.0 31.7 L677.5 27.5 L680.0 23.8 L682.5 20.7 L685.0 18.1 L687.5 16.2 L690.0 14.9 L692.5 14.3 L695.0 14.3 L697.5 14.9 L700.0 16.2 L702.5 18.2 L705.0 20.7 L707.5 23.9 L710.0 27.6 L712.5 31.8 L715.0 36.4 L717.5 41.5 L720.0 46.9 L722.5 52.6 L725.0 58.6 L727.5 64.7 L730.0 70.9 L732.5 77.1 L735.0 83.3 L737.5 89.4 L740.0 95.3 L742.5 101.0 L745.0 106.4 L747.5 111.4 L750.0 116.0 L752.5 120.2 L755.0 123.8 L757.5 126.9 L760.0 129.4 L762.5 131.3 L765.0 132.5 L767.5 133.1 L770.0 133.1 L772.5 132.4 L775.0 131.1 L777.5 129.1 L780.0 126.6 L782.5 123.5 L785.0 119.8 L787.5 115.6 L790.0 111.0 L792.5 106.0 L795.0 100.7 L797.5 95.0 L800.0 89.2 L802.5 83.2 L805.0 77.1 L807.5 70.9 L810.0 64.9 L812.5 58.9 L815.0 53.1 L817.5 47.5 L820.0 42.3 L822.5 37.4 L825.0 32.9 L827.5 28.8 L830.0 25.3 L832.5 22.3 L835.0 19.9 L837.5 18.1 L840.0 16.9 L842.5 16.3 L845.0 16.4 L847.5 17.1 L850.0 18.4 L852.5 20.3 L855.0 22.8 L857.5 25.9 L860.0 29.5 L862.5 33.5 L865.0 38.0 L867.5 42.9 L870.0 48.1 L872.5 53.6 L875.0 59.3 L877.5 65.1 L880.0 71.0 L882.5 77.0 L885.0 82.9 L887.5 88.6 L890.0 94.2 L892.5 99.6 L895.0 104.7 L897.5 109.4 L900.0 113.7 L902.5 117.6 L905.0 120.9 L907.5 123.8 L910.0 126.1 L912.5 127.8 L915.0 129.0 L917.5 129.5 L920.0 129.4 L922.5 128.7 L925.0 127.4 L927.5 125.5 L930.0 123.1 L932.5 120.1 L935.0 116.7 L937.5 112.8 L940.0 108.5 L942.5 103.8 L945.0 98.8 L947.5 93.5 L950.0 88.1 L952.5 82.5 L955.0 76.8 L957.5 71.2 L960.0 65.6 L962.5 60.1 L965.0 54.7 L967.5 49.6 L970.0 44.8 L972.5 40.3 L975.0 36.2 L977.5 32.6 L980.0 29.4 L982.5 26.7 L985.0 24.5 L987.5 22.9 L990.0 21.9 L992.5 21.4 L995.0 21.5 L997.5 22.2 L1000.0 23.4 L1002.5 25.2 L1005.0 27.6 L1007.5 30.4 L1010.0 33.7 L1012.5 37.4 L1015.0 41.5 L1017.5 45.9 L1020.0 50.6 L1022.5 55.6 L1025.0 60.7 L1027.5 66.0 L1030.0 71.3 L1032.5 76.7 L1035.0 81.9 L1037.5 87.1 L1040.0 92.1 L1042.5 96.9 L1045.0 101.4 L1047.5 105.6 L1050.0 109.4 L1052.5 112.8 L1055.0 115.8 L1057.5 118.3 L1060.0 120.3 L1062.5 121.8 L1065.0 122.7 L1067.5 123.1 L1070.0 123.0 L1072.5 122.3 L1075.0 121.2 L1077.5 119.5 L1080.0 117.3 L1082.5 114.6 L1085.0 111.6 L1087.5 108.1 L1090.0 104.2 L1092.5 100.1 L1095.0 95.7 L1097.5 91.1 L1100.0 86.3 L1102.5 81.4 L1105.0 76.5 L1107.5 71.5 L1110.0 66.6 L1112.5 61.9 L1115.0 57.2 L1117.5 52.8 L1120.0 48.7 L1122.5 44.8 L1125.0 41.3"/>
-  </g>
+  <!-- drawn last, so the queue line passes behind it -->
   <g class="fragment" data-fragment-index="1">
-    <line class="click-jump" x1="375.0" y1="113.7" x2="375.0" y2="74"/>
-    <line class="click-jump" x1="450.0" y1="74" x2="450.0" y2="113.7"/>
-  </g>
-  <g class="fragment" data-fragment-index="3">
-    <line class="click-jump" x1="1125.0" y1="41.3" x2="1125.0" y2="103.8"/>
+    <text x="600" y="222" class="st-caption on-audio">a slot, stamped</text>
   </g>
 </svg>
-</div>
 
-<div class="callback-note">The box is one callback: <code>try_push</code> loses the end of its input block, and its output starts with as many zeros.</div>
+<div class="cards-note">The defaults are part 1's push and pop. Fill a phase for more, like the FFT from the start: in <code>before_inference</code>, on the model's window.</div>
 
 Note:
-- First the input side: the worker is behind, and the input ring is full.
-- try_push fails, the rest of the host block is not pushed, and the processor counts it in m_unpushed.
-- [click] The output starts its next block with as many zeros: two clicks.
-- [click] After the zeros, the audio is late by as many samples.
-- On top, the input: the samples that were never pushed, in red. Below, the output.
-- Both happen in the same callback, the box: the end of its input block is lost, and its output starts with as many zeros.
-- [click] One latency later, those samples would reach the output. They are missing, so the audio jumps back in line: the third click.
-- The missing samples are on the input side, so the output cannot drop them: it only meets the gap one latency later.
+- anira does all of this automatically in the process callback, and
+- additionally it allows us to define our own stages that run at predefined moments in this lifecycle
+- The first of those stages is pre_process: it takes one window out of the input ring into the model tensor, and we can override it for a custom pop. It runs on the audio thread, so it has to be real-time safe
+- Then the job goes through the queue to an inference thread, and there before_inference runs first: here we can preprocess the model tensor, for example an FFT first, like the one from the very beginning, but now off the audio thread, so the callback stays flat. It may allocate, lock and take its time
+- After the engine, after_inference runs on the same inference thread: there we can postprocess the model's output, for example the inverse FFT. Then the slot goes back to the audio thread
+- There post_process writes the result into the output ring, and the host block comes out of it. Like pre_process it runs on the audio thread and has to be real-time safe
+- But where is the state handled? Automatically: anira binds the state pair before before_inference and swaps it after after_inference, no copy, so both stages see it
+- Ok so that's the plan if the worker keeps up, but what if an inference takes too long?
 
 ---
 
@@ -416,41 +136,97 @@ Note:
 ## What happens if an inference is too late?<br><span class="then">Zeros, then the late samples are dropped.</span>
 
 ```cpp
-while (m_debt > 0) { if (m_output.try_pop(late)) { --m_debt; } else { break; } }  // drop the late
-for (size_t i = zeros; i < num_samples; ++i) {
-    const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
-    if (!popped) {                                          // the result is late
-        std::fill_n(samples + i, num_samples - i, 0.0f);
-        m_debt += num_samples - i;                          // dropped when it arrives
-        break;
-    }
+if (!popped) {                                         // the result is late
+    std::fill_n(samples + i, num_samples - i, 0.0f);   // zeros for the rest of the block
+    m_debt += num_samples - i;                         // dropped when they arrive
+    break;
 }
 ```
 
 <div class="click">
-  <div class="click-labels"><span style="left:32.50%;width:5.00%">zeros</span><span class="fragment" data-fragment-index="2" style="left:37.50%;width:62.50%">in line: the late samples are popped and dropped</span></div>
+  <div class="click-labels"><span style="left:32.50%;width:5.00%">zeros</span><span style="left:37.50%;width:62.50%">in line: the late samples are popped and dropped</span></div>
   <svg class="click-wave" viewBox="0 0 1500 200" aria-hidden="true">
   <rect class="click-gap" x="487.5" y="0" width="75.0" height="200"/>
   <line class="click-div" x1="188" y1="6" x2="188" y2="194"/><line class="click-div" x1="375" y1="6" x2="375" y2="194"/><line class="click-div" x1="562" y1="6" x2="562" y2="194"/><line class="click-div" x1="750" y1="6" x2="750" y2="194"/><line class="click-div" x1="938" y1="6" x2="938" y2="194"/><line class="click-div" x1="1125" y1="6" x2="1125" y2="194"/><line class="click-div" x1="1312" y1="6" x2="1312" y2="194"/>
   <path class="click-line" d="M0.0 63.9 L2.5 60.2 L5.0 56.9 L7.5 54.0 L10.0 51.7 L12.5 49.8 L15.0 48.5 L17.5 47.7 L20.0 47.5 L22.5 47.9 L25.0 48.9 L27.5 50.4 L30.0 52.5 L32.5 55.1 L35.0 58.3 L37.5 61.9 L40.0 65.9 L42.5 70.4 L45.0 75.3 L47.5 80.4 L50.0 85.8 L52.5 91.4 L55.0 97.1 L57.5 102.9 L60.0 108.7 L62.5 114.5 L65.0 120.1 L67.5 125.5 L70.0 130.7 L72.5 135.6 L75.0 140.2 L77.5 144.3 L80.0 148.0 L82.5 151.1 L85.0 153.7 L87.5 155.8 L90.0 157.2 L92.5 158.1 L95.0 158.2 L97.5 157.8 L100.0 156.7 L102.5 155.0 L105.0 152.6 L107.5 149.7 L110.0 146.2 L112.5 142.2 L115.0 137.6 L117.5 132.7 L120.0 127.3 L122.5 121.6 L125.0 115.7 L127.5 109.5 L130.0 103.2 L132.5 96.8 L135.0 90.4 L137.5 84.1 L140.0 77.9 L142.5 71.9 L145.0 66.2 L147.5 60.9 L150.0 55.9 L152.5 51.4 L155.0 47.4 L157.5 43.9 L160.0 41.1 L162.5 38.9 L165.0 37.3 L167.5 36.5 L170.0 36.3 L172.5 36.8 L175.0 38.0 L177.5 39.9 L180.0 42.5 L182.5 45.8 L185.0 49.6 L187.5 54.0 L190.0 59.0 L192.5 64.4 L195.0 70.2 L197.5 76.5 L200.0 83.0 L202.5 89.7 L205.0 96.5 L207.5 103.5 L210.0 110.4 L212.5 117.3 L215.0 124.0 L217.5 130.4 L220.0 136.6 L222.5 142.4 L225.0 147.7 L227.5 152.6 L230.0 156.9 L232.5 160.6 L235.0 163.6 L237.5 166.0 L240.0 167.6 L242.5 168.5 L245.0 168.7 L247.5 168.1 L250.0 166.8 L252.5 164.7 L255.0 161.9 L257.5 158.3 L260.0 154.2 L262.5 149.4 L265.0 144.1 L267.5 138.2 L270.0 131.9 L272.5 125.3 L275.0 118.3 L277.5 111.1 L280.0 103.7 L282.5 96.3 L285.0 88.9 L287.5 81.5 L290.0 74.4 L292.5 67.5 L295.0 60.9 L297.5 54.8 L300.0 49.1 L302.5 43.9 L305.0 39.4 L307.5 35.5 L310.0 32.2 L312.5 29.8 L315.0 28.1 L317.5 27.1 L320.0 27.0 L322.5 27.7 L325.0 29.1 L327.5 31.4 L330.0 34.4 L332.5 38.1 L335.0 42.6 L337.5 47.7 L340.0 53.4 L342.5 59.6 L345.0 66.2 L347.5 73.3 L350.0 80.7 L352.5 88.3 L355.0 96.1 L357.5 103.9 L360.0 111.7 L362.5 119.5 L365.0 127.0 L367.5 134.2 L370.0 141.1 L372.5 147.6 L375.0 153.6 L377.5 158.9 L380.0 163.7 L382.5 167.8 L385.0 171.1 L387.5 173.7 L390.0 175.4 L392.5 176.4 L395.0 176.5 L397.5 175.7 L400.0 174.1 L402.5 171.8 L405.0 168.6 L407.5 164.6 L410.0 160.0 L412.5 154.6 L415.0 148.7 L417.5 142.2 L420.0 135.2 L422.5 127.8 L425.0 120.1 L427.5 112.2 L430.0 104.1 L432.5 95.9 L435.0 87.8 L437.5 79.8 L440.0 72.0 L442.5 64.5 L445.0 57.3 L447.5 50.7 L450.0 44.5 L452.5 38.9 L455.0 34.1 L457.5 29.9 L460.0 26.5 L462.5 23.8 L465.0 22.1 L467.5 21.1 L470.0 21.1 L472.5 21.9 L475.0 23.5 L477.5 26.0 L480.0 29.3 L482.5 33.4 L485.0 38.3 L487.5 43.8 L487.5 100 L562.5 100L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5 L752.5 39.1 L755.0 34.3 L757.5 30.3 L760.0 27.0 L762.5 24.6 L765.0 22.9 L767.5 22.2 L770.0 22.3 L772.5 23.2 L775.0 25.0 L777.5 27.6 L780.0 30.9 L782.5 35.1 L785.0 39.9 L787.5 45.4 L790.0 51.5 L792.5 58.0 L795.0 65.1 L797.5 72.5 L800.0 80.1 L802.5 88.0 L805.0 96.0 L807.5 104.0 L810.0 111.9 L812.5 119.7 L815.0 127.3 L817.5 134.5 L820.0 141.4 L822.5 147.7 L825.0 153.6 L827.5 158.8 L830.0 163.3 L832.5 167.2 L835.0 170.3 L837.5 172.6 L840.0 174.1 L842.5 174.9 L845.0 174.7 L847.5 173.8 L850.0 172.1 L852.5 169.5 L855.0 166.3 L857.5 162.3 L860.0 157.6 L862.5 152.3 L865.0 146.5 L867.5 140.2 L870.0 133.4 L872.5 126.3 L875.0 119.0 L877.5 111.5 L880.0 103.8 L882.5 96.2 L885.0 88.6 L887.5 81.2 L890.0 74.0 L892.5 67.1 L895.0 60.6 L897.5 54.6 L900.0 49.1 L902.5 44.1 L905.0 39.8 L907.5 36.2 L910.0 33.3 L912.5 31.1 L915.0 29.7 L917.5 29.0 L920.0 29.2 L922.5 30.1 L925.0 31.8 L927.5 34.2 L930.0 37.3 L932.5 41.1 L935.0 45.6 L937.5 50.6 L940.0 56.1 L942.5 62.1 L945.0 68.5 L947.5 75.2 L950.0 82.1 L952.5 89.2 L955.0 96.4 L957.5 103.6 L960.0 110.7 L962.5 117.7 L965.0 124.4 L967.5 130.9 L970.0 137.0 L972.5 142.6 L975.0 147.7 L977.5 152.4 L980.0 156.4 L982.5 159.7 L985.0 162.4 L987.5 164.4 L990.0 165.7 L992.5 166.3 L995.0 166.1 L997.5 165.2 L1000.0 163.6 L1002.5 161.3 L1005.0 158.4 L1007.5 154.8 L1010.0 150.7 L1012.5 146.0 L1015.0 140.8 L1017.5 135.2 L1020.0 129.3 L1022.5 123.1 L1025.0 116.6 L1027.5 110.0 L1030.0 103.3 L1032.5 96.7 L1035.0 90.1 L1037.5 83.6 L1040.0 77.4 L1042.5 71.4 L1045.0 65.8 L1047.5 60.6 L1050.0 55.9 L1052.5 51.7 L1055.0 48.0 L1057.5 44.9 L1060.0 42.4 L1062.5 40.6 L1065.0 39.5 L1067.5 39.0 L1070.0 39.2 L1072.5 40.0 L1075.0 41.5 L1077.5 43.6 L1080.0 46.4 L1082.5 49.7 L1085.0 53.5 L1087.5 57.8 L1090.0 62.6 L1092.5 67.7 L1095.0 73.2 L1097.5 78.9 L1100.0 84.8 L1102.5 90.8 L1105.0 96.9 L1107.5 103.0 L1110.0 109.1 L1112.5 114.9 L1115.0 120.6 L1117.5 126.0 L1120.0 131.1 L1122.5 135.9 L1125.0 140.2 L1127.5 144.0 L1130.0 147.3 L1132.5 150.1 L1135.0 152.3 L1137.5 153.9 L1140.0 155.0 L1142.5 155.4 L1145.0 155.2 L1147.5 154.4 L1150.0 153.0 L1152.5 151.1 L1155.0 148.6 L1157.5 145.5 L1160.0 142.1 L1162.5 138.1 L1165.0 133.8 L1167.5 129.2 L1170.0 124.2 L1172.5 119.0 L1175.0 113.7 L1177.5 108.3 L1180.0 102.8 L1182.5 97.3 L1185.0 91.8 L1187.5 86.5 L1190.0 81.4 L1192.5 76.6 L1195.0 72.0 L1197.5 67.8 L1200.0 63.9 L1202.5 60.5 L1205.0 57.6 L1207.5 55.1 L1210.0 53.1 L1212.5 51.7 L1215.0 50.8 L1217.5 50.4 L1220.0 50.6 L1222.5 51.4 L1225.0 52.6 L1227.5 54.4 L1230.0 56.6 L1232.5 59.3 L1235.0 62.5 L1237.5 66.0 L1240.0 69.9 L1242.5 74.0 L1245.0 78.4 L1247.5 83.0 L1250.0 87.8 L1252.5 92.7 L1255.0 97.6 L1257.5 102.4 L1260.0 107.3 L1262.5 111.9 L1265.0 116.5 L1267.5 120.8 L1270.0 124.8 L1272.5 128.6 L1275.0 132.0 L1277.5 135.0 L1280.0 137.6 L1282.5 139.8 L1285.0 141.5 L1287.5 142.7 L1290.0 143.5 L1292.5 143.8 L1295.0 143.6 L1297.5 143.0 L1300.0 141.8 L1302.5 140.2 L1305.0 138.2 L1307.5 135.8 L1310.0 133.1 L1312.5 130.0 L1315.0 126.5 L1317.5 122.9 L1320.0 119.0 L1322.5 114.9 L1325.0 110.7 L1327.5 106.5 L1330.0 102.1 L1332.5 97.9 L1335.0 93.6 L1337.5 89.5 L1340.0 85.5 L1342.5 81.8 L1345.0 78.2 L1347.5 75.0 L1350.0 72.0 L1352.5 69.4 L1355.0 67.1 L1357.5 65.2 L1360.0 63.7 L1362.5 62.6 L1365.0 61.9 L1367.5 61.7 L1370.0 61.9 L1372.5 62.5 L1375.0 63.4 L1377.5 64.8 L1380.0 66.6 L1382.5 68.7 L1385.0 71.1 L1387.5 73.9 L1390.0 76.8 L1392.5 80.0 L1395.0 83.4 L1397.5 87.0 L1400.0 90.7 L1402.5 94.4 L1405.0 98.1 L1407.5 101.9 L1410.0 105.5 L1412.5 109.1 L1415.0 112.6 L1417.5 115.9 L1420.0 119.0 L1422.5 121.8 L1425.0 124.4 L1427.5 126.7 L1430.0 128.6 L1432.5 130.3 L1435.0 131.6 L1437.5 132.5 L1440.0 133.1 L1442.5 133.3 L1445.0 133.2 L1447.5 132.6 L1450.0 131.8 L1452.5 130.6 L1455.0 129.0 L1457.5 127.2 L1460.0 125.1 L1462.5 122.7 L1465.0 120.1 L1467.5 117.3 L1470.0 114.4 L1472.5 111.3 L1475.0 108.1 L1477.5 104.9 L1480.0 101.6 L1482.5 98.4 L1485.0 95.2 L1487.5 92.1 L1490.0 89.1 L1492.5 86.2 L1495.0 83.5 L1497.5 81.1 L1500.0 78.8"/>
-  <path class="shift-ghost fragment" data-fragment-index="2" d="M487.5 43.8 L490.0 50.0 L492.5 56.7 L495.0 63.8 L497.5 71.4 L500.0 79.4 L502.5 87.5 L505.0 95.8 L507.5 104.2 L510.0 112.5 L512.5 120.7 L515.0 128.7 L517.5 136.3 L520.0 143.6 L522.5 150.4 L525.0 156.7 L527.5 162.3 L530.0 167.3 L532.5 171.5 L535.0 175.0 L537.5 177.6 L540.0 179.4 L542.5 180.3 L545.0 180.3 L547.5 179.5 L550.0 177.8 L552.5 175.2 L555.0 171.8 L557.5 167.6 L560.0 162.6 L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5 L752.5 39.1 L755.0 34.3 L757.5 30.3 L760.0 27.0 L762.5 24.6 L765.0 22.9 L767.5 22.2 L770.0 22.3 L772.5 23.2 L775.0 25.0 L777.5 27.6 L780.0 30.9 L782.5 35.1 L785.0 39.9 L787.5 45.4 L790.0 51.5 L792.5 58.0 L795.0 65.1 L797.5 72.5 L800.0 80.1 L802.5 88.0 L805.0 96.0 L807.5 104.0 L810.0 111.9 L812.5 119.7 L815.0 127.3 L817.5 134.5 L820.0 141.4 L822.5 147.7 L825.0 153.6 L827.5 158.8 L830.0 163.3 L832.5 167.2 L835.0 170.3 L837.5 172.6 L840.0 174.1 L842.5 174.9 L845.0 174.7 L847.5 173.8 L850.0 172.1 L852.5 169.5 L855.0 166.3 L857.5 162.3 L860.0 157.6 L862.5 152.3 L865.0 146.5 L867.5 140.2 L870.0 133.4 L872.5 126.3 L875.0 119.0 L877.5 111.5 L880.0 103.8 L882.5 96.2 L885.0 88.6 L887.5 81.2 L890.0 74.0 L892.5 67.1 L895.0 60.6 L897.5 54.6 L900.0 49.1 L902.5 44.1 L905.0 39.8 L907.5 36.2 L910.0 33.3 L912.5 31.1 L915.0 29.7 L917.5 29.0 L920.0 29.2 L922.5 30.1 L925.0 31.8 L927.5 34.2 L930.0 37.3 L932.5 41.1 L935.0 45.6 L937.5 50.6 L940.0 56.1 L942.5 62.1 L945.0 68.5 L947.5 75.2 L950.0 82.1 L952.5 89.2 L955.0 96.4 L957.5 103.6 L960.0 110.7 L962.5 117.7 L965.0 124.4 L967.5 130.9 L970.0 137.0 L972.5 142.6 L975.0 147.7 L977.5 152.4 L980.0 156.4 L982.5 159.7 L985.0 162.4 L987.5 164.4 L990.0 165.7 L992.5 166.3 L995.0 166.1 L997.5 165.2 L1000.0 163.6 L1002.5 161.3 L1005.0 158.4 L1007.5 154.8 L1010.0 150.7 L1012.5 146.0 L1015.0 140.8 L1017.5 135.2 L1020.0 129.3 L1022.5 123.1 L1025.0 116.6 L1027.5 110.0 L1030.0 103.3 L1032.5 96.7 L1035.0 90.1 L1037.5 83.6 L1040.0 77.4 L1042.5 71.4 L1045.0 65.8 L1047.5 60.6 L1050.0 55.9 L1052.5 51.7 L1055.0 48.0 L1057.5 44.9 L1060.0 42.4 L1062.5 40.6 L1065.0 39.5 L1067.5 39.0 L1070.0 39.2 L1072.5 40.0 L1075.0 41.5 L1077.5 43.6 L1080.0 46.4 L1082.5 49.7 L1085.0 53.5 L1087.5 57.8 L1090.0 62.6 L1092.5 67.7 L1095.0 73.2 L1097.5 78.9 L1100.0 84.8 L1102.5 90.8 L1105.0 96.9 L1107.5 103.0 L1110.0 109.1 L1112.5 114.9 L1115.0 120.6 L1117.5 126.0 L1120.0 131.1 L1122.5 135.9 L1125.0 140.2 L1127.5 144.0 L1130.0 147.3 L1132.5 150.1 L1135.0 152.3 L1137.5 153.9 L1140.0 155.0 L1142.5 155.4 L1145.0 155.2 L1147.5 154.4 L1150.0 153.0 L1152.5 151.1 L1155.0 148.6 L1157.5 145.5 L1160.0 142.1 L1162.5 138.1 L1165.0 133.8 L1167.5 129.2 L1170.0 124.2 L1172.5 119.0 L1175.0 113.7 L1177.5 108.3 L1180.0 102.8 L1182.5 97.3 L1185.0 91.8 L1187.5 86.5 L1190.0 81.4 L1192.5 76.6 L1195.0 72.0 L1197.5 67.8 L1200.0 63.9 L1202.5 60.5 L1205.0 57.6 L1207.5 55.1 L1210.0 53.1 L1212.5 51.7 L1215.0 50.8 L1217.5 50.4 L1220.0 50.6 L1222.5 51.4 L1225.0 52.6 L1227.5 54.4 L1230.0 56.6 L1232.5 59.3 L1235.0 62.5 L1237.5 66.0 L1240.0 69.9 L1242.5 74.0 L1245.0 78.4 L1247.5 83.0 L1250.0 87.8 L1252.5 92.7 L1255.0 97.6 L1257.5 102.4 L1260.0 107.3 L1262.5 111.9 L1265.0 116.5 L1267.5 120.8 L1270.0 124.8 L1272.5 128.6 L1275.0 132.0 L1277.5 135.0 L1280.0 137.6 L1282.5 139.8 L1285.0 141.5 L1287.5 142.7 L1290.0 143.5 L1292.5 143.8 L1295.0 143.6 L1297.5 143.0 L1300.0 141.8 L1302.5 140.2 L1305.0 138.2 L1307.5 135.8 L1310.0 133.1 L1312.5 130.0 L1315.0 126.5 L1317.5 122.9 L1320.0 119.0 L1322.5 114.9 L1325.0 110.7 L1327.5 106.5 L1330.0 102.1 L1332.5 97.9 L1335.0 93.6 L1337.5 89.5 L1340.0 85.5 L1342.5 81.8 L1345.0 78.2 L1347.5 75.0 L1350.0 72.0 L1352.5 69.4 L1355.0 67.1 L1357.5 65.2 L1360.0 63.7 L1362.5 62.6 L1365.0 61.9 L1367.5 61.7 L1370.0 61.9 L1372.5 62.5 L1375.0 63.4 L1377.5 64.8 L1380.0 66.6 L1382.5 68.7 L1385.0 71.1 L1387.5 73.9 L1390.0 76.8 L1392.5 80.0 L1395.0 83.4 L1397.5 87.0 L1400.0 90.7 L1402.5 94.4 L1405.0 98.1 L1407.5 101.9 L1410.0 105.5 L1412.5 109.1 L1415.0 112.6 L1417.5 115.9 L1420.0 119.0 L1422.5 121.8 L1425.0 124.4 L1427.5 126.7 L1430.0 128.6 L1432.5 130.3 L1435.0 131.6 L1437.5 132.5 L1440.0 133.1 L1442.5 133.3 L1445.0 133.2 L1447.5 132.6 L1450.0 131.8 L1452.5 130.6 L1455.0 129.0 L1457.5 127.2 L1460.0 125.1 L1462.5 122.7 L1465.0 120.1 L1467.5 117.3 L1470.0 114.4 L1472.5 111.3 L1475.0 108.1 L1477.5 104.9 L1480.0 101.6 L1482.5 98.4 L1485.0 95.2 L1487.5 92.1 L1490.0 89.1 L1492.5 86.2 L1495.0 83.5 L1497.5 81.1 L1500.0 78.8"/>
-  <g class="fragment" data-fragment-index="1">
+  <path class="shift-ghost" d="M487.5 43.8 L490.0 50.0 L492.5 56.7 L495.0 63.8 L497.5 71.4 L500.0 79.4 L502.5 87.5 L505.0 95.8 L507.5 104.2 L510.0 112.5 L512.5 120.7 L515.0 128.7 L517.5 136.3 L520.0 143.6 L522.5 150.4 L525.0 156.7 L527.5 162.3 L530.0 167.3 L532.5 171.5 L535.0 175.0 L537.5 177.6 L540.0 179.4 L542.5 180.3 L545.0 180.3 L547.5 179.5 L550.0 177.8 L552.5 175.2 L555.0 171.8 L557.5 167.6 L560.0 162.6 L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5 L752.5 39.1 L755.0 34.3 L757.5 30.3 L760.0 27.0 L762.5 24.6 L765.0 22.9 L767.5 22.2 L770.0 22.3 L772.5 23.2 L775.0 25.0 L777.5 27.6 L780.0 30.9 L782.5 35.1 L785.0 39.9 L787.5 45.4 L790.0 51.5 L792.5 58.0 L795.0 65.1 L797.5 72.5 L800.0 80.1 L802.5 88.0 L805.0 96.0 L807.5 104.0 L810.0 111.9 L812.5 119.7 L815.0 127.3 L817.5 134.5 L820.0 141.4 L822.5 147.7 L825.0 153.6 L827.5 158.8 L830.0 163.3 L832.5 167.2 L835.0 170.3 L837.5 172.6 L840.0 174.1 L842.5 174.9 L845.0 174.7 L847.5 173.8 L850.0 172.1 L852.5 169.5 L855.0 166.3 L857.5 162.3 L860.0 157.6 L862.5 152.3 L865.0 146.5 L867.5 140.2 L870.0 133.4 L872.5 126.3 L875.0 119.0 L877.5 111.5 L880.0 103.8 L882.5 96.2 L885.0 88.6 L887.5 81.2 L890.0 74.0 L892.5 67.1 L895.0 60.6 L897.5 54.6 L900.0 49.1 L902.5 44.1 L905.0 39.8 L907.5 36.2 L910.0 33.3 L912.5 31.1 L915.0 29.7 L917.5 29.0 L920.0 29.2 L922.5 30.1 L925.0 31.8 L927.5 34.2 L930.0 37.3 L932.5 41.1 L935.0 45.6 L937.5 50.6 L940.0 56.1 L942.5 62.1 L945.0 68.5 L947.5 75.2 L950.0 82.1 L952.5 89.2 L955.0 96.4 L957.5 103.6 L960.0 110.7 L962.5 117.7 L965.0 124.4 L967.5 130.9 L970.0 137.0 L972.5 142.6 L975.0 147.7 L977.5 152.4 L980.0 156.4 L982.5 159.7 L985.0 162.4 L987.5 164.4 L990.0 165.7 L992.5 166.3 L995.0 166.1 L997.5 165.2 L1000.0 163.6 L1002.5 161.3 L1005.0 158.4 L1007.5 154.8 L1010.0 150.7 L1012.5 146.0 L1015.0 140.8 L1017.5 135.2 L1020.0 129.3 L1022.5 123.1 L1025.0 116.6 L1027.5 110.0 L1030.0 103.3 L1032.5 96.7 L1035.0 90.1 L1037.5 83.6 L1040.0 77.4 L1042.5 71.4 L1045.0 65.8 L1047.5 60.6 L1050.0 55.9 L1052.5 51.7 L1055.0 48.0 L1057.5 44.9 L1060.0 42.4 L1062.5 40.6 L1065.0 39.5 L1067.5 39.0 L1070.0 39.2 L1072.5 40.0 L1075.0 41.5 L1077.5 43.6 L1080.0 46.4 L1082.5 49.7 L1085.0 53.5 L1087.5 57.8 L1090.0 62.6 L1092.5 67.7 L1095.0 73.2 L1097.5 78.9 L1100.0 84.8 L1102.5 90.8 L1105.0 96.9 L1107.5 103.0 L1110.0 109.1 L1112.5 114.9 L1115.0 120.6 L1117.5 126.0 L1120.0 131.1 L1122.5 135.9 L1125.0 140.2 L1127.5 144.0 L1130.0 147.3 L1132.5 150.1 L1135.0 152.3 L1137.5 153.9 L1140.0 155.0 L1142.5 155.4 L1145.0 155.2 L1147.5 154.4 L1150.0 153.0 L1152.5 151.1 L1155.0 148.6 L1157.5 145.5 L1160.0 142.1 L1162.5 138.1 L1165.0 133.8 L1167.5 129.2 L1170.0 124.2 L1172.5 119.0 L1175.0 113.7 L1177.5 108.3 L1180.0 102.8 L1182.5 97.3 L1185.0 91.8 L1187.5 86.5 L1190.0 81.4 L1192.5 76.6 L1195.0 72.0 L1197.5 67.8 L1200.0 63.9 L1202.5 60.5 L1205.0 57.6 L1207.5 55.1 L1210.0 53.1 L1212.5 51.7 L1215.0 50.8 L1217.5 50.4 L1220.0 50.6 L1222.5 51.4 L1225.0 52.6 L1227.5 54.4 L1230.0 56.6 L1232.5 59.3 L1235.0 62.5 L1237.5 66.0 L1240.0 69.9 L1242.5 74.0 L1245.0 78.4 L1247.5 83.0 L1250.0 87.8 L1252.5 92.7 L1255.0 97.6 L1257.5 102.4 L1260.0 107.3 L1262.5 111.9 L1265.0 116.5 L1267.5 120.8 L1270.0 124.8 L1272.5 128.6 L1275.0 132.0 L1277.5 135.0 L1280.0 137.6 L1282.5 139.8 L1285.0 141.5 L1287.5 142.7 L1290.0 143.5 L1292.5 143.8 L1295.0 143.6 L1297.5 143.0 L1300.0 141.8 L1302.5 140.2 L1305.0 138.2 L1307.5 135.8 L1310.0 133.1 L1312.5 130.0 L1315.0 126.5 L1317.5 122.9 L1320.0 119.0 L1322.5 114.9 L1325.0 110.7 L1327.5 106.5 L1330.0 102.1 L1332.5 97.9 L1335.0 93.6 L1337.5 89.5 L1340.0 85.5 L1342.5 81.8 L1345.0 78.2 L1347.5 75.0 L1350.0 72.0 L1352.5 69.4 L1355.0 67.1 L1357.5 65.2 L1360.0 63.7 L1362.5 62.6 L1365.0 61.9 L1367.5 61.7 L1370.0 61.9 L1372.5 62.5 L1375.0 63.4 L1377.5 64.8 L1380.0 66.6 L1382.5 68.7 L1385.0 71.1 L1387.5 73.9 L1390.0 76.8 L1392.5 80.0 L1395.0 83.4 L1397.5 87.0 L1400.0 90.7 L1402.5 94.4 L1405.0 98.1 L1407.5 101.9 L1410.0 105.5 L1412.5 109.1 L1415.0 112.6 L1417.5 115.9 L1420.0 119.0 L1422.5 121.8 L1425.0 124.4 L1427.5 126.7 L1430.0 128.6 L1432.5 130.3 L1435.0 131.6 L1437.5 132.5 L1440.0 133.1 L1442.5 133.3 L1445.0 133.2 L1447.5 132.6 L1450.0 131.8 L1452.5 130.6 L1455.0 129.0 L1457.5 127.2 L1460.0 125.1 L1462.5 122.7 L1465.0 120.1 L1467.5 117.3 L1470.0 114.4 L1472.5 111.3 L1475.0 108.1 L1477.5 104.9 L1480.0 101.6 L1482.5 98.4 L1485.0 95.2 L1487.5 92.1 L1490.0 89.1 L1492.5 86.2 L1495.0 83.5 L1497.5 81.1 L1500.0 78.8"/>
+  <g>
     <line class="click-jump" x1="487.5" y1="43.8" x2="487.5" y2="100"/>
     <line class="click-jump" x1="562.5" y1="100" x2="562.5" y2="157.0"/>
   </g>
 </svg>
 </div>
 
-<div class="click-note fragment" data-fragment-index="2"><b>click</b> Two clicks per miss. The audio after it stays in line.</div>
+<div class="click-note"><b>click</b> Two clicks per miss. The audio after it stays in line.</div>
 
 Note:
-- And on the output side: what happens if an inference is too late?
-- The output side pops sample by sample, and when the ring is empty, the result is late.
-- The rest of the block goes out as zeros, and the processor counts them in m_debt.
-- [click] Into the zeros and out of them: two clicks.
-- [click] In the next callbacks, before anything is played, as many samples are popped and thrown away as soon as they have arrived: the late part of the result.
-- So the audio after the miss is exactly where it belongs: the dashed line and the signal are the same.
-- All of them have to go before a block is played; if not enough have arrived yet, that callback is another miss and the rest stays owed.
+- Let's look at part 1 first
+- When the worker is late, the output ring is empty when the audio thread pops
+- Then the rest of the block goes out as zeros, and we count them as our debt
+- The late samples are dropped as soon as they arrive, so the audio after the miss stays in line
+
+---
+
+<!-- .slide: class="recap miss" -->
+
+<div class="tag">Part 1 · Step 7</div>
+
+## What happens if the input ring is full?<br><span class="then">Zeros, then the audio is late for one latency.</span>
+
+```cpp
+if (!m_input.try_push(samples[i])) {   // the worker is behind, the ring is full
+    m_unpushed += num_samples - i;     // as many zeros go out first
+    break;
+}
+```
+
+<div class="click">
+  <div class="click-labels"><span class="lane">input</span><span style="left:26.50%;width:12.33%">never pushed</span><span style="left:43.50%;width:31.50%">one latency later, the gap reaches the output</span></div>
+  <svg class="click-wave" viewBox="0 0 1500 108" aria-hidden="true">
+  <defs><marker id="lost-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" class="lost-arrowhead"/></marker></defs>
+  <rect class="callback-box" x="375.0" y="1" width="187.5" height="106"/>
+  <rect class="shift-band" x="487.5" y="0" width="75.0" height="108"/>
+  <line class="click-div" x1="188" y1="6" x2="188" y2="102"/><line class="click-div" x1="375" y1="6" x2="375" y2="102"/><line class="click-div" x1="562" y1="6" x2="562" y2="102"/><line class="click-div" x1="750" y1="6" x2="750" y2="102"/><line class="click-div" x1="938" y1="6" x2="938" y2="102"/><line class="click-div" x1="1125" y1="6" x2="1125" y2="102"/><line class="click-div" x1="1312" y1="6" x2="1312" y2="102"/>
+  <path class="click-line" d="M0.0 84.2 L2.5 80.9 L5.0 77.3 L7.5 73.4 L10.0 69.3 L12.5 65.1 L15.0 60.7 L17.5 56.2 L20.0 51.8 L22.5 47.3 L25.0 42.9 L27.5 38.7 L30.0 34.6 L32.5 30.7 L35.0 27.1 L37.5 23.8 L40.0 20.8 L42.5 18.1 L45.0 15.9 L47.5 14.1 L50.0 12.7 L52.5 11.8 L55.0 11.3 L57.5 11.3 L60.0 11.8 L62.5 12.7 L65.0 14.1 L67.5 16.0 L70.0 18.2 L72.5 20.8 L75.0 23.8 L77.5 27.2 L80.0 30.8 L82.5 34.6 L85.0 38.7 L87.5 43.0 L90.0 47.3 L92.5 51.8 L95.0 56.2 L97.5 60.7 L100.0 65.0 L102.5 69.2 L105.0 73.3 L107.5 77.1 L110.0 80.7 L112.5 84.0 L115.0 87.0 L117.5 89.6 L120.0 91.8 L122.5 93.5 L125.0 94.9 L127.5 95.8 L130.0 96.2 L132.5 96.2 L135.0 95.7 L137.5 94.8 L140.0 93.4 L142.5 91.6 L145.0 89.3 L147.5 86.7 L150.0 83.7 L152.5 80.5 L155.0 76.9 L157.5 73.1 L160.0 69.0 L162.5 64.8 L165.0 60.6 L167.5 56.2 L170.0 51.8 L172.5 47.5 L175.0 43.2 L177.5 39.1 L180.0 35.1 L182.5 31.3 L185.0 27.8 L187.5 24.6 L190.0 21.7 L192.5 19.2 L195.0 17.1 L197.5 15.4 L200.0 14.1 L202.5 13.2 L205.0 12.8 L207.5 12.8 L210.0 13.3 L212.5 14.3 L215.0 15.6 L217.5 17.4 L220.0 19.6 L222.5 22.2 L225.0 25.1 L227.5 28.3 L230.0 31.8 L232.5 35.5 L235.0 39.4 L237.5 43.5 L240.0 47.7 L242.5 51.9 L245.0 56.1 L247.5 60.3 L250.0 64.4 L252.5 68.4 L255.0 72.3 L257.5 75.9 L260.0 79.3 L262.5 82.4 L265.0 85.1 L267.5 87.5 L270.0 89.6 L272.5 91.2 L275.0 92.4 L277.5 93.3 L280.0 93.6 L282.5 93.6 L285.0 93.1 L287.5 92.1 L290.0 90.8 L292.5 89.1 L295.0 87.0 L297.5 84.5 L300.0 81.7 L302.5 78.6 L305.0 75.3 L307.5 71.7 L310.0 67.9 L312.5 64.1 L315.0 60.1 L317.5 56.0 L320.0 52.0 L322.5 48.0 L325.0 44.0 L327.5 40.2 L330.0 36.6 L332.5 33.2 L335.0 30.0 L337.5 27.0 L340.0 24.4 L342.5 22.1 L345.0 20.2 L347.5 18.7 L350.0 17.5 L352.5 16.8 L355.0 16.4 L357.5 16.5 L360.0 17.0 L362.5 17.9 L365.0 19.2 L367.5 20.8 L370.0 22.8 L372.5 25.2 L375.0 27.8 L377.5 30.8 L380.0 33.9 L382.5 37.3 L385.0 40.9 L387.5 44.5 L390.0 48.3 L392.5 52.1 L395.0 55.9 L397.5 59.7 L400.0 63.4 L402.5 66.9 L405.0 70.3 L407.5 73.6 L410.0 76.6 L412.5 79.3 L415.0 81.7 L417.5 83.8 L420.0 85.6 L422.5 87.1 L425.0 88.1 L427.5 88.8 L430.0 89.1 L432.5 89.0 L435.0 88.5 L437.5 87.7 L440.0 86.5 L442.5 84.9 L445.0 83.0 L447.5 80.8 L450.0 78.3 L452.5 75.6 L455.0 72.6 L457.5 69.5 L460.0 66.2 L462.5 62.8 L465.0 59.3 L467.5 55.8 L470.0 52.2 L472.5 48.7 L475.0 45.3 L477.5 42.0 L480.0 38.9 L482.5 35.9 L485.0 33.2 L487.5 30.6 M562.5 75.3L562.5 75.3 L565.0 77.3 L567.5 79.1 L570.0 80.5 L572.5 81.7 L575.0 82.6 L577.5 83.1 L580.0 83.3 L582.5 83.2 L585.0 82.8 L587.5 82.1 L590.0 81.0 L592.5 79.7 L595.0 78.1 L597.5 76.3 L600.0 74.2 L602.5 71.9 L605.0 69.4 L607.5 66.8 L610.0 64.1 L612.5 61.3 L615.0 58.4 L617.5 55.5 L620.0 52.5 L622.5 49.7 L625.0 46.9 L627.5 44.2 L630.0 41.6 L632.5 39.2 L635.0 36.9 L637.5 34.9 L640.0 33.1 L642.5 31.5 L645.0 30.2 L647.5 29.2 L650.0 28.4 L652.5 27.9 L655.0 27.8 L657.5 27.9 L660.0 28.2 L662.5 28.9 L665.0 29.9 L667.5 31.0 L670.0 32.5 L672.5 34.1 L675.0 36.0 L677.5 38.0 L680.0 40.2 L682.5 42.6 L685.0 45.0 L687.5 47.5 L690.0 50.1 L692.5 52.7 L695.0 55.3 L697.5 57.8 L700.0 60.3 L702.5 62.7 L705.0 65.0 L707.5 67.1 L710.0 69.1 L712.5 70.9 L715.0 72.5 L717.5 73.9 L720.0 75.0 L722.5 76.0 L725.0 76.6 L727.5 77.0 L730.0 77.2 L732.5 77.1 L735.0 76.7 L737.5 76.1 L740.0 75.3 L742.5 74.2 L745.0 73.0 L747.5 71.5 L750.0 69.9 L752.5 68.1 L755.0 66.1 L757.5 64.0 L760.0 61.9 L762.5 59.7 L765.0 57.4 L767.5 55.1 L770.0 52.9 L772.5 50.6 L775.0 48.4 L777.5 46.3 L780.0 44.3 L782.5 42.5 L785.0 40.7 L787.5 39.2 L790.0 37.8 L792.5 36.6 L795.0 35.6 L797.5 34.8 L800.0 34.2 L802.5 33.8 L805.0 33.7 L807.5 33.8 L810.0 34.1 L812.5 34.6 L815.0 35.4 L817.5 36.3 L820.0 37.4 L822.5 38.7 L825.0 40.2 L827.5 41.7 L830.0 43.4 L832.5 45.2 L835.0 47.1 L837.5 49.1 L840.0 51.0 L842.5 53.0 L845.0 55.0 L847.5 56.9 L850.0 58.8 L852.5 60.7 L855.0 62.4 L857.5 64.0 L860.0 65.5 L862.5 66.9 L865.0 68.1 L867.5 69.2 L870.0 70.0 L872.5 70.7 L875.0 71.2 L877.5 71.5 L880.0 71.6 L882.5 71.6 L885.0 71.3 L887.5 70.8 L890.0 70.2 L892.5 69.4 L895.0 68.4 L897.5 67.3 L900.0 66.0 L902.5 64.7 L905.0 63.2 L907.5 61.6 L910.0 60.0 L912.5 58.3 L915.0 56.6 L917.5 54.9 L920.0 53.1 L922.5 51.4 L925.0 49.8 L927.5 48.2 L930.0 46.7 L932.5 45.3 L935.0 44.0 L937.5 42.8 L940.0 41.7 L942.5 40.8 L945.0 40.1 L947.5 39.5 L950.0 39.0 L952.5 38.8 L955.0 38.7 L957.5 38.7 L960.0 39.0 L962.5 39.4 L965.0 39.9 L967.5 40.6 L970.0 41.5 L972.5 42.4 L975.0 43.5 L977.5 44.7 L980.0 46.0 L982.5 47.4 L985.0 48.8 L987.5 50.2 L990.0 51.7 L992.5 53.2 L995.0 54.7 L997.5 56.2 L1000.0 57.7 L1002.5 59.1 L1005.0 60.4 L1007.5 61.6 L1010.0 62.8 L1012.5 63.8 L1015.0 64.8 L1017.5 65.6 L1020.0 66.2 L1022.5 66.8 L1025.0 67.2 L1027.5 67.4 L1030.0 67.5 L1032.5 67.4 L1035.0 67.2 L1037.5 66.9 L1040.0 66.4 L1042.5 65.8 L1045.0 65.1 L1047.5 64.2 L1050.0 63.3 L1052.5 62.2 L1055.0 61.1 L1057.5 59.9 L1060.0 58.6 L1062.5 57.3 L1065.0 56.0 L1067.5 54.7 L1070.0 53.3 L1072.5 52.0 L1075.0 50.7 L1077.5 49.5 L1080.0 48.3 L1082.5 47.2 L1085.0 46.1 L1087.5 45.2 L1090.0 44.4 L1092.5 43.6 L1095.0 43.0 L1097.5 42.5 L1100.0 42.2 L1102.5 41.9 L1105.0 41.8 L1107.5 41.9 L1110.0 42.0 L1112.5 42.3 L1115.0 42.7 L1117.5 43.3 L1120.0 43.9 L1122.5 44.7 L1125.0 45.6 L1127.5 46.5 L1130.0 47.5 L1132.5 48.6 L1135.0 49.8 L1137.5 50.9 L1140.0 52.2 L1142.5 53.4 L1145.0 54.6 L1147.5 55.8 L1150.0 57.0 L1152.5 58.2 L1155.0 59.3 L1157.5 60.3 L1160.0 61.3 L1162.5 62.2 L1165.0 63.0 L1167.5 63.7 L1170.0 64.2 L1172.5 64.7 L1175.0 65.1 L1177.5 65.3 L1180.0 65.4 L1182.5 65.4 L1185.0 65.3 L1187.5 65.0 L1190.0 64.6 L1192.5 64.1 L1195.0 63.5 L1197.5 62.8 L1200.0 62.0 L1202.5 61.1 L1205.0 60.2 L1207.5 59.1 L1210.0 58.0 L1212.5 56.9 L1215.0 55.8 L1217.5 54.6 L1220.0 53.4 L1222.5 52.2 L1225.0 51.1 L1227.5 50.0 L1230.0 48.9 L1232.5 47.9 L1235.0 46.9 L1237.5 46.0 L1240.0 45.3 L1242.5 44.6 L1245.0 44.0 L1247.5 43.5 L1250.0 43.1 L1252.5 42.9 L1255.0 42.7 L1257.5 42.7 L1260.0 42.9 L1262.5 43.1 L1265.0 43.5 L1267.5 43.9 L1270.0 44.5 L1272.5 45.2 L1275.0 46.0 L1277.5 46.9 L1280.0 47.8 L1282.5 48.8 L1285.0 49.9 L1287.5 51.1 L1290.0 52.2 L1292.5 53.4 L1295.0 54.6 L1297.5 55.8 L1300.0 57.0 L1302.5 58.1 L1305.0 59.2 L1307.5 60.3 L1310.0 61.3 L1312.5 62.2 L1315.0 63.0 L1317.5 63.7 L1320.0 64.3 L1322.5 64.9 L1325.0 65.3 L1327.5 65.5 L1330.0 65.7 L1332.5 65.7 L1335.0 65.6 L1337.5 65.4 L1340.0 65.0 L1342.5 64.6 L1345.0 64.0 L1347.5 63.2 L1350.0 62.4 L1352.5 61.5 L1355.0 60.5 L1357.5 59.5 L1360.0 58.3 L1362.5 57.1 L1365.0 55.9 L1367.5 54.6 L1370.0 53.4 L1372.5 52.1 L1375.0 50.8 L1377.5 49.6 L1380.0 48.4 L1382.5 47.3 L1385.0 46.2 L1387.5 45.2 L1390.0 44.3 L1392.5 43.5 L1395.0 42.8 L1397.5 42.2 L1400.0 41.8 L1402.5 41.5 L1405.0 41.3 L1407.5 41.2 L1410.0 41.3 L1412.5 41.6 L1415.0 41.9 L1417.5 42.4 L1420.0 43.1 L1422.5 43.8 L1425.0 44.7 L1427.5 45.7 L1430.0 46.8 L1432.5 48.0 L1435.0 49.2 L1437.5 50.5 L1440.0 51.9 L1442.5 53.3 L1445.0 54.7 L1447.5 56.1 L1450.0 57.5 L1452.5 58.9 L1455.0 60.2 L1457.5 61.5 L1460.0 62.7 L1462.5 63.8 L1465.0 64.9 L1467.5 65.8 L1470.0 66.5 L1472.5 67.2 L1475.0 67.7 L1477.5 68.1 L1480.0 68.3 L1482.5 68.4 L1485.0 68.3 L1487.5 68.0 L1490.0 67.6 L1492.5 67.0 L1495.0 66.3 L1497.5 65.5 L1500.0 64.5"/>
+  <path class="shift-line lost-line" d="M487.5 30.6 L490.0 28.4 L492.5 26.5 L495.0 24.8 L497.5 23.5 L500.0 22.6 L502.5 21.9 L505.0 21.7 L507.5 21.8 L510.0 22.2 L512.5 23.0 L515.0 24.2 L517.5 25.6 L520.0 27.4 L522.5 29.4 L525.0 31.7 L527.5 34.2 L530.0 36.9 L532.5 39.8 L535.0 42.8 L537.5 46.0 L540.0 49.2 L542.5 52.4 L545.0 55.6 L547.5 58.8 L550.0 61.9 L552.5 64.9 L555.0 67.8 L557.5 70.5 L560.0 73.0 L562.5 75.3"/>
+  <g>
+    <line class="lost-link" x1="568.5" y1="14" x2="1121.0" y2="14" marker-end="url(#lost-arrow)"/>
+    <line class="lost-mark" x1="1125.0" y1="0" x2="1125.0" y2="108"/>
+  </g>
+</svg>
+</div>
+
+<div class="click lost">
+  <div class="click-labels"><span class="lane">output</span><span style="left:25.00%;width:5.00%">zeros</span><span style="left:30.00%;width:45.00%">late by the zeros, for one latency</span><span style="left:65.00%;width:20.00%">back in line</span></div>
+  <svg class="click-wave" viewBox="0 0 1500 148" aria-hidden="true">
+  <rect class="callback-box" x="375.0" y="1" width="187.5" height="146"/>
+  <rect class="click-gap" x="375.0" y="0" width="75.0" height="148"/>
+  <rect class="shift-band" x="450.0" y="0" width="675.0" height="148"/>
+  <line class="click-div" x1="188" y1="6" x2="188" y2="142"/><line class="click-div" x1="375" y1="6" x2="375" y2="142"/><line class="click-div" x1="562" y1="6" x2="562" y2="142"/><line class="click-div" x1="750" y1="6" x2="750" y2="142"/><line class="click-div" x1="938" y1="6" x2="938" y2="142"/><line class="click-div" x1="1125" y1="6" x2="1125" y2="142"/><line class="click-div" x1="1312" y1="6" x2="1312" y2="142"/>
+  <path class="click-line" d="M0.0 47.3 L2.5 44.5 L5.0 42.1 L7.5 39.9 L10.0 38.2 L12.5 36.8 L15.0 35.8 L17.5 35.2 L20.0 35.1 L22.5 35.4 L25.0 36.1 L27.5 37.2 L30.0 38.8 L32.5 40.7 L35.0 43.1 L37.5 45.7 L40.0 48.8 L42.5 52.1 L45.0 55.7 L47.5 59.5 L50.0 63.5 L52.5 67.6 L55.0 71.9 L57.5 76.2 L60.0 80.5 L62.5 84.7 L65.0 88.9 L67.5 92.9 L70.0 96.8 L72.5 100.4 L75.0 103.8 L77.5 106.8 L80.0 109.5 L82.5 111.9 L85.0 113.8 L87.5 115.3 L90.0 116.4 L92.5 117.0 L95.0 117.2 L97.5 116.8 L100.0 116.0 L102.5 114.7 L105.0 113.0 L107.5 110.8 L110.0 108.2 L112.5 105.3 L115.0 101.9 L117.5 98.2 L120.0 94.3 L122.5 90.0 L125.0 85.6 L127.5 81.0 L130.0 76.4 L132.5 71.6 L135.0 66.9 L137.5 62.2 L140.0 57.6 L142.5 53.2 L145.0 49.0 L147.5 45.0 L150.0 41.3 L152.5 38.0 L155.0 35.0 L157.5 32.4 L160.0 30.3 L162.5 28.7 L165.0 27.5 L167.5 26.9 L170.0 26.8 L172.5 27.2 L175.0 28.1 L177.5 29.5 L180.0 31.4 L182.5 33.8 L185.0 36.6 L187.5 39.9 L190.0 43.6 L192.5 47.6 L195.0 51.9 L197.5 56.5 L200.0 61.4 L202.5 66.3 L205.0 71.4 L207.5 76.6 L210.0 81.7 L212.5 86.8 L215.0 91.8 L217.5 96.6 L220.0 101.1 L222.5 105.4 L225.0 109.4 L227.5 113.0 L230.0 116.2 L232.5 118.9 L235.0 121.2 L237.5 122.9 L240.0 124.1 L242.5 124.8 L245.0 124.9 L247.5 124.5 L250.0 123.5 L252.5 121.9 L255.0 119.8 L257.5 117.2 L260.0 114.2 L262.5 110.6 L265.0 106.7 L267.5 102.3 L270.0 97.7 L272.5 92.7 L275.0 87.5 L277.5 82.2 L280.0 76.8 L282.5 71.2 L285.0 65.7 L287.5 60.3 L290.0 55.0 L292.5 49.9 L295.0 45.0 L297.5 40.5 L300.0 36.2 L302.5 32.4 L305.0 29.1 L307.5 26.2 L310.0 23.8 L312.5 21.9 L315.0 20.7 L317.5 20.0 L320.0 19.9 L322.5 20.4 L325.0 21.5 L327.5 23.1 L330.0 25.4 L332.5 28.2 L335.0 31.4 L337.5 35.2 L340.0 39.4 L342.5 44.0 L345.0 49.0 L347.5 54.2 L350.0 59.7 L352.5 65.3 L355.0 71.1 L357.5 76.9 L360.0 82.7 L362.5 88.4 L365.0 94.0 L367.5 99.4 L370.0 104.5 L372.5 109.3 L375.0 113.7 L375.0 74 L450.0 74L450.0 113.7 L452.5 117.7 L455.0 121.2 L457.5 124.2 L460.0 126.7 L462.5 128.6 L465.0 129.9 L467.5 130.6 L470.0 130.7 L472.5 130.1 L475.0 129.0 L477.5 127.2 L480.0 124.8 L482.5 121.9 L485.0 118.4 L487.5 114.5 L490.0 110.1 L492.5 105.3 L495.0 100.1 L497.5 94.6 L500.0 88.9 L502.5 83.0 L505.0 77.0 L507.5 71.0 L510.0 65.0 L512.5 59.0 L515.0 53.2 L517.5 47.7 L520.0 42.4 L522.5 37.4 L525.0 32.9 L527.5 28.7 L530.0 25.1 L532.5 22.0 L535.0 19.5 L537.5 17.6 L540.0 16.2 L542.5 15.5 L545.0 15.5 L547.5 16.1 L550.0 17.3 L552.5 19.2 L555.0 21.6 L557.5 24.7 L560.0 28.3 L562.5 32.4 L565.0 36.9 L567.5 41.9 L570.0 47.2 L572.5 52.8 L575.0 58.7 L577.5 64.7 L580.0 70.9 L582.5 77.1 L585.0 83.3 L587.5 89.3 L590.0 95.3 L592.5 100.9 L595.0 106.3 L597.5 111.4 L600.0 116.0 L602.5 120.2 L605.0 123.9 L607.5 127.0 L610.0 129.6 L612.5 131.5 L615.0 132.8 L617.5 133.5 L620.0 133.5 L622.5 132.9 L625.0 131.6 L627.5 129.7 L630.0 127.2 L632.5 124.1 L635.0 120.4 L637.5 116.2 L640.0 111.6 L642.5 106.6 L645.0 101.1 L647.5 95.4 L650.0 89.5 L652.5 83.4 L655.0 77.1 L657.5 70.9 L660.0 64.6 L662.5 58.5 L665.0 52.6 L667.5 46.8 L670.0 41.4 L672.5 36.3 L675.0 31.7 L677.5 27.5 L680.0 23.8 L682.5 20.7 L685.0 18.1 L687.5 16.2 L690.0 14.9 L692.5 14.3 L695.0 14.3 L697.5 14.9 L700.0 16.2 L702.5 18.2 L705.0 20.7 L707.5 23.9 L710.0 27.6 L712.5 31.8 L715.0 36.4 L717.5 41.5 L720.0 46.9 L722.5 52.6 L725.0 58.6 L727.5 64.7 L730.0 70.9 L732.5 77.1 L735.0 83.3 L737.5 89.4 L740.0 95.3 L742.5 101.0 L745.0 106.4 L747.5 111.4 L750.0 116.0 L752.5 120.2 L755.0 123.8 L757.5 126.9 L760.0 129.4 L762.5 131.3 L765.0 132.5 L767.5 133.1 L770.0 133.1 L772.5 132.4 L775.0 131.1 L777.5 129.1 L780.0 126.6 L782.5 123.5 L785.0 119.8 L787.5 115.6 L790.0 111.0 L792.5 106.0 L795.0 100.7 L797.5 95.0 L800.0 89.2 L802.5 83.2 L805.0 77.1 L807.5 70.9 L810.0 64.9 L812.5 58.9 L815.0 53.1 L817.5 47.5 L820.0 42.3 L822.5 37.4 L825.0 32.9 L827.5 28.8 L830.0 25.3 L832.5 22.3 L835.0 19.9 L837.5 18.1 L840.0 16.9 L842.5 16.3 L845.0 16.4 L847.5 17.1 L850.0 18.4 L852.5 20.3 L855.0 22.8 L857.5 25.9 L860.0 29.5 L862.5 33.5 L865.0 38.0 L867.5 42.9 L870.0 48.1 L872.5 53.6 L875.0 59.3 L877.5 65.1 L880.0 71.0 L882.5 77.0 L885.0 82.9 L887.5 88.6 L890.0 94.2 L892.5 99.6 L895.0 104.7 L897.5 109.4 L900.0 113.7 L902.5 117.6 L905.0 120.9 L907.5 123.8 L910.0 126.1 L912.5 127.8 L915.0 129.0 L917.5 129.5 L920.0 129.4 L922.5 128.7 L925.0 127.4 L927.5 125.5 L930.0 123.1 L932.5 120.1 L935.0 116.7 L937.5 112.8 L940.0 108.5 L942.5 103.8 L945.0 98.8 L947.5 93.5 L950.0 88.1 L952.5 82.5 L955.0 76.8 L957.5 71.2 L960.0 65.6 L962.5 60.1 L965.0 54.7 L967.5 49.6 L970.0 44.8 L972.5 40.3 L975.0 36.2 L977.5 32.6 L980.0 29.4 L982.5 26.7 L985.0 24.5 L987.5 22.9 L990.0 21.9 L992.5 21.4 L995.0 21.5 L997.5 22.2 L1000.0 23.4 L1002.5 25.2 L1005.0 27.6 L1007.5 30.4 L1010.0 33.7 L1012.5 37.4 L1015.0 41.5 L1017.5 45.9 L1020.0 50.6 L1022.5 55.6 L1025.0 60.7 L1027.5 66.0 L1030.0 71.3 L1032.5 76.7 L1035.0 81.9 L1037.5 87.1 L1040.0 92.1 L1042.5 96.9 L1045.0 101.4 L1047.5 105.6 L1050.0 109.4 L1052.5 112.8 L1055.0 115.8 L1057.5 118.3 L1060.0 120.3 L1062.5 121.8 L1065.0 122.7 L1067.5 123.1 L1070.0 123.0 L1072.5 122.3 L1075.0 121.2 L1077.5 119.5 L1080.0 117.3 L1082.5 114.6 L1085.0 111.6 L1087.5 108.1 L1090.0 104.2 L1092.5 100.1 L1095.0 95.7 L1097.5 91.1 L1100.0 86.3 L1102.5 81.4 L1105.0 76.5 L1107.5 71.5 L1110.0 66.6 L1112.5 61.9 L1115.0 57.2 L1117.5 52.8 L1120.0 48.7 L1122.5 44.8 L1125.0 41.3L1125.0 103.8 L1127.5 106.6 L1130.0 109.1 L1132.5 111.1 L1135.0 112.8 L1137.5 114.0 L1140.0 114.7 L1142.5 115.1 L1145.0 114.9 L1147.5 114.3 L1150.0 113.3 L1152.5 111.8 L1155.0 110.0 L1157.5 107.8 L1160.0 105.2 L1162.5 102.3 L1165.0 99.1 L1167.5 95.6 L1170.0 91.9 L1172.5 88.1 L1175.0 84.2 L1177.5 80.1 L1180.0 76.0 L1182.5 72.0 L1185.0 68.0 L1187.5 64.0 L1190.0 60.2 L1192.5 56.6 L1195.0 53.3 L1197.5 50.1 L1200.0 47.3 L1202.5 44.7 L1205.0 42.5 L1207.5 40.7 L1210.0 39.2 L1212.5 38.2 L1215.0 37.5 L1217.5 37.3 L1220.0 37.4 L1222.5 37.9 L1225.0 38.9 L1227.5 40.2 L1230.0 41.9 L1232.5 43.9 L1235.0 46.2 L1237.5 48.8 L1240.0 51.7 L1242.5 54.7 L1245.0 58.0 L1247.5 61.4 L1250.0 65.0 L1252.5 68.6 L1255.0 72.2 L1257.5 75.8 L1260.0 79.4 L1262.5 82.9 L1265.0 86.2 L1267.5 89.4 L1270.0 92.4 L1272.5 95.2 L1275.0 97.7 L1277.5 99.9 L1280.0 101.9 L1282.5 103.5 L1285.0 104.7 L1287.5 105.7 L1290.0 106.3 L1292.5 106.5 L1295.0 106.3 L1297.5 105.8 L1300.0 105.0 L1302.5 103.8 L1305.0 102.3 L1307.5 100.6 L1310.0 98.5 L1312.5 96.2 L1315.0 93.7 L1317.5 91.0 L1320.0 88.1 L1322.5 85.1 L1325.0 81.9 L1327.5 78.8 L1330.0 75.6 L1332.5 72.4 L1335.0 69.3 L1337.5 66.2 L1340.0 63.3 L1342.5 60.5 L1345.0 57.9 L1347.5 55.4 L1350.0 53.2 L1352.5 51.3 L1355.0 49.6 L1357.5 48.2 L1360.0 47.1 L1362.5 46.3 L1365.0 45.8 L1367.5 45.6 L1370.0 45.7 L1372.5 46.2 L1375.0 46.9 L1377.5 47.9 L1380.0 49.2 L1382.5 50.8 L1385.0 52.6 L1387.5 54.6 L1390.0 56.8 L1392.5 59.2 L1395.0 61.7 L1397.5 64.4 L1400.0 67.1 L1402.5 69.8 L1405.0 72.6 L1407.5 75.4 L1410.0 78.1 L1412.5 80.8 L1415.0 83.3 L1417.5 85.8 L1420.0 88.0 L1422.5 90.2 L1425.0 92.1 L1427.5 93.8 L1430.0 95.2 L1432.5 96.4 L1435.0 97.4 L1437.5 98.1 L1440.0 98.5 L1442.5 98.7 L1445.0 98.6 L1447.5 98.2 L1450.0 97.5 L1452.5 96.7 L1455.0 95.5 L1457.5 94.2 L1460.0 92.6 L1462.5 90.8 L1465.0 88.9 L1467.5 86.8 L1470.0 84.7 L1472.5 82.4 L1475.0 80.0 L1477.5 77.6 L1480.0 75.2 L1482.5 72.8 L1485.0 70.4 L1487.5 68.1 L1490.0 65.9 L1492.5 63.8 L1495.0 61.8 L1497.5 60.0 L1500.0 58.3"/>
+  <g>
+    <path class="shift-ghost" d="M375.0 113.7 L377.5 117.7 L380.0 121.2 L382.5 124.2 L385.0 126.7 L387.5 128.6 L390.0 129.9 L392.5 130.6 L395.0 130.7 L397.5 130.1 L400.0 129.0 L402.5 127.2 L405.0 124.8 L407.5 121.9 L410.0 118.4 L412.5 114.5 L415.0 110.1 L417.5 105.3 L420.0 100.1 L422.5 94.6 L425.0 88.9 L427.5 83.0 L430.0 77.0 L432.5 71.0 L435.0 65.0 L437.5 59.0 L440.0 53.2 L442.5 47.7 L445.0 42.4 L447.5 37.4 L450.0 32.9 L452.5 28.7 L455.0 25.1 L457.5 22.0 L460.0 19.5 L462.5 17.6 L465.0 16.2 L467.5 15.5 L470.0 15.5 L472.5 16.1 L475.0 17.3 L477.5 19.2 L480.0 21.6 L482.5 24.7 L485.0 28.3 L487.5 32.4 L490.0 36.9 L492.5 41.9 L495.0 47.2 L497.5 52.8 L500.0 58.7 L502.5 64.7 L505.0 70.9 L507.5 77.1 L510.0 83.3 L512.5 89.3 L515.0 95.3 L517.5 100.9 L520.0 106.3 L522.5 111.4 L525.0 116.0 L527.5 120.2 L530.0 123.9 L532.5 127.0 L535.0 129.6 L537.5 131.5 L540.0 132.8 L542.5 133.5 L545.0 133.5 L547.5 132.9 L550.0 131.6 L552.5 129.7 L555.0 127.2 L557.5 124.1 L560.0 120.4 L562.5 116.2 L565.0 111.6 L567.5 106.6 L570.0 101.1 L572.5 95.4 L575.0 89.5 L577.5 83.4 L580.0 77.1 L582.5 70.9 L585.0 64.6 L587.5 58.5 L590.0 52.6 L592.5 46.8 L595.0 41.4 L597.5 36.3 L600.0 31.7 L602.5 27.5 L605.0 23.8 L607.5 20.7 L610.0 18.1 L612.5 16.2 L615.0 14.9 L617.5 14.3 L620.0 14.3 L622.5 14.9 L625.0 16.2 L627.5 18.2 L630.0 20.7 L632.5 23.9 L635.0 27.6 L637.5 31.8 L640.0 36.4 L642.5 41.5 L645.0 46.9 L647.5 52.6 L650.0 58.6 L652.5 64.7 L655.0 70.9 L657.5 77.1 L660.0 83.3 L662.5 89.4 L665.0 95.3 L667.5 101.0 L670.0 106.4 L672.5 111.4 L675.0 116.0 L677.5 120.2 L680.0 123.8 L682.5 126.9 L685.0 129.4 L687.5 131.3 L690.0 132.5 L692.5 133.1 L695.0 133.1 L697.5 132.4 L700.0 131.1 L702.5 129.1 L705.0 126.6 L707.5 123.5 L710.0 119.8 L712.5 115.6 L715.0 111.0 L717.5 106.0 L720.0 100.7 L722.5 95.0 L725.0 89.2 L727.5 83.2 L730.0 77.1 L732.5 70.9 L735.0 64.9 L737.5 58.9 L740.0 53.1 L742.5 47.5 L745.0 42.3 L747.5 37.4 L750.0 32.9 L752.5 28.8 L755.0 25.3 L757.5 22.3 L760.0 19.9 L762.5 18.1 L765.0 16.9 L767.5 16.3 L770.0 16.4 L772.5 17.1 L775.0 18.4 L777.5 20.3 L780.0 22.8 L782.5 25.9 L785.0 29.5 L787.5 33.5 L790.0 38.0 L792.5 42.9 L795.0 48.1 L797.5 53.6 L800.0 59.3 L802.5 65.1 L805.0 71.0 L807.5 77.0 L810.0 82.9 L812.5 88.6 L815.0 94.2 L817.5 99.6 L820.0 104.7 L822.5 109.4 L825.0 113.7 L827.5 117.6 L830.0 120.9 L832.5 123.8 L835.0 126.1 L837.5 127.8 L840.0 129.0 L842.5 129.5 L845.0 129.4 L847.5 128.7 L850.0 127.4 L852.5 125.5 L855.0 123.1 L857.5 120.1 L860.0 116.7 L862.5 112.8 L865.0 108.5 L867.5 103.8 L870.0 98.8 L872.5 93.5 L875.0 88.1 L877.5 82.5 L880.0 76.8 L882.5 71.2 L885.0 65.6 L887.5 60.1 L890.0 54.7 L892.5 49.6 L895.0 44.8 L897.5 40.3 L900.0 36.2 L902.5 32.6 L905.0 29.4 L907.5 26.7 L910.0 24.5 L912.5 22.9 L915.0 21.9 L917.5 21.4 L920.0 21.5 L922.5 22.2 L925.0 23.4 L927.5 25.2 L930.0 27.6 L932.5 30.4 L935.0 33.7 L937.5 37.4 L940.0 41.5 L942.5 45.9 L945.0 50.6 L947.5 55.6 L950.0 60.7 L952.5 66.0 L955.0 71.3 L957.5 76.7 L960.0 81.9 L962.5 87.1 L965.0 92.1 L967.5 96.9 L970.0 101.4 L972.5 105.6 L975.0 109.4 L977.5 112.8 L980.0 115.8 L982.5 118.3 L985.0 120.3 L987.5 121.8 L990.0 122.7 L992.5 123.1 L995.0 123.0 L997.5 122.3 L1000.0 121.2 L1002.5 119.5 L1005.0 117.3 L1007.5 114.6 L1010.0 111.6 L1012.5 108.1 L1015.0 104.2 L1017.5 100.1 L1020.0 95.7 L1022.5 91.1 L1025.0 86.3 L1027.5 81.4 L1030.0 76.5 L1032.5 71.5 L1035.0 66.6 L1037.5 61.9 L1040.0 57.2 L1042.5 52.8 L1045.0 48.7 L1047.5 44.8 L1050.0 41.3 L1052.5 38.2 L1055.0 35.4 L1057.5 33.2 L1060.0 31.3 L1062.5 30.0 L1065.0 29.1 L1067.5 28.8 L1070.0 28.9 L1072.5 29.5 L1075.0 30.6 L1077.5 32.2 L1080.0 34.2 L1082.5 36.7 L1085.0 39.5 L1087.5 42.7 L1090.0 46.3 L1092.5 50.1 L1095.0 54.1 L1097.5 58.4 L1100.0 62.7 L1102.5 67.2 L1105.0 71.7 L1107.5 76.3 L1110.0 80.7 L1112.5 85.1 L1115.0 89.3 L1117.5 93.3 L1120.0 97.1 L1122.5 100.6 L1125.0 103.8"/>
+    <path class="shift-line" d="M450.0 113.7 L452.5 117.7 L455.0 121.2 L457.5 124.2 L460.0 126.7 L462.5 128.6 L465.0 129.9 L467.5 130.6 L470.0 130.7 L472.5 130.1 L475.0 129.0 L477.5 127.2 L480.0 124.8 L482.5 121.9 L485.0 118.4 L487.5 114.5 L490.0 110.1 L492.5 105.3 L495.0 100.1 L497.5 94.6 L500.0 88.9 L502.5 83.0 L505.0 77.0 L507.5 71.0 L510.0 65.0 L512.5 59.0 L515.0 53.2 L517.5 47.7 L520.0 42.4 L522.5 37.4 L525.0 32.9 L527.5 28.7 L530.0 25.1 L532.5 22.0 L535.0 19.5 L537.5 17.6 L540.0 16.2 L542.5 15.5 L545.0 15.5 L547.5 16.1 L550.0 17.3 L552.5 19.2 L555.0 21.6 L557.5 24.7 L560.0 28.3 L562.5 32.4 L565.0 36.9 L567.5 41.9 L570.0 47.2 L572.5 52.8 L575.0 58.7 L577.5 64.7 L580.0 70.9 L582.5 77.1 L585.0 83.3 L587.5 89.3 L590.0 95.3 L592.5 100.9 L595.0 106.3 L597.5 111.4 L600.0 116.0 L602.5 120.2 L605.0 123.9 L607.5 127.0 L610.0 129.6 L612.5 131.5 L615.0 132.8 L617.5 133.5 L620.0 133.5 L622.5 132.9 L625.0 131.6 L627.5 129.7 L630.0 127.2 L632.5 124.1 L635.0 120.4 L637.5 116.2 L640.0 111.6 L642.5 106.6 L645.0 101.1 L647.5 95.4 L650.0 89.5 L652.5 83.4 L655.0 77.1 L657.5 70.9 L660.0 64.6 L662.5 58.5 L665.0 52.6 L667.5 46.8 L670.0 41.4 L672.5 36.3 L675.0 31.7 L677.5 27.5 L680.0 23.8 L682.5 20.7 L685.0 18.1 L687.5 16.2 L690.0 14.9 L692.5 14.3 L695.0 14.3 L697.5 14.9 L700.0 16.2 L702.5 18.2 L705.0 20.7 L707.5 23.9 L710.0 27.6 L712.5 31.8 L715.0 36.4 L717.5 41.5 L720.0 46.9 L722.5 52.6 L725.0 58.6 L727.5 64.7 L730.0 70.9 L732.5 77.1 L735.0 83.3 L737.5 89.4 L740.0 95.3 L742.5 101.0 L745.0 106.4 L747.5 111.4 L750.0 116.0 L752.5 120.2 L755.0 123.8 L757.5 126.9 L760.0 129.4 L762.5 131.3 L765.0 132.5 L767.5 133.1 L770.0 133.1 L772.5 132.4 L775.0 131.1 L777.5 129.1 L780.0 126.6 L782.5 123.5 L785.0 119.8 L787.5 115.6 L790.0 111.0 L792.5 106.0 L795.0 100.7 L797.5 95.0 L800.0 89.2 L802.5 83.2 L805.0 77.1 L807.5 70.9 L810.0 64.9 L812.5 58.9 L815.0 53.1 L817.5 47.5 L820.0 42.3 L822.5 37.4 L825.0 32.9 L827.5 28.8 L830.0 25.3 L832.5 22.3 L835.0 19.9 L837.5 18.1 L840.0 16.9 L842.5 16.3 L845.0 16.4 L847.5 17.1 L850.0 18.4 L852.5 20.3 L855.0 22.8 L857.5 25.9 L860.0 29.5 L862.5 33.5 L865.0 38.0 L867.5 42.9 L870.0 48.1 L872.5 53.6 L875.0 59.3 L877.5 65.1 L880.0 71.0 L882.5 77.0 L885.0 82.9 L887.5 88.6 L890.0 94.2 L892.5 99.6 L895.0 104.7 L897.5 109.4 L900.0 113.7 L902.5 117.6 L905.0 120.9 L907.5 123.8 L910.0 126.1 L912.5 127.8 L915.0 129.0 L917.5 129.5 L920.0 129.4 L922.5 128.7 L925.0 127.4 L927.5 125.5 L930.0 123.1 L932.5 120.1 L935.0 116.7 L937.5 112.8 L940.0 108.5 L942.5 103.8 L945.0 98.8 L947.5 93.5 L950.0 88.1 L952.5 82.5 L955.0 76.8 L957.5 71.2 L960.0 65.6 L962.5 60.1 L965.0 54.7 L967.5 49.6 L970.0 44.8 L972.5 40.3 L975.0 36.2 L977.5 32.6 L980.0 29.4 L982.5 26.7 L985.0 24.5 L987.5 22.9 L990.0 21.9 L992.5 21.4 L995.0 21.5 L997.5 22.2 L1000.0 23.4 L1002.5 25.2 L1005.0 27.6 L1007.5 30.4 L1010.0 33.7 L1012.5 37.4 L1015.0 41.5 L1017.5 45.9 L1020.0 50.6 L1022.5 55.6 L1025.0 60.7 L1027.5 66.0 L1030.0 71.3 L1032.5 76.7 L1035.0 81.9 L1037.5 87.1 L1040.0 92.1 L1042.5 96.9 L1045.0 101.4 L1047.5 105.6 L1050.0 109.4 L1052.5 112.8 L1055.0 115.8 L1057.5 118.3 L1060.0 120.3 L1062.5 121.8 L1065.0 122.7 L1067.5 123.1 L1070.0 123.0 L1072.5 122.3 L1075.0 121.2 L1077.5 119.5 L1080.0 117.3 L1082.5 114.6 L1085.0 111.6 L1087.5 108.1 L1090.0 104.2 L1092.5 100.1 L1095.0 95.7 L1097.5 91.1 L1100.0 86.3 L1102.5 81.4 L1105.0 76.5 L1107.5 71.5 L1110.0 66.6 L1112.5 61.9 L1115.0 57.2 L1117.5 52.8 L1120.0 48.7 L1122.5 44.8 L1125.0 41.3"/>
+  </g>
+  <g>
+    <line class="click-jump" x1="375.0" y1="113.7" x2="375.0" y2="74"/>
+    <line class="click-jump" x1="450.0" y1="74" x2="450.0" y2="113.7"/>
+  </g>
+  <g>
+    <line class="click-jump" x1="1125.0" y1="41.3" x2="1125.0" y2="103.8"/>
+  </g>
+</svg>
+</div>
+
+<div class="callback-note">The box is one callback: <code>try_push</code> loses the end of its input block, and its output starts with as many zeros.</div>
+
+Note:
+- And on the other side
+- Because the worker thread is busy for to long, the input samples in the input ring are poped to late and the input ring gets full
+- try_push fails then and the rest of the host block is never pushed
+- the output then pays the depth and starts its next block with as many zeros
+- After the zeros the audio is late by as many samples
+- And one latency later the gap reaches the output, and the audio jumps back in line
 
 ---
 
@@ -470,7 +246,7 @@ Note:
       <line class="fill-edge" x1="562.5" y1="0" x2="562.5" y2="200"/>
       <path class="click-line" d="M0.0 63.9 L2.5 60.2 L5.0 56.9 L7.5 54.0 L10.0 51.7 L12.5 49.8 L15.0 48.5 L17.5 47.7 L20.0 47.5 L22.5 47.9 L25.0 48.9 L27.5 50.4 L30.0 52.5 L32.5 55.1 L35.0 58.3 L37.5 61.9 L40.0 65.9 L42.5 70.4 L45.0 75.3 L47.5 80.4 L50.0 85.8 L52.5 91.4 L55.0 97.1 L57.5 102.9 L60.0 108.7 L62.5 114.5 L65.0 120.1 L67.5 125.5 L70.0 130.7 L72.5 135.6 L75.0 140.2 L77.5 144.3 L80.0 148.0 L82.5 151.1 L85.0 153.7 L87.5 155.8 L90.0 157.2 L92.5 158.1 L95.0 158.2 L97.5 157.8 L100.0 156.7 L102.5 155.0 L105.0 152.6 L107.5 149.7 L110.0 146.2 L112.5 142.2 L115.0 137.6 L117.5 132.7 L120.0 127.3 L122.5 121.6 L125.0 115.7 L127.5 109.5 L130.0 103.2 L132.5 96.8 L135.0 90.4 L137.5 84.1 L140.0 77.9 L142.5 71.9 L145.0 66.2 L147.5 60.9 L150.0 55.9 L152.5 51.4 L155.0 47.4 L157.5 43.9 L160.0 41.1 L162.5 38.9 L165.0 37.3 L167.5 36.5 L170.0 36.3 L172.5 36.8 L175.0 38.0 L177.5 39.9 L180.0 42.5 L182.5 45.8 L185.0 49.6 L187.5 54.0 L190.0 59.0 L192.5 64.4 L195.0 70.2 L197.5 76.5 L200.0 83.0 L202.5 89.7 L205.0 96.5 L207.5 103.5 L210.0 110.4 L212.5 117.3 L215.0 124.0 L217.5 130.4 L220.0 136.6 L222.5 142.4 L225.0 147.7 L227.5 152.6 L230.0 156.9 L232.5 160.6 L235.0 163.6 L237.5 166.0 L240.0 167.6 L242.5 168.5 L245.0 168.7 L247.5 168.1 L250.0 166.8 L252.5 164.7 L255.0 161.9 L257.5 158.3 L260.0 154.2 L262.5 149.4 L265.0 144.1 L267.5 138.2 L270.0 131.9 L272.5 125.3 L275.0 118.3 L277.5 111.1 L280.0 103.7 L282.5 96.3 L285.0 88.9 L287.5 81.5 L290.0 74.4 L292.5 67.5 L295.0 60.9 L297.5 54.8 L300.0 49.1 L302.5 43.9 L305.0 39.4 L307.5 35.5 L310.0 32.2 L312.5 29.8 L315.0 28.1 L317.5 27.1 L320.0 27.0 L322.5 27.7 L325.0 29.1 L327.5 31.4 L330.0 34.4 L332.5 38.1 L335.0 42.6 L337.5 47.7 L340.0 53.4 L342.5 59.6 L345.0 66.2 L347.5 73.3 L350.0 80.7 L352.5 88.3 L355.0 96.1 L357.5 103.9 L360.0 111.7 L362.5 119.5 L365.0 127.0 L367.5 134.2 L370.0 141.1 L372.5 147.6 L375.0 153.6 M562.5 157.0L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
       <path class="fill-line" d="M375.0 153.6L375.0 97.1 L377.5 90.1 L380.0 83.4 L382.5 77.2 L385.0 71.6 L387.5 66.8 L390.0 62.9 L392.5 60.0 L395.0 58.2 L397.5 57.5 L400.0 58.0 L402.5 59.6 L405.0 62.4 L407.5 66.1 L410.0 70.8 L412.5 76.3 L415.0 82.4 L417.5 89.0 L420.0 95.9 L422.5 102.9 L425.0 109.9 L427.5 116.6 L430.0 122.8 L432.5 128.4 L435.0 133.2 L437.5 137.1 L440.0 140.0 L442.5 141.8 L445.0 142.5 L447.5 142.0 L450.0 140.4 L452.5 137.6 L455.0 133.9 L457.5 129.2 L460.0 123.7 L462.5 117.6 L465.0 111.0 L467.5 104.1 L470.0 97.1 L472.5 90.1 L475.0 83.4 L477.5 77.2 L480.0 71.6 L482.5 66.8 L485.0 62.9 L487.5 60.0 L490.0 58.2 L492.5 57.5 L495.0 58.0 L497.5 59.6 L500.0 62.4 L502.5 66.1 L505.0 70.8 L507.5 76.3 L510.0 82.4 L512.5 89.0 L515.0 95.9 L517.5 102.9 L520.0 109.9 L522.5 116.6 L525.0 122.8 L527.5 128.4 L530.0 133.2 L532.5 137.1 L535.0 140.0 L537.5 141.8 L540.0 142.5 L542.5 142.0 L545.0 140.4 L547.5 137.6 L550.0 133.9 L552.5 129.2 L555.0 123.7 L557.5 117.6 L560.0 111.0 L562.5 104.1 L562.5 157.0"/>
-      <path class="shift-ghost fragment" data-fragment-index="1" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
+      <path class="shift-ghost" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
     </svg>
   </div>
   <div class="policy">
@@ -482,7 +258,7 @@ Note:
       <line class="fill-edge" x1="562.5" y1="0" x2="562.5" y2="200"/>
       <path class="click-line" d="M0.0 63.9 L2.5 60.2 L5.0 56.9 L7.5 54.0 L10.0 51.7 L12.5 49.8 L15.0 48.5 L17.5 47.7 L20.0 47.5 L22.5 47.9 L25.0 48.9 L27.5 50.4 L30.0 52.5 L32.5 55.1 L35.0 58.3 L37.5 61.9 L40.0 65.9 L42.5 70.4 L45.0 75.3 L47.5 80.4 L50.0 85.8 L52.5 91.4 L55.0 97.1 L57.5 102.9 L60.0 108.7 L62.5 114.5 L65.0 120.1 L67.5 125.5 L70.0 130.7 L72.5 135.6 L75.0 140.2 L77.5 144.3 L80.0 148.0 L82.5 151.1 L85.0 153.7 L87.5 155.8 L90.0 157.2 L92.5 158.1 L95.0 158.2 L97.5 157.8 L100.0 156.7 L102.5 155.0 L105.0 152.6 L107.5 149.7 L110.0 146.2 L112.5 142.2 L115.0 137.6 L117.5 132.7 L120.0 127.3 L122.5 121.6 L125.0 115.7 L127.5 109.5 L130.0 103.2 L132.5 96.8 L135.0 90.4 L137.5 84.1 L140.0 77.9 L142.5 71.9 L145.0 66.2 L147.5 60.9 L150.0 55.9 L152.5 51.4 L155.0 47.4 L157.5 43.9 L160.0 41.1 L162.5 38.9 L165.0 37.3 L167.5 36.5 L170.0 36.3 L172.5 36.8 L175.0 38.0 L177.5 39.9 L180.0 42.5 L182.5 45.8 L185.0 49.6 L187.5 54.0 L190.0 59.0 L192.5 64.4 L195.0 70.2 L197.5 76.5 L200.0 83.0 L202.5 89.7 L205.0 96.5 L207.5 103.5 L210.0 110.4 L212.5 117.3 L215.0 124.0 L217.5 130.4 L220.0 136.6 L222.5 142.4 L225.0 147.7 L227.5 152.6 L230.0 156.9 L232.5 160.6 L235.0 163.6 L237.5 166.0 L240.0 167.6 L242.5 168.5 L245.0 168.7 L247.5 168.1 L250.0 166.8 L252.5 164.7 L255.0 161.9 L257.5 158.3 L260.0 154.2 L262.5 149.4 L265.0 144.1 L267.5 138.2 L270.0 131.9 L272.5 125.3 L275.0 118.3 L277.5 111.1 L280.0 103.7 L282.5 96.3 L285.0 88.9 L287.5 81.5 L290.0 74.4 L292.5 67.5 L295.0 60.9 L297.5 54.8 L300.0 49.1 L302.5 43.9 L305.0 39.4 L307.5 35.5 L310.0 32.2 L312.5 29.8 L315.0 28.1 L317.5 27.1 L320.0 27.0 L322.5 27.7 L325.0 29.1 L327.5 31.4 L330.0 34.4 L332.5 38.1 L335.0 42.6 L337.5 47.7 L340.0 53.4 L342.5 59.6 L345.0 66.2 L347.5 73.3 L350.0 80.7 L352.5 88.3 L355.0 96.1 L357.5 103.9 L360.0 111.7 L362.5 119.5 L365.0 127.0 L367.5 134.2 L370.0 141.1 L372.5 147.6 L375.0 153.6 M562.5 157.0L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
       <path class="fill-line" d="M375.0 153.6L375.0 54.0 L377.5 59.0 L380.0 64.4 L382.5 70.2 L385.0 76.5 L387.5 83.0 L390.0 89.7 L392.5 96.5 L395.0 103.5 L397.5 110.4 L400.0 117.3 L402.5 124.0 L405.0 130.4 L407.5 136.6 L410.0 142.4 L412.5 147.7 L415.0 152.6 L417.5 156.9 L420.0 160.6 L422.5 163.6 L425.0 166.0 L427.5 167.6 L430.0 168.5 L432.5 168.7 L435.0 168.1 L437.5 166.8 L440.0 164.7 L442.5 161.9 L445.0 158.3 L447.5 154.2 L450.0 149.4 L452.5 144.1 L455.0 138.2 L457.5 131.9 L460.0 125.3 L462.5 118.3 L465.0 111.1 L467.5 103.7 L470.0 96.3 L472.5 88.9 L475.0 81.5 L477.5 74.4 L480.0 67.5 L482.5 60.9 L485.0 54.8 L487.5 49.1 L490.0 43.9 L492.5 39.4 L495.0 35.5 L497.5 32.2 L500.0 29.8 L502.5 28.1 L505.0 27.1 L507.5 27.0 L510.0 27.7 L512.5 29.1 L515.0 31.4 L517.5 34.4 L520.0 38.1 L522.5 42.6 L525.0 47.7 L527.5 53.4 L530.0 59.6 L532.5 66.2 L535.0 73.3 L537.5 80.7 L540.0 88.3 L542.5 96.1 L545.0 103.9 L547.5 111.7 L550.0 119.5 L552.5 127.0 L555.0 134.2 L557.5 141.1 L560.0 147.6 L562.5 153.6 L562.5 157.0"/>
-      <path class="shift-ghost fragment" data-fragment-index="1" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
+      <path class="shift-ghost" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
     </svg>
   </div>
   <div class="policy">
@@ -494,11 +270,11 @@ Note:
       <line class="fill-edge" x1="562.5" y1="0" x2="562.5" y2="200"/>
       <path class="click-line" d="M0.0 63.9 L2.5 60.2 L5.0 56.9 L7.5 54.0 L10.0 51.7 L12.5 49.8 L15.0 48.5 L17.5 47.7 L20.0 47.5 L22.5 47.9 L25.0 48.9 L27.5 50.4 L30.0 52.5 L32.5 55.1 L35.0 58.3 L37.5 61.9 L40.0 65.9 L42.5 70.4 L45.0 75.3 L47.5 80.4 L50.0 85.8 L52.5 91.4 L55.0 97.1 L57.5 102.9 L60.0 108.7 L62.5 114.5 L65.0 120.1 L67.5 125.5 L70.0 130.7 L72.5 135.6 L75.0 140.2 L77.5 144.3 L80.0 148.0 L82.5 151.1 L85.0 153.7 L87.5 155.8 L90.0 157.2 L92.5 158.1 L95.0 158.2 L97.5 157.8 L100.0 156.7 L102.5 155.0 L105.0 152.6 L107.5 149.7 L110.0 146.2 L112.5 142.2 L115.0 137.6 L117.5 132.7 L120.0 127.3 L122.5 121.6 L125.0 115.7 L127.5 109.5 L130.0 103.2 L132.5 96.8 L135.0 90.4 L137.5 84.1 L140.0 77.9 L142.5 71.9 L145.0 66.2 L147.5 60.9 L150.0 55.9 L152.5 51.4 L155.0 47.4 L157.5 43.9 L160.0 41.1 L162.5 38.9 L165.0 37.3 L167.5 36.5 L170.0 36.3 L172.5 36.8 L175.0 38.0 L177.5 39.9 L180.0 42.5 L182.5 45.8 L185.0 49.6 L187.5 54.0 L190.0 59.0 L192.5 64.4 L195.0 70.2 L197.5 76.5 L200.0 83.0 L202.5 89.7 L205.0 96.5 L207.5 103.5 L210.0 110.4 L212.5 117.3 L215.0 124.0 L217.5 130.4 L220.0 136.6 L222.5 142.4 L225.0 147.7 L227.5 152.6 L230.0 156.9 L232.5 160.6 L235.0 163.6 L237.5 166.0 L240.0 167.6 L242.5 168.5 L245.0 168.7 L247.5 168.1 L250.0 166.8 L252.5 164.7 L255.0 161.9 L257.5 158.3 L260.0 154.2 L262.5 149.4 L265.0 144.1 L267.5 138.2 L270.0 131.9 L272.5 125.3 L275.0 118.3 L277.5 111.1 L280.0 103.7 L282.5 96.3 L285.0 88.9 L287.5 81.5 L290.0 74.4 L292.5 67.5 L295.0 60.9 L297.5 54.8 L300.0 49.1 L302.5 43.9 L305.0 39.4 L307.5 35.5 L310.0 32.2 L312.5 29.8 L315.0 28.1 L317.5 27.1 L320.0 27.0 L322.5 27.7 L325.0 29.1 L327.5 31.4 L330.0 34.4 L332.5 38.1 L335.0 42.6 L337.5 47.7 L340.0 53.4 L342.5 59.6 L345.0 66.2 L347.5 73.3 L350.0 80.7 L352.5 88.3 L355.0 96.1 L357.5 103.9 L360.0 111.7 L362.5 119.5 L365.0 127.0 L367.5 134.2 L370.0 141.1 L372.5 147.6 L375.0 153.6 M562.5 157.0L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
       <path class="fill-line" d="M375.0 153.6L375.0 100.0 L377.5 100.0 L380.0 100.0 L382.5 100.0 L385.0 100.0 L387.5 100.0 L390.0 100.0 L392.5 100.0 L395.0 100.0 L397.5 100.0 L400.0 100.0 L402.5 100.0 L405.0 100.0 L407.5 100.0 L410.0 100.0 L412.5 100.0 L415.0 100.0 L417.5 100.0 L420.0 100.0 L422.5 100.0 L425.0 100.0 L427.5 100.0 L430.0 100.0 L432.5 100.0 L435.0 100.0 L437.5 100.0 L440.0 100.0 L442.5 100.0 L445.0 100.0 L447.5 100.0 L450.0 100.0 L452.5 100.0 L455.0 100.0 L457.5 100.0 L460.0 100.0 L462.5 100.0 L465.0 100.0 L467.5 100.0 L470.0 100.0 L472.5 100.0 L475.0 100.0 L477.5 100.0 L480.0 100.0 L482.5 100.0 L485.0 100.0 L487.5 100.0 L490.0 100.0 L492.5 100.0 L495.0 100.0 L497.5 100.0 L500.0 100.0 L502.5 100.0 L505.0 100.0 L507.5 100.0 L510.0 100.0 L512.5 100.0 L515.0 100.0 L517.5 100.0 L520.0 100.0 L522.5 100.0 L525.0 100.0 L527.5 100.0 L530.0 100.0 L532.5 100.0 L535.0 100.0 L537.5 100.0 L540.0 100.0 L542.5 100.0 L545.0 100.0 L547.5 100.0 L550.0 100.0 L552.5 100.0 L555.0 100.0 L557.5 100.0 L560.0 100.0 L562.5 100.0 L562.5 157.0"/>
-      <path class="shift-ghost fragment" data-fragment-index="1" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
+      <path class="shift-ghost" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
     </svg>
   </div>
   <div class="policy">
-    <div class="policy-name"><code>callback</code> your function: continue the wave, aim for the next block</div>
+    <div class="policy-name"><code>callback</code> your own function</div>
     <svg class="click-wave" viewBox="0 0 750 200" aria-hidden="true">
       <rect class="fill-band" x="375.0" y="0" width="187.5" height="200"/>
       <line class="click-div" x1="187.5" y1="6" x2="187.5" y2="194"/><line class="click-div" x1="375.0" y1="6" x2="375.0" y2="194"/><line class="click-div" x1="562.5" y1="6" x2="562.5" y2="194"/>
@@ -506,55 +282,17 @@ Note:
       <line class="fill-edge" x1="562.5" y1="0" x2="562.5" y2="200"/>
       <path class="click-line" d="M0.0 63.9 L2.5 60.2 L5.0 56.9 L7.5 54.0 L10.0 51.7 L12.5 49.8 L15.0 48.5 L17.5 47.7 L20.0 47.5 L22.5 47.9 L25.0 48.9 L27.5 50.4 L30.0 52.5 L32.5 55.1 L35.0 58.3 L37.5 61.9 L40.0 65.9 L42.5 70.4 L45.0 75.3 L47.5 80.4 L50.0 85.8 L52.5 91.4 L55.0 97.1 L57.5 102.9 L60.0 108.7 L62.5 114.5 L65.0 120.1 L67.5 125.5 L70.0 130.7 L72.5 135.6 L75.0 140.2 L77.5 144.3 L80.0 148.0 L82.5 151.1 L85.0 153.7 L87.5 155.8 L90.0 157.2 L92.5 158.1 L95.0 158.2 L97.5 157.8 L100.0 156.7 L102.5 155.0 L105.0 152.6 L107.5 149.7 L110.0 146.2 L112.5 142.2 L115.0 137.6 L117.5 132.7 L120.0 127.3 L122.5 121.6 L125.0 115.7 L127.5 109.5 L130.0 103.2 L132.5 96.8 L135.0 90.4 L137.5 84.1 L140.0 77.9 L142.5 71.9 L145.0 66.2 L147.5 60.9 L150.0 55.9 L152.5 51.4 L155.0 47.4 L157.5 43.9 L160.0 41.1 L162.5 38.9 L165.0 37.3 L167.5 36.5 L170.0 36.3 L172.5 36.8 L175.0 38.0 L177.5 39.9 L180.0 42.5 L182.5 45.8 L185.0 49.6 L187.5 54.0 L190.0 59.0 L192.5 64.4 L195.0 70.2 L197.5 76.5 L200.0 83.0 L202.5 89.7 L205.0 96.5 L207.5 103.5 L210.0 110.4 L212.5 117.3 L215.0 124.0 L217.5 130.4 L220.0 136.6 L222.5 142.4 L225.0 147.7 L227.5 152.6 L230.0 156.9 L232.5 160.6 L235.0 163.6 L237.5 166.0 L240.0 167.6 L242.5 168.5 L245.0 168.7 L247.5 168.1 L250.0 166.8 L252.5 164.7 L255.0 161.9 L257.5 158.3 L260.0 154.2 L262.5 149.4 L265.0 144.1 L267.5 138.2 L270.0 131.9 L272.5 125.3 L275.0 118.3 L277.5 111.1 L280.0 103.7 L282.5 96.3 L285.0 88.9 L287.5 81.5 L290.0 74.4 L292.5 67.5 L295.0 60.9 L297.5 54.8 L300.0 49.1 L302.5 43.9 L305.0 39.4 L307.5 35.5 L310.0 32.2 L312.5 29.8 L315.0 28.1 L317.5 27.1 L320.0 27.0 L322.5 27.7 L325.0 29.1 L327.5 31.4 L330.0 34.4 L332.5 38.1 L335.0 42.6 L337.5 47.7 L340.0 53.4 L342.5 59.6 L345.0 66.2 L347.5 73.3 L350.0 80.7 L352.5 88.3 L355.0 96.1 L357.5 103.9 L360.0 111.7 L362.5 119.5 L365.0 127.0 L367.5 134.2 L370.0 141.1 L372.5 147.6 L375.0 153.6 M562.5 157.0L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
       <path class="fill-line" d="M375.0 153.6L375.0 153.6 L377.5 158.9 L380.0 163.5 L382.5 167.5 L385.0 170.6 L387.5 173.0 L390.0 174.5 L392.5 175.1 L395.0 174.8 L397.5 173.6 L400.0 171.6 L402.5 168.7 L405.0 164.9 L407.5 160.4 L410.0 155.2 L412.5 149.3 L415.0 142.8 L417.5 135.8 L420.0 128.4 L422.5 120.6 L425.0 112.7 L427.5 104.6 L430.0 96.5 L432.5 88.5 L435.0 80.7 L437.5 73.3 L440.0 66.2 L442.5 59.6 L445.0 53.5 L447.5 48.2 L450.0 43.5 L452.5 39.6 L455.0 36.6 L457.5 34.4 L460.0 33.1 L462.5 32.7 L465.0 33.3 L467.5 34.7 L470.0 36.9 L472.5 40.0 L475.0 43.9 L477.5 48.6 L480.0 53.9 L482.5 59.8 L485.0 66.2 L487.5 73.0 L490.0 80.1 L492.5 87.5 L495.0 95.0 L497.5 102.6 L500.0 110.0 L502.5 117.4 L505.0 124.4 L507.5 131.1 L510.0 137.4 L512.5 143.1 L515.0 148.3 L517.5 152.8 L520.0 156.6 L522.5 159.7 L525.0 162.0 L527.5 163.6 L530.0 164.3 L532.5 164.2 L535.0 163.3 L537.5 161.6 L540.0 159.2 L542.5 156.1 L545.0 152.3 L547.5 148.0 L550.0 143.0 L552.5 137.6 L555.0 131.8 L557.5 125.7 L560.0 119.3 L562.5 112.8 L562.5 157.0"/>
-      <path class="shift-ghost fragment" data-fragment-index="1" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
+      <path class="shift-ghost" d="M562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5"/>
     </svg>
   </div>
 </div>
 
-<div class="click-note fill fragment" data-fragment-index="1"><b>no shift</b> A late result or a full queue: the block is filled, the late result is dropped, the audio after it stays in line.</div>
+<div class="click-note fill"><b>no shift</b> A late result or a full queue: the contract's <code>"on_miss"</code> fills the block, the late result is dropped, the audio after it stays in line.</div>
 
 Note:
-- In anira a missed block is filled in place, and nothing shifts: the audio after it stays in line, for a late result and for a full queue alike.
-- A miss is one block, and what goes out there is the contract's on_miss: the input block, the last block again, silence, or your own function.
-- With a callback you can continue the waveform from before the miss and aim for where the next block starts.
-- The next block is usually not computed yet, so that start is a guess: close, but a small step remains.
-- [click] A late result that arrives after the miss is dropped, and no input is skipped, so the audio after the miss is where it belongs: the dashed line and the signal are the same.
-- If every slot is busy, the window is dropped and its block is filled the same way, at its place in the stream. If the shared queue itself refuses the job, the block goes out as zeros, whatever the policy.
-- The edges of the filled block can still be heard, depending on the policy. A full queue no longer shifts the audio: the fill sits where the dropped hop belongs.
-
----
-
-<!-- .slide: class="answer" -->
-
-<div class="tag">anira · Misses</div>
-
-## What a missed block delivers<br><span class="then">is the contract's choice.</span>
-
-```json
-{ "hard": { "budget": "measured", "warmup": "until_stable", "on_miss": "bypass" } }
-```
-
-<div class="statement-points">
-  <div><code>bypass</code>, the default: the input block, as it came in</div>
-  <div><code>hold_last</code>: the last block the model delivered, repeated</div>
-  <div><code>zeros</code>: silence</div>
-  <div><code>callback</code>: your function, on the audio thread, for that block</div>
-</div>
-
-<div class="cards-note">The stream stays aligned: a late result that arrives afterwards is dropped, never played shifted.</div>
-
-<div class="note-box">Transport jump: <code>reset()</code>, wait-free. Clears rings and state.</div>
-
-Note:
-- What a missed block delivers is the contract's choice: on_miss.
-- bypass, the default, passes the input through unchanged.
-- hold_last repeats the last block the model delivered.
-- zeros is silence, as in step 7, and callback calls your own function on the audio thread.
-- process reports the block as missed, and that is not an error: the buffer holds what the policy chose.
-- A late result that arrives after a miss is dropped, so the stream stays aligned, without the counters of step 7.
-- If every slot is busy, the window is dropped and filled the same way: that is overload, and rt_error tells you so.
-- After a miss the pool catches up: the next block is on time again once the late result has arrived, otherwise that callback is another miss.
-- And the box: on a transport jump you call reset, wait-free, from the audio thread. It clears the rings and refills the latency's zeros, drops the inferences still running, and the state pair starts at zero with the first block of the new stream. In part 1 we had no answer for that: the old samples and the old state would have carried on.
+- anira handles both cases more gracefully: the missed block is filled in place, and nothing shifts
+- A late result is dropped when it arrives, and if all input slots are busy, the window is dropped and its block filled later, at its place in the stream
+- The contract chooses what happens on a on_miss: bypass, the default, passes the input through, hold_last repeats the last block, zeros is silence as in part 1, or the user can even provide a custom callback function
 
 ---
 
@@ -607,11 +345,7 @@ Note:
 <div class="cards-note">Step 8 in a bounce: the output ring runs dry and goes out as silence, and the input ring fills up and drops samples.</div>
 
 Note:
-- Did anyone export a track with our plugin from step 8? Rendering offline, a bounce in the DAW.
-- Live, the host calls once per block period, 11.6 ms for 512 samples, and the latency covers our inference: the result is back before the host needs it.
-- In a bounce there is no clock. The host calls the next block as soon as the last one returns, a fraction of a millisecond later.
-- The inference still takes its 12 or so milliseconds. Our audio thread never waits, so in step 8 the output ring runs dry and those samples go out as silence, and the input ring fills up and drops what does not fit. The bounce has gaps.
-- Live, never waiting is right. Offline nothing runs against a deadline, so we can afford to wait. How does anira do that?
+- And finally I want to talk about offline bouncing...
 
 ---
 
@@ -636,89 +370,6 @@ if (isNonRealtime()) {   // a bounce: no deadline, nothing to miss
 </div>
 
 Note:
-- So when the host says it renders offline, JUCE's isNonRealtime, we call process_wait instead: the same call, but it blocks until the inference threads have delivered this block's result. ANIRA_WAIT_FOREVER means as long as it takes.
-- That is exactly what v2's set_non_realtime did.
-- Live, process stays nonblocking: never wait on the audio thread.
-- What we do not do: sleep in the callback for as long as the block lasts, to give the pool time. That only imitates the clock, and is still a guess.
+- In anira when the host renders offline, in JUCE i.e. isNonRealtime is true, we call process_wait instead of process
+- The same call, but it blocks until the inference threads have delivered this block's result. ANIRA_WAIT_FOREVER means as long as it takes
 
----
-
-<!-- .slide: class="recap" -->
-
-<div class="tag">Part 1 · Step 5</div>
-
-## We checked real-time safety by hand.<br><span class="then">Once, on our machine.</span>
-
-```cpp
-void process_block(float* samples, size_t num_samples)
-    [[clang::nonblocking]] { … }
-```
-
-<div class="cards-note">RTSan on our engine, one run: what it caught, and what it could not see.</div>
-
-Note:
-- In step 5 we checked real-time safety by hand, once, on our machine.
-- We tagged the callback nonblocking, built with -fsanitize=realtime, and ran RTSan once, on ONNX Runtime.
-- That showed us what it caught, and what it could not see.
-- And it has to be repeated for every change, every model, every engine.
-
----
-
-<!-- .slide: class="answer" -->
-
-<div class="tag">anira · Safety</div>
-
-## Every entry names its thread.<br><span class="then">The audio-thread entries are nonblocking.</span>
-
-<div class="threads">
-  <div class="threads-label">main</div>
-  <div class="threads-lane"><span>from_file</span><span>create</span><span>prepare</span><span>destroy</span></div>
-  <div class="threads-label">audio</div>
-  <div class="threads-lane audio"><span>process</span><span class="stage">pre_process</span><span class="stage">post_process</span></div>
-  <div class="threads-label">pool</div>
-  <div class="threads-lane pool"><span class="stage">before_inference</span><span class="engine">engine</span><span class="stage">after_inference</span></div>
-</div>
-
-<div class="cards-note">Every audio-thread entry carries <code>ANIRA_NONBLOCKING</code>; the whole test suite runs under RTSan in CI.</div>
-
-Note:
-- In anira every entry names its thread, and the audio-thread entries are nonblocking.
-- The thread tags are part of the API, as in CLAP: main for setup, audio for the host's callback, pool for inference.
-- from_file, create, prepare and destroy are main; get_latency may be called from any thread; process, pre_process and post_process are audio; before_inference, the engine and after_inference are pool.
-- ANIRA_NONBLOCKING is clang's nonblocking attribute on every audio-thread entry, so the compiler checks what each one calls.
-- The exceptions are the waiting twins like process_wait: they are tagged blocking, and calling one in the callback is your decision.
-- And the whole test suite runs under RTSan in CI.
-- Your own stage is different: anira cannot check it. Under a Hard contract your processor promises with a flag that pre_process and post_process are real-time safe; mark them ANIRA_NONBLOCKING and run RTSan in your own build to hold that promise.
-- Logging from the audio thread needs no lock: a fixed record goes into a queue, and a drain thread prints it.
-- A failed audio-thread call says why in rt_error.
-
----
-
-<div class="tag">The map</div>
-
-## After process:<br><span class="then">the whole path of one block.</span>
-
-{{MAP:show=create,prepare,process}}
-
-Note:
-- After process, every row is filled.
-- The next chapter walks the whole map once, from your callback to the engine and back.
-
----
-
-<div class="tag">Take away</div>
-
-## The callback waits only if you ask.<br><span class="then">The policies are yours.</span>
-
-<div class="statement-points">
-  <div>Waiting: a strategy for the pool, a ratio for the callback, a policy for a miss</div>
-  <div>Stages: four phases around the engine, two of them on the audio thread</div>
-  <div>Safety: every entry names its thread; the audio-thread ones are checked</div>
-</div>
-
-Note:
-- The callback waits only if you ask, and the policies are yours.
-- Waiting: a strategy for the pool, a ratio for the callback, a policy for a miss.
-- Stages: four phases around the engine, two of them on the audio thread.
-- Safety: every entry names its thread, and the audio-thread ones are checked.
-- Next: the whole picture, the C ABI underneath, and the three places in a plugin.

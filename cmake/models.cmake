@@ -35,10 +35,10 @@ set(_workshop_models_release
 set(_workshop_models
     # Steps 1 to 9: the forward model
     "rave/model_forward.onnx|a75d50597aa8d4287ba5de73fd933d2df1c0f07c99539f5c88b1d7f694ad6f26"
-    # Steps 10 and 11: the model taken apart; step 11 runs the decoder alone
+    # Step 10 and the bonus: the model taken apart; step 10 runs the decoder alone
     "rave/model_encoder.onnx|7c202eede08c638b75a2cd67b571ad3d15a6d8bbd1928a1f71f5a96f564d6d9a"
     "rave/model_decoder.onnx|66ce39f2b5fc9122852c088b16cde5872a5541dceb59e601262d25f78bf3a4a8"
-    # Step 11: MediaPipe's hand tracking chain as ONNX (Apache 2.0), via anira-cam
+    # Step 10: MediaPipe's hand tracking chain as ONNX (Apache 2.0), via anira-cam
     "handtracking/hand_detector.onnx|431501d81309306a0526d333df5ff23eccb4e01987bc20d19c56e47a001f2873"
     "handtracking/hand_landmarks_detector.onnx|b4ac6e8ad824556264bd2e76141881904beeab80b63c9de56449dedbadf23471"
     "handtracking/gesture_embedder.onnx|b58c43055433d21c4075a0a5bdb9d641f418960dbbbf0a8673558a8b2ed6991e"

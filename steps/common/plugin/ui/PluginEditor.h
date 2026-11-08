@@ -1,7 +1,7 @@
 // The plugin's window: what to process (the example, your file, or the
 // input), the dry/wet mix, a row of the step's own knobs if it has any, an
 // overlay while the plugin is bypassed or held back, and anira's plan report
-// (steps 9 and 10).
+// (step 9 and the bonus).
 // Colours from the slides.
 #pragma once
 

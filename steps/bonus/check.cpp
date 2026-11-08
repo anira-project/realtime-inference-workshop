@@ -1,11 +1,11 @@
-// Step 10 — the check: drives SplitProcessor the way the plugin's host does,
+// Bonus — the check: drives SplitProcessor the way the plugin's host does,
 // prepare once, process every callback, on the fake host with the test signal.
 // It runs offline, as a bounce: the host calls as fast as it can and every
 // block waits for its result, so nothing is missed and the comparison is exact.
-// First with every offset at 0, against step 10's reference
+// First with every offset at 0, against the bonus step's reference
 // (target_split_signal.h), shifted by latency(); then once more with offsets,
-// which must change the output. Built twice: step10_exercise_check and
-// step10_solution_check.
+// which must change the output. Built twice: bonus_exercise_check and
+// bonus_solution_check.
 
 #include <array>
 #include <cstddef>
@@ -98,5 +98,5 @@ static int check() try {
 }
 
 int main() {
-    return step_result(10, check());
+    return step_result(k_bonus, check());
 }

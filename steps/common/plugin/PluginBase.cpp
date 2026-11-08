@@ -9,7 +9,7 @@
 namespace {
 constexpr const char* k_mix_id = "mix";
 
-// anira measured a plan slower than real time (steps 9 and 10): live it drops
+// anira measured a plan slower than real time (step 9 and the bonus): live it drops
 // out; a bounce waits for every result, so it is not held back.
 constexpr PluginBase::Hold k_not_realtime{
     "Not real-time",
@@ -18,7 +18,7 @@ constexpr PluginBase::Hold k_not_realtime{
     "Try nonetheless",
     true};
 
-// The host's rate is not the model's 44.1 kHz (steps 9 and 10): the model
+// The host's rate is not the model's 44.1 kHz (step 9 and the bonus): the model
 // plays at the wrong speed, so it sounds higher or lower.
 constexpr PluginBase::Hold k_not_44k{
     "44.1 kHz only",

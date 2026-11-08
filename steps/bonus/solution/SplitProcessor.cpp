@@ -1,10 +1,10 @@
-// Step 10 — Opening the model, reference implementation
+// Bonus — Opening the model, reference implementation
 //
 // Goal:  the model cut in the middle: encoder and decoder as two handlers, and
 //        an offset per latent dimension between them.
 // Given: encoder.json, decoder.json and contract.json next to this file, the
 //        plugin around it.
-// Check: step10_solution_check: with zero offsets the output equals step 10's
+// Check: bonus_solution_check: with zero offsets the output equals the bonus step's
 //        reference, shifted by latency(); an offset changes it.
 
 #include "SplitProcessor.h"
@@ -45,8 +45,8 @@ void SplitProcessor::prepare(double sample_rate, size_t max_block_size) {
 
     // What the host is told: the encoder's latency comes in latent frames,
     // k_frame_size samples each; the decoder's in samples
-    m_encoder_latency_frames = m_encoder->get_latency(0);
-    m_latency = m_encoder_latency_frames * k_frame_size + m_decoder->get_latency(0);
+    m_encoder_latency_frames = m_encoder->get_latency();
+    m_latency = m_encoder_latency_frames * k_frame_size + m_decoder->get_latency();
 
     // A new stream on both handlers: the count towards the next latent frame starts over
     m_input_samples = 0;

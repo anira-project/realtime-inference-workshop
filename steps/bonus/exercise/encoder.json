@@ -1,4 +1,4 @@
-// Step 10: the encoder. Replace every ? with its value, a number as it is.
+// Bonus: the encoder. Replace every ? with its value, a number as it is.
 // The comments are hints; the processor drops them before anira reads the file.
 {
   "models": [
@@ -6,7 +6,7 @@
   ],
   "inputs": [
     {
-      "name": "audio",
+      "name": "audio_in",
       "dtype": "float32",
       "role": "streamed",
       "axes": [["batch", 1], ["channel", 1], ["time", ?]]   // TODO1: audio samples per inference, as in step 9

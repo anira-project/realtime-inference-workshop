@@ -33,8 +33,8 @@ void AniraProcessor::prepare(double sample_rate, size_t max_block_size) {
     // latency. Two lines are missing:
     //   - the host's side of the contract: its smallest block (any block may
     //     come, down to 1), its largest (max_block_size) and its sample rate.
-    //   - the latency of output slot 0 (audio_out), from the prepared handler:
-    //     handler.get_latency(slot).
+    //   - the latency of the first output (audio_out), from the prepared handler:
+    //     handler.get_latency().
     //
     m_contract.hard_host_blocks(?, ?, ?);  // <- 1. fill out
 

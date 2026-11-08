@@ -1,4 +1,4 @@
-// Step 10 — Opening the model
+// Bonus — Opening the model
 //
 // Goal:   the model cut in the middle: encoder and decoder as two handlers, and
 //         an offset per latent dimension between them.
@@ -6,9 +6,9 @@
 //         around it, anira (anira.hpp).
 // Task:   TODO 1 in encoder.json and decoder.json: replace every ? there.
 //         TODO 2 below: one line, marked "fill out".
-// Check:  step10_exercise_check: with zero offsets the output equals step 10's
+// Check:  bonus_exercise_check: with zero offsets the output equals the bonus step's
 //         reference, shifted by latency(); an offset changes it. Then play:
-//         the plugin step10_exercise, eight knobs, z0 to z7.
+//         the plugin bonus_exercise, eight knobs, z0 to z7.
 //
 // It builds once every ? is filled in, then the check says what is still off.
 
@@ -50,8 +50,8 @@ void SplitProcessor::prepare(double sample_rate, size_t max_block_size) {
 
     // What the host is told: the encoder's latency comes in latent frames,
     // k_frame_size samples each; the decoder's in samples
-    m_encoder_latency_frames = m_encoder->get_latency(0);
-    m_latency = m_encoder_latency_frames * k_frame_size + m_decoder->get_latency(0);
+    m_encoder_latency_frames = m_encoder->get_latency();
+    m_latency = m_encoder_latency_frames * k_frame_size + m_decoder->get_latency();
 
     // A new stream on both handlers: the count towards the next latent frame starts over
     m_input_samples = 0;

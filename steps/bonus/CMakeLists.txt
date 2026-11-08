@@ -1,9 +1,9 @@
 # The model taken apart: encoder and decoder as two handlers, the latents
 # between them, in SplitProcessor (prepare and process). Per variant:
-#   step10_<variant>_check  drives SplitProcessor on the fake host and compares
+#   bonus_<variant>_check  drives SplitProcessor on the fake host and compares
 #                           the output with the reference; the exercise's
 #                           only on request, once its ? are filled in
-#   step10_<variant>        the plugin around it, eight offset knobs (VST3,
+#   bonus_<variant>        the plugin around it, eight offset knobs (VST3,
 #                           Standalone); with WORKSHOP_JUCE
 workshop_setup_anira()
 if(WORKSHOP_JUCE)
@@ -16,7 +16,7 @@ foreach(variant exercise solution)
     # is relative to that directory, which is all the code needs to know
     set(step_dir "${CMAKE_CURRENT_LIST_DIR}/${variant}")
 
-    set(check step10_${variant}_check)
+    set(check bonus_${variant}_check)
     add_executable(${check} check.cpp ${variant}/SplitProcessor.cpp)
     # anira's C++ header is C++20; the C ABI underneath is C11
     target_compile_features(${check} PRIVATE cxx_std_20)
@@ -29,7 +29,7 @@ foreach(variant exercise solution)
     endif()
 
     if(WORKSHOP_JUCE)
-        set(plugin step10_${variant})
+        set(plugin bonus_${variant})
         string(SUBSTRING ${variant} 0 1 initial)
         workshop_add_plugin(${plugin}
             NAME "Workshop split ${variant}"
@@ -43,7 +43,7 @@ foreach(variant exercise solution)
 
     # The exercise builds once every ? in it is filled in: only on request
     if(variant STREQUAL "exercise")
-        workshop_exclude_from_all(${check} step10_exercise)
+        workshop_exclude_from_all(${check} bonus_exercise)
     endif()
 endforeach()
 
@@ -51,7 +51,7 @@ endforeach()
 # pass like the solution (cmake/exercises.cmake). Only with WORKSHOP_CHECK_EXERCISES.
 if(WORKSHOP_CHECK_EXERCISES)
     workshop_fill_exercise(filled SplitProcessor.cpp encoder.json decoder.json contract.json)
-    set(check step10_exercise_filled_check)
+    set(check bonus_exercise_filled_check)
     add_executable(${check} check.cpp ${filled})
     workshop_exclude_from_all(${check})
     target_compile_features(${check} PRIVATE cxx_std_20)

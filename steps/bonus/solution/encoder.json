@@ -1,4 +1,4 @@
-// Step 10: the encoder, filled in. The comments say where each value comes from.
+// Bonus: the encoder, filled in. The comments say where each value comes from.
 // The comments are hints; the processor drops them before anira reads the file.
 {
   "models": [
@@ -6,7 +6,7 @@
   ],
   "inputs": [
     {
-      "name": "audio",
+      "name": "audio_in",
       "dtype": "float32",
       "role": "streamed",
       "axes": [["batch", 1], ["channel", 1], ["time", 2048]]   // TODO1: one model block, 2048 samples, as in step 9

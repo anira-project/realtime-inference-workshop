@@ -419,6 +419,31 @@ html.tanh .streams {
   margin-top: var(--space-6);
 }
 
+/* Several host sizes over one model row ({{STREAM:host=512,768,441|…}}): each row's buffer
+   adaptation on the right, the model row static, since each host completes its blocks at
+   another callback (the dark ones) */
+html.tanh .stream.multi {
+  grid-template-columns: 110px 1fr 150px;
+}
+
+html.tanh .stream-delta {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  line-height: 1.2;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .stream-delta strong {
+  font-size: 1.5em;
+  color: var(--ink);
+}
+
+html.tanh .reveal section.present .stream.multi .stream-model b {
+  animation: none;
+}
+
 /*********************************************
  * Step 2 · ring buffers on both sides: the input fills in host-sized steps,
  * the model takes 2048 at once, the output drains in host-sized steps
@@ -895,6 +920,43 @@ html.tanh .lat-sum {
   gap: var(--space-4);
   margin-top: var(--space-7);
   font-size: 1.3em;
+}
+
+/* The sum for several host blocks: the term boxes as the header, one row of numbers per
+   host block below them, in the order of the stream rows above */
+html.tanh .lat-grid {
+  display: grid;
+  grid-template-columns: repeat(8, auto);
+  justify-content: center;
+  justify-items: center;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  margin-top: var(--space-5);
+  font-size: 1.3em;
+}
+
+html.tanh .lat-grid > strong {
+  font-family: var(--fs-code-font);
+  font-size: 0.65em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+html.tanh .lat-grid > strong.total {
+  font-weight: 700;
+}
+
+html.tanh .lat-host {
+  justify-self: end;
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  color: var(--fs-text-muted-color);
+  white-space: nowrap;
+}
+
+html.tanh .lat-host b {
+  color: var(--ink);
 }
 
 /* The same sum without boxes: where a number comes from, written above it */
@@ -3239,7 +3301,7 @@ html.tanh .teaser canvas {
 }
 
 
-/* Step 10: latent space figures */
+/* Bonus: latent space figures */
 html.tanh .lat-fig { display: block; width: 100%; max-height: 520px; margin: 0.6em auto 0; }
 html.tanh .lat-fig .frame { fill: none; stroke: var(--fs-border); stroke-width: 2; }
 html.tanh .lat-fig .pt { fill: var(--fs-highlight-background); }

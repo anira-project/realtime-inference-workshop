@@ -233,10 +233,13 @@
         let sources = [];
         let gains = [];
         let offset = 0;      // Seconds into the recording when paused
-        let startedAt = 0;   // context.currentTime when playback started
+        let startedAt = 0;   // now() when playback started
+        // Mirrored from the speaker view (js/mirror.js): no sound, a clock of its own
+        let silentClock = false;
+        const now = () => (silentClock ? performance.now() / 1000 : context.currentTime);
 
         // Both recordings loop, so the position wraps
-        const position = () => (sources.length ? (offset + context.currentTime - startedAt) % duration : offset);
+        const position = () => (sources.length ? (offset + now() - startedAt) % duration : offset);
         const timeLabel = player.querySelector('.spectro-time');
 
         const FADE = 0.04;   // seconds, so starting and stopping do not click
@@ -255,6 +258,13 @@
         };
 
         const stop = () => {
+            if (silentClock) {
+                silentClock = false;
+                sources = [];
+                playButton.innerHTML = PLAY;
+                player.classList.remove('playing');
+                return;
+            }
             const end = context.currentTime + FADE;
             master.gain.cancelScheduledValues(context.currentTime);
             master.gain.setValueAtTime(master.gain.value, context.currentTime);
@@ -267,6 +277,14 @@
         };
 
         const play = () => {
+            if (window.workshopMirror?.silent) {
+                silentClock = true;
+                sources = [null];  // playing, without a source
+                startedAt = now();
+                playButton.innerHTML = PAUSE;
+                player.classList.add('playing');
+                return;
+            }
             context = context || new AudioContext();
             context.resume();
             master = context.createGain();
@@ -379,13 +397,20 @@
         let source = null;
         let gain = null;
         let startedAt = 0;
+        // Mirrored from the speaker view (js/mirror.js): no sound, a clock of its own
+        let silentEnd = null;
+        const now = () => (source?.silent ? performance.now() / 1000 : context.currentTime);
 
         const stop = () => {
             if (!source) return;
-            // A short fade, so stopping mid-sound does not click
-            gain.gain.setTargetAtTime(0, context.currentTime, 0.01);
-            source.onended = null;
-            source.stop(context.currentTime + 0.05);
+            if (source.silent) {
+                clearTimeout(silentEnd);
+            } else {
+                // A short fade, so stopping mid-sound does not click
+                gain.gain.setTargetAtTime(0, context.currentTime, 0.01);
+                source.onended = null;
+                source.stop(context.currentTime + 0.05);
+            }
             source = null;
             player.classList.remove('playing');
             playhead.style.left = '0';
@@ -393,7 +418,7 @@
 
         const tick = () => {
             if (!source) return;
-            const fraction = Math.max(0, (context.currentTime - startedAt) / buffer.duration);
+            const fraction = Math.max(0, (now() - startedAt) / buffer.duration);
             playhead.style.left = `${Math.min(1, fraction) * 100}%`;
             requestAnimationFrame(tick);
         };
@@ -401,6 +426,12 @@
         button.addEventListener('click', () => {
             if (source) {
                 stop();
+            } else if (window.workshopMirror?.silent) {
+                source = { silent: true };
+                startedAt = now();
+                silentEnd = setTimeout(stop, buffer.duration * 1000);
+                player.classList.add('playing');
+                tick();
             } else {
                 context = context || new AudioContext();
                 context.resume();

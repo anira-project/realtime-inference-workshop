@@ -5,8 +5,10 @@
  */
 
 (() => {
-    // The speaker view's previews are decks of their own: they stay silent
-    const silent = /receiver/i.test(window.location.search);
+    // The speaker view's previews are decks of their own: only the current slide's
+    // preview, where you click, sounds (js/mirror.js)
+    const preview = /receiver/i.test(window.location.search);
+    const silent = preview && !window.workshopMirror?.currentPreview;
     let audio = null;
 
     // A short sine with a soft attack and decay, `delay` seconds from now
@@ -44,7 +46,7 @@
         timer.textContent = format(remaining);
         if (!timer._warned && remaining <= 60) {
             timer._warned = true;
-            tone(880);
+            if (!timer._mirrored) tone(880);
         }
         if (remaining <= 0) {
             clearInterval(timer._interval);
@@ -52,7 +54,7 @@
             timer._remaining = 0;
             timer.classList.remove('running');
             timer.classList.add('done');
-            [0, 0.35, 0.7].forEach(delay => tone(880, delay));
+            if (!timer._mirrored) [0, 0.35, 0.7].forEach(delay => tone(880, delay));
         }
     };
 
@@ -68,8 +70,10 @@
             timer.classList.remove('running');
             return;
         }
+        // Started from the speaker view: the speaker view plays the tones (js/mirror.js)
+        timer._mirrored = window.workshopMirror?.silent === true;
         // Created on the click that starts it: browsers allow audio only after a gesture
-        if (!silent && !audio) audio = new AudioContext();
+        if (!silent && !timer._mirrored && !audio) audio = new AudioContext();
         audio?.resume();
         timer._started = Date.now();
         timer._interval = setInterval(() => tick(timer), 250);

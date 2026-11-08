@@ -67,14 +67,14 @@ For the last step, bring a laptop with a webcam if you have one. The step also r
 
 ## During the workshop
 
-Every blank in an exercise is a `?`, in the C++ and in the model files of steps 9 and 10. Each exercise builds once every `?` in its C++ is filled in, so it is not part of the default build. Build and run one by its target:
+Every blank in an exercise is a `?`, in the C++ and in the model files of step 9 and the bonus. Each exercise builds once every `?` in its C++ is filled in, so it is not part of the default build. Build and run one by its target:
 
 ```bash
 cmake --build --preset release --target step01_exercise
 ./build/release/bin/step01_exercise
 ```
 
-Steps 9 and 10 have a check and a plugin: `step09_exercise_check`, `step09_exercise_Standalone` or `step09_exercise_VST3`. Each step's README says what to do and what the output should be.
+Step 9 and the bonus have a check and a plugin: `step09_exercise_check`, `step09_exercise_Standalone` or `step09_exercise_VST3`. Each step's README says what to do and what the output should be.
 
 To step through a task in a debugger, use the debug preset. It builds into `build/debug/`, next to the release build, and fetches the libraries a second time, so do it at home, not on the room's network. Timings, such as the benchmark in step 4, only mean something in the release build.
 
@@ -102,12 +102,15 @@ Part 1, by hand:
 Part 2, with anira:
 
 9. [The model with anira](steps/09_anira/README.md) — two JSON files and three calls replace steps 3, 6 and 7
-10. [Opening the model](steps/10_split/README.md) — encoder and decoder as two handlers, the latent space in between
-11. [The model as an instrument](steps/11_hands/README.md) — a camera and hand tracking drive the decoder; a JUCE app, no check
+10. [The model as an instrument](steps/10_hands/README.md) — a camera and hand tracking drive the decoder; a JUCE app, no check
+
+Bonus, for after the workshop, with its own [slides](https://anira-project.github.io/realtime-inference-workshop/bonus/):
+
+- [Opening the model](steps/bonus/README.md) — encoder and decoder as two handlers, the latent space in between
 
 ## Layout
 
-- `steps/` — one folder per step, with `exercise/` and `solution/`; steps 4, 5, 7 and 8 are solution only, step 11 exercise only
+- `steps/` — one folder per step, with `exercise/` and `solution/`; steps 4, 5, 7 and 8 are solution only, step 10 solution only
 - `steps/common/` — what the steps share: the engine, the ring buffers, the fake host and the reporting in `helpers/`, the test signal, audio and models in `assets/`
 - `cmake/` — the dependencies: ONNX Runtime, the models, anira, JUCE
 - `slides/` — the Reveal.js slides, built by `scripts/build.js`
@@ -117,7 +120,7 @@ The models are not in git; the configure downloads them. [steps/common/assets/mo
 
 ## Options
 
-- `-DWORKSHOP_STEP=01` — configure a single step
+- `-DWORKSHOP_STEP=01` — configure a single step (`bonus` for the bonus)
 - `-DWORKSHOP_ANIRA=OFF` — leave part 2 out
 - `-DWORKSHOP_JUCE=OFF` — leave the plugin steps out
 - `-DWORKSHOP_RTSAN=ON` — step 5 with RealtimeSanitizer; needs a clang that has it, see the [step's README](steps/05_realtime_safety/README.md)

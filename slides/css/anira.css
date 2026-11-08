@@ -2008,6 +2008,11 @@ html.tanh .ov-pill-text {
 html.tanh .ov-pill-text.small { font-size: 13px; }
 
 html.tanh .ov-note.left { text-anchor: start; }
+/* A note centred on its line: a halo in the page colour breaks the line behind it */
+/* Where a line branches off another */
+html.tanh .ov-junction { fill: var(--fs-text-muted-color); }
+html.tanh .ov-title.on-line { paint-order: stroke; stroke: var(--wash); stroke-width: 18px; stroke-linejoin: round; }
+html.tanh .ov-note.on-line { paint-order: stroke; stroke: var(--paper); stroke-width: 16px; stroke-linejoin: round; }
 
 html.tanh .ov-note {
   font-size: 16px;
@@ -2062,6 +2067,10 @@ html.tanh .st-caption {
 }
 
 html.tanh .st-caption.left { text-anchor: start; }
+/* A caption over a line: a halo in its lane's colour breaks the line behind the text */
+html.tanh .st-caption.on-audio, html.tanh .st-caption.on-pool { paint-order: stroke; stroke-width: 18px; stroke-linejoin: round; }
+html.tanh .st-caption.on-audio { stroke: color-mix(in srgb, var(--tint-exercise) 45%, var(--paper)); }
+html.tanh .st-caption.on-pool { stroke: color-mix(in srgb, var(--tint-model) 45%, var(--paper)); }
 
 /* Reveal fades fragments; the SVG groups follow */
 html.tanh .ov g.fragment,
@@ -2149,9 +2158,9 @@ html.tanh .reveal .slides section .when b {
   color: var(--mark-check);
 }
 
-/* Create's closing table: what was declared, what create did, when it takes
-   effect. Six rows of two lines, the key under its name, so a size down from
-   the default table and the first column the widest */
+/* Create's closing table: what was declared and what create did with it.
+   Six rows of two lines, the key under its name, so a size down from the
+   default table and the first column the widest */
 html.tanh .reveal table.declared {
   margin: var(--space-4) auto 0;
   font-size: 0.72em;
@@ -2173,6 +2182,34 @@ html.tanh .reveal table.declared td:nth-child(2) {
 }
 
 html.tanh .reveal table.declared td b {
+  font-weight: 600;
+  color: var(--mark-check);
+}
+
+/* Create's memory slide: who loads the weights and how many copies, part 1
+   against anira with and without state. Three rows, the two counts centred */
+html.tanh .reveal table.copies {
+  margin: var(--space-4) auto 0;
+  font-size: 0.72em;
+}
+
+html.tanh .reveal table.copies th,
+html.tanh .reveal table.copies td {
+  padding: 6px 16px;
+}
+
+html.tanh .reveal table.copies th:first-child,
+html.tanh .reveal table.copies td:first-child {
+  width: 24%;
+}
+
+html.tanh .reveal table.copies th:nth-child(n + 3),
+html.tanh .reveal table.copies td:nth-child(n + 3) {
+  text-align: center;
+  white-space: nowrap;
+}
+
+html.tanh .reveal table.copies td b {
   font-weight: 600;
   color: var(--mark-check);
 }
@@ -2252,19 +2289,19 @@ html.tanh .offline-fig .inv { fill: var(--paper); }
 html.tanh .offline-fig .ok, html.tanh .offline-fig .bad { font-size: 24px; }
 html.tanh .offline-fig .bad { fill: var(--mark-over, #c0543f); }
 
-/* Step 10 · the model figure from the introduction, its three parts framed */
+/* Bonus · the model figure from the introduction, its three parts framed */
 html.tanh .mf.mf-split { width: 100%; height: auto; max-height: 740px; }
 html.tanh .mf.mf-split .mf-title { font-size: 34px; }
 html.tanh .mf .mf-zone rect { fill: var(--tint-latent); fill-opacity: 0.55; stroke: none; }
 html.tanh .mf .mf-zone.z rect { fill: var(--tint-exercise); fill-opacity: 0.8; }
 html.tanh .mf .mf-zone text { font-size: 34px; font-weight: 600; fill: var(--ink); font-family: var(--fs-heading-font); }
 
-/* Step 10 · the eight offsets of the listening example */
+/* Bonus · the eight offsets of the listening example */
 html.tanh .z-offsets { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--space-2); margin: var(--space-4) 0 var(--space-3); }
 html.tanh .z-offsets span { display: flex; flex-direction: column; align-items: center; padding: var(--space-2); border-radius: var(--radius-small); background: var(--tint-latent); font-family: var(--fs-code-font); font-size: 0.55em; }
 html.tanh .z-offsets b { font-family: var(--fs-heading-font); font-weight: 600; color: var(--fs-text-muted-color); }
 
-/* Step 10 · the latent bars (js/latent_bars.js) */
+/* Bonus · the latent bars (js/latent_bars.js) */
 html.tanh .latent-live { margin-top: var(--space-6); }
 html.tanh .lb-bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--space-5); height: 520px; }
 html.tanh .lb-col { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
@@ -2284,7 +2321,7 @@ html.tanh .lb-toggle { font: inherit; font-size: 0.55em; padding: var(--space-2)
 html.tanh .lb-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 html.tanh .lb-frame { font-size: 0.45em; color: var(--fs-text-muted-color); font-family: var(--fs-code-font); }
 
-/* Step 10 · the latent space as a map of sounds */
+/* Bonus · the latent space as a map of sounds */
 html.tanh .lat-map { display: block; width: 100%; max-height: 470px; margin-top: var(--space-3); }
 html.tanh .lat-map .lm-a { stop-color: var(--tint-latent); stop-opacity: 0.35; }
 html.tanh .lat-map .lm-b { stop-color: var(--tint-latent); stop-opacity: 1; }
@@ -2300,7 +2337,7 @@ html.tanh .lat-map .lm-arrow { stroke: var(--ink); stroke-width: 4; stroke-dasha
 html.tanh .lat-map .lm-lab { font-size: 28px; fill: var(--ink); font-family: var(--fs-heading-font); }
 html.tanh .lat-map .lm-note text { font-size: 28px; fill: var(--fs-text-muted-color); font-family: var(--fs-heading-font); }
 
-/* Step 10 · what 8 numbers can describe: a waveform against a description */
+/* Bonus · what 8 numbers can describe: a waveform against a description */
 html.tanh .wd { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-5); align-items: center; margin-top: var(--space-6); }
 html.tanh .wd-side { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-radius: var(--radius-main); background: var(--fs-surface-alt); min-height: 380px; justify-content: center; }
 html.tanh .wd-head { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.72em; }
@@ -2314,14 +2351,14 @@ html.tanh .wd-list b { display: block; font-weight: 600; }
 html.tanh .wd-list small { color: var(--fs-text-muted-color); font-size: 0.85em; }
 html.tanh .wd-z { font-family: var(--fs-code-font); font-size: 0.5em; color: var(--fs-text-muted-color); margin-top: var(--space-2); white-space: pre; }
 
-/* Step 10 · before and after the shift, as small wave players */
+/* Bonus · before and after the shift, as small wave players */
 html.tanh .lm-players { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-top: var(--space-3); }
 html.tanh .lm-player-label { font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.55em; margin-bottom: var(--space-1); }
 html.tanh .lm-player .wave-player { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--space-4); }
 html.tanh .lm-player .wave-play { width: 72px; height: 72px; }
 html.tanh .lm-player .wave-track canvas { height: 80px; }
 
-/* Step 10 · the offset first, the other ways beside it */
+/* Bonus · the offset first, the other ways beside it */
 html.tanh .zw { display: grid; grid-template-columns: 1fr 1.6fr; gap: var(--space-6); margin-top: var(--space-7); align-items: stretch; }
 html.tanh .zw-main { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6); border-radius: var(--radius-main); background: var(--tint-exercise); outline: 2px solid var(--ink); }
 html.tanh .zw-tag { font-size: 0.45em; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fs-text-muted-color); }
@@ -2334,7 +2371,7 @@ html.tanh .zw-grid > div { display: flex; flex-direction: column; gap: var(--spa
 html.tanh .zw-grid b { font-family: var(--fs-heading-font); font-size: 1.15em; }
 html.tanh .zw-grid small { color: var(--fs-text-muted-color); }
 
-/* Step 10 · the forward model and its two halves */
+/* Bonus · the forward model and its two halves */
 html.tanh .split-files { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-6); }
 html.tanh .sf-row { display: grid; grid-template-columns: 300px 1fr 60px 1fr 180px; align-items: center; gap: var(--space-4); }
 html.tanh .sf-file { display: flex; justify-content: center; }
@@ -2345,7 +2382,7 @@ html.tanh .sf-arrow { text-align: center; font-size: 0.8em; color: var(--fs-text
 html.tanh .sf-note { font-size: 0.5em; color: var(--fs-text-muted-color); }
 html.tanh .sf-cut { align-self: center; font-size: 0.5em; color: var(--fs-text-muted-color); border-top: 2px dashed var(--fs-border-strong); width: 100%; text-align: center; padding-top: var(--space-2); }
 
-/* Step 11 · the model without its encoder */
+/* Step 10 · the model without its encoder */
 html.tanh .mf .mf-cover { fill: var(--paper); fill-opacity: 0.88; }
 html.tanh .mf .mf-cover.full { fill-opacity: 1; }
 html.tanh .mf .mf-gone { font-size: 34px; font-weight: 600; fill: var(--fs-text-subtle-color); font-family: var(--fs-heading-font); }
@@ -2452,3 +2489,128 @@ html.tanh .report-scale div {
   align-items: center;
   gap: var(--space-4);
 }
+
+/* Two rows of cards, one in focus: the top row first, a .rows-focus fragment
+   moves the focus to the bottom row. The slide's own section only, as for
+   .integration-focus. */
+html.tanh .rows-top,
+html.tanh .rows-bottom {
+  transition: opacity 0.4s var(--ease);
+}
+
+html.tanh .reveal section:not(:has(section)):has(.rows-focus:not(.visible)) .rows-bottom,
+html.tanh .reveal section:not(:has(section)):has(.rows-focus.visible) .rows-top {
+  opacity: 0.25;
+}
+
+/* Three keys instead of five, as on step 9's hard_host_blocks slide */
+html.tanh .mj-keys.three { grid-template-columns: repeat(3, 1fr); font-size: 0.75em; }
+
+/* Step 10 · foundation models: hand tracking below open source, the arrow between them */
+html.tanh .cards.fm-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: var(--space-2); }
+html.tanh .cards.fm-grid .card-arrow { grid-column: 2; justify-self: center; }
+html.tanh .cards.fm-grid .card.accent { grid-column: 2; }
+
+/* Step 10 · the forward model above the decoder, not needed here: faded */
+html.tanh .sf-row.sf-dim { opacity: 0.35; }
+
+/* Step 10 · the app's threads left to right, the hand-offs between them; anira's pool
+   below, push_data down and pop_data up */
+html.tanh .threads { display: grid; grid-template-columns: 1fr 240px 1fr 240px 1fr; grid-template-rows: auto auto auto; column-gap: var(--space-3); row-gap: var(--space-2); margin-top: var(--space-5); font-size: 0.85em; }
+html.tanh .threads .card { padding: var(--space-4); gap: var(--space-2); }
+html.tanh .th-hand { align-self: center; text-align: center; font-size: 1.3em; color: var(--ink); border-radius: var(--radius-small); }
+html.tanh .th-hand small { display: block; font-size: 0.42em; white-space: nowrap; line-height: 1.4; color: var(--fs-text-muted-color); }
+html.tanh .th-none { align-self: center; text-align: center; font-size: 0.55em; color: var(--fs-text-muted-color); }
+html.tanh .th-pool { align-self: stretch; min-height: 110px; border-radius: var(--radius-main); background: var(--tint-exercise); }
+html.tanh .th-pool-model { margin: var(--space-3); padding: var(--space-2) var(--space-3); border: var(--hairline) solid var(--fs-border-strong); border-radius: var(--radius-small); background: var(--fs-background-color, #fff); font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.8em; text-align: center; }
+html.tanh .th-pool-name { align-self: center; text-align: center; font-family: var(--fs-heading-font); font-weight: 600; }
+html.tanh .th-pool-model small, html.tanh .th-pool-name small { display: block; font-weight: 400; font-size: 0.75em; color: var(--fs-text-muted-color); }
+
+/* Step 10 · only the arrows move: chevrons travel down for push_data, up for pop_data
+   and right along the hand-offs, each at its thread's period (--p), slowed down alike */
+html.tanh .th-flow-v, html.tanh .th-flow-h { display: block; background: var(--ink); -webkit-mask-size: 24px 24px; mask-size: 24px 24px; }
+html.tanh .th-flow-v { order: 3; width: 24px; height: 64px; margin-bottom: calc(-1 * var(--space-2)); }
+html.tanh .th-call.down .th-flow-v { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 8 L12 15 L19 8' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 8 L12 15 L19 8' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y; }
+html.tanh .th-call.up .th-flow-v { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 16 L12 9 L19 16' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 16 L12 9 L19 16' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y; }
+html.tanh .th-flow-h { width: 85%; height: 24px; margin: var(--space-3) auto 0; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5 L15 12 L8 19' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5 L15 12 L8 19' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); -webkit-mask-repeat: repeat-x; mask-repeat: repeat-x; }
+html.tanh .th-hand { position: relative; }
+html.tanh .reveal section.present .th-call.down .th-flow-v { animation: th-move-down var(--p) linear infinite; }
+html.tanh .reveal section.present .th-call.up .th-flow-v { animation: th-move-up var(--p) linear infinite; }
+html.tanh .reveal section.present .th-flow-h { animation: th-move-right var(--p) linear infinite; }
+@keyframes th-move-down { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: 0 24px; mask-position: 0 24px; } }
+@keyframes th-move-up { from { -webkit-mask-position: 0 24px; mask-position: 0 24px; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+@keyframes th-move-right { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: 24px 0; mask-position: 24px 0; } }
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .th-flow-v, html.tanh .reveal section.present .th-flow-h { animation: none; }
+}
+
+/* Step 10 · what goes into the pool and what comes back: an image and its prediction,
+   8 latents and the audio */
+html.tanh .th-calls { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); padding: var(--space-2) 0; }
+html.tanh .th-call { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: var(--space-2); border-radius: var(--radius-small); }
+html.tanh .th-call-pic { height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; }
+html.tanh .th-call-pic svg { height: 100%; width: auto; max-width: 100%; }
+html.tanh .th-call-name { font-family: var(--fs-code-font); font-size: 0.65em; }
+html.tanh .th-call small { font-size: 0.55em; color: var(--fs-text-muted-color); }
+html.tanh .th-cam-frame { fill: var(--fs-text-subtle-color); opacity: 0.3; }
+html.tanh .th-pred-frame { fill: none; stroke: var(--fs-border-strong); stroke-width: 2; }
+html.tanh .th-cam-hand polyline { fill: none; stroke: #b98b6e; stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; }
+html.tanh .th-cam-hand polygon { fill: #b98b6e; stroke: #b98b6e; stroke-width: 10; stroke-linejoin: round; }
+html.tanh .th-cam-bones polyline { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+html.tanh .th-cam-dots circle { fill: var(--tint-exercise); stroke: var(--ink); stroke-width: 1.5; }
+html.tanh .th-bar { fill: var(--ink); }
+html.tanh .th-zero { stroke: var(--fs-border-strong); stroke-width: 1.5; }
+
+
+/* Step 10 · the hand sways like live video, its prediction follows a moment later, and
+   the audio scrolls by */
+html.tanh .th-cam-hand, html.tanh .th-cam-pred { transform-box: view-box; transform-origin: 80px 110px; }
+html.tanh .reveal section.present .th-cam-hand { animation: th-hand 3s ease-in-out infinite alternate; }
+html.tanh .reveal section.present .th-cam-pred { animation: th-hand 3s ease-in-out infinite alternate; animation-delay: 0.24s; }
+@keyframes th-hand {
+  0% { transform: translate(-12px, 2px) rotate(-12deg); }
+  50% { transform: translate(4px, -6px) rotate(2deg); }
+  100% { transform: translate(12px, 0) rotate(12deg); }
+}
+html.tanh .th-clip { width: 100%; height: 100%; overflow: hidden; }
+html.tanh .th-scroll { display: flex; width: 200%; height: 100%; }
+html.tanh .th-call-pic .th-scroll svg { width: 50%; max-width: none; height: 100%; flex: none; }
+html.tanh .reveal section.present .th-scroll { animation: th-scroll 3.7s linear infinite; }
+@keyframes th-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .th-cam-hand, html.tanh .reveal section.present .th-cam-pred,
+  html.tanh .reveal section.present .th-scroll { animation: none; }
+}
+
+/* Step 10 · from the hands to the latent vector: each feature and the dimension it drives */
+html.tanh .hm { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-top: var(--space-5); }
+html.tanh .hm-label { margin-bottom: var(--space-3); font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.75em; color: var(--fs-text-muted-color); }
+html.tanh .hm-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
+html.tanh .hm-feat, html.tanh .hm-z { padding: var(--space-2) var(--space-4); border-radius: var(--radius-small); font-size: 0.7em; }
+html.tanh .hm-feat { border: var(--hairline) solid var(--fs-border-strong); font-family: var(--fs-heading-font); font-weight: 600; }
+html.tanh .hm-feat small { display: block; font-weight: 400; font-size: 0.8em; color: var(--fs-text-muted-color); }
+html.tanh .hm-z { background: var(--tint-exercise); }
+html.tanh .hm-z b { margin-right: var(--space-2); font-family: var(--fs-code-font); }
+html.tanh .hm-arrow { color: var(--fs-text-subtle-color); }
+
+/* Process · misses: the last note closer to the one above, so the slide clears the footer */
+html.tanh .reveal section.miss .click-note + .cards-note { margin-top: var(--space-2); }
+
+/* Step 10 · hand tracking: the webcam image and the hand it finds, inside their cards */
+html.tanh .cards.ht .ht-pic { height: 110px; display: flex; align-items: center; justify-content: center; }
+html.tanh .cards.ht .ht-pic svg { height: 100%; width: auto; }
+html.tanh .cards.ht .card { justify-content: flex-end; }
+html.tanh .ht-box { fill: none; stroke: var(--mark-over, #d24); stroke-width: 3; }
+html.tanh .ht-tag { fill: var(--ink); }
+html.tanh .ht-tag-text { fill: var(--paper); font-family: var(--fs-heading-font); font-size: 11px; font-weight: 600; text-anchor: middle; }
+html.tanh .ht-bar-bg { fill: var(--fs-text-subtle-color); opacity: 0.25; }
+html.tanh .ht-bar { fill: var(--ink); }
+
+/* Step 10 · play: the button that shares the demo window, and the popup it opens over the deck */
+html.tanh .live-share { margin-top: var(--space-4); padding: var(--space-3) var(--space-6); border: 0; border-radius: 999px;
+  background: var(--ink); color: var(--paper); font-family: var(--fs-heading-font); font-size: 0.8em; font-weight: 600; cursor: pointer; }
+.live-share-overlay { position: fixed; inset: 3vh 3vw; z-index: 2000; display: flex; align-items: center; justify-content: center;
+  background: #111; border-radius: 12px; box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5); }
+.live-share-overlay video { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+.live-share-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; border: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9); color: #111; font-size: 28px; line-height: 44px; cursor: pointer; }

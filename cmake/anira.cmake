@@ -1,7 +1,7 @@
 # anira for part 2, fetched and built from source, pinned to the v3.0.0-alpha.3
 # tag (ABI 0.3): the measured budget, the until-stable warm-up, the optional
 # window and the latency fixes. ONNX Runtime only, static: the plugin's choice from
-# step 8, and the engine the model files of steps 9 to 11 name.
+# step 8, and the engine the model files of steps 9 and 10 and the bonus name.
 #
 #   workshop_setup_anira()   -> target anira::anira
 #

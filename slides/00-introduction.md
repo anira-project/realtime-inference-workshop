@@ -20,7 +20,7 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 Note:
 - Hi all
 - Welcome to our workshop on real-time inference of neural networks.
-- Today we take an exported neural network model and implement it in an audio environement in a real-time safe manner
+- Today we take an exported neural network model and implement it in an audio environment in a real-time safe manner
 
 ---
 
@@ -31,13 +31,14 @@ Note:
 <div class="teaser" data-teaser="clock" data-work="fft"><canvas></canvas></div>
 
 Note:
-- What you see: one turn of the clock is one callback. The host gives us 512 samples, and the next 512 are due one turn later
-- An FFT on blocks of 2048: three callbacks only collect, the 4th runs FFT and IFFT
-- That is the pattern you know from STFT and FFT convolution: a FIFO collects the block, the callback that completes it does the transform, and we report 2048 samples of latency to the host
-- The block sizes don't match, and that only costs latency
-- FFT and IFFT take about 3 µs on our laptop (FFTW), roughly a tenth of a sample. The tick on the clock is drawn much thicker than that
-- The boxes on the right: time per block, in samples. The same for every block: an FFT does the same operations, whatever the audio is
-- Three callbacks idle, one does all the work. Spiky, but with thousands of times headroom it doesn't matter. Every callback is on time
+- But before we talk about neural networks, let's first look at something familiar:
+- Fixed block FFT processing within the host's audio callback.
+- For example we can have a host audio callback with 512 samples and a fixed size FFT processing module which requires 2048 samples.
+- How is this typically implemented?
+- You'd use a ring buffer to collect samples for 3 callbacks, then in the fourth you can run your FFT processing
+- On this machine it takes less than the equivalent of a sample per block constantly
+- And then the samples are returned
+- So we will have a little processing spike every 4 host callbacks, but since we are so quick it does not matter much
 
 ---
 
@@ -48,13 +49,10 @@ Note:
 <div class="teaser" data-teaser="clock" data-work="nn"><canvas></canvas></div>
 
 Note:
-- Same clock, same 2048-sample block. Only the FFT is replaced by our neural network
-- The block sizes don't match, as with the FFT: four callbacks collect, the 4th runs the network. That part we know how to handle
-- New problem 1: the forward pass takes about 570 samples' worth of time (13 ms on ONNX Runtime, step 3), more than the 512 a callback has. It doesn't fit
-- New problem 2: by how much it misses changes every time, sometimes far more. The runtime is not deterministic
-- The boxes on the right: time per block, in samples, red when it is more than the 512 a callback has. The newest one counts while the network runs
-- The times shown are illustrative, after step 3's measurements
-- The question: how do we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline? That is today's workshop
+- If we replace the FFT module with a neural network module, we have similarities
+- We also have a fixed input size for the neural network (here 2048 as well), but the processing takes longer
+- And on top of that the processing is nondeterministic, it varies in time
+- Today's question is therefore: How can we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline?
 
 ---
 
@@ -87,7 +85,7 @@ Note:
 </div>
 
 Note:
-- The short answer to solve this problem, you can use our anira library.
+- The short answer: you can use our anira library.
 - It is an open-source library for real-time inference.
 - You give it a model for LibTorch, ONNX Runtime, LiteRT or ExecuTorch, and it takes care of the threads, the buffering and the latency.
 - It is the outcome of our work and research about real-time inference since 2020.
@@ -121,8 +119,8 @@ Note:
 </div>
 
 Note:
-- So who are we?
-- Lina is a student assistant at TU Berlin.
+- But before diving deeper into the topic let us first introduce ourselves
+- Lina Campanella is working as a student assistant at TU Berlin.
 - I am a research associate at TU Berlin leading the Computer Music and Neural Audio Systems research team, and together with Valentin I run tanh lab.
 - In addition Valentin also works as an audio software developer at Baby Audio.
 
@@ -145,11 +143,12 @@ Note:
 </div>
 
 Note:
-- So whats tanh lab.
-- Tanh lab is an audio software studio based in berlin.
+- What is this tanh lab?
+- Tanh lab is an audio software studio based in Berlin.
 - We take ideas from research all the way to a product.
 - Our work ranges from applied research, evaluating the feasibility of an idea to the full stack implementation and deployment of the product.
-- We are also the maintaining the open source and permissively licensed anira library.
+- Our expertise lies mainly in real-time audio processing and machine learning
+- We are also maintaining the open source and permissively licensed anira library.
 
 ---
 
@@ -172,12 +171,12 @@ Note:
 <div class="cards-note">Not today: training, exporting, ML fundamentals, Python.</div>
 
 Note:
-- Now lets talk about the workshop.
-- Today's path starts from an exported model (get it from data scientist) already trained and exported.
+- Now let's talk about the workshop.
+- Today's path starts from an exported model (get it from a data scientist) already trained and exported.
 - We will run this model in C++, and see what the engine, the block size and the worst case mean for us.
 - We make it real-time safe, with a worker thread and an honest latency.
 - And we put all of it into a plugin that runs in your host.
-- anira solves these three steps, but in order to understand why it is usefull, today you will build it by hand first.
+- anira solves these three steps, but in order to understand why it is useful, today you will build it by hand first.
 - So today we are not going to cover: training, exporting, machine learning basics or Python.
 
 ---
@@ -219,7 +218,7 @@ Note:
 - Please scan the code now, or type the address.
 - The slides are linked there too, top right on the GitHub page.
 - If you cannot read the screen well, click through them on your own machine.
-- If you have not built the code yet, clone it and start the configure step now, so it runs while we talk.
+- If you have not done so already, please clone the repo and start the configure step now, so it runs while we talk.
 
 ---
 
@@ -242,11 +241,11 @@ Note:
 - We sent the setup instructions by email. If you did it at home: thank you, just pull and configure again.
 - If not: please start now. Clone, configure, build.
 - Configuring downloads about 350 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
-- It runs while we talk. Building the libraries and every solution takes a while too, so start the build right after. The exercises build on their own, once you fill them in.
+- Idealy the build is then finished in time for the first exercise
 - Why release? There is a benchmark in the examples, which is only meaningful in release.
-- Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so please do it at another moment, not now on the shared network.
+- Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches the dependencies a second time, so please do it at another moment, not now on the shared network.
 - If configuring fails, raise your hand and we come to you.
-- Please! do not wait for the first exercise: that is the worst moment to start a download.
+- Please! Do not wait for the first exercise.
 
 ---
 

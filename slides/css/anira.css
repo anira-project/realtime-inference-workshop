@@ -2517,27 +2517,20 @@ html.tanh .th-pool-model { margin: var(--space-3); padding: var(--space-2) var(-
 html.tanh .th-pool-name { align-self: center; text-align: center; font-family: var(--fs-heading-font); font-weight: 600; }
 html.tanh .th-pool-model small, html.tanh .th-pool-name small { display: block; font-weight: 400; font-size: 0.75em; color: var(--fs-text-muted-color); }
 
-/* Step 10 · only the arrows move: dashes flow down for push_data, up for pop_data and
-   right along the hand-offs, each at its thread's period (--p), slowed down alike */
-html.tanh .th-call { position: relative; }
-html.tanh .th-flow-v { order: 3; width: 4px; height: 56px; margin-bottom: calc(-1 * var(--space-2));
-  background: repeating-linear-gradient(to bottom, var(--ink) 0 10px, transparent 10px 20px); }
+/* Step 10 · only the arrows move: chevrons travel down for push_data, up for pop_data
+   and right along the hand-offs, each at its thread's period (--p), slowed down alike */
+html.tanh .th-flow-v, html.tanh .th-flow-h { display: block; background: var(--ink); -webkit-mask-size: 24px 24px; mask-size: 24px 24px; }
+html.tanh .th-flow-v { order: 3; width: 24px; height: 64px; margin-bottom: calc(-1 * var(--space-2)); }
+html.tanh .th-call.down .th-flow-v { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 8 L12 15 L19 8' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 8 L12 15 L19 8' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y; }
+html.tanh .th-call.up .th-flow-v { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 16 L12 9 L19 16' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 16 L12 9 L19 16' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y; }
+html.tanh .th-flow-h { width: 85%; height: 24px; margin: var(--space-3) auto 0; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5 L15 12 L8 19' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5 L15 12 L8 19' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); -webkit-mask-repeat: repeat-x; mask-repeat: repeat-x; }
 html.tanh .th-hand { position: relative; }
-html.tanh .th-flow-h { display: block; height: 4px; margin: 4px auto 0; width: 80%;
-  background: repeating-linear-gradient(to right, var(--ink) 0 10px, transparent 10px 20px); }
-html.tanh .reveal section.present .th-call.down .th-flow-v { animation: th-dash-down var(--p) linear infinite; }
-html.tanh .reveal section.present .th-call.up .th-flow-v { animation: th-dash-up var(--p) linear infinite; }
-html.tanh .reveal section.present .th-flow-h { animation: th-dash-right var(--p) linear infinite; }
-@keyframes th-dash-down { from { background-position: 0 0; } to { background-position: 0 20px; } }
-@keyframes th-dash-up { from { background-position: 0 20px; } to { background-position: 0 0; } }
-@keyframes th-dash-right { from { background-position: 0 0; } to { background-position: 20px 0; } }
-/* Their heads: down for push_data, up for pop_data, right along the hand-offs */
-html.tanh .th-flow-v, html.tanh .th-flow-h { position: relative; overflow: visible; }
-html.tanh .th-flow-v::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); border-left: 10px solid transparent; border-right: 10px solid transparent; }
-html.tanh .th-call.down .th-flow-v::after { bottom: -12px; border-top: 14px solid var(--ink); }
-html.tanh .th-call.up .th-flow-v::after { top: -12px; border-bottom: 14px solid var(--ink); }
-html.tanh .th-flow-h { margin-top: var(--space-3); }
-html.tanh .th-flow-h::after { content: ""; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 14px solid var(--ink); }
+html.tanh .reveal section.present .th-call.down .th-flow-v { animation: th-move-down var(--p) linear infinite; }
+html.tanh .reveal section.present .th-call.up .th-flow-v { animation: th-move-up var(--p) linear infinite; }
+html.tanh .reveal section.present .th-flow-h { animation: th-move-right var(--p) linear infinite; }
+@keyframes th-move-down { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: 0 24px; mask-position: 0 24px; } }
+@keyframes th-move-up { from { -webkit-mask-position: 0 24px; mask-position: 0 24px; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+@keyframes th-move-right { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: 24px 0; mask-position: 24px 0; } }
 @media (prefers-reduced-motion: reduce) {
   html.tanh .reveal section.present .th-flow-v, html.tanh .reveal section.present .th-flow-h { animation: none; }
 }

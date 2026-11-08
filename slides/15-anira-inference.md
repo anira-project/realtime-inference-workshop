@@ -175,7 +175,7 @@ Note:
 
 <!-- .slide: class="dense-code" -->
 
-<div class="tag">Contract: <code>hard_host_blocks</code></div>
+<div class="tag">Exercise: <code>AniraProcessor.cpp</code></div>
 
 ## What the host may send.<br><span class="then">We want the worst case here.</span>
 

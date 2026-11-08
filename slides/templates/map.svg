@@ -22,7 +22,6 @@
   <rect class="ov-box" x="330" y="84" width="270" height="616" rx="10"/>
   <text x="465" y="118" class="ov-title">anira_handler</text>
   <rect class="ov-box" x="630" y="84" width="410" height="616" rx="10"/>
-  <text x="835" y="118" class="ov-title">session</text>
   <rect class="ov-box context" x="1300" y="84" width="280" height="616" rx="10"/>
   <text x="1440" y="118" class="ov-title">Context ‹static›</text>
   <line class="ov-sep" x1="20" y1="236" x2="300" y2="236"/>
@@ -41,13 +40,16 @@
     <line class="ov-flow" x1="284" y1="149" x2="346" y2="149" marker-end="url(#ov-arrow)"/>
     <rect class="ov-pill" x="346" y="134" width="238" height="30" rx="6"/><text x="465" y="154" class="ov-pill-text">create(context, pipeline)</text>
     <line class="ov-flow" x1="584" y1="149" x2="646" y2="149" marker-end="url(#ov-arrow)"/>
-    <path class="ov-flow" d="M584 128 H1300" marker-end="url(#ov-arrow)"/>
-    <text x="1170" y="133" class="ov-note on-line">get instance</text>
+    <path class="ov-flow" d="M612 149 V110 H1300" marker-end="url(#ov-arrow)"/>
+    <circle class="ov-junction" cx="612" cy="149" r="4"/>
+    <text x="1170" y="115" class="ov-note on-line">get instance</text>
     <rect class="ov-pill" x="646" y="134" width="236" height="30" rx="6"/><text x="764" y="154" class="ov-pill-text">check the config</text>
     <rect class="ov-pill mem" x="892" y="134" width="132" height="30" rx="6"/><text x="958" y="154" class="ov-pill-text">state pairs</text>
     <rect class="ov-pill" x="646" y="172" width="378" height="30" rx="6"/><text x="835" y="192" class="ov-pill-text">a slot per tensor · nothing loaded yet</text>
     <rect class="ov-pill" x="1316" y="134" width="248" height="30" rx="6"/><text x="1440" y="154" class="ov-pill-text">settings, no threads yet</text>
   </g>
+  <!-- after the create row, so the get-instance line passes behind it -->
+  <text x="835" y="118" class="ov-title on-line">session</text>
 
   <!-- prepare: when the host announces its blocks -->
   <g class="map-row prepare">

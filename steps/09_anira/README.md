@@ -17,7 +17,7 @@
 Open [`exercise/model.json`](exercise/model.json) and [`exercise/AniraProcessor.cpp`](exercise/AniraProcessor.cpp).
 
 1. **Declare the tensors** (`model.json`). The sizes: `"time"` of the audio in and out is the model's block, 2048 (step 1). The audio output carries the model's own delay: `"latency": 2224` (step 7).
-2. **Declare the state** (`model.json`). Its size, in and out: as many floats as the state of step 2 (63,488). And `state_source`: the output that feeds `state_in`. Is it `"audio"`, `"audio_out"` or `"state_out"`? Try; a wrong one is refused at create, with the reason. Once paired, anira carries the state from call to call: the whole state loop of step 2, with no copy in your code.
+2. **Declare the state** (`model.json`). Its size, in and out: as many floats as the state of step 2 (63,488). And `state_source`: the output that feeds `state_in`. Which one is it? Try; a wrong one is refused at create, with the reason. Once paired, anira carries the state from call to call: the whole state loop of step 2, with no copy in your code.
 3. **Prepare and process** (`AniraProcessor.cpp`). Loading, the pipeline, the handler and prepare are given, all from `anira.hpp`; four blanks, marked `fill out`:
    1. `m_contract.hard_host_blocks(…)`: the smallest block the host may send (any, down to 1), its largest (`max_block_size`) and its sample rate.
    2. `latency`: `handler.get_latency` of output slot 0.

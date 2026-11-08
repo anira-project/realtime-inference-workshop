@@ -142,9 +142,10 @@ Note:
 </div>
 Note:
 - This is the model file Fares showed you, now with question marks.
-- The comment next to each blank says which TODO it is.
-- [pause] TODO 1, the audio: the time size in and out, and the latency on audio_out.
-- TODO 2, the state: its size, and which output feeds it.
+- Basically, there are two TODOs here.
+- TODO 1 defines the size of the input and output audio tensors, and the latency on audio_out.
+- TODO 2 defines the state size, and gives state_in its state_source.
+- Think about which output tensor has to go there, by name, to keep the inference stateful.
 - All the numbers come from part 1: steps 1, 2 and 7.
 - The state pair, on the next slide.
 
@@ -167,7 +168,7 @@ Note:
 
 <div class="statement-points">
   <div>The size: as many floats as the state of step 2</div>
-  <div><code>state_source</code>: the output that feeds <code>state_in</code>. <b>A</b> <code>"audio"</code> · <b>B</b> <code>"audio_out"</code> · <b>C</b> <code>"state_out"</code>?</div>
+  <div><code>state_source</code>: the output that feeds <code>state_in</code>, by its name. Which one?</div>
 </div>
 
 Note:
@@ -175,8 +176,8 @@ Note:
 - Every block the new state was copied back over the old one, in our vector.
 - Below it, step 9: the same loop, declared in one line.
 - Size and source declared, anira carries it: two buffers, swapped after every run.
-- So which output feeds state_in: A, B, or C?
-- [pause, leave it open] You saw the answer in the create chapter, so try a wrong one first and read what create says.
+- So which output feeds state_in?
+- [pause, leave it open] If you pick a wrong one, create refuses it and says why.
 - That is the model file, the what: now the how.
 
 ---
@@ -300,7 +301,7 @@ Note:
 ```json
 { "name": "state_in",  "role": "state",
   "axes": [["batch", 1], ["any", «63488»]],     // <- solution
-  "state_source": "«state_out»" },              // <- solution: C
+  "state_source": "«state_out»" },              // <- solution
 …
 { "name": "state_out", "role": "state",
   "axes": [["batch", 1], ["any", «63488»]] }    // <- solution
@@ -308,9 +309,9 @@ Note:
 
 Note:
 - TODO 2, the state: step 2's number in and out, and the pairing, one field, state_source.
-- [ask the room, hands up] Who tried a wrong one, A or B, and read the message?
-- The answer is C, state_out.
-- A, audio, is no output at all, and B, audio_out, is streamed audio, not state.
+- [ask the room, hands up] Who tried a wrong one first, and read the message?
+- The answer is state_out.
+- audio is no output at all, and audio_out is streamed audio, not state.
 - Create refuses both, and says why, by name.
 - Leave it out, and create refuses that too: a state input needs a source.
 - With the pair in place, anira runs the inferences one after another: each needs the state before it.

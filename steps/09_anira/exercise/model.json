@@ -17,7 +17,7 @@
       "dtype": "float32",
       "role": "state",
       "axes": [["batch", 1], ["any", ?]],   // TODO2: floats in the state (step 2)
-      "state_source": "?"                     // TODO2: which output feeds it? A "audio" · B "audio_out" · C "state_out"
+      "state_source": "?"                     // TODO2: the name of the output that feeds it
     }
   ],
   "outputs": [

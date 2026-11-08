@@ -189,9 +189,51 @@ async function renderWaveforms(content) {
 // sample axis. A playhead lights the callbacks one by one; the callback that completes a
 // model block is drawn dark, and that block flashes: that is where the model runs.
 // model=0 leaves the model row out.
+// host=512,768,441 → one host row per size over one model row, each with its buffer
+// adaptation P − gcd(b, P) on the right (Rath & Geier): the general formula, size by size.
+function gcd(a, b) {
+  return b === 0 ? a : gcd(b, a % b);
+}
+
+function renderMultiStream(o) {
+  const hosts = o.host.split(',').map(Number);
+  const model = Number(o.model);
+  const length = Number(o.length || 4096);
+  const cycle = Number(o.seconds || 6);
+  const rows = hosts.map(host => {
+    // As for one host: whole callbacks, the last one cut off at the end of the row
+    const count = Math.ceil(length / host);
+    const drawn = count * host;
+    const cells = lit => Array.from({ length: count }, (_, i) => {
+      const start = i * host;
+      const end = start + host;
+      const fires = Math.floor(end / model) > Math.floor(start / model);
+      return `<i class="${lit && fires ? 'fires' : ''}" style="left:${(start / drawn * 100).toFixed(3)}%;` +
+        `width:${(host / drawn * 100).toFixed(3)}%"></i>`;
+    }).join('');
+    const cellsWidth = `width:${(drawn / length * 100).toFixed(3)}%`;
+    const divisor = gcd(host, model);
+    return `<div class="stream-label">host<br><strong>${host}</strong></div>` +
+      `<div class="stream-host" style="--cells:${count}"><div class="stream-cells" style="${cellsWidth}">${cells(false)}</div>` +
+      `<div class="stream-cells stream-lit" style="${cellsWidth}">${cells(true)}</div></div>` +
+      `<div class="stream-delta"><small>${model} − ${divisor}</small><strong>${model - divisor}</strong></div>`;
+  }).join('');
+  let blocks = '';
+  for (let b = 0; b < Math.floor(length / model); b++) {
+    blocks += `<b style="left:${(b * model / length * 100).toFixed(3)}%;width:${(model / length * 100).toFixed(3)}%">` +
+      `<span>${model}</span></b>`;
+  }
+  return `<div class="stream multi" style="--cycle:${cycle}s;grid-template-rows:auto repeat(${hosts.length + 1}, 54px)">` +
+    `<div></div><div></div><div class="stream-delta head"><small>P − gcd(b, P)</small></div>` +
+    rows +
+    `<div class="stream-label">model</div><div class="stream-model">${blocks}</div><div></div>` +
+    `</div>`;
+}
+
 function renderStreams(content) {
   return content.replace(/\{\{STREAM:([^}]+)\}\}/g, (match, args) => {
     const o = Object.fromEntries(args.split('|').map(a => a.split('=')));
+    if (o.host.includes(',')) { return renderMultiStream(o); }
     const host = Number(o.host);
     const model = Number(o.model || 0);
     // The row spans length samples, whatever the host size, so model blocks match across rows

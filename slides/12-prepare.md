@@ -214,7 +214,7 @@ Note:
 
 ## Computed at <code>prepare</code>,<br><span class="then">for the block size the host uses.</span>
 
-{{STREAM:host=512|model=2048|length=4096|seconds=5}}
+{{STREAM:host=512,768,441|model=2048|length=6144|seconds=7}}
 
 <div class="lat-sum">
   <div class="lat-part">block adaptation<small>P − gcd(b, P)</small><strong>1536</strong></div>

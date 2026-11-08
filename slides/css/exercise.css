@@ -419,6 +419,31 @@ html.tanh .streams {
   margin-top: var(--space-6);
 }
 
+/* Several host sizes over one model row ({{STREAM:host=512,768,441|…}}): each row's buffer
+   adaptation on the right, the model row static, since each host completes its blocks at
+   another callback (the dark ones) */
+html.tanh .stream.multi {
+  grid-template-columns: 110px 1fr 150px;
+}
+
+html.tanh .stream-delta {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--fs-heading-font);
+  font-size: 0.45em;
+  line-height: 1.2;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .stream-delta strong {
+  font-size: 1.5em;
+  color: var(--ink);
+}
+
+html.tanh .reveal section.present .stream.multi .stream-model b {
+  animation: none;
+}
+
 /*********************************************
  * Step 2 · ring buffers on both sides: the input fills in host-sized steps,
  * the model takes 2048 at once, the output drains in host-sized steps

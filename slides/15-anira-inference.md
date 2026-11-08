@@ -141,15 +141,11 @@ Note:
 
 </div>
 Note:
-- The model file as you get it: every key in place, every blank a question mark.
+- This is the model file Fares showed you, now with question marks.
 - The comment next to each blank says which TODO it is.
-- Under models: ONNX Runtime, and a relative path, resolved against this file's folder.
-- First input, audio, streamed: its time axis is one model block, step 1's number.
-- Second input, state_in, role state: batch, then one axis tagged any.
-- Any is anira's tag: an axis neither time nor channel, just a size.
-- Only the data type is off the slide: the file says float32, the default.
-- [pause] TODO 1, the audio: the time size in and out, and the latency on audio_out, step 7's number.
-- TODO 2 is the state: its size, and which output feeds it.
+- [pause] TODO 1, the audio: the time size in and out, and the latency on audio_out.
+- TODO 2, the state: its size, and which output feeds it.
+- All the numbers come from part 1: steps 1, 2 and 7.
 - The state pair, on the next slide.
 
 ---

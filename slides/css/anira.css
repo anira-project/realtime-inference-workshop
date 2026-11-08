@@ -2149,9 +2149,9 @@ html.tanh .reveal .slides section .when b {
   color: var(--mark-check);
 }
 
-/* Create's closing table: what was declared, what create did, when it takes
-   effect. Six rows of two lines, the key under its name, so a size down from
-   the default table and the first column the widest */
+/* Create's closing table: what was declared and what create did with it.
+   Six rows of two lines, the key under its name, so a size down from the
+   default table and the first column the widest */
 html.tanh .reveal table.declared {
   margin: var(--space-4) auto 0;
   font-size: 0.72em;
@@ -2173,6 +2173,34 @@ html.tanh .reveal table.declared td:nth-child(2) {
 }
 
 html.tanh .reveal table.declared td b {
+  font-weight: 600;
+  color: var(--mark-check);
+}
+
+/* Create's memory slide: who loads the weights and how many copies, part 1
+   against anira with and without state. Three rows, the two counts centred */
+html.tanh .reveal table.copies {
+  margin: var(--space-4) auto 0;
+  font-size: 0.72em;
+}
+
+html.tanh .reveal table.copies th,
+html.tanh .reveal table.copies td {
+  padding: 6px 16px;
+}
+
+html.tanh .reveal table.copies th:first-child,
+html.tanh .reveal table.copies td:first-child {
+  width: 24%;
+}
+
+html.tanh .reveal table.copies th:nth-child(n + 3),
+html.tanh .reveal table.copies td:nth-child(n + 3) {
+  text-align: center;
+  white-space: nowrap;
+}
+
+html.tanh .reveal table.copies td b {
   font-weight: 600;
   color: var(--mark-check);
 }

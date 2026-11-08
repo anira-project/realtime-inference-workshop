@@ -397,22 +397,32 @@ Note:
 <!-- .slide: class="answer" -->
 
 <div class="tag">anira · Memory</div>
-<div class="when">→ <b>prepare</b>: the instances load</div>
+<div class="when">→ <b>prepare</b>: the weights load</div>
 
-## Our model: one instance per handler.<br><span class="then">Stateless models can run in parallel.</span>
+## Ten instances, four copies.<br><span class="then">If the model has no state. Ours has: still ten.</span>
 
-<div class="cards">
-  <div class="card accent">{{ICON:model}}<div class="card-title">With state, like ours</div><div class="card-text">One instance per handler, whatever the config says. Its jobs run one at a time, in order; anira carries the state.</div></div>
-  <div class="card">{{ICON:threads}}<div class="card-title">Without state</div><div class="card-text">Loaded once for every handler. <code>"max_instances": 4</code> runs up to four inferences at once on the pool.</div></div>
-</div>
+<table class="copies">
+  <thead>
+    <tr><th></th><th>Who loads the weights, at prepare</th><th>10 instances</th><th>1 instance</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Part 1, step 8</td><td>every instance: its own session</td><td>10 copies</td><td>1 copy</td></tr>
+    <tr><td>anira, with state<br>like ours</td><td>every handler: its own session</td><td>10 copies</td><td>1 copy</td></tr>
+    <tr><td>anira, without state</td><td>the first handler: <code>max_instances</code> sessions, by default one per pool thread; every later one shares them</td><td><b>4 copies</b></td><td>4 copies</td></tr>
+  </tbody>
+</table>
+
+<div class="cards-note">On the pool of four threads from the context file. A copy is one ONNX Runtime session with its own weights; anira shares only the environment and the session options.</div>
 
 Note:
-- What anira does for a model like ours, with state: one engine instance per handler, whatever max_instances says, and its jobs run one after another, in order, because each needs the state of the one before. That is anira 3's rule for every stateful model or declared state pair.
-- Compared to part 1: anira carries the state, keeps the order, and the threads come from the shared pool instead of one worker per instance.
-- The instance itself is not shared: with ONNX Runtime it is its own session with its own copy of the weights, so ten plugin instances still hold ten copies, as in step 8.
-- For a model without state anira can do more: it is loaded once and shared by every handler, and max_instances lets several inferences of it run at the same time on the pool. That multithreads stateless inference, which helps when a block has more work than one thread can do in time.
-- The default for max_instances is one per pool thread, since more could never run at once.
-- Shared means the whole load matches: engine, path, provider, options and instance count.
+- Back to the memory. In step 8 every instance's prepare created its own ONNX Runtime session, and a session holds its own copy of the weights: ten instances, ten copies.
+- anira loads the weights at prepare as well. How many copies it makes depends on one thing: whether the model has state.
+- With state, like ours: the state belongs to one stream, so every handler gets its own session at its prepare, and its inferences run one at a time, in order. One handler per plugin instance: ten instances, ten copies, the same as part 1.
+- Without state: the first handler's prepare loads the model once for the whole process, as max_instances sessions, by default one per pool thread, since more could never run at once. Every later handler with an equal model config on the same engine and provider shares those sessions and loads nothing.
+- So ten instances on our four threads hold four copies, not ten. But a single instance holds four as well: below four instances that is more than part 1.
+- max_instances is the knob: a large model can set it to 1, one copy for the whole process, one inference at a time.
+- The shared sessions live as long as a handler uses them: the last handler that goes frees them.
+- What anira changes for our model is therefore not the memory: it carries the state, keeps the order, and runs the inferences on the one pool instead of a worker per instance.
 - All of it is declared here and loaded at prepare: a file with two enabled engines holds both. Prepare's memory slide.
 
 ---
@@ -423,40 +433,21 @@ Note:
 
 <table class="declared">
   <thead>
-    <tr><th>You declare</th><th>Create</th><th>Takes effect</th></tr>
+    <tr><th>You declare</th><th>Create</th></tr>
   </thead>
   <tbody>
-    <tr><td>the engines, an entry per export<br><code>models</code>, <code>default_engine</code></td><td>checks that this build can run one</td><td><b>prepare</b>: the entry loads</td></tr>
-    <tr><td>the tensors: name, dtype, axes, role<br><code>inputs</code>, <code>outputs</code></td><td>checks the shapes, builds a slot each</td><td><b>process</b>: the blocks go through them</td></tr>
-    <tr><td>the state, a pair<br><code>role: state</code>, <code>state_source</code></td><td>resolves the pair, allocates its buffers</td><td><b>process</b>: swapped after every run</td></tr>
-    <tr><td>the model's own latency<br><code>latency</code> on the output</td><td>keeps it</td><td><b>prepare</b>: part of what the host is told</td></tr>
-    <tr><td>the instances<br><code>max_instances</code></td><td>keeps it</td><td><b>prepare</b>: they load · <b>process</b>: in parallel</td></tr>
-    <tr><td>the pool: threads, how they wait<br><code>ContextConfig</code></td><td>registers the settings</td><td><b>prepare</b>: the threads start</td></tr>
+    <tr><td>the engines, an entry per export<br><code>models</code>, <code>default_engine</code></td><td>checks that this build can run one</td></tr>
+    <tr><td>the tensors: name, dtype, axes, role<br><code>inputs</code>, <code>outputs</code></td><td>checks the shapes, builds a slot each</td></tr>
+    <tr><td>the state, a pair<br><code>role: state</code>, <code>state_source</code></td><td>resolves the pair, allocates its buffers</td></tr>
+    <tr><td>the model's own latency<br><code>latency</code> on the output</td><td>keeps it</td></tr>
+    <tr><td>the instances<br><code>max_instances</code></td><td>keeps it</td></tr>
+    <tr><td>the pool: threads, how they wait<br><code>ContextConfig</code></td><td>registers the settings</td></tr>
   </tbody>
 </table>
 
 Note:
 - After create: everything is declared and checked, and nothing runs yet.
-- Left, what we declared. The third column is all create did with it: it checked, it built the slots, and it allocated the state pairs' two buffers, the one memory that holds from here on.
-- No model, no plan, no thread: all of that needs the contract, and the contract comes with the host's blocks.
-- The right column says where each declaration takes effect. The next two rows show it.
-
----
-
-<div class="tag">Take away</div>
-
-## Declare once.<br><span class="then">Share what can be shared.</span>
-
-<div class="statement-points">
-  <div>Engines are entries in a file; a plan per engine and provider</div>
-  <div>Every slot is a typed tensor; state is a role</div>
-  <div>One pool for every instance in the process; models without state are shared</div>
-</div>
-
-Note:
-- Declare once, and share what can be shared.
-- Engines are entries in a file, with a plan per engine and provider.
-- Every slot is a typed tensor, and state is a role.
-- One pool serves every instance in the process, and a model without state is loaded once for all of them.
-- Everything here is in effect from prepare on; the next two chapters show it running.
+- Left, what we declared; right, all create did with it: it checked, it built the slots, and it allocated the state pair's two buffers.
+- No model, no plan, no thread yet: all of that needs the contract, and the contract comes with the host's blocks.
+- In short: declare once, share what can be shared. The engines are entries in a file, every slot is a typed tensor, one pool serves every instance, and a model without state is loaded once for all of them.
 - Next: prepare, when the host says which blocks it will deliver.

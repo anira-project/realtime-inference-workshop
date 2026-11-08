@@ -69,8 +69,8 @@ Note:
 - Create is already done for you, in the constructor.
 - In prepare you fill two blanks: tell the contract the host's blocks, and read back the latency.
 - In process you fill two more: one call per callback, live or offline.
-- The check runs process offline and waits for each result.
-- It removes the latency anira adds, so the output lines up with the reference.
+- The check runs offline and makes sure our output matches the Python reference.
+- And that the reported latency is calculated right.
 
 ---
 

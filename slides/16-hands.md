@@ -202,6 +202,7 @@ Note:
 - Build the standalone app with these two commands.
 - Get a feel for how it works: the camera and your hands control the synth.
 - [start the timer] Use your laptop loudspeakers, so we all play together, and jam!
+- We have ten minutes now; afterwards we wrap it up.
 - [let it run, walk through the room] And now: hands down.
 - [silence: the latent vector glides to rest and the room fades out; wait for it]
 

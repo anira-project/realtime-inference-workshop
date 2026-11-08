@@ -2062,7 +2062,10 @@ html.tanh .st-caption {
 }
 
 html.tanh .st-caption.left { text-anchor: start; }
-html.tanh .st-caption.right { text-anchor: end; }
+/* A caption over a line: a halo in its lane's colour breaks the line behind the text */
+html.tanh .st-caption.on-audio, html.tanh .st-caption.on-pool { paint-order: stroke; stroke-width: 10px; stroke-linejoin: round; }
+html.tanh .st-caption.on-audio { stroke: color-mix(in srgb, var(--tint-exercise) 45%, var(--paper)); }
+html.tanh .st-caption.on-pool { stroke: color-mix(in srgb, var(--tint-model) 45%, var(--paper)); }
 
 /* Reveal fades fragments; the SVG groups follow */
 html.tanh .ov g.fragment,

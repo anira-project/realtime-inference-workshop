@@ -64,32 +64,32 @@ Note:
   <text x="40" y="330" class="st-lane-label">inference thread · may allocate, lock and block</text>
   <g class="fragment" data-fragment-index="1">
     <rect class="ov-pill" x="50" y="132" width="130" height="56" rx="8"/><text x="115" y="166" class="st-text">host block</text>
-    <line class="ov-flow strong" x1="180" y1="160" x2="214" y2="160" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="186" y1="160" x2="218" y2="160" marker-end="url(#st-arrow)"/>
     <circle class="ov-ring" cx="250" cy="160" r="24"/><text x="250" y="222" class="st-caption">input ring</text>
-    <line class="ov-flow strong" x1="286" y1="160" x2="300" y2="160" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="282" y1="160" x2="294" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="300" y="132" width="170" height="56" rx="8"/><text x="385" y="166" class="st-text">pre_process</text>
     <text x="385" y="222" class="st-caption">a window out of the ring</text>
-    <line class="ov-flow strong" x1="470" y1="160" x2="510" y2="160" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="476" y1="160" x2="504" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill tensor" x="510" y="132" width="180" height="56" rx="8"/><text x="600" y="166" class="st-text">model tensor in</text>
   </g>
   <g class="fragment" data-fragment-index="2">
-    <path class="ov-flow strong" d="M600 188 V380" marker-end="url(#st-arrow)"/>
+    <path class="ov-flow strong" d="M600 194 V374" marker-end="url(#st-arrow)"/>
     <text x="616" y="286" class="st-caption left">the queue</text>
     <rect class="ov-pill stage" x="505" y="380" width="190" height="56" rx="8"/><text x="600" y="414" class="st-text">before_inference</text>
-    <line class="ov-flow strong" x1="695" y1="408" x2="745" y2="408" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="701" y1="408" x2="739" y2="408" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill engine" x="745" y="372" width="150" height="72" rx="10"/><text x="820" y="414" class="st-text strong">engine</text>
-    <line class="ov-flow strong" x1="895" y1="408" x2="945" y2="408" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="901" y1="408" x2="939" y2="408" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="945" y="380" width="190" height="56" rx="8"/><text x="1040" y="414" class="st-text">after_inference</text>
-    <path class="ov-flow strong" d="M1040 380 V188" marker-end="url(#st-arrow)"/>
+    <path class="ov-flow strong" d="M1040 374 V194" marker-end="url(#st-arrow)"/>
     <text x="1056" y="286" class="st-caption left">the slot, back</text>
     <rect class="ov-pill tensor" x="945" y="132" width="190" height="56" rx="8"/><text x="1040" y="166" class="st-text">model tensor out</text>
     <text x="1040" y="222" class="st-caption on-audio">the next stamp</text>
-    <line class="ov-flow strong" x1="1135" y1="160" x2="1180" y2="160" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="1141" y1="160" x2="1174" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="1180" y="132" width="170" height="56" rx="8"/><text x="1265" y="166" class="st-text">post_process</text>
     <text x="1265" y="222" class="st-caption">the result into the ring</text>
-    <line class="ov-flow strong" x1="1350" y1="160" x2="1364" y2="160" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="1356" y1="160" x2="1368" y2="160" marker-end="url(#st-arrow)"/>
     <circle class="ov-ring" cx="1400" cy="160" r="24"/><text x="1400" y="222" class="st-caption">output ring</text>
-    <line class="ov-flow strong" x1="1436" y1="160" x2="1450" y2="160" marker-end="url(#st-arrow)"/>
+    <line class="ov-flow strong" x1="1432" y1="160" x2="1444" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill" x="1450" y="132" width="130" height="56" rx="8"/><text x="1515" y="166" class="st-text">host block</text>
   </g>
   <g class="fragment" data-fragment-index="3">

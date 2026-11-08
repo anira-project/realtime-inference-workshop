@@ -71,10 +71,10 @@ Note:
 
 ## Break<br><span class="then">Afterwards: how anira handles these steps.</span>
 
-<div class="break-mug">{{ICON:coffee}}<div class="break-back" style="margin-top: 150px;">back at 11:40</div></div>
+<div class="break-mug">{{ICON:coffee}}<div class="break-back" style="margin-top: 150px;">back at 11:30</div></div>
 
 Note:
 - Every piece is a place where things can go wrong
 - You'd write all of it again for every new model
 - After the break: how anira does this for you
-- 15 minute break, we start again at 11:40
+- 15 minute break, we start again at 11:30

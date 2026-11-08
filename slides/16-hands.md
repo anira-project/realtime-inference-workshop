@@ -9,7 +9,7 @@ Note:
 - [before: the step 10 app open behind the slides, camera allowed, sound on the room's speakers]
 - We have everything in place, and everything runs.
 - Now it's time to have some fun with the model, and use it in a different way.
-- Only its decoder, and your hands move its eight numbers.
+- There are many ways to do that, and of course we add some neural processing on top.
 
 ---
 

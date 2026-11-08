@@ -1,6 +1,6 @@
 /**
- * Notes editor (dev server only): a pencil in the header and in the speaker
- * view opens the current slide's notes as their markdown source. Saving writes
+ * Notes editor (dev server only): a pencil in the speaker view opens the
+ * current slide's notes as their markdown source. Saving writes
  * them back into the chapter's slides/*.md through the dev server
  * (/api/notes); the rebuild and the hot reload then show them, and the speaker
  * view reconnects by itself.
@@ -123,18 +123,10 @@ function installNotesEditor(mode) {
             new MutationObserver(unhide).observe(notes, { attributes: true, attributeFilter: ['class'] });
         };
         place();
-    } else {
-        const button = document.createElement('button');
-        button.className = 'header-button';
-        button.title = 'Edit the notes of this slide';
-        button.setAttribute('aria-label', 'Edit the notes of this slide');
-        button.innerHTML = PENCIL;
-        button.addEventListener('click', open);
-        document.querySelector('.header-logo-box')?.prepend(button);
     }
 }
 
-installNotesEditor('deck');
+// The pencil sits in the speaker view only: the projected deck stays clean
 
 // The speaker view is written into a blank window by Reveal's notes plugin: the
 // editor is run there as source, once its notes area exists.

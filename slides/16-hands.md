@@ -111,14 +111,31 @@ Note:
 
 ## A camera at 30 fps,<br><span class="then">audio at 44.1 kHz, one pool.</span>
 
-<div class="cards">
-  <div class="card">{{ICON:people}}<div class="card-title">camera</div><div class="card-text">30 frames per second</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:model}}<div class="card-title">hand tracking</div><div class="card-text">Google's model, provided</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card accent">{{ICON:sliders}}<div class="card-title">8 latents</div><div class="card-text">height, pinch, tilt, …</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:model}}<div class="card-title">decoder</div><div class="card-text">a generator, no audio in</div></div>
+<div class="lanes">
+  <div class="lane">
+    <div class="lane-name">camera thread<small>30 frames a second</small></div>
+    <div class="card"><div class="card-title">camera frame</div></div>
+    <div class="card-arrow">→</div>
+    <div class="card"><div class="card-title">hand tracking</div><div class="card-text">push, never waits · on the pool</div></div>
+  </div>
+  <div class="lane-pass">↓ the newest hands · lock-free triple buffer</div>
+  <div class="lane">
+    <div class="lane-name">message thread<small>GUI timer, 60 a second</small></div>
+    <div class="card"><div class="card-title">hands</div><div class="card-text">features, 0 to 1</div></div>
+    <div class="card-arrow">→</div>
+    <div class="card accent"><div class="card-title">your mapping</div><div class="card-text">HandMapping.cpp</div></div>
+    <div class="card-arrow">→</div>
+    <div class="card"><div class="card-title">8 latents</div><div class="card-text">smoothed</div></div>
+  </div>
+  <div class="lane-pass">↓ 8 × <code>std::atomic&amp;lt;float&amp;gt;</code> · relaxed</div>
+  <div class="lane">
+    <div class="lane-name">audio thread<small>44.1 kHz</small></div>
+    <div class="card"><div class="card-title">load the 8</div><div class="card-text">once per 2048 samples</div></div>
+    <div class="card-arrow">→</div>
+    <div class="card"><div class="card-title">decoder</div><div class="card-text">push_data · on the pool</div></div>
+    <div class="card-arrow">→</div>
+    <div class="card"><div class="card-title">audio out</div><div class="card-text">pop_data</div></div>
+  </div>
 </div>
 
 Note:
@@ -133,7 +150,13 @@ Note:
 - Alongside it, one switch fades the output out in about a second: Silence without hands, on by default.
 - [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
 - [point at the latent panel] Eight bars, one per latent, more on the tick later.
-- [back to the slide] The tracker runs per camera frame, the decoder per block of 2048 samples, both on one pool.
+- [back to the slide] Three threads, and none waits for another.
+- The camera thread pushes every frame to the tracker and goes on.
+- The message thread, a timer 60 times a second, takes the newest hands from a lock-free triple buffer.
+- There your mapping turns them into eight latents.
+- It hands them to the audio thread as eight atomic floats.
+- The audio thread loads them once per 2048 samples, pushes them to the decoder, and pops the audio.
+- Tracker and decoder share one anira pool.
 - Now your part.
 
 ---

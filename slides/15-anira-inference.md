@@ -28,8 +28,7 @@ Note:
 - Here are the six things again that we built by hand in part 1.
 - Inference: which model, which engine, which tensors, now all defined in model.json.
 - Benchmarking: the worst-case execution time is declared in our contract.json.
-- Real-time safety is built into anira's design.
-- Threading is handled by anira too: one thread pool, from the anira context.
+- Real-time safety and threading are built into anira: one thread pool, from the anira context.
 - Latency: anira calculates it, and we only read it.
 - Real-time guarantees: what happens on a missed deadline is also in the contract.
 - [pause] So what is left for us to write?

@@ -103,7 +103,9 @@ Note:
 Note:
 - So what are the provided files?
 - Same assets as in part 1: the model, the test signal and the reference.
-- New in the helpers: anira itself, fetched by CMake, and contract.json, already complete.
+- What helpers are new?
+- We provide anira itself, bundled and included automatically.
+- And the contract file, already filled in.
 - You edit two files: the gaps in model.json, and four blanks in AniraProcessor.cpp.
 
 ---

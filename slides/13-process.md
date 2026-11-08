@@ -52,7 +52,7 @@ Note:
 
 ## The push and pop is anira's.<br><span class="then">The phases around the engine are yours.</span>
 
-<svg class="st" viewBox="0 0 1600 560" aria-label="the stage phases">
+<svg class="st" viewBox="0 0 1600 570" aria-label="the stage phases">
   <defs>
     <marker id="st-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10z" class="ov-arrowhead"/>
@@ -60,7 +60,7 @@ Note:
   </defs>
   <rect class="st-lane audio" x="20" y="40" width="1570" height="220" rx="10"/>
   <text x="40" y="70" class="st-lane-label">audio thread · real-time: no allocation, no lock, no wait</text>
-  <rect class="st-lane pool" x="20" y="300" width="1570" height="200" rx="10"/>
+  <rect class="st-lane pool" x="20" y="300" width="1570" height="230" rx="10"/>
   <text x="40" y="330" class="st-lane-label">inference thread · may allocate, lock and block</text>
   <g class="fragment" data-fragment-index="1">
     <rect class="ov-pill" x="50" y="132" width="130" height="56" rx="8"/><text x="115" y="166" class="st-text">host block</text>
@@ -72,18 +72,25 @@ Note:
     <line class="ov-flow strong" x1="476" y1="160" x2="504" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill tensor" x="510" y="132" width="180" height="56" rx="8"/><text x="600" y="166" class="st-text">model tensor in</text>
   </g>
+  <!-- down the queue to the engine -->
   <g class="fragment" data-fragment-index="2">
     <path class="ov-flow strong" d="M600 194 V374" marker-end="url(#st-arrow)"/>
     <text x="616" y="286" class="st-caption left">the queue</text>
     <rect class="ov-pill stage" x="505" y="380" width="190" height="56" rx="8"/><text x="600" y="414" class="st-text">before_inference</text>
     <line class="ov-flow strong" x1="701" y1="408" x2="739" y2="408" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill engine" x="745" y="372" width="150" height="72" rx="10"/><text x="820" y="414" class="st-text strong">engine</text>
+  </g>
+  <!-- after the engine, back up to the model tensor out -->
+  <g class="fragment" data-fragment-index="3">
     <line class="ov-flow strong" x1="901" y1="408" x2="939" y2="408" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="945" y="380" width="190" height="56" rx="8"/><text x="1040" y="414" class="st-text">after_inference</text>
     <path class="ov-flow strong" d="M1040 374 V194" marker-end="url(#st-arrow)"/>
     <text x="1056" y="286" class="st-caption left">the slot, back</text>
     <rect class="ov-pill tensor" x="945" y="132" width="190" height="56" rx="8"/><text x="1040" y="166" class="st-text">model tensor out</text>
     <text x="1040" y="222" class="st-caption on-audio">the next stamp</text>
+  </g>
+  <!-- the rest of the audio thread: into the output ring, out to the host -->
+  <g class="fragment" data-fragment-index="4">
     <line class="ov-flow strong" x1="1141" y1="160" x2="1174" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill stage" x="1180" y="132" width="170" height="56" rx="8"/><text x="1265" y="166" class="st-text">post_process</text>
     <text x="1265" y="222" class="st-caption">the result into the ring</text>
@@ -92,10 +99,11 @@ Note:
     <line class="ov-flow strong" x1="1432" y1="160" x2="1444" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill" x="1450" y="132" width="130" height="56" rx="8"/><text x="1515" y="166" class="st-text">host block</text>
   </g>
-  <g class="fragment" data-fragment-index="3">
+  <!-- the state pair; its caption below the loop, where no line passes behind it -->
+  <g class="fragment" data-fragment-index="5">
     <path class="ov-flow state" d="M880 444 V494 H760 V444" marker-end="url(#st-arrow)"/>
-    <text x="820" y="478" class="st-caption on-pool">state_in ← state_out</text>
-    <text x="820" y="530" class="st-caption">the declared pair swaps around each inference, no copy</text>
+    <text x="820" y="520" class="st-caption">state_in ← state_out</text>
+    <text x="820" y="556" class="st-caption">the declared pair swaps around each inference, no copy</text>
   </g>
   <!-- drawn last, so the queue line passes behind it -->
   <g class="fragment" data-fragment-index="1">

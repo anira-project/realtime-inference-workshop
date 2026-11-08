@@ -99,11 +99,15 @@ Note:
     <line class="ov-flow strong" x1="1432" y1="160" x2="1444" y2="160" marker-end="url(#st-arrow)"/>
     <rect class="ov-pill" x="1450" y="132" width="130" height="56" rx="8"/><text x="1515" y="166" class="st-text">host block</text>
   </g>
-  <!-- the state pair; its caption below the loop, where no line passes behind it -->
+  <!-- the state pair, around the whole inference: bound before before_inference, swapped after
+       after_inference, so both stages see it; captions beside and below the loop, where no line
+       passes behind them -->
   <g class="fragment" data-fragment-index="5">
-    <path class="ov-flow state" d="M880 444 V494 H760 V444" marker-end="url(#st-arrow)"/>
-    <text x="820" y="520" class="st-caption">state_in ← state_out</text>
-    <text x="820" y="556" class="st-caption">the declared pair swaps around each inference, no copy</text>
+    <path class="ov-flow state" d="M1040 442 V484 H600 V442" marker-end="url(#st-arrow)"/>
+    <text x="1052" y="470" class="st-caption left">swap</text>
+    <text x="588" y="470" class="st-caption" style="text-anchor: end">bind</text>
+    <text x="820" y="512" class="st-caption">state_in ← state_out</text>
+    <text x="820" y="556" class="st-caption">bound before before_inference, swapped after after_inference: both see the state, no copy</text>
   </g>
   <!-- drawn last, so the queue line passes behind it -->
   <g class="fragment" data-fragment-index="1">

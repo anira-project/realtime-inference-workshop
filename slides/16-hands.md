@@ -133,24 +133,10 @@ Note:
 </div>
 
 Note:
-- [switch to the app, camera on, one hand in view; from here speak little, play more] Here it is.
-- [open the hand] Open, and it gets louder: that is z0.
-- [raise it] Higher, and it gets brighter: that is z2.
-- [pinch] Pinch is the body.
-- [move sideways] Left to right, the colour.
-- [tilt] Tilt the hand, and the sound tilts: the names are found by ear.
-- [second hand in] My second hand sets the texture: swell, dark or bright, resonance.
-- [hands away] Hands away: the latent vector glides to rest, and the sound with it. [wait for the silence]
-- Alongside it, one switch fades the output out in about a second: Silence without hands, on by default.
-- [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
-- [point at the latent panel] Eight bars, one per latent, more on the tick later.
-- [back to the slide] And here is what's nice about anira.
-- Once the configs are in place, we just register our handlers.
-- Four for the webcam models on the camera thread, one for the audio model on the audio thread.
-- All five share the same thread pool.
-- [point at the middle] And our message thread syncs the detection with the audio thread, to control the latents.
-- [point at the flow] Each thread runs at its own pace, and none waits for another.
-- Next: how a hand becomes the latents.
+- Here is what's nice about anira.
+- With the configs in place, we just register our handlers: four for the webcam, one for the audio.
+- All five share one thread pool.
+- [point at the middle] The message thread syncs the detection with the audio thread, to control the latents.
 
 ---
 

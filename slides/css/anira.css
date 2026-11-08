@@ -2581,3 +2581,14 @@ html.tanh .reveal section.present .th-scroll { animation: th-scroll 3.7s linear 
   html.tanh .reveal section.present .th-cam-hand, html.tanh .reveal section.present .th-cam-pred,
   html.tanh .reveal section.present .th-scroll { animation: none; }
 }
+
+/* Step 10 · from the hands to the latent vector: each feature and the dimension it drives */
+html.tanh .hm { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-top: var(--space-5); }
+html.tanh .hm-label { margin-bottom: var(--space-3); font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.75em; color: var(--fs-text-muted-color); }
+html.tanh .hm-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
+html.tanh .hm-feat, html.tanh .hm-z { padding: var(--space-2) var(--space-4); border-radius: var(--radius-small); font-size: 0.7em; }
+html.tanh .hm-feat { border: var(--hairline) solid var(--fs-border-strong); font-family: var(--fs-heading-font); font-weight: 600; }
+html.tanh .hm-feat small { display: block; font-weight: 400; font-size: 0.8em; color: var(--fs-text-muted-color); }
+html.tanh .hm-z { background: var(--tint-exercise); }
+html.tanh .hm-z b { margin-right: var(--space-2); font-family: var(--fs-code-font); }
+html.tanh .hm-arrow { color: var(--fs-text-subtle-color); }

@@ -151,93 +151,36 @@ Note:
 
 ---
 
-<div class="tag">Given</div>
+<div class="tag">Hands to latents</div>
 
-## What we get<br><span class="then">1 model, 1 library, 1 file to play with.</span>
+## Five numbers per hand,<br><span class="then">eight dimensions out.</span>
 
-<div class="given">
-  <div class="given-column">
-    <div class="given-label">Models</div>
-    <div class="given-folder">common/assets/models/</div>
-    {{FILE:model_decoder.onnx}}
+<div class="hm">
+  <div class="hm-hand">
+    <div class="hm-label">right hand · leads</div>
+    <div class="hm-row"><div class="hm-feat">openness<small>fist → open</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z0</b>loudness</div></div>
+    <div class="hm-row"><div class="hm-feat">height<small>low → high</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z2</b>brightness</div></div>
+    <div class="hm-row"><div class="hm-feat">pinch<small>apart → touching</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z1</b>body</div></div>
+    <div class="hm-row"><div class="hm-feat">left – right<small>where the hand is</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z3</b>colour</div></div>
+    <div class="hm-row"><div class="hm-feat">tilt<small>tilted left → right</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z5</b>tilt</div></div>
   </div>
-  <div class="given-column many">
-    <div class="given-label">Helpers</div>
-    <div class="given-folder">common/hands/ · 10_hands/source/</div>
-    {{FILE:hands|new}}
-    {{FILE:HandTracker.h|new}}
-    {{FILE:HandControls.cpp|new}}
-    {{FILE:LatentDecoder.cpp|new}}
-    {{FILE:decoder.json}}
-  </div>
-  <div class="given-column exercise">
-    <div class="given-label">To play with</div>
-    <div class="given-folder">10_hands/solution/</div>
-    {{FILE:HandMapping.cpp|new}}
+  <div class="hm-hand">
+    <div class="hm-label">left hand · texture</div>
+    <div class="hm-row"><div class="hm-feat">height<small>low → high</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z4</b>swell</div></div>
+    <div class="hm-row"><div class="hm-feat">left – right<small>where the hand is</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z6</b>dark / bright</div></div>
+    <div class="hm-row"><div class="hm-feat">openness<small>fist → open</small></div><div class="hm-arrow">→</div><div class="hm-z"><b>z7</b>resonance</div></div>
   </div>
 </div>
 
-Note:
-- No new model: a latent vector with eight dimensions in, and inside, the decoder fills the other 120 with zeros.
-- [point at Helpers] The hands library: the camera and the tracking, four models compiled in.
-- You never open it: HandTracker.h is the one header worth a look.
-- The camera behind it: AVFoundation on macOS, JUCE on Windows, OpenCV on Linux.
-- HandControls.cpp decides which hand leads, calls your mapping, and smooths the result.
-- LatentDecoder.cpp is that generator, rendering at 44.1 kHz, resampled if your device runs another rate.
-- [point at the right] And HandMapping.cpp: the one mapping, yours to change.
-- First the hand, as the tracker gives it to you.
-
----
-
-<div class="tag">Helpers: <code>HandTracker.h</code></div>
-
-## The hand<br><span class="then">Five features, each from 0 to 1.</span>
-
-```cpp
-struct HandFeatures {
-    float x;         // left → right
-    float y;         // low → high
-    float openness;  // fist → open palm
-    float pinch;     // apart → thumb and index touching
-    float roll;      // tilted left → right, 0.5 upright
-};
-```
+<div class="cards-note">Every feature runs from 0 to 1 · smoothed 60 times a second · then to the audio thread</div>
 
 Note:
-- Per hand, the tracker gives you these five numbers; the comments say which way each one runs.
-- Everything is seen like a mirror: move your hand to the right, and x grows.
-- The tracker also knows which hand it is, a gesture, and 21 joints for drawing.
-- Up to two hands arrive, and the next slide says which one plays what.
-
----
-
-<div class="tag">Helpers: <code>HandControls.cpp</code></div>
-
-## From the camera to the decoder<br><span class="then">Your mapping in the middle.</span>
-
-```cpp
-// camera thread, every frame
-tracker.pushFrame(image);
-
-// GUI timer, 60 times a second
-controls.update(tracker.hands(), dt, settings);  // roles → map_hands → smoothing
-decoder.setLatents(controls.latents());          // the audio thread reads them
-```
-
-Note:
-- Three lines, and MainComponent runs them for you.
-- [point at line 1] The camera thread hands every frame to the tracker and goes on.
-- [point at the timer block] The GUI timer, on the main thread, asks for the newest hands, up to two.
-- HandControls gives them roles: your right hand leads, the other one is the texture hand.
-- A single hand always leads, and the Swap hands box in the app makes the left one lead.
-- It calls your map_hands with both, and gets the latent vector back.
-- Why smooth: so the eight numbers do not jump, and can glide when the hand leaves.
-- A one-pole filter per latent, 80 ms by default, and the Smoothing slider changes it.
-- In the panel the tick is your mapping's number, the target, and the bar is the smoothed value.
-- Lead hand gone for a fifth of a second, and the latent vector heads for rest.
-- Rest is z0 at minus 3, near silent, and the other seven at zero.
-- The smoother slows to 600 ms: quick while you play, slow when you leave.
-- The smoothed vector reaches the decoder as atomics; the audio thread pushes them once per model block, as one latent frame.
+- Per hand, the tracker gives five numbers, each from 0 to 1.
+- Your right hand leads: open is loud, high is bright.
+- Pinch is the body, left to right the colour, tilting the hand tilts the sound.
+- A second hand adds texture: swell, dark or bright, and resonance.
+- The values are smoothed, so the sound glides instead of jumping.
+- And when your hands leave, it fades to silence.
 
 ---
 

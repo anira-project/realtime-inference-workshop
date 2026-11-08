@@ -2531,6 +2531,13 @@ html.tanh .reveal section.present .th-flow-h { animation: th-dash-right var(--p)
 @keyframes th-dash-down { from { background-position: 0 0; } to { background-position: 0 20px; } }
 @keyframes th-dash-up { from { background-position: 0 20px; } to { background-position: 0 0; } }
 @keyframes th-dash-right { from { background-position: 0 0; } to { background-position: 20px 0; } }
+/* Their heads: down for push_data, up for pop_data, right along the hand-offs */
+html.tanh .th-flow-v, html.tanh .th-flow-h { position: relative; overflow: visible; }
+html.tanh .th-flow-v::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); border-left: 10px solid transparent; border-right: 10px solid transparent; }
+html.tanh .th-call.down .th-flow-v::after { bottom: -12px; border-top: 14px solid var(--ink); }
+html.tanh .th-call.up .th-flow-v::after { top: -12px; border-bottom: 14px solid var(--ink); }
+html.tanh .th-flow-h { margin-top: var(--space-3); }
+html.tanh .th-flow-h::after { content: ""; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 14px solid var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   html.tanh .reveal section.present .th-flow-v, html.tanh .reveal section.present .th-flow-h { animation: none; }
 }

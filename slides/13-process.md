@@ -6,8 +6,7 @@ One block through anira
 <!-- kind: talk -->
 
 Note:
-- Process is the third row of the map: what happens in every callback
-- We look at the push and pop, the phases around the model, the wait, what happens when something is late, and the offline bounce
+- This leads us to the process function
 
 ---
 
@@ -18,7 +17,7 @@ Note:
 {{MAP:show=create,prepare|focus=process}}
 
 Note:
-- Process runs in every callback, on the audio thread: in JUCE that is processBlock
+- Process runs in every callback, on the audio thread: in JUCE we'd call it in the processBlock function
 
 ---
 
@@ -38,9 +37,10 @@ m_output.try_pop(samples[i]);       // host out, sample by sample
 
 Note:
 - Lets recap process in part 1
-- We wrote every step by hand: the host block into the input ring, sample by sample
-- On the worker a model block out of it, the model, and the result into the output ring
-- And back on the audio thread the host block out of the output ring
+- We wrote every step by hand: we pushed the host block into the input ring, sample by sample on the audio thread
+- Then the worker popped the samples out and called the model inference on the worker thread
+- The result got pushed back to the output ringbuffer
+- And back on the audio thread the host block popped the output ringbuffer to fill its host block
 - All of it inside our processor, and it only knew one shape: audio in, audio out
 - How does anira do this?
 
@@ -106,137 +106,11 @@ Note:
 <div class="cards-note">The defaults are part 1's push and pop. Fill a phase for more, like the FFT from the start: in <code>before_inference</code>, on the model's window. <code>reset</code> starts a new stream.</div>
 
 Note:
-- anira does all of this for us: its default phases are exactly our push and pop from part 1
-- And around the engine it gives us four phases we can fill ourselves, plus a reset
-- [click] Top lane, the audio thread: the host block goes into the input ring, pre_process takes one window out of it into the model tensor, into a slot, and the callback returns
-- [click] Bottom lane, an inference thread: before_inference, the engine and after_inference, then the slot goes back. In a later callback post_process writes the result into the output ring
-- [click] And the state pair from Create is swapped around each inference, no copy
-- Every phase has its thread. pre_process, post_process and reset run on the audio thread: there we have to promise that they are real-time, no allocation, no lock, no wait, otherwise prepare refuses the processor
-- before_inference and after_inference run on an inference thread: they may allocate, lock and block, as long as it takes
-- reset runs before the first block of a new stream, after prepare or a reset of the handler: an overlap buffer or a filter's history starts over
+- anira does all of this automatically in the process callback and
+- additionally it allows for the user to define some extra stages that run at predefined moments in this lifecycle
+- 
 - And that is where something like the FFT from the very beginning fits: remember the clock, the FFT ran in every fourth callback
 - In a processor the heavy half can run in before_inference, on an inference thread, on the model's window of 2048, and the callback stays flat. anira's docs name exactly this case: a spectrogram model's FFT and its inverse
-
----
-
-<div class="tag">anira · Pipeline</div>
-
-## Audio in, through the pool, audio out.<br><span class="then">Push, then pop, every callback.</span>
-
-<div class="pipeline" data-window="4" data-inference="1.32" data-threads="2" data-slots="4" data-ring="12" data-period="1400" data-loop="40">
-  <div class="pl-in"><div class="pl-label">audio in · 512</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1 fragment" data-fragment-index="1" data-stage="1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in fragment" data-fragment-index="1" data-stage="1"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2 fragment" data-fragment-index="2" data-stage="2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots fragment" data-fragment-index="2" data-stage="2"><div class="pl-label">slots · 2048 each</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both fragment" data-fragment-index="3" data-stage="3"></div>
-  <div class="pl-threads fragment" data-fragment-index="3" data-stage="3"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out fragment" data-fragment-index="5" data-stage="5"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back fragment" data-fragment-index="5" data-stage="5"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out fragment" data-fragment-index="4" data-stage="4"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back fragment" data-fragment-index="4" data-stage="4"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down fragment" data-fragment-index="4" data-stage="4"><span class="pl-then"></span></div>
-</div>
-
-<div class="cards-note fragment" data-fragment-index="5">The output ring starts with 2560 samples of silence, step 7's prefill: 1536 + 1024. Then every block is on time.</div>
-
-Note:
-- Now lets look at one block going through anira, with our numbers from part 1: 512 samples per callback, 2048 per model run, and a worst case of 15.3 ms, about 1.3 callbacks
-- [click] The push: the audio thread writes every block into the input ring
-- [click] The enqueue: as soon as the ring holds one model block, it goes into a free slot
-- [click] A free inference thread takes the oldest waiting slot, runs the model and writes the result back
-- [click] The dequeue: right after the enqueue the audio thread takes a result out. But the window it just handed over is still running, so it takes an older one, or none yet
-- [click] The pop: the result goes into the output ring, and every callback plays one block out of it
-- The output ring starts with 2560 samples of silence, as in step 7: 1536 for the block adaptation and 1024 for the two callbacks of the worker. Plus the model's 2224, that is our 4784
-- Watch the dequeue: it never waits for the window it just handed over. That costs latency, and that is what wait_ratio is about
-
----
-
-<div class="tag">anira · Waiting</div>
-
-## Between enqueue and dequeue,<br><span class="then">the audio thread may wait.</span>
-
-<div class="pl-case"><code>wait_ratio = 0</code> the dequeue comes right after the enqueue.</div>
-
-<div class="pipeline" data-window="2" data-inference="0.35" data-wait="0" data-period="2400" data-threads="2" data-slots="4" data-ring="8" data-loop="12">
-  <div class="pl-in"><div class="pl-label">audio in</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots"><div class="pl-label">slots</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both"></div>
-  <div class="pl-threads"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down"><span class="pl-then"></span></div>
-</div>
-
-Note:
-- Between the enqueue and the dequeue the audio thread may wait: that is wait_ratio, in the contract
-- To see it we take a faster model: a window of two blocks, and one run takes about a third of a block. Simplified, not to scale
-- With wait_ratio 0, the default, the dequeue comes right after the enqueue
-- The window just handed over is still running, so its result comes out one callback later: that callback is latency
-- process itself never waits, only its twin process_wait does: up to wait_ratio of a block
-
----
-
-<div class="tag">anira · Waiting</div>
-
-## Between enqueue and dequeue,<br><span class="then">the audio thread may wait.</span>
-
-<div class="pl-case"><code>wait_ratio = 0.25</code> the audio thread waits a quarter block: not long enough.</div>
-
-<div class="pipeline" data-window="2" data-inference="0.35" data-wait="0.25" data-period="2400" data-threads="2" data-slots="4" data-ring="8" data-loop="12">
-  <div class="pl-in"><div class="pl-label">audio in</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots"><div class="pl-label">slots</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both"></div>
-  <div class="pl-threads"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down"><span class="pl-then"></span><div class="pl-wait" style="--share:0.25"><i class="pl-wait-fill"></i></div></div>
-</div>
-
-Note:
-- With 0.25 process_wait waits up to a quarter of a block
-- The dashed box next to the arrow down is the share the ratio allows
-- The model needs a third, so the wait runs out first: nothing new, and the result comes one callback later as before
-- The quarter block of waiting was lost for nothing
-
----
-
-<div class="tag">anira · Waiting</div>
-
-## Between enqueue and dequeue,<br><span class="then">the audio thread may wait.</span>
-
-<div class="pl-case"><code>wait_ratio = 0.5</code> the audio thread waits up to half a block: the result is back in time.</div>
-
-<div class="pipeline" data-window="2" data-inference="0.35" data-wait="0.5" data-period="2400" data-threads="2" data-slots="4" data-ring="8" data-loop="12">
-  <div class="pl-in"><div class="pl-label">audio in</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots"><div class="pl-label">slots</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both"></div>
-  <div class="pl-threads"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down"><span class="pl-then"></span><div class="pl-wait" style="--share:0.5"><i class="pl-wait-fill"></i></div></div>
-</div>
-
-Note:
-- With 0.5 it waits up to half a block
-- The model is done after a third, the audio thread wakes up, and the dequeue takes this window's result right away
-- So the result goes out in the same callback, and the latency is one block lower. get_latency already counts on that wait at prepare
-- But it buys latency with callback time: fine for one instance on a quiet machine, dangerous for ten. The default stays 0
 
 ---
 
@@ -529,14 +403,3 @@ Note:
 - Live process stays nonblocking: never wait on the audio thread
 - What we do not do: sleep in the callback for as long as the block lasts, to give the pool time. That only imitates the clock, and is still a guess
 
----
-
-<div class="tag">The map</div>
-
-## After process:<br><span class="then">the whole path of one block.</span>
-
-{{MAP:show=create,prepare,process}}
-
-Note:
-- After process every row of the map is filled
-- Next we walk the whole map once, from our callback to the engine and back

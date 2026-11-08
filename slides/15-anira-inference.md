@@ -250,8 +250,10 @@ Note:
 ```
 
 Note:
-- TODO 1: 2048 in and out, one model block, as in step 1.
-- On audio_out, the model's own latency: 2224 samples, as in step 7.
+- Time is up: let's go to the solution.
+- In TODO 1 we had to fill in the size of the input and output audio tensors, and the latency.
+- We know it from part 1: 2048 samples in and out.
+- And the model's own latency is 2224 samples.
 - A wrong size is refused at prepare, when anira opens the ONNX file.
 - [pause] A wrong latency is not refused: the ONNX file has no delay to check against.
 - But the check catches it: the output no longer lines up with the reference.

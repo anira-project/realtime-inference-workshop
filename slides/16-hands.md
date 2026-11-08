@@ -133,10 +133,13 @@ Note:
 </div>
 
 Note:
-- Here is what's nice about anira.
-- With the configs in place, we just register our handlers: four for the webcam, one for the audio.
-- All five share one thread pool.
-- [point at the middle] The message thread syncs the detection with the audio thread, to control the latents.
+- And here is what's nice about anira.
+- Once the configs are in place, we just register our handlers.
+- Four for the webcam models on the camera thread, one for the audio model on the audio thread.
+- All five share the same thread pool.
+- [point at the middle] And our message thread syncs the detection with the audio thread, to control the latents.
+- [point at the flow] Each thread runs at its own pace, and none waits for another.
+- Next: how a hand becomes the latents.
 
 ---
 

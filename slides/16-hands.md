@@ -166,12 +166,13 @@ Note:
 <div class="cards-note">Every feature runs from 0 to 1 · smoothed 60 times a second · then to the audio thread</div>
 
 Note:
+- What we haven't told you yet: each dimension of the latent vector can often be tied to a sound attribute.
+- Loudness, brightness, body, and more.
+- Now we map the hand, its gesture, its position and its tilt, to these dimensions to control them.
 - Per hand, the tracker gives five numbers, each from 0 to 1.
 - Your right hand leads: open is loud, high is bright.
-- Pinch is the body, left to right the colour, tilting the hand tilts the sound.
-- A second hand adds texture: swell, dark or bright, and resonance.
+- A second hand adds texture.
 - The values are smoothed, so the sound glides instead of jumping.
-- And when your hands leave, it fades to silence.
 
 ---
 

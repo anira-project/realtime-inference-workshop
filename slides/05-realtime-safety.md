@@ -26,7 +26,7 @@ The average doesn't matter. **The worst case does.**
 
 Note:
 - Go through this quickly
-- You probably know these rules
+- You probably know these real-time principles:
 - Never allocate: the allocator might lock or need a page from the OS
 - Never lock: whoever holds it might be paused by the scheduler
 - No OS calls: no files, no logging
@@ -78,7 +78,7 @@ Intercepted call to real-time unsafe function `malloc`
 One thread. Our buffers and tensors preallocated. **Still allocates.**
 
 Note:
-- With the sanitizer it stops in the fourth callback, the first one that runs the model, before the model has run
+- With the sanitizer it stops in the fourth callback, the first one that runs the model
 - If we read the stack we see that ONNX Runtime's `Run` calls a `malloc` on its way into the model.
 - Even with one thread and our own buffers and tensors preallocated
 

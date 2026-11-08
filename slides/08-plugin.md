@@ -17,7 +17,7 @@ Note:
 
 | Host call | What happens | Steps |
 |---|---|---|
-| **constructor** | make the processor with the model; it makes its engine: nothing loaded, nothing allocated | 1,&nbsp;7 |
+| **constructor** | pass the model configs; it constructs its engine: nothing loaded, nothing allocated | 1,&nbsp;7 |
 | **`prepare`** ← `prepareToPlay` | load the model, size the buffers, start the worker, return the latency | 1,&nbsp;2,&nbsp;3,&nbsp;4,&nbsp;7 |
 | **`process`** ← `processBlock` | one mono block: in and out between threads, dry/wet mix | 6,&nbsp;7 |
 

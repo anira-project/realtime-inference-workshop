@@ -58,7 +58,7 @@ public:
         // Given: m_input holds one model block, m_output the prefill and one
         // model block more
         m_input = RingBuffer(m_model.m_input_size);
-        m_output = RingBuffer(prefill + m_model.m_input_size);
+        m_output = RingBuffer(m_model.m_input_size);
         for (size_t i = 0; i < prefill; ++i) {
             const bool pushed = m_output.try_push(0.0f);
             assert(pushed);  // never fails: m_output has room for the prefill

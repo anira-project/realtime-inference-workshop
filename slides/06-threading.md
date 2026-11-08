@@ -25,7 +25,7 @@ Note:
 Note:
 - Two threads, on one time axis: every row lines up on the same callbacks
 - Audio thread: every 512 samples a callback. It pushes its block into `m_input` and takes one out of `m_output`, nothing else
-- `m_input` fills a quarter per callback; at the fourth, a whole model block of 2048 is there and the worker takes it
+- At the fourth, a whole model block of 2048 is there and the worker takes it
 - Worker thread: it spins on `try_pop` the whole time, and runs the model as soon as a block is whole. It is not tied to the callbacks: the run may take longer than one callback
 - `m_output` starts with the prefill, 5 blocks: the host hears silence first. The model's result arrives before the prefill runs out, and from then on the host hears the model's stream
 - We solve 2 problems:
@@ -119,6 +119,8 @@ Note:
 
 ## Every callback 512 in, 512 out<br><span class="then">The worker spins until a model block is whole.</span>
 
+<!-- .slide: data-visibility="hidden" -->
+
 <div class="flow">
   <div class="flow-lane" style="top: -48px">audio thread</div>
   <div class="flow-lane" style="top: 162px">worker thread</div>
@@ -210,27 +212,20 @@ Note:
   <div class="lat-op">=</div>
   <div class="lat-term fragment" data-fragment-index="1"><span>in samples</span><small>× 44.1 kHz</small><strong>794</strong></div>
   <div class="lat-op fragment" data-fragment-index="2">→</div>
-  <div class="lat-term total fragment" data-fragment-index="2"><span>worker_time</span><small>whole 512-sample callbacks</small><strong>1024</strong></div>
+  <div class="lat-term total fragment" data-fragment-index="2"><span>rounded_max_inference_samples</span><small>whole 512-sample callbacks</small><strong>1024</strong></div>
 </div>
 
 <div class="fragment" data-fragment-index="3">
 
-```cpp
-// given, in prepare()
-const double worst_case_samples = max_inference_ms * m_model.m_sample_rate / 1000.0;
-const size_t worker_time =
-    static_cast<size_t>(std::ceil(worst_case_samples / host_block_size)) * host_block_size;
-```
 
 </div>
 
 Note:
-- The worker needs time to run a model block: your worst case from step 4, the number you put into `inference_time.h`
 - My worst case: 18 ms
 - Click: in samples, at 44.1 kHz: 18 ms are 794 samples
 - Whole callbacks, because the audio thread only picks results up once per callback
 - Click: rounded up to whole 512-sample callbacks: 1024, two callbacks
-- Click: You don't need to calculate this yourself, it's given at the top of `prepare`. `main` passes your number into `prepare`, as `max_inference_ms`. TODO 1 builds on `worker_time`
+- Click: You don't need to calculate this yourself, it's given at the top of `prepare`.
 
 ---
 
@@ -292,11 +287,11 @@ Note:
 
 ```cpp
 m_prefill = «(m_model.m_input_size - host_block_size)»    // <- solution: step 3's prefill
-          + «worker_time»;                               //    plus the worker's time
+          + «rounded_max_inference_samples»;                               //    plus the worker's time
 
 // given: the sizes, the silence goes in, and the worker thread starts
 m_input = ThreadSafeRingBuffer(m_model.m_input_size);
-m_output = ThreadSafeRingBuffer(worker_time + m_model.m_input_size);
+m_output = ThreadSafeRingBuffer(rounded_max_inference_samples + m_model.m_input_size);
 m_worker.start([this] { process_model(); });
 ```
 
@@ -304,7 +299,7 @@ Note:
 - `m_output` starts with a prefill of zeros, so the host never finds it empty
 - The prefill is the sum of:
   - step 3's prefill, the buffer adaptation: one model block minus one host block
-  - the worker's time, `worker_time`: the block still has to go through the model. Your worst case from step 4, in whole callbacks
+  - the worker's time, `rounded_max_inference_samples`: the block still has to go through the model. Your worst case from step 4, in whole callbacks
 - A wrong prefill: the check says what's wrong
 - The sizes are given: `m_input` one model block, `m_output` the worker's time plus one model block, so the prefill fits
 ---
@@ -345,9 +340,9 @@ for (size_t i = zeros; i < num_samples; ++i) {
 Note:
 - Same job as step 3's `process_block`, minus the engine: host samples into `m_input`, model samples out of `m_output`
 - You fill in two calls: `try_push` and `try_pop`. They never wait and never allocate, they only say whether it worked
-- try_push: `m_input` full? The rest of the block is lost. We count it in `m_unpushed` and send that many zeros instead
-- try_pop: `m_output` empty? The worker is late. The rest of this callback goes out as zeros: a dropout
-- Those zeros are our debt. When the late samples arrive we throw that many away first, so everything after stays in place: a dropout, but the latency never grows
+- If `try_push` fails: The rest of the block is lost. We count it in `m_unpushed` and write as many zeros into the output buffer.
+- If `try_pop` fails: The worker is late. Which we need to catch up on later, so we count it in `m_debt`
+- This makes sure we stay time aligned, even if the worker is late.
 
 ---
 

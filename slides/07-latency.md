@@ -16,23 +16,14 @@ Note:
 <div class="lat-add with-code">
   <div class="lat-term fragment"><span>buffer adaptation</span><small>2048 − 512</small><strong>1536</strong></div>
   <div class="lat-op fragment">+</div>
-  <div class="lat-term fragment"><span>the worker's time</span><small>18 ms → 2 callbacks</small><strong>1024</strong></div>
+  <div class="lat-term fragment"><span>rounded max inference samples</span><small>18 ms → 2 callbacks</small><strong>1024</strong></div>
   <div class="lat-op fragment">+</div>
   <div class="lat-term fragment"><span>the model itself</span><small>decoder 1696 + PQMF 528</small><strong>2224</strong></div>
   <div class="lat-op fragment">=</div>
   <div class="lat-term total fragment"><span>latency</span><small>samples</small><strong>4784</strong></div>
 </div>
 
-<div class="fragment">
 
-```cpp
-// in prepare(): step 6's prefill, given
-const size_t adaptation = m_model.m_input_size - host_block_size;
-m_prefill = adaptation + worker_time;
-m_latency = m_prefill + m_model.m_latency;  // the number the host is told
-```
-
-</div>
 
 Note:
 - Buffer adaptation, step 3: the model needs a whole block
@@ -44,26 +35,6 @@ Note:
 - Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE
 - Only for 512: other block sizes give other numbers, part 2
 - Honest: fine for mixing, can't play through it live. Part 2 comes back to it
-
----
-
-<div class="tag">The dry path</div>
-
-## Delay the dry signal<br><span class="then">By the whole latency.</span>
-
-```cpp
-// in prepare(): the wet path has step 6's prefill, the dry one gets its own
-const size_t dry_prefill = m_latency;
-for (size_t i = 0; i < dry_prefill; ++i) {
-    const bool pushed = m_dry.try_push(0.0f);
-    assert(pushed);  // never fails: m_dry has room for the delay
-}
-```
-
-Note:
-- The wet path gets step 6's prefill (buffer adaptation + the worker's time). The model's own 2224 are already inside what it returns
-- The dry path gets the whole latency, `m_latency`: prefill + the model's 2224
-- Every sample comes out 4784 samples later, like the wet one
 
 ---
 

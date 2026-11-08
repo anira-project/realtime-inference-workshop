@@ -102,7 +102,6 @@ Note:
 - Same model, signals and engine helper
 - New: a ring buffer
 - The exercise isn't writing a ring buffer, it's sizing and using it
-- `ProcessorExample` is made with `k_model` and owns the engine. It keeps the model as `m_model`, so the class reads its sizes from the member, not from the global. Its `prepare` gets the host's block size, fixed at 512, and loads the model there, once
 
 ---
 
@@ -128,7 +127,8 @@ Note:
 - We use 3 methods: 
 - The available() method checks if there are samples in the buffer
 - `try_push` at the back, `try_pop` from the front, one sample at a time: first in, first out method
-- They never throw: they say whether it worked. Full or empty, nothing changes
+- `try` means:
+- They never throw: they return a boolian telling us whether it worked. Even if we try to push and the RB is full or the other way around, nothing changes
 
 ---
 
@@ -188,7 +188,7 @@ Note:
 const size_t prefill = «m_model.m_input_size - host_block_size»;  // <- solution
 
 m_input = RingBuffer(m_model.m_input_size);              // given
-m_output = RingBuffer(prefill + m_model.m_input_size);   // given
+m_output = RingBuffer(m_model.m_input_size);   // given
 for (size_t i = 0; i < prefill; ++i) {                   // given: the zeros go in
     const bool pushed = m_output.try_push(0.0f);
     assert(pushed);  // never fails: m_output has room for the prefill
@@ -199,9 +199,7 @@ Note:
 - The host takes 512 samples every callback, but the model's first block is only complete in the fourth callback
 - Callbacks 1 to 3 take 3 × 512 = 1536 samples from `m_output`: 2048 − 512. That is the prefill, zeros
 - So the host always finds samples, from the very first callback
-- The sizes are given: `m_input` one model block, `m_output` the prefill and one model block more
-- The loop is given too: it pushes the prefill's zeros into `m_output` with `try_push`, one at a time. It never fails, `m_output` has room for them, so we only assert it
-- A wrong prefill: the check tells you what's wrong
+- The sizes are given: `m_input` one model block, `m_output` one model block
 - For host sizes that don't divide 2048 this isn't true anymore, but we'll get into that in part 2
 
 ---

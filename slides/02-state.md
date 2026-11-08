@@ -75,7 +75,7 @@ Note:
 - Stateless: no memory, the past is handed in at every call
 - Stateful: only the new block, carries the past along. 
 - Our model is stateful in pytorch/python.
-- Because Onnx runtime is stateless by design, so the state needs to be cleared when exporting
+- Because Onnx runtime is stateless by design, so we need to feed the state out when exporting
 - At every forward pass: We need to explicitly pass out the state of the model to feed it into the next forward pass
 - Without passing the state, every block is the first block.
 
@@ -137,7 +137,7 @@ cmake --build --preset release --target step02_exercise
 Note:
 - Two TODOs: outside the loop we need to construct our state and then pass it with the audio
 - We don't create the state ourselves: the model writes it on every call. We only give it the memory, zeros for the start
-- Again you will find the struct `k_model` before the main function, now with the size of the state.
+- Again you will find a constant struct before the main function, now with the size of the state.
 - 5 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
 - We solve it together, solutions are in the solution's main.cpp
@@ -162,7 +162,7 @@ std::vector<float> state(«k_model.m_state_size», «0.0f»); // <- solution
 ```
 
 Note:
-- correct size: given in `k_model`, 63488 floats
+- correct size: given in our ModelConfig struct, 63488 floats
 - We need to construct our state vector with the correct size and initialize it with zeros
 - The vector lives outside the loop, if it were constructed every block, it would start at zero every time
 
@@ -197,8 +197,7 @@ Note:
 
 
 Note:
+- Same output as Python, for every block
 - If we listen to our example from before but now with the state passed on every block
 - No more drop-outs: the sound runs through
-- Same model, same audio, only the state is different
-- Same output as Python, for every block
 - However this is in the case we always get blocks of 2048 samples. But a host doesn't always hand us 2048 samples. Which brings us to step 3

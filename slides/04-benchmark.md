@@ -284,7 +284,7 @@ Note:
 <div class="big-question">?</div>
 
 Note:
-- Ask the room: did anyone measure a worst case above 46.4 ms?
+- Ask the room: did anyone measure a mean above 46.4 ms?
 - Colleague will come to have a look and help
 - That means one forward pass would take longer than the audio it produces: no latency fixes that
 - Run it again with other apps closed and the laptop on power; a busy machine makes the worst case worse

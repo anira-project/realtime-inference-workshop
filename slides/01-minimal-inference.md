@@ -84,7 +84,7 @@ Note:
 OnnxEngine engine;                        // Nothing loaded yet
 engine.load(path);                        // Loads the model
 
-engine.process(audio, num_samples);       // Overwrites the block in place
+engine.process(buffer, num_samples);       // Overwrites the block in place
 ```
 
 Note:
@@ -160,7 +160,8 @@ cmake --build --preset release --target step01_exercise
 
 Note:
 - Two TODOs: load the model, run the first block with a block size you pick.
-- At the beginning of the main file you will find a constructor, with the model's fixed setting. 
+- At the beginning of the main file you will find a `ModelConfig` constant struct, with the model's fixed setting. 
+- When you run the code and you will get feedback automatically. If something still doesn't work, my colleagues will be walking around to help you.
 - Build commands are on the slide
 - 8 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide
@@ -187,7 +188,7 @@ engine.load(«k_model.m_path»);  // <- solution
 ```
 
 Note:
-- `load` takes the path to the .onnx file, from the constructor
+- `load` takes the path to the .onnx file, from the constant struct with the model's fixed setting. 
 - The engine loads it once: 126 MB, too slow to do per block
 
 ---
@@ -209,10 +210,10 @@ engine.process(«buffer.data()», «k_model.m_input_size»);  // <- solution
 ```
 
 Note:
-- Where the block starts, `buffer.data()`, and how many samples: 2048, set by the model at export
-- Try 512: the engine says the model takes exactly 2048 samples per call
 - `buffer` starts as a copy of the input; `process()` overwrites the block with the result, in place
 - Only the first 2048 samples are compared
+- Where the block starts, `buffer.data()`, and how many samples: 2048, set by the model at export
+- Try 512: the engine says the model takes exactly 2048 samples per call
 
 ---
 

@@ -20,7 +20,7 @@
 // @prefill: the samples of silence m_output starts with
 // @host_block_size: the samples the host gives every callback, always the same
 // @model_block_size: samples the model takes per forward pass
-// @worker_samples: the worker's time, worker_time
+// @worker_samples: the worker's time, rounded_max_inference_samples
 inline void check_prefill(size_t prefill,
                           size_t host_block_size,
                           size_t model_block_size,

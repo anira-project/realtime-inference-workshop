@@ -60,14 +60,14 @@ public:
         if (!m_engine.loaded()) { m_engine.load(m_model.m_path); }
 
         // Step 6's worker time: your worst case, in samples, in whole callbacks
-        const double worst_case_samples = max_inference_ms * m_model.m_sample_rate / 1000.0;
-        const size_t worker_time =
-            static_cast<size_t>(std::ceil(worst_case_samples / host_block_size)) * host_block_size;
+        const double max_inference_samples = max_inference_ms * m_model.m_sample_rate / 1000.0;
+        const size_t rounded_max_inference_samples =
+            static_cast<size_t>(std::ceil(max_inference_samples / host_block_size)) * host_block_size;
         // The buffer adaptation, step 3: the samples it takes until the worker
         // has its first whole block
         const size_t adaptation = m_model.m_input_size - host_block_size;
-        m_prefill = adaptation + worker_time;
-        const size_t output_capacity = worker_time + m_model.m_input_size;
+        m_prefill = adaptation + rounded_max_inference_samples;
+        const size_t output_capacity = rounded_max_inference_samples + m_model.m_input_size;
 
         // The latency: how late the wet signal is, the number the host is told;
         // in a plugin it goes to setLatencySamples(). Three things delay it, and

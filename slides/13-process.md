@@ -328,7 +328,7 @@ Note:
 <div class="policy-advice fragment"><span>We recommend BLOCKING.</span> One bounded wake instead of threads polling while idle. It takes no lock and never waits, but no OS documents it as real-time safe, and RTSan does not check it.</div>
 
 Note:
-- In anira the pool's wait is one setting for the whole process, declared at create in ContextConfig::threads: spin with backoff, or block.
+- In anira the pool's wait is one setting for the whole process, declared at create in the ContextConfig, its wait_strategy: spin with backoff, or block.
 - Not the wait from the slides before: wait_ratio is the audio thread waiting for a result, per handler, in the contract. This is the pool waiting for work.
 - SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool pays by polling.
 - Its backoff: 4 retries at once, 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry. So an idle thread picks up new work within about 100 µs.

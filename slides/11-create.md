@@ -292,11 +292,9 @@ Note:
   </div>
 </div>
 
-```cpp
-// once per process; the defaults: cores / 2, SPIN_BACKOFF
-anira::ContextConfig config;
-config.threads(4, ANIRA_WAIT_BLOCKING);
-anira::Context context{config};
+```json
+// context.json: once per process; the defaults: cores / 2, "spin_backoff"
+{ "num_threads": 4, "wait_strategy": "blocking" }
 ```
 
 Note:

@@ -7,7 +7,7 @@
 ## What you have
 
 - `steps/common/assets/models/rave/model_forward.onnx` — the model as in step 1: audio plus a state tensor in, audio plus the new state out.
-- [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named and their roles given. Every `?` is a blank: replace it with the value, a number as it is (`2048`, no quotes), a name in its quotes (`"audio"`). The comment next to each blank says which TODO it belongs to and where the value comes from.
+- [`exercise/model.json`](exercise/model.json) — the model file, every key in place: the tensors are named and their roles given. Every `?` is a blank: replace it with the value, a number as it is (`2048`, no quotes), a name in its quotes (`"audio_in"`). The comment next to each blank says which TODO it belongs to and where the value comes from.
 - [`exercise/contract.json`](exercise/contract.json) — how it runs: the budget measured at prepare on this machine (`"budget": "measured"`), warm-up runs until their times are stable (`"warmup": "until_stable"`), the input block on a miss (`"on_miss": "bypass"`). Complete.
 - [`common/helpers/support.h`](../common/helpers/support.h) — `report_with_latency`: the step 7 comparison, with the late callbacks left out.
 - anira, fetched and built by CMake ([`cmake/anira.cmake`](../../cmake/anira.cmake)), with ONNX Runtime built in. The first configure clones it and builds it once; a couple of minutes.
@@ -17,7 +17,7 @@
 Open [`exercise/model.json`](exercise/model.json) and [`exercise/AniraProcessor.cpp`](exercise/AniraProcessor.cpp).
 
 1. **Declare the tensors** (`model.json`). The sizes: `"time"` of the audio in and out is the model's block, 2048 (step 1). The audio output carries the model's own delay: `"latency": 2224` (step 7).
-2. **Declare the state** (`model.json`). Its size, in and out: as many floats as the state of step 2 (63,488). And `state_source`: the output that feeds `state_in`. Is it `"audio"`, `"audio_out"` or `"state_out"`? Try; a wrong one is refused at create, with the reason. Once paired, anira carries the state from call to call: the whole state loop of step 2, with no copy in your code.
+2. **Declare the state** (`model.json`). Its size, in and out: as many floats as the state of step 2 (63,488). And `state_source`: the output that feeds `state_in`. Is it `"audio_in"`, `"audio_out"` or `"state_out"`? Try; a wrong one is refused at create, with the reason. Once paired, anira carries the state from call to call: the whole state loop of step 2, with no copy in your code.
 3. **Prepare and process** (`AniraProcessor.cpp`). Loading, the pipeline, the handler and prepare are given, all from `anira.hpp`; four blanks, marked `fill out`:
    1. `m_contract.hard_host_blocks(…)`: the smallest block the host may send (any, down to 1), its largest (`max_block_size`) and its sample rate.
    2. `latency`: `handler.get_latency` of output slot 0.
@@ -78,7 +78,7 @@ The check runs twice. First offline, like a bounce: the host calls as fast as it
 
 - **`model.json, line 13: ? is still open`** (or `"?" is still open`) — a blank not filled yet; the line says which.
 - **`model.json, line 13: "2048" is text; write the number without quotes`** — a number in quotes is a string in JSON.
-- **`inputs[0].axes[2][1]: an extent is a positive integer or "dynamic"`** — a size is not a positive number. The path names it: `inputs[0]` is `audio`, `inputs[1]` is `state_in`, `outputs[…]` the same for the outputs.
+- **`inputs[0].axes[2][1]: an extent is a positive integer or "dynamic"`** — a size is not a positive number. The path names it: `inputs[0]` is `audio_in`, `inputs[1]` is `state_in`, `outputs[…]` the same for the outputs.
 - **`onnxruntime: input tensor 'audio' bound to the model's 'audio': the model's tensor is [1, 1, 2048], the spec's engine dims are [1, 1, 1024] (axis 2: 2048 against 1024)`** — TODO 1 (or 2, for `state_in`): a size is filled but wrong; prepare checks every tensor against the model file and names the one that does not fit, with both shapes.
 - **`TODO 1: audio_out declares a latency of 0 samples; the model's own delay is 2224`**, after a mismatch — the output lines up with the reference, but at another shift: `"latency"` in `model.json` is wrong (here 0). The reported latency moves with it, the output does not.
 - **`tensor 'state_in': a State input needs a state_source: ...`** — TODO 2: a state input nobody feeds is refused by name, at create.

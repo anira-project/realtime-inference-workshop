@@ -1,5 +1,5 @@
 // Step 9: the model file. Replace every ? with its value: a number as it
-// is, 2048, no quotes; a name in its quotes, "audio". The comment says which TODO.
+// is, 2048, no quotes; a name in its quotes, "audio_in". The comment says which TODO.
 // The comments are hints; the processor drops them before anira reads the file.
 {
   "models": [
@@ -7,7 +7,7 @@
   ],
   "inputs": [
     {
-      "name": "audio",
+      "name": "audio_in",
       "dtype": "float32",
       "role": "streamed",
       "axes": [["batch", 1], ["channel", 1], ["time", ?]]   // TODO1: samples per inference, the model's block (step 1)
@@ -17,7 +17,7 @@
       "dtype": "float32",
       "role": "state",
       "axes": [["batch", 1], ["any", ?]],   // TODO2: floats in the state (step 2)
-      "state_source": "?"                     // TODO2: which output feeds it? A "audio" · B "audio_out" · C "state_out"
+      "state_source": "?"                     // TODO2: which output feeds it? A "audio_in" · B "audio_out" · C "state_out"
     }
   ],
   "outputs": [

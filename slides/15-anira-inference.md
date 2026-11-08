@@ -114,7 +114,7 @@ Note:
 ```json
 {
   "models":  [ { "engine": "onnxruntime", "path": "…/model_forward.onnx" } ],
-  "inputs":  [ { "name": "audio",     "role": "streamed",
+  "inputs":  [ { "name": "audio_in",  "role": "streamed",
                  "axes": [["batch",1],["channel",1],["time",?]] },
                { "name": "state_in",  "role": "state",
                  "axes": [["batch",1],["any",?]], "state_source": "?" } ],
@@ -137,7 +137,7 @@ Note:
 - The model file as you get it: every key in place, every blank a question mark.
 - The comment next to each blank says which TODO it is.
 - Under models: ONNX Runtime, and a relative path, resolved against this file's folder.
-- First input, audio, streamed: its time axis is one model block, step 1's number.
+- First input, audio_in, streamed: its time axis is one model block, step 1's number.
 - Second input, state_in, role state: batch, then one axis tagged any.
 - Any is anira's tag: an axis neither time nor channel, just a size.
 - Only the data type is off the slide: the file says float32, the default.
@@ -164,7 +164,7 @@ Note:
 
 <div class="statement-points">
   <div>The size: as many floats as the state of step 2</div>
-  <div><code>state_source</code>: the output that feeds <code>state_in</code>. <b>A</b> <code>"audio"</code> · <b>B</b> <code>"audio_out"</code> · <b>C</b> <code>"state_out"</code>?</div>
+  <div><code>state_source</code>: the output that feeds <code>state_in</code>. <b>A</b> <code>"audio_in"</code> · <b>B</b> <code>"audio_out"</code> · <b>C</b> <code>"state_out"</code>?</div>
 </div>
 
 Note:
@@ -266,7 +266,7 @@ Note:
 
 ```json
 "inputs": [
-  { "name": "audio", "role": "streamed",
+  { "name": "audio_in", "role": "streamed",
     "axes": [["batch", 1], ["channel", 1], ["time", «2048»]] },   // <- solution
   …
 ],
@@ -307,7 +307,7 @@ Note:
 - TODO 2, the state: step 2's number in and out, and the pairing, one field, state_source.
 - [ask the room, hands up] Who tried a wrong one, A or B, and read the message?
 - The answer is C, state_out.
-- A, audio, is no output at all, and B, audio_out, is streamed audio, not state.
+- A, audio_in, is no output at all, and B, audio_out, is streamed audio, not state.
 - Create refuses both, and says why, by name.
 - Leave it out, and create refuses that too: a state input needs a source.
 - With the pair in place, anira runs the inferences one after another: each needs the state before it.

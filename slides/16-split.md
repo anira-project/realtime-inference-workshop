@@ -332,12 +332,12 @@ Note:
 
 ```json
 // encoder.json: audio in, latents out
-{ "name": "audio",   "axes": [["batch",1],["channel",1],["time",?]] }
-{ "name": "latents", "axes": [["batch",1],["channel",?],["time",?]] }
+{ "name": "audio_in",  "axes": [["batch",1],["channel",1],["time",?]] }
+{ "name": "latents",   "axes": [["batch",1],["channel",?],["time",?]] }
 
-// decoder.json: latents in, audio out ("anchor": "audio")
-{ "name": "latents", "axes": [["batch",1],["channel",?],["time",?]] }
-{ "name": "audio",   "axes": [["batch",1],["channel",1],["time",?]], "latency": 2224 }
+// decoder.json: latents in, audio out ("anchor": "audio_out")
+{ "name": "latents",   "axes": [["batch",1],["channel",?],["time",?]] }
+{ "name": "audio_out", "axes": [["batch",1],["channel",1],["time",?]], "latency": 2224 }
 ```
 
 Note:
@@ -453,12 +453,12 @@ Note:
 
 ```json
 // encoder.json: one model block in, eight latents and one frame out
-"audio":   [["batch", 1], ["channel", 1], ["time", «2048»]]  // <- solution
-"latents": [["batch", 1], ["channel", «8»], ["time", «1»]]     // <- solution
+"audio_in":  [["batch", 1], ["channel", 1], ["time", «2048»]]  // <- solution
+"latents":   [["batch", 1], ["channel", «8»], ["time", «1»]]     // <- solution
 
 // decoder.json: what the encoder gives in, one model block out
-"latents": [["batch", 1], ["channel", «8»], ["time", «1»]]     // <- solution
-"audio":   [["batch", 1], ["channel", 1], ["time", «2048»]]  // <- solution
+"latents":   [["batch", 1], ["channel", «8»], ["time", «1»]]     // <- solution
+"audio_out": [["batch", 1], ["channel", 1], ["time", «2048»]]  // <- solution
 ```
 
 Note:

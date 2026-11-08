@@ -170,7 +170,7 @@ Note:
 ## One tensor type, on every slot.<br><span class="then">The model file says what each one is.</span>
 
 ```json
-{ "name": "audio", "dtype": "float32", "role": "streamed",
+{ "name": "audio_in", "dtype": "float32", "role": "streamed",
   "axes": [["batch", 1], ["channel", 1], ["time", 2048]] }
 ```
 
@@ -220,7 +220,7 @@ Note:
 
 ```json
 "inputs": [
-  { "name": "audio",     "role": "streamed",
+  { "name": "audio_in",  "role": "streamed",
     "axes": [["batch",1],["channel",1],["time",2048]] },
   { "name": "state_in",  "role": "state",
     "axes": [["batch",1],["any",63488]], "state_source": "state_out" }

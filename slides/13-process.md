@@ -19,7 +19,6 @@ Note:
 
 Note:
 - Process runs in every callback, on the audio thread: in JUCE that is processBlock
-- Everything else in this row is anira's, on the audio thread and on the inference threads
 
 ---
 

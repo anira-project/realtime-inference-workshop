@@ -33,7 +33,7 @@ Note:
 - There is the ModelConfig (remember the constant struct at the beginning of the examples), a stream contract, a ContextConfig.
 - The ModelConfig declares the model: its file path or binary, and every tensor with its role.
 - The Contract is the contract for the stream: it contains information about the host's buffer sizes and sample rate, and the inference budget.
-- The optional ContextConfig declares the context of the process: how many threads the pool has and which log level. There is one pool per process, and every handler shares it.
+- The optional ContextConfig declares the context of the process: how many threads the pool has and which log level.
 - The InferenceHandler then gives you the three typical calls from step 8: create, prepare and process. It is created with the model config and the context; the contract comes in at prepare, once the host has said its buffer size.
 
 ---

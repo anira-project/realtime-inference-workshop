@@ -69,8 +69,6 @@ Note:
 - Create is already done for you, in the constructor.
 - In prepare you fill two blanks: tell the contract the host's blocks, and read back the latency.
 - In process you fill two more: one call per callback, live or offline.
-- The check runs offline and makes sure our output matches the Python reference.
-- And that the reported latency is calculated right.
 
 ---
 
@@ -163,14 +161,7 @@ Note:
 Three keys. The host's blocks come in at `prepare`.
 
 Note:
-- The second file, contract.json, is already filled in for you.
-- Hard means a stream: every callback has a deadline.
-- Budget measured: we no longer benchmark by hand.
-- anira benchmarks the model inside our product, on the user's machine.
-- That is handy once you ship it: every machine gets its own number.
-- It also generates a report inside the plugin's UI, with all the stats for you to look at.
-- Warm-up until stable: the slow first runs happen before the audio starts.
-- On a miss, bypass: the dry input goes out instead of silence.
+- The second file, contract.json, is already filled in for you with auto benchmarking and warmuping.
 
 ---
 

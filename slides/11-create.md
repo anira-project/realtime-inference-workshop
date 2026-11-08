@@ -124,7 +124,6 @@ Note:
 
 Note:
 - I.e. model we have used in part 1 would be declared like this
-- Just a sidenote, anira also supports binary model files compiled in
 
 ---
 
@@ -150,8 +149,8 @@ Note:
 - But if we recap our the constant k_model struct there was more information than just the model path.
 - The more and more complex our examples grew, the more members our struct got:
 - First only input size, then also state, latency, etc...
-- Then there were also information that our Onnx Engine was assuming, i.e. the data type (float in our example, that we only had one channel, etc.)
-- Anira generalizes this the Tensor specifications in the following way, the tensor specifications are part of the model config as they are defined by the model
+- Then there was also information that our Onnx Engine was assuming, i.e. the data type (float in our example, that we only had one channel, etc.)
+- Anira generalizes this in the following way
 
 ---
 
@@ -175,7 +174,7 @@ Note:
 
 Note:
 - In anira every tensor - in or out - has a slot with a name and role
-- I.e. our input audio is a streamed tensor named "audio_in". It's role is streamed because (it represents a continuous stream with a time axis)
+- I.e. our input audio is a tensor named "audio_in". It's role is streamed because (it represents a continuous stream with a time axis)
 - We define the channel number as 1 and the fixed time window of 2048
 
 ---
@@ -196,7 +195,7 @@ std::vector<Ort::Value> m_outputs;  // audio, state
 
 Note:
 - Now recap how the state was handled in part 1
-- It was declared as a size and two tensors in the engine, and that was all the code could say about it.
+- It was declared as a size and two tensors in the engine
 - That the state output feeds the state input was declared nowhere it was later implemented in the OnnxEngine::process call
 
 ---
@@ -234,7 +233,7 @@ Note:
 - We can also see another information which we can provide in the anira ModelConfig:
 - That is whether a streamed output tensor has a latency
 - Appart from streamed and state anira also allows a third tensor role. Static tensors:
-- Static tensors keep the same value in every inference run until overwritten and then keep this value for the next inference. I.e. this can be some parameter that the user can tweak (i.e. the decay time in a reverb emulation neural network model)
+- Static tensors keep the same value in every inference run until overwritten and then keep this value for the next inference. This can be some parameter that the user can tweak (i.e. the decay time in a reverb emulation neural network model)
 - The tensor specifications are known when the model is exported. So this is something that your data scientist can fill out for you ideally..
 
 ---
@@ -261,8 +260,6 @@ Note:
 - We have been declaring the worker thread
 - In our example one thread per processor, and in step 8 one processor per plugin instance.
 - But as Valentin already pointed out this does not scale well
-- And apart from that we have been using a "dirty" hot spinning loop on the worker thread which is burning our full cpu compute of one thread while waiting for data.
-- How is this handled by anira?
 
 ---
 
@@ -282,9 +279,8 @@ const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
 ```
 
 Note:
-- In step 6 we made two decisions without naming them: how the worker waits for work, and that the audio thread never waits for the worker.
-- The timeline from step 6: between two runs the worker spins on try_pop the whole time, no sleep, no pause, one core at 100 percent, even while idle.
-- The audio thread only pushes and pops. If a sample is not there yet, it writes zeros for the rest of the callback and owes them: the debt.
+- And apart from that we have been using a "dirty" hot spinning loop on the worker thread which is burning our full cpu compute of one thread while waiting for data.
+- How is this handled by anira?
 
 ---
 
@@ -407,7 +403,6 @@ Note:
 - anira loads the weights at prepare as well but How many copies are loaded depends on whether the model has state.
 - With state, like ours: the state belongs to one stream, so every handler gets its own session at its prepare, and its inferences run one at a time, in order. One handler per plugin instance: ten instances, ten copies, the same as part 1.
 - Without state: the first handler's prepare loads the model for the whole process. A model setting, max_instances, by default one per pool thread, then says how many engine instances that load creates
-- With ONNX Runtime one session each, and every session reads the file and keeps its own copy of the weights. Every later handler shares them and loads nothing.
 - So ten instances on our four threads would hold four copies, not ten.
 - And similarly a single instance would hold four engines as well: This means that for a stateless model anira would allow multiple parallel inferences at once for one instance
 
@@ -435,4 +430,4 @@ Note:
 - After create: everything is declared and checked, and nothing runs yet.
 - Left, what we declared; right, all create did with it: it checked, it built the slots, and it allocated the state pair's two buffers.
 - There is no model loaded, no ringbuffer allocated or no thread started yet
-- Next up is prepare, where the host will provide us information about the blocks that it will deliver.
+- Next up is prepare

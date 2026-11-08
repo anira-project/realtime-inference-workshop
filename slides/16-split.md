@@ -30,12 +30,7 @@ Note:
 
 Note:
 - Our model from the introduction: until now one block, 2048 samples in, 2048 out.
-- [click] The first half is the encoder.
-- It squeezes one block, 46.4 ms of audio, down to eight numbers that describe its sound.
-- [click] Those eight numbers are z: one point in the latent space.
-- [click] The second half is the decoder: eight numbers in, 2048 samples out, the sound that point describes.
-- Between the two, this step adds an offset to each of the eight, the way anira's own example does it.
-- First a closer look at the middle.
+- in the middle we have one latent vector with 8 dims.
 
 ---
 
@@ -103,11 +98,7 @@ Note:
 <div class="note-box">The decoder only knows the sounds it was trained on, the magnetic resonator piano: whatever 8 numbers you give it, it answers in that timbre.</div>
 
 Note:
-- Left, the block as samples; right, the same block as eight numbers.
-- Nobody designed those dimensions: the model decided what to keep.
-- And the box: whatever goes in comes out as the magnetic resonator piano it was trained on.
-- A voice, a drum, our chords: that is timbre transfer, what this model is mostly used for.
-- But why is there always a sound, and never noise?
+raus
 
 ---
 <div class="tag">Latent space</div>
@@ -143,16 +134,7 @@ Note:
 <div class="note-box">What a latent means is learned, not designed: every trained model has its own. Often you can name it by listening.</div>
 
 Note:
-- Picture the eight numbers as a position on a map of sounds.
-- Two of the eight dimensions, z0 and z2, are the axes, and the chords walk across, one step per block.
-- The training leaves no holes: nearby points sound alike, and every point is a sound it can make.
-- [play before, five seconds]
-- [click] An offset moves the whole walk, and the decoder still finds a sound there.
-- Only z0 and z2 moved: louder and brighter, still the resonator piano. [play after, let it play]
-- Two slides back z0 got the same shift, with seven others, and the level fell.
-- The other six pulled it down: so turn one knob at a time, and listen.
-- What a dimension means, the model learned: this step's plugin is for finding out.
-- Where do these eight come from?
+raus
 ---
 
 <div class="tag">Latent space</div>
@@ -193,15 +175,7 @@ Note:
 <div class="cards-note">Caillon &amp; Esling, 2021 · Realtime Audio Variational autoEncoder</div>
 
 Note:
-- Our model is the Realtime Audio Variational autoEncoder, Caillon and Esling, 2021.
-- It learned 128 numbers per block, sorted during training by a principal component analysis fitted on the validation set.
-- [pause] The tallest bar, z0, is almost a fifth of all the variation on its own.
-- So the ones that vary most come first, the ones you could name.
-- The model as published keeps the first eight, and our export follows.
-- In the original two things are random: the encoder jitters z, and the decoder fills the 120 with noise.
-- Our export removes both, zeros for the 120: the same audio always gives the same output.
-- That is why the check can compare exactly.
-- Eight numbers, sorted: what can we do with them?
+raus
 ---
 
 <div class="tag">Latent space</div>

@@ -2008,6 +2008,8 @@ html.tanh .ov-pill-text {
 html.tanh .ov-pill-text.small { font-size: 13px; }
 
 html.tanh .ov-note.left { text-anchor: start; }
+/* A note centred on its line: a halo in the page colour breaks the line behind it */
+html.tanh .ov-note.on-line { paint-order: stroke; stroke: var(--paper); stroke-width: 16px; stroke-linejoin: round; }
 
 html.tanh .ov-note {
   font-size: 16px;

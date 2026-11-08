@@ -4,10 +4,10 @@
 <!-- kind: exercise -->
 
 Note:
-- Back to coding.
-- Step 9: the model from part 1, now on anira.
-- Same model, same check.
-- But steps 3, 6 and 7 are not our code any more.
+- [before: step09_exercise_Standalone built on this machine; the interface at 48 kHz, so the report-slide demo shows the rate ask first]
+- Thank you, Fares: hands-on from here, the part 1 model on anira.
+- Step 9, and there is code to write, in two files.
+- Same model, same test signal, same check, but steps 3, 6 and 7 are anira's now.
 
 ---
 
@@ -25,25 +25,9 @@ Note:
 </div>
 
 Note:
-- The six things from part 1, now that we know how anira works.
-- Inference, steps 1 to 3: engine, block size and state, by hand.
-- Now the model file says it.
-- Benchmarking, step 4: one run, on our machine.
-- Now the contract says "measured", and prepare does it.
-- Real-time safety, step 5: RTSan, once.
-- Now the audio-thread calls are anira's: nonblocking, and checked.
-- Threading, steps 6 and 8: a worker per instance.
-- Now one pool, with its defaults.
-- Minimal latency, step 7: a prefill, counted by hand.
-- Now prepare computes it.
-- We only read it.
-- Real-time guarantees: we hoped the budget held.
-- Now the contract says what a late block delivers.
-- Three of them we declare, in two files.
-- The other three anira handles.
-- We write nothing for them.
-- So what is left to write?
-- Next slide.
+- The six things from the start of part 2, each with a third line now: where it went.
+- Three we declare, in two files; the other three anira handles, and Fares just showed you how.
+- [pause] So what is left for us to write?
 
 ---
 
@@ -70,26 +54,14 @@ Note:
 <div class="cards-note">The calls are in <code>AniraProcessor.cpp</code>.</div>
 
 Note:
-- Three configs and three calls.
-- The goal: the same output and the same check as in part 1.
-- The model file is the what.
-- Which engine, which file: ONNX Runtime here.
-- Which tensors, which role each plays.
-- Which output feeds the state.
-- That one you fill in.
-- The contract is the how.
-- The budget, the warm-up, what a miss delivers.
-- Given, three lines.
-- The context is the with what.
-- The pool: how many threads, how they wait.
-- Given, in AniraProcessor.h: ContextConfig with its defaults.
-- anira could read it from a file too.
-- We do not need one.
-- Then the three calls, in AniraProcessor.cpp.
-- Create is given: the pipeline and the handler, in the constructor.
-- Prepare: you give the contract the host's blocks and read the latency back.
-- Process: one call per callback, in place.
-- The check is step 7's: the output against the reference, shifted by the latency anira reports.
+- What is left: three configs on top, three calls below, and step 7's check at the end.
+- The model file is the what: ONNX Runtime, and you fill the tensor sizes and the state pair.
+- The contract is the how: three keys, we read them in a moment.
+- The context, the with-what, sits in AniraProcessor.h, in the source folder beside the exercise.
+- No context file: the defaults are enough here.
+- Below, the three calls: create in the constructor, prepare from prepareToPlay, process from processBlock.
+- Process runs live in the callback, and the check also runs it offline, waiting for each result.
+- The check shifts the output by anira's latency, less the model's own delay, already in the reference.
 
 ---
 
@@ -110,8 +82,6 @@ Note:
     <div class="given-folder">09_anira/exercise/ · CMake</div>
     {{FILE:contract.json|new}}
     {{FILE:anira|new}}
-    {{FILE:host.h}}
-    {{FILE:support.h}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
@@ -122,12 +92,14 @@ Note:
 </div>
 
 Note:
-- CMake fetches anira, pinned to a v3 pre-release, with ONNX Runtime built in.
-- The contract is complete.
-- The model file has gaps.
-- The tensors are named.
-- Their shapes and the state pair are your task.
-- Your other file is AniraProcessor.cpp.
+- Assets, as in step 1: the model, the test signal and the reference.
+- CMake fetches anira, pinned to v3 alpha 3, with ONNX Runtime built in.
+- Your setup build already did that.
+- A fresh build folder clones and compiles it again: a couple of minutes.
+- The check compares like step 7: support.h, in common/helpers, skips any callback that came back late.
+- The contract is complete, the model file has gaps.
+- Its tensors are named: their shapes and the state pair are your task.
+- Your other file is AniraProcessor.cpp: four blanks, in two functions.
 
 ---
 
@@ -162,32 +134,16 @@ Note:
 
 </div>
 Note:
-- The model file as you get it.
-- Every key is in place.
-- Every blank is a question mark.
-- The comment next to each blank says TODO 1 or TODO 2.
-- Only the dtype is left out on the slide: float32 is the default.
-- On the right, the five keys you need to read it.
-- models: the engine, ONNX Runtime, and the path to our ONNX file.
-- inputs: the model's input tensors.
-- The first is audio.
-- Its role is streamed: audio comes in continuously, and anira cuts it into blocks for the model.
-- Its axes are its shape, each with a name.
-- Batch 1, channel 1, time 2048.
-- A tensor of 1 by 1 by 2048.
-- The time axis says how many samples one inference takes.
-- 2048, our input size.
-- The second input is state_in.
-- Role state: no time axis.
-- It is carried from one call to the next.
-- The outputs mirror the inputs.
-- audio_out, streamed, the same shape.
-- state_out, the new state.
-- TODO 1 is the audio: the time size, in and out.
-- And on audio_out the model's own latency.
-- You know that number from step 7.
+- The model file as you get it: every key in place, every blank a question mark.
+- The comment next to each blank says which TODO it is.
+- Under models: ONNX Runtime, and a relative path, resolved against this file's folder.
+- First input, audio, streamed: its time axis is one model block, step 1's number.
+- Second input, state_in, role state: batch, then one axis tagged any.
+- Any is anira's tag: an axis neither time nor channel, just a size.
+- Only the data type is off the slide: the file says float32, the default.
+- [pause] TODO 1, the audio: the time size in and out, and the latency on audio_out, step 7's number.
 - TODO 2 is the state: its size, and which output feeds it.
-- Next slide.
+- The state pair, on the next slide.
 
 ---
 
@@ -198,7 +154,7 @@ Note:
 <div class="state-demo">
   <div class="state-row was">
     <div class="state-label">step 2</div>
-    <code>std::copy_n(m_state_out.begin(), m_state_out.size(), state.begin());</code>
+    <code>std::copy_n(m_outputs[1].GetTensorMutableData&lt;float&gt;(), state_size, state);</code>
   </div>
   <div class="state-row is">
     <div class="state-label">step 9</div>
@@ -212,24 +168,13 @@ Note:
 </div>
 
 Note:
-- Remember the state loop from step 2.
-- Every block, we copied the state that came out back into the state that goes in.
-- By hand.
-- In anira the state is two tensors with the role state.
-- state_in goes into the model, state_out comes out.
-- You declare their size: as many floats as in step 2.
-- And which output feeds the input: state_source.
-- Then anira carries it.
-- Two buffers, swapped after every inference.
-- No copy, no code on your side.
-- So which output is it?
-- A, audio.
-- B, audio_out.
-- C, state_out.
-- Try one.
-- A wrong one is refused at create, and the message says why.
-- The pair tells anira one more thing: every call needs the state of the one before.
-- So it never runs two blocks of this model at once, and keeps them in order.
+- Remember the state loop from step 2, the line at the top.
+- Every block the new state was copied back over the old one, in our vector.
+- Below it, step 9: the same loop, declared in one line.
+- Size and source declared, anira carries it: two buffers, swapped after every run.
+- So which output feeds state_in: A, B, or C?
+- [pause, leave it open] You saw the answer in the create chapter, so try a wrong one first and read what create says.
+- That is the model file, the what: now the how.
 
 ---
 
@@ -241,29 +186,19 @@ Note:
 { "hard": { "budget": "measured", "warmup": "until_stable", "on_miss": "bypass" } }
 ```
 
-Three lines. The geometry comes from the host, at `prepare`.
+Three keys. The host's blocks come in at `prepare`.
 
 <div class="note-box">The third config, the context: nothing to write. One pool per process, with its defaults.</div>
 
 Note:
-- The contract is three lines.
-- Hard, because this is a real-time stream.
-- The host calls with fixed blocks, every block has a deadline, nothing may wait.
-- Jobs without a stream, images for example, get an async contract in a later release.
-- The budget is measured.
-- anira benchmarks the model at prepare, on this machine, with this engine.
-- That is step 4, done by the library.
-- The warm-up runs until the times are stable, before prepare returns.
-- We saw why in step 4.
-- ONNX Runtime's first call took 18 ms instead of 13.
-- LibTorch's first two, 80 and 38 ms instead of 7.7.
-- Those calls now happen before the audio starts.
-- On a miss: bypass.
-- A block whose result is late goes out as the input block.
-- Not as zeros, as in step 7.
-- The host's blocks come in at prepare.
-- The third config, the context: we write nothing.
-- anira takes its defaults, one pool per process.
+- Hard: the stream from the prepare chapter, every callback with a deadline.
+- Budget measured: prepare benchmarks it on this machine, and we read its report after the task.
+- Warm-up until stable: remember Lina's benchmark, the first pass 18 ms, then 13.
+- Those slow passes now run inside prepare, before the audio starts.
+- On a miss, bypass: where step 7's late callback left the wet path as zeros, the input block goes out.
+- No wait_ratio line: its default is 0, the callback never waits for a result.
+- [pause] No block sizes here: that is your blank, in prepare.
+- That is both files: now fill in the gaps.
 
 ---
 
@@ -305,22 +240,23 @@ cmake --build --preset release --target step09_exercise_Standalone
       <div class="q small one"><div class="q-slot"><b></b></div></div>
       <div class="mini-model">anira</div>
       <div class="q small one out"><div class="q-slot"><b></b></div></div>
-      <div class="run-ok">✓ matches the reference, shifted by <code>get_latency()</code></div>
+      <div class="run-ok">✓ matches the reference</div>
     </div>
   </div>
 </div>
 
 Note:
-- Ten minutes.
-- TODO 1 and 2 are in model.json: replace every question mark with its value.
-- A number as it is, 2048, no quotes.
-- A name in its quotes.
-- The comment next to each blank says where the value comes from.
+- Ten minutes, three TODOs, two files.
+- TODO 1 and 2, in model.json: replace every question mark, numbers without quotes, names in quotes.
+- Each comment says where its value comes from: a step of part 1, the matching tensor, or the three options.
+- The state size is on step 2's slide, or in its main.cpp, the k_model constant.
 - TODO 3 is in AniraProcessor.cpp: four blanks, marked "fill out".
-- Then build step09_exercise_check and run it.
-- It names what is still missing, with the line.
-- You are done when it matches the reference.
-- Then the same processor runs as a plugin: step09_exercise_Standalone.
+- For the first one mind the order: smallest block, largest block, sample rate.
+- The C++ file does not compile until all four blanks are filled.
+- The check reports the model file's blanks, with the line number.
+- It also prints anira's plan report: we read that together afterwards.
+- Don't worry if you don't finish: we solve it together, the solution sits next to the exercise.
+- [start the timer] We walk around: wave if the check refuses something you don't understand.
 
 ---
 
@@ -343,14 +279,15 @@ Note:
 ```
 
 Note:
-- TODO 1, the audio.
-- Audio in and out: a time axis of 2048.
-- One model block, as in step 1.
-- On audio_out: the model's own latency, 2224, as in step 7.
-- A wrong size is refused at prepare.
-- anira names the tensor and both shapes.
-- A wrong latency is not refused: the file cannot know it.
-- The check finds it, because the output lines up at another shift.
+- TODO 1, the audio: 2048 in and out, one model block, step 1's fixed size.
+- On audio_out, the model's own latency: 2224 samples, as in step 7.
+- The same wrong size in and out is refused at prepare, not at create.
+- Prepare is when anira first opens the ONNX file: create reads only your declaration.
+- The refusal names the tensor and both shapes, the model's and yours.
+- Two different sizes create refuses already: one streamed block, one hop.
+- [pause] A wrong latency, though, is not refused: the ONNX file carries no delay figure to check against.
+- The check finds it: your latency moves anira's number, not the audio, so the output lines up at another shift.
+- And its message names both numbers, yours and the model's own.
 ---
 
 <div class="tag">Solution</div>
@@ -367,15 +304,13 @@ Note:
 ```
 
 Note:
-- The state: 63,488 floats in and out, the size from step 2.
-- The pairing is one field, state_source.
-- C, state_out.
-- A: audio is no output.
-- B: audio_out is streamed audio.
-- Create refuses both, and says why.
+- TODO 2, the state: step 2's number in and out, and the pairing, one field, state_source.
+- [ask the room, hands up] Who tried a wrong one, A or B, and read the message?
+- The answer is C, state_out.
+- A, audio, is no output at all, and B, audio_out, is streamed audio, not state.
+- Create refuses both, and says why, by name.
 - Leave it out, and create refuses that too: a state input needs a source.
-- With the pair in place, anira knows each call depends on the one before.
-- So it never runs two blocks of this model at once, and it keeps them in order.
+- With the pair in place, anira runs the inferences one after another: each needs the state before it.
 
 ---
 
@@ -388,7 +323,7 @@ Note:
 m_contract.hard_host_blocks(«1», «max_block_size», «sample_rate»);  // <- 1. solution
 const anira::PlanReport report = m_handler->prepare(m_contract);  // warm-up runs here
 m_budget_ms = report.plans().front().measured_ms;
-m_latency = «m_handler->get_latency(0)»;  // <- 2. solution: output slot 0
+m_latency = «m_handler->get_latency(0)»;  // <- 2. solution: output slot 0 · here: 5295
 
 // process()
 if (offline) {   // <- 3. solution: a bounce, wait for the result
@@ -399,22 +334,19 @@ if (offline) {   // <- 3. solution: a bounce, wait for the result
 ```
 
 Note:
-- Given: the constructor reads the model file, drops its comments, builds the pipeline and the handler.
-- The prepare call is given too.
-- The warm-up and the measurement run inside it.
-- Blank 1: the host's side of the contract.
-- Any block from 1 up to its largest, and the sample rate.
-- Blank 2: the latency of output 0.
-- On my machine 5295: a budget of about 12.7 ms, for any host block up to 512.
-- Yours depends on your machine.
-- Blank 3, offline: a bounce.
-- process_wait with ANIRA_WAIT_FOREVER waits for every result.
-- Nothing is missed.
-- Blank 4, live: in the callback, process over the block, in place.
-- It never waits.
-- The same four values in both calls.
-- The check runs offline first, so the comparison is exact.
-- Then once live.
+- TODO 3: where the main thread and the audio thread talk to anira.
+- Above this code, given: the constructor reads the model file, drops its comments, builds the pipeline and handler.
+- A pipeline, the class from the architecture slide: what one handler runs, here the one model alone.
+- Blank 1, the host's promise in the contract: why 1 and not 512? [pause]
+- Remember the loop point from the prepare chapter: the largest block is not the only one.
+- And the check itself sends blocks of 512 first, then changing sizes, one of them a single sample.
+- prepare is given too, and the line below keeps the plan report's measured time.
+- Blank 2: the latency of output slot 0, audio_out, the first output in the file.
+- On this machine get_latency returns 5295 [say: fifty-two ninety-five], Fares's number: it covers any block up to 512.
+- Yours follows your machine's budget.
+- Blank 3, offline, a bounce: process_wait with ANIRA_WAIT_FOREVER waits for every result.
+- Blank 4, live, in the callback: process over the block, in place.
+- The check runs offline first, where nothing is missed, so the comparison is exact, then once live.
 
 ---
 
@@ -433,34 +365,26 @@ Note:
   <div class="report-scale">
     <div><span class="report-pill ok">comfortable</span>below 75 %</div>
     <div><span class="report-pill marginal">marginal</span>below 100 %, may drop out under load</div>
-    <div><span class="report-pill over">not real-time</span>held back live, until <strong>Run anyway</strong></div>
+    <div><span class="report-pill over">not real-time</span>held back live, until <strong>Try nonetheless</strong></div>
   </div>
 </div>
 
 <div class="cards-note">The check prints it, the plugin shows it under <strong>report</strong>: <code>handler.plan_report()</code></div>
+<div class="cards-note">At 48 kHz the plugin asks first: a 44.1 kHz model, no resampler. <strong>Process anyway</strong> plays it as it is.</div>
 
 Note:
-- prepare does not only plan.
-- It warms the model up and measures it, on this machine, with this engine.
-- Step 4, done by the library.
-- One row per plan.
-- The budget anira plans with.
-- What it measured: the maximum of the last warm-up inferences.
-- And the median, the jitter at a glance.
-- The load: the inference time over the audio it produces.
-- Here 28 %.
-- The model needs about a quarter of the time it has.
-- "Over 1 inference": the model carries its state, so its inferences run one after another.
-- A stateless model could run several at once, and the load would be shared.
-- Below 75 % comfortable.
-- Below 100 % marginal.
-- Above, not real-time.
-- Not real-time: live, the plugin holds back.
-- The window says so.
-- "Run anyway" plays it nonetheless, with dropouts and clicks.
-- A bounce always processes: it waits for every result.
-- Your check prints your report.
-- The plugin's report button shows it.
+- [before: step09_exercise_Standalone built, interface at 48 kHz, as prepared at slide 1]
+- prepare's plan report, one row per plan.
+- Budget equals measured: the max of the last four warm-up runs.
+- They differ only when the budget is given by hand, in milliseconds.
+- The median sits right under the max: the times hardly spread.
+- Four inferences, because the first four already agreed: within 20 percent of their median.
+- Fares's slide said 12.7 ms, on his machine: either budget takes two callbacks, so the same latency.
+- Over 1 inference: the state keeps the runs in order, one at a time.
+- Try nonetheless plays a not-real-time model all the same, dropouts and clicks included.
+- [ask the room] Your check printed yours: anyone marginal, or not real-time?
+- [if time: open step09_exercise_Standalone at 48 kHz: the rate ask, Process anyway, then report]
+- [in the demo] The window asks at any rate but 44.1 kHz, as step 8 did at 48: no resampler.
 
 ---
 
@@ -476,7 +400,6 @@ Note:
 </div>
 
 Note:
-- That is steps 3, 6 and 7, in two files.
-- No ring buffer, no worker, no queue, no state copy, no latency arithmetic.
-- And step 7's check passes.
-- Next: we take the model apart.
+- Gone: the ring buffer, the worker, the latency arithmetic, and step 2's state copy.
+- And step 7's check passes, with anira's latency instead of ours.
+- Next, step 10: we cut the model in the middle.

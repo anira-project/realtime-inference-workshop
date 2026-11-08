@@ -6,11 +6,9 @@ Eight numbers to play
 <!-- kind: demo, exercise -->
 
 Note:
-- Step 11: the model as an instrument.
-- Eight numbers to play.
-- The decoder from step 10, and a hand moves its eight numbers.
-- Start the build now, it runs while we talk: cmake --build --preset release --target step11_exercise.
-- At the end we play it together.
+- [before: the step 11 app open behind the slides, camera allowed, sound on the room's speakers]
+- This is step 10's decoder alone, and a hand moves its eight numbers.
+- No TODO this step, one file to play with: at the end we all play together.
 
 ---
 
@@ -47,16 +45,13 @@ Note:
 </div>
 
 Note:
-- The model from step 10 again: encoder, the eight numbers, decoder.
-- Remember the last option there: replace.
-- The eight numbers do not have to come from the encoder.
-- [click] So we take the encoder away completely.
-- No audio goes in any more.
-- [click] The eight numbers come from somewhere else.
-- An LFO, a slider on the screen, or your hand in front of a camera.
-- The decoder alone makes the sound from them.
-- It becomes a generator, an instrument.
-- That is this step.
+- The model from step 10 once more: encoder, eight numbers, decoder.
+- In step 10 your line sat between the two halves: an offset on z.
+- Replace went furthest: anything that gives eight numbers, a hand among them.
+- [click] So the encoder goes, and with it the audio input.
+- [click] The eight numbers come from somewhere else: an LFO, a slider, or your hand in front of a camera.
+- [pause] The decoder alone turns them into sound: one latent frame in, 2048 samples out.
+- A decoder without an encoder is a generator, an instrument: that is this step.
 
 ---
 
@@ -73,14 +68,11 @@ Note:
 <div class="cards-note">We launch them with the v3 release: add a model to your C++ plugin without writing its configs.</div>
 
 Note:
-- Where do eight numbers come from, if not from an encoder?
-- From another model.
-- With the v3 release we launch anira foundation models: ready-made models with predefined anira configs.
-- You add a feature to your C++ plugin without writing the model file and the contract yourself.
-- One of them is hand tracking.
-- The hand tracker in this step is our own example, built the same way.
-- We have a library that runs video models too.
-- So why not play the latents with our hands?
+- Where do the eight numbers come from today: from your hand.
+- A camera sees it, and a model reads the hand from the image: the hand tracker.
+- With v3 we plan to launch anira foundation models, and hand tracking is one of them.
+- Today you get a preview of it, ahead of the release: from anira-cam, our library for video models.
+- It runs on anira like the decoder: let me show you.
 
 ---
 
@@ -99,22 +91,19 @@ Note:
 </div>
 
 Note:
-- Two kinds of model share one pool.
-- One runs per camera frame, the other per audio block.
-- The hand tracker is MediaPipe's chain of four small ONNX models.
-- It runs once per camera frame, 30 times a second.
-- The decoder runs as a hard real-time audio stream.
-- As a generator, with no audio input at all.
-- The hand becomes eight latents, smoothed on the main thread.
-- The audio thread reads them as atomics.
-- [Start the demo. Speak little, play more.]
-- When I open my hand, it gets louder.
-- That is z0.
-- When I raise it, it gets brighter.
-- That is z2.
-- Pinch, left and right, and tilt change body, colour and tilt.
-- The second hand sets the texture: swell, dark and bright, resonance.
-- When I take my hands away, the latents glide to rest and the sound fades.
+- [switch to the app, camera on, one hand in view; from here speak little, play more] Here it is.
+- [open the hand] Open, and it gets louder: that is z0.
+- [raise it] Higher, and it gets brighter: that is z2.
+- [pinch] Pinch is the body.
+- [move sideways] Left to right, the colour.
+- [tilt] Tilt the hand, and the sound tilts: the names are found by ear.
+- [second hand in] My second hand sets the texture: swell, dark or bright, resonance.
+- [hands away] Hands away: the latents glide to rest, and the sound with them. [wait for the silence]
+- Alongside it, one switch fades the output out in about a second: Silence without hands, on by default.
+- [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
+- [point at the latent panel] Eight bars, one per latent, more on the tick later.
+- [back to the slide] The tracker runs per camera frame, the decoder per block of 2048 samples, both on one pool.
+- How the tracker gets there: next.
 
 ---
 
@@ -133,17 +122,16 @@ Note:
 </div>
 
 Note:
-- The hand tracking is Google's MediaPipe hand chain.
-- Four small models, Apache 2.0, converted to ONNX in anira-cam.
-- The palm detector looks at the whole frame, scaled to 192 by 192, and finds boxes around palms.
-- It only runs while fewer hands are tracked than we want.
-- Here, two.
-- The landmark model gets a 224 by 224 crop around one hand.
-- It returns 21 joints, whether a hand is there, and whether it is a left or a right hand.
-- Once a hand is found, the next frame's crop comes from its own joints.
-- The detector can rest.
-- The gesture stage turns the 21 joints into 128 numbers and classifies them.
-- Open palm, fist, victory, and four more.
+- Google's MediaPipe hand chain: four small models, Apache 2.0, converted to ONNX in anira-cam.
+- Stage one, the palm detector, looks at the whole frame.
+- Stage two, the landmarks: besides the joints, it says whether a hand is there at all.
+- Once a hand is found, its next crop comes from its own joints.
+- With both hands tracked, the detector rests.
+- Stage three, the gesture, is two models: that makes four.
+- The embedder takes the joints, in the image and in space, and which hand it is.
+- Out come 128 numbers: a pose, nothing to do with step 10's 128 latent dimensions.
+- The classifier names it: open palm, fist, victory and four more.
+- The app draws the gesture over the video, and nothing else uses it today.
 
 ---
 
@@ -155,20 +143,21 @@ Note:
   <div><small>1</small>One handler per model, one landmark handler per hand</div>
   <div><small>2</small>Every frame: pop what has finished, push the new crops</div>
   <div><small>3</small>The result reaches the GUI through a triple buffer</div>
-  <div><small>4</small>The decoder's pool: 30 frames and 21.5 latent frames a second</div>
+  <div><small>4</small>One pool: 30 camera frames and 21.5 latent frames a second</div>
 </div>
 
 Note:
-- The chain runs on anira's v3 API, like the decoder.
-- One context, a model config and a hard contract per model.
-- Each model has its own handler.
-- Each tracked hand has its own landmark handler, so two hands run in parallel.
-- The camera thread never waits for an inference.
-- Each frame, it pops what has finished and pushes new work.
-- A late result arrives with the next frame.
-- The tracking rate drops, the camera rate does not.
-- The newest result goes to the GUI through a triple buffer, without a lock.
-- The tracker and the decoder share the threads: camera frames and audio blocks in one pool.
+- Step 10's calls, push and pop.
+- A model config per model, a Hard contract per handler, one context for the chain.
+- Budgets are set by hand: detector and landmarks get twice a worst case, benchmarked on an M3 Max.
+- Warm-up: one fixed run, nothing measured at prepare.
+- Why not: the gesture stages queue behind bigger models, a measured budget would be too tight; theirs is wide.
+- [point at 1] Two hands at once, on the pool.
+- [point at 2] The push fills the ring, claims a slot, Fares's word, and goes on.
+- A late result arrives with the next frame: the tracking rate drops, never the camera's.
+- [point at 3] The writer always has a free buffer, no lock.
+- [point at 4] A thread per core, set in the context: tracker and decoder queue together.
+- Idle threads block, as Fares recommended.
 
 ---
 
@@ -183,12 +172,9 @@ Note:
 </div>
 
 Note:
-- The last step, and a playground.
-- No TODO, no check.
-- One file with five ready-made mappings, from the hand to the eight latents.
-- Pick one, change it, or write your own.
-- After ten minutes we show a few.
-- Then we all play together.
+- The last step, and a playground: nothing to get right.
+- One file holds five ready-made mappings, from the hand to the eight latents.
+- First, what is given.
 
 ---
 
@@ -219,20 +205,14 @@ Note:
 </div>
 
 Note:
-- No new model: step 10's decoder, on its own.
-- The model has 128 latents.
-- We kept the 8 that matter most.
-- The decoder still needs all 128.
-- It fills the other 120 with zeros, as in step 10.
-- Those 120 carry only about 7 % of the variation.
-- The 8 we kept make the sound.
-- The hands library in common/hands is the camera and the hand tracking, with its four small models compiled in.
-- You never open it.
-- HandTracker.h is the one header worth a look.
-- HandControls.cpp decides which hand leads, calls your function and smooths the result.
-- Your file is HandMapping.cpp: the mappings, from the hands to the latents.
-- The camera: AVFoundation on macOS, JUCE on Windows, OpenCV on Linux.
-- Without a camera, an XY pad plays.
+- No new model: eight latents in, and inside, the decoder fills the other 120 with zeros.
+- [point at Helpers] The hands library: the camera and the tracking, four models compiled in.
+- You never open it: HandTracker.h is the one header worth a look.
+- The camera behind it: AVFoundation on macOS, JUCE on Windows, OpenCV on Linux.
+- HandControls.cpp decides which hand leads, calls your mapping, and smooths the result.
+- LatentDecoder.cpp is that generator, rendering at 44.1 kHz, resampled if your device runs another rate.
+- [point at Exercise] And your file, HandMapping.cpp: the five mappings live there.
+- First the hand, as the tracker gives it to you.
 
 ---
 
@@ -251,10 +231,10 @@ struct HandFeatures {
 ```
 
 Note:
-- All you need from the hand tracking: five numbers per hand, each from 0 to 1.
-- Seen like a mirror: moving your hand right moves x up.
-- The tracker also knows which hand it is, a gesture and 21 joints.
-- The app uses those for the roles and for drawing.
+- Per hand, the tracker gives you these five numbers; the comments say which way each one runs.
+- Everything is seen like a mirror: move your hand to the right, and x grows.
+- The tracker also knows which hand it is, a gesture, and 21 joints for drawing.
+- Up to two hands arrive, and the next slide says which one plays what.
 
 ---
 
@@ -272,14 +252,19 @@ decoder.setLatents(controls.latents());          // the audio thread reads them
 ```
 
 Note:
-- MainComponent does this for you.
-- The camera thread hands every frame over and goes on.
-- The GUI timer asks for the newest hands.
-- HandControls picks the lead hand, your right one, and the texture hand, the other one.
-- It calls map_hands with both.
-- Then it smooths the eight numbers, so they do not jump.
-- The latents go to the decoder as atomics.
-- The audio thread reads them once per 2048 samples.
+- Three lines, and MainComponent runs them for you.
+- [point at line 1] The camera thread hands every frame to the tracker and goes on.
+- [point at the timer block] The GUI timer, on the main thread, asks for the newest hands, up to two.
+- HandControls gives them roles: your right hand leads, the other one is the texture hand.
+- A single hand always leads, and the Swap hands box in the app makes the left one lead.
+- It calls your map_hands with both, and gets eight latents back.
+- Why smooth: so the eight numbers do not jump, and can glide when the hand leaves.
+- A one-pole filter per latent, 80 ms by default, and the Smoothing slider changes it.
+- In the panel the tick is your mapping's number, the target, and the bar is the smoothed value.
+- Lead hand gone for a fifth of a second, and the latents head for rest.
+- Rest is z0 at minus 3, near silent, and the other seven at zero.
+- The smoother slows to 600 ms: quick while you play, slow when you leave.
+- Smoothed latents reach the decoder as atomics; the audio thread pushes them once per model block, as one latent frame.
 
 ---
 
@@ -295,21 +280,28 @@ Latents two_hands(lead, texture);  // right: loudness, left: brightness
 Latents bow(lead, texture);        // the pinch is the loudness
 Latents yours(lead, texture);      // start from here
 
+z[0] = map_range(lead.openness, -2.5F, 2.0F);  // in classic: a fist is quiet
+
 Latents map_hands(const HandFeatures& lead, const std::optional<HandFeatures>& texture) {
     return classic(lead, texture);  // <- or inverted, steps, two_hands, bow, yours
 }
 ```
 
 Note:
-- Each mapping is a small function: five features in, eight latents out.
-- map_range draws a straight line.
-- map_range of openness, minus 2.5, 2: minus 2.5 at a fist, 2 at the open palm.
-- z0 is the loudness, z2 the brightness.
-- The other six you find by ear.
-- About minus 2 to plus 2 is their natural range.
-- Switch the one line in map_hands.
-- Rebuild.
-- Play.
+- Each mapping is one small function: the lead hand in, eight latents back.
+- The texture hand is optional: it is only there while a second hand is tracked.
+- [point at the list] The comments cover the first four: bow and yours need a word.
+- bow plays the loudness with the pinch squared, so it stays quiet longer.
+- And it zeroes the body: bow starts from classic, where the pinch drives the body too.
+- yours starts with the loudness alone, the rest is your choice.
+- Inside each one, map_range draws a straight line between two ends.
+- [point at the z0 line] Openness: a fist gives minus 2.5, an open palm gives 2.
+- The other six you find by ear, as in step 10.
+- [pause] On z0, plus 1 is about 5.5 dB louder.
+- Minus 3 is rest, the near silence you heard.
+- [pause] Each latent lives between about minus 2 and plus 2.
+- Far past plus or minus 3 the sound turns loud and strange: shrink the range.
+- Switch the line, rebuild, play.
 
 ---
 
@@ -325,6 +317,8 @@ The last step: give it a spin in `steps/11_hands/exercise/HandMapping.cpp`
 cmake --build --preset release --target step11_exercise
 open build/release/steps/11_hands/step11_exercise_artefacts/Release/*.app
 ```
+
+<div class="cards-note">macOS: start it with <code>open</code> or a double-click, so it can ask for the camera · no camera: the mouse plays the hand · left hand leads: <strong>Swap hands</strong></div>
 
 <div class="run">
   <div class="run-step" data-seconds="2.6">
@@ -348,13 +342,16 @@ open build/release/steps/11_hands/step11_exercise_artefacts/Release/*.app
 </div>
 
 Note:
-- The last step of the workshop, and we want it to be fun.
-- No TODO, nothing to get right.
-- Five mappings are ready.
-- Pick one, change it, write your own.
-- Give it a spin.
-- Ten minutes.
-- Then we show what you can do with it, and then we jam.
+- The task: one file, HandMapping.cpp.
+- Your setup build already built the app: after each change, the first command rebuilds it.
+- Then the second command, or a double-click: not from the IDE, not the binary inside the bundle.
+- Otherwise macOS asks the wrong program for the camera.
+- If you refused once: allow it under Privacy & Security, Camera, and restart the app.
+- On Linux: the OpenCV dev package before configuring, and your user in the video group.
+- No camera, no permission: the video area is a pad, and the mouse is the hand.
+- Drag to move it, hold the button to open the hand, right button to pinch.
+- Step two: make it yours, or bring in the texture hand.
+- [start the timer] Ten minutes, we walk around, and then we all jam together.
 
 ---
 
@@ -369,12 +366,16 @@ Note:
 </div>
 
 Note:
-- [First show two or three mappings live: classic, steps, two hands. Ask who wrote their own, and let one or two play theirs.]
-- "Now all of us, together. Open your step 11 app, with open or a double-click, so macOS asks for the camera."
-- "Laptop speakers, half volume. Your right hand plays: open is loud, high is bright. Your left hand adds texture."
-- "Fifty decoders in one room. Listen to the room, not only to your laptop."
-- [Let it run for about two minutes.]
-- "And now: hands down." The latents glide to rest, and the room fades out.
+- [before: the room's speakers on, the lectern app open]
+- Now all of us, together.
+- Play the mapping you liked best, or simply your last build.
+- If your app is closed: open it the same way as before.
+- Laptop speakers, half volume: fifty laptops add up.
+- Your right hand plays, your left hand adds texture if your mapping uses it.
+- [wait until most screens show the camera; help the two or three that do not] Both hands up, and play.
+- Fifty decoders in one room: listen to the room, not only to your laptop.
+- [let it run about two minutes, walk through the room] And now: hands down.
+- [silence: the latents glide to rest and the room fades out; wait for it]
 
 ---
 
@@ -390,9 +391,9 @@ Note:
 </div>
 
 Note:
-- Two models, three rates, one library.
-- The camera at 30 frames a second.
-- The latents at one frame per 2048 samples, about 21.5 a second.
-- The audio at 44.1 kHz.
-- One thing is still a copy: every camera frame goes to the CPU, and then to the engine.
-- That is where the outlook starts.
+- [when the room is quiet again] Two models on one pool: the hand tracker reads images, the decoder writes audio.
+- Camera frames at 30 a second, latent frames at 21.5, one per 2048 samples, audio at 44.1 kHz.
+- The same configs and calls you know, and push and pop carry frames that are not audio.
+- One copy remains: every camera frame is copied to the CPU, then to the engine.
+- A frame that stays where it is: zero copy, one of the four things ahead.
+- That was the last exercise of the day; the rest is the outlook.

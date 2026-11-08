@@ -71,7 +71,7 @@ That is with `k_max_inference_ms` still at 46.4 ms; with your number it will be 
 
 ## The host runs in real time now
 
-`main` is step 3's host loop with one line more: a sleep after every callback, for as long as one block of audio lasts, 11.6 ms for 512 samples at 44.1 kHz ([`block_duration`](../common/helpers/host.h)). Two threads only work if the audio thread is called at the audio rate, the way a device calls it. Up to now the loop ran as fast as it could, which no worker thread could ever keep up with.
+`main` is step 3's host loop with one line more: a sleep after every callback, for as long as one block of audio lasts, 11.6 ms for 512 samples at 44.1 kHz (`block_duration`, above `main`). Two threads only work if the audio thread is called at the audio rate, the way a device calls it. Up to now the loop ran as fast as it could, which no worker thread could ever keep up with.
 
 ## What the audio thread still does
 

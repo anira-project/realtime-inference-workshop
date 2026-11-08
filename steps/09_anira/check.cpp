@@ -5,16 +5,17 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
+#include <thread>
 #include <vector>
 
 #include "AniraProcessor.h"
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/checks/anira_report.h"
-#include "common/helpers/host.h"
 #include "common/helpers/support.h"
 
 // What the fake host does, in samples at its rate.
@@ -118,14 +119,14 @@ static int check() try {
         return result;
     }
 
-    // Live, at the host's pace: the call the audio thread makes. It has to
-    // process the block; whether one comes back late does not matter here.
-    const std::vector<float> live = run_host(
-        k_input_signal.data(),
-        k_input_signal.size(),
-        k_host.m_block_size,
-        [&](float* samples, size_t num_samples) { processor.process(samples, num_samples); },
-        k_host.m_sample_rate);
+    // Live, at the host's pace: the call the audio thread makes, one block
+    // every 11.6 ms, like an audio device. It has to process the block;
+    // whether one comes back late does not matter here.
+    std::vector<float> live(k_input_signal.begin(), k_input_signal.end());
+    for (size_t start = 0; start + k_host.m_block_size <= live.size(); start += k_host.m_block_size) {
+        processor.process(live.data() + start, k_host.m_block_size);
+        std::this_thread::sleep_for(std::chrono::duration<double>(k_host.m_block_size / k_host.m_sample_rate));
+    }
     // The block is processed in place: untouched, it goes out as it came in.
     if (std::equal(live.begin(), live.end(), k_input_signal.begin())) {
         fail("TODO 3: live, the output is the input: process the block in process()");

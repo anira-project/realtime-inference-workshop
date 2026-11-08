@@ -24,7 +24,7 @@ const juce::Colour k_marginal{0xfff2c46d};
 }  // namespace palette
 
 // Over the whole window while the plugin is bypassed: why, and what to change.
-// Held back by anira's report, it offers to run anyway and to show the report.
+// Held back by anira's report, it offers to try nonetheless and to show the report.
 class BypassOverlay : public juce::Component {
 public:
     BypassOverlay();
@@ -42,7 +42,7 @@ public:
     juce::String m_title{"Bypassed"};
     int m_reason_lines = 6;   // Room for the reason
     bool m_held_back = false;
-    juce::TextButton m_run_anyway{"Run anyway, with dropouts"};
+    juce::TextButton m_run_anyway{"Try nonetheless"};
     juce::TextButton m_show_report{"Report"};
 };
 

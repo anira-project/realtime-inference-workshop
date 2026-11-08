@@ -14,13 +14,25 @@ You need git, CMake 3.22 or newer, and a C++17 compiler.
 
 - **macOS**: Xcode or the Command Line Tools (`xcode-select --install`), and CMake (`brew install cmake`).
 - **Windows**: Visual Studio 2022 with the *Desktop development with C++* workload, and CMake 3.30 or newer.
-- **Linux**: `gcc` or `clang`, CMake, and what JUCE needs:
+- **Linux**: `gcc` or `clang`, CMake, and what JUCE needs. Debian and Ubuntu:
 
   ```bash
-  sudo apt install build-essential cmake git libasound2-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev libfreetype6-dev libcurl4-openssl-dev libwebkit2gtk-4.1-dev libopencv-dev
+  sudo apt install build-essential pkg-config cmake git libasound2-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev libxcomposite-dev libxrender-dev libxi-dev libfreetype-dev libfontconfig-dev libopencv-dev
   ```
 
-  `libopencv-dev` is for the camera in the last step; without it the step still builds, with the mouse instead of a hand.
+  Fedora:
+
+  ```bash
+  sudo dnf install gcc-c++ make pkgconf-pkg-config cmake git alsa-lib-devel libX11-devel libXext-devel libXrandr-devel libXinerama-devel libXcursor-devel libXcomposite-devel libXrender-devel libXi-devel freetype-devel fontconfig-devel opencv-devel
+  ```
+
+  Arch:
+
+  ```bash
+  sudo pacman -S --needed base-devel cmake git alsa-lib libx11 libxext libxrandr libxinerama libxcursor libxcomposite libxrender libxi freetype2 fontconfig opencv
+  ```
+
+  OpenCV (`libopencv-dev`, `opencv-devel`, `opencv`) is for the camera in the last step; without it the step still builds, with the mouse instead of a hand.
 
 ### 2. Clone, configure, build
 
@@ -109,6 +121,7 @@ The models are not in git; the configure downloads them. [steps/common/assets/mo
 - `-DWORKSHOP_ANIRA=OFF` — leave part 2 out
 - `-DWORKSHOP_JUCE=OFF` — leave the plugin steps out
 - `-DWORKSHOP_RTSAN=ON` — step 5 with RealtimeSanitizer; needs a clang that has it, see the [step's README](steps/05_realtime_safety/README.md)
+- `-DWORKSHOP_HOST_SLOWDOWN=4` — for CI: the host loop of steps 6 and 7 calls back four times slower, since a shared runner does not keep up with real time
 - `-DWORKSHOP_CHECK_EXERCISES=ON` — for maintainers: every exercise, its `?` filled in from the solution by [`scripts/fill_exercise.py`](scripts/fill_exercise.py), has to build and pass like the solution (`stepNN_exercise_filled`, `step09_exercise_filled_check`). CI runs them on every push; locally it needs Python 3.
 
 ## Funding

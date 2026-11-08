@@ -13,6 +13,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # for clangd, see .clangd
 
+# MSBuild builds projects side by side, but the files of one project one after
+# another unless cl gets /MP. JUCE sets it on its own targets; this gives it to
+# anira's and ours. Set here, before the dependencies are added, and not as
+# CMAKE_CXX_FLAGS in a preset, which would replace MSVC's default flags.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_GENERATOR MATCHES "^Visual Studio")
+    add_compile_options(/MP)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(compile-commands)
 workshop_link_compile_commands()  # build/compile_commands.json -> this tree's
@@ -41,6 +49,11 @@ option(WORKSHOP_JUCE "Build the JUCE plugin and app steps" ON)
 
 # Part 2 builds anira from source, which takes a couple of minutes once.
 option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
+
+# How many times slower than real time the host loop of steps 6 and 7 calls
+# back. 1 everywhere but CI: a shared runner does not keep up with real time,
+# so CI sets 4, and the checks still test every alignment and latency claim.
+set(WORKSHOP_HOST_SLOWDOWN 1 CACHE STRING "Pace the host loop of steps 6 and 7 this many times slower (CI)")
 
 # The models are downloaded from Hugging Face, or the repository's own release,
 # into steps/common/assets/models/, unless they are already there. The test

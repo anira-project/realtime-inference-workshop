@@ -72,7 +72,6 @@ Note:
     <div class="given-label">Helpers</div>
     <div class="given-folder">common/helpers/ · CMake</div>
     {{FILE:onnx_engine.h}}
-    {{FILE:host.h|new}}
     {{FILE:threadsafe_ring_buffer.h|new}}
     {{FILE:worker_thread.h|new}}
   </div>

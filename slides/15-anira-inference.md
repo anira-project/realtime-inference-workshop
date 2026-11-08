@@ -27,7 +27,7 @@ Note:
 Note:
 - Here are the six things again that we built by hand in part 1.
 - Inference: which model, which engine, which tensors, now all defined in model.json.
-- Benchmarking: the worst-case execution time is declared in our contract.json.
+- Benchmarking: defined in our contract.json.
 - Real-time safety and threading are built into anira: one thread pool, from the anira context.
 - Latency: anira calculates it, and we only read it.
 - Real-time guarantees: what happens on a missed deadline is also in the contract.
@@ -61,9 +61,10 @@ Note:
 - What is left: three configs on top, three calls below.
 - In model.json you fill the gaps: the tensor sizes and the state pair.
 - The contract is given, and the context runs on its defaults.
-- Below, the three calls: create in the constructor, prepare from prepareToPlay, process from processBlock.
-- Process runs live in the callback, and the check also runs it offline, waiting for each result.
-- The check shifts the output by anira's latency, less the model's own delay, already in the reference.
+- [point below] Then three calls: create, prepare and process.
+- Create goes in the constructor, prepare in prepareToPlay, process in processBlock.
+- The check runs process offline and waits for each result.
+- It removes the latency anira adds, so the output lines up with the reference.
 
 ---
 

@@ -4,8 +4,8 @@
 <!-- kind: demo -->
 
 Note:
-- The host hears it exactly the prefill late
-- But is this the same latency we need to pad our dry signal with?
+- There is one more thing we need to talk about before we can create our plug in
+- We need to know the latency of the wet path so we can delay the dry signal by the same amount before mixing the two.
 
 ---
 
@@ -26,15 +26,13 @@ Note:
 
 
 Note:
-- Buffer adaptation, step 3: the model needs a whole block
-- The worker's time, step 6: your worst case from step 4, in whole callbacks
-- Together, the prefill: that is how late the host hears the model's stream
-- New: the model itself answers late. 2224 samples: 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. From the export script, not visible from C++
-- Up to now it did not matter: we compared against the reference, which has it too. For the dry/wet mix it does: the dry signal has no such delay
-- So the latency is our prefill from step 6 plus `m_model.m_latency`
-- Total: 4784 samples, about 108 ms at 44.1 kHz. We report this to the host: `setLatencySamples()` in JUCE
-- Only for 512: other block sizes give other numbers, part 2
-- Honest: fine for mixing, can't play through it live. Part 2 comes back to it
+- Ask: Does anyone have an idea how much we have to delay the dry signal by?
+- Our wet signal is delayed at least with our prefill from the step before:
+   - Buffer adaptation, step 3: the model needs a whole block
+   - The rounded max inference samples, step 6: your worst case from step 4, in whole callbacks
+- Together: that is how late the host hears the model's stream
+- New: the model itself answers late. 2224 samples: 1696 from the decoder's transposed convolutions (with the strides), 528 from the PQMF filter bank. 
+- If you want to see this latency implemented we have a solution file for step 7, but I wan't go into detail about it.
 
 ---
 
@@ -52,6 +50,5 @@ Note:
 <div class="cards-note corner-note">For a constant 512. anira handles any host block size, smaller blocks than announced included, and computes the latency for it: part 2.</div>
 
 Note:
-- Correct, real-time safe, late by a known, fixed amount
+- A correct set up that is real-time safe, late by a known latency
 - Host can line it up, dry and wet crossfade cleanly
-- Only for a constant 512: the plugin in step 8 bypasses outside 512 samples and 44.1 or 48 kHz. Every size: part 2, with anira

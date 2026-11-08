@@ -54,7 +54,7 @@ void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
 <div class="cards-note corner-note">Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang. </div>
 
 Note:
-- To find out we will use a RealtimeSanitizer
+- To find out if we have any real-time violations we will use a RealtimeSanitizer
 - Build our main.cpp with RealtimeSanitizer on: checks every call underneath at runtime, also in libraries
 - Since Clang 20 there's a tool for this
 <!-- - On a Mac: LLVM from Homebrew, not Apple's Clang -->

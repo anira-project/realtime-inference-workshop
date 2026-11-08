@@ -21,7 +21,7 @@ The first two are step 6's prefill. The second is a choice: it buys the worker t
 
 ## What it does
 
-[`solution/main.cpp`](solution/main.cpp) is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses. Your number from step 4 comes from [`common/inference_time.h`](../common/inference_time.h), as in step 6. Two lines in `prepare()` are what this step is about:
+[`solution/main.cpp`](solution/main.cpp) is step 6's `ProcessorExample`, filled in, with a dry path next to it: `m_dry`, step 3's ring buffer, which only the audio thread uses, with `try_push()` and `try_pop()` like the other two. As in step 6, `main` passes your number from step 4, `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), into `prepare(host_block_size, max_inference_ms)`, and the same two lines turn it into `rounded_max_inference_samples`: in samples, rounded up to whole callbacks. Two lines further down in `prepare()` are what this step is about:
 
 1. **`m_latency = m_prefill + m_model.m_latency`**: the number above, what the host is told. Step 6's prefill holds the first two parts; the model's own delay comes on top. The wet path only gets the prefill: the model's own delay is already inside what it returns.
 2. **The dry delay**: `m_dry` starts with the full latency in silence.
@@ -40,13 +40,13 @@ The mix in `process_block()` is a plain crossfade between the delayed dry signal
 ==============================================================
 ```
 
-That is with `k_max_inference_ms` still at 46.4 ms; with your number it will be smaller: 4784 samples from 11.6 to 23.2 ms. Every callback more or less of worst case changes it by 512. The host runs as in step 6, at a mix of 0.5. The check builds what the host should hear: half the input, delayed by the reported latency, plus half the model's stream, delayed by the rest of it (the reference already carries the model's own delay). If either path is off by a single sample, the two do not line up and the run fails. A callback where the worker was late has only the dry half: that is a dropout, and more than a quarter of them fail the run.
+That is with `k_max_inference_ms` still at 46.4 ms; with your number it will be smaller: 4784 samples from 11.6 to 23.2 ms. Every callback more or less of worst case changes it by 512. The host runs as in step 6, at a mix of 0.5. The check builds what the host should hear: half the input, delayed by the reported latency, plus half the model's stream, delayed by the rest of it (the reference already carries the model's own delay, 2224 samples). If either path is off by a single sample, the two do not line up and the run fails. A callback where the worker was late has only the dry half: that is a dropout, and more than a quarter of them fail the run.
 
 So a wrong latency number cannot pass.
 
 ## Why the dry path needs a delay line at all
 
-Mixing an undelayed dry signal with a wet one that is 108 ms late does not sound like a blend; it sounds like a slap-back echo, and at low mix values like comb filtering. The dry path gets its own ring buffer, primed with the full latency in silence, so both arrive together.
+Mixing an undelayed dry signal with a wet one that is 108 ms late does not sound like a blend; it sounds like an echo. The dry path gets its own ring buffer, primed with the full latency in silence, so both arrive together.
 
 In a plugin you report the same number with `setLatencySamples()`, and the host lines the track up with everything else.
 

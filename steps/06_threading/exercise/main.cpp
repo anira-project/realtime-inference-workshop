@@ -18,7 +18,7 @@
 #include "common/assets/target_signal.h"
 #include "common/assets/test_signal.h"
 #include "common/checks/step06.h"
-#include "common/helpers/host.h"
+// #include "common/helpers/host.h"
 #include "common/helpers/onnx_engine.h"
 #include "common/helpers/threadsafe_ring_buffer.h"
 #include "common/helpers/worker_thread.h"

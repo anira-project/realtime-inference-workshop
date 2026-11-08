@@ -47,11 +47,11 @@ Note:
 - Go through the slide fast
 - Every callback has a deadline: the real-time threshold, our time budget
 - Model block: 2048 samples = 46.4 ms. Says whether real-time is possible at all
-- Host callback: 512 samples = 11.6 ms. Says whether one forward pass fits into one callback
+- Host callback: 512 samples = 11.6 ms. Tells us the time we have to fit one forward pass into one callback
 - Click: real-time factor = forward pass ÷ threshold, must stay below 1
 - ONNX Runtime on my Mac, about 13 ms on average: 0.28 against the model block (what a CPU meter shows), 1.12 against the callback: too long
 - Click: 3 callbacks only copy samples, the 4th runs the whole model
-- And that's only the average. The worst case decides: we measure it
+- And that's only the average.
 
 ---
 
@@ -133,63 +133,6 @@ Note:
 
 ---
 
-<!-- .slide: data-visibility="hidden" -->
-
-<div class="tag">Result</div>
-
-## What it prints
-
-<div class="output-full">
-
-```text
-Real-time threshold at 44100 Hz:
-  model block   2048 samples    46.44 ms
-  callback       512 samples    11.61 ms
-
-The first 5 forward passes of 2 repetitions, in ms:
-               rep 1     rep 2
-  pass  1     18.00     13.59
-  pass  2     14.14     13.05
-  pass  3     13.25     13.07
-  pass  4     13.40     12.97
-  pass  5     12.92     12.97
-
-All 20 forward passes:
-  mean      13.39 ms
-  median    13.07 ms
-  min       12.89 ms
-  p99       18.00 ms
-  max       18.00 ms
-
-The 5 slowest of all 20 forward passes:
-  repetition 1, pass   1   18.00 ms
-  repetition 1, pass   2   14.14 ms
-  repetition 2, pass   1   13.59 ms
-  repetition 1, pass   7   13.46 ms
-  repetition 1, pass   4   13.40 ms
-
-Your worst case:
-  max inference time    18.00 ms
-
-  PASS  shorter than one model block (46.4 ms). Write 18.00 into k_max_inference_ms
-        in steps/common/inference_time.h
-```
-
-</div>
-
-Note:
-- Screen share on (C): run it live in the IDE's terminal
-- Without a share: this slide shows the output of one earlier run, on ONNX Runtime
-- Look at the passes of both repetitions, 
-- We also see some general statistics of our runs, mean, p99, max
-- Mean: is what your CPU meter shows
-- p99: one call in a hundred is slower. With only 20 passes that is simply the slowest one, so here p99 = max = 18 ms
-- Then at bottom a list of the 5 slowest
-- The last lines: your worst case, over all the forward passes. 
-- Write it down, steps 6 and 7 need it
-
----
-
 <div class="tag">Result</div>
 
 ## ONNX Runtime<br><span class="then">One slower call, then flat, above the callback.</span>
@@ -203,56 +146,9 @@ Note:
 
 Note:
 - One earlier run on my Mac, ONNX Runtime: first pass 18 ms, then about 13 ms
-- First iteration is slower, this is typical for inference engines, they habe some warm up time
+- First iteration is slower, this is typical for inference engines, because they have some warm up time
 - Click, the two thresholds: every call fits the 46.4 ms model block easily
 - None fits the 11.6 ms callback, not even a typical one
----
-
-<!-- .slide: data-visibility="hidden" -->
-
-<div class="tag">Result</div>
-
-## LibTorch<br><span class="then">A long warm-up, then faster.</span>
-
-<div class="warmup">
-  <div class="warmup-line model fragment" data-fragment-index="1" style="--at:0.516"><span>model block<br>46.4 ms</span></div>
-  <div class="warmup-line callback fragment" data-fragment-index="1" style="--at:0.129"><span>512-sample callback<br>11.6 ms</span></div>
-  <div class="warmup-bars"><i class="warm" style="--h:88.5%;--i:0"><span>79.6 ms</span><em>1</em></i><i class="warm" style="--h:42.7%;--i:1"><span>38.4 ms</span><em>2</em></i><i class="" style="--h:8.7%;--i:2"><span>7.8 ms</span><em>3</em></i><i class="" style="--h:8.7%;--i:3"><span>7.9 ms</span><em>4</em></i><i class="" style="--h:9.2%;--i:4"><span>8.3 ms</span><em>5</em></i><i class="" style="--h:9.1%;--i:5"><span>8.2 ms</span><em>6</em></i><i class="" style="--h:8.4%;--i:6"><span>7.6 ms</span><em>7</em></i><i class="" style="--h:8.5%;--i:7"><span>7.6 ms</span><em>8</em></i><i class="" style="--h:8.5%;--i:8"><span>7.6 ms</span><em>9</em></i><i class="" style="--h:8.3%;--i:9"><span>7.5 ms</span><em>10</em></i></div>
-  <div class="warmup-axis">call</div>
-</div>
-
-Note:
-- We don't use Libtorch in this workshop, but just for comparison
-- The same model, different engine on LibTorch
-- First call 80 ms, second 38 ms: TorchScript optimises the model while it runs it
-- Click: from the third call on about 7.7 ms, faster than ONNX Runtime
-- The two thresholds: after warm up a typical call fits the callback, with little room
-- It's the first calls every time that are slower, not random
-- The slower first passes are warm-up: the first calls after loading do one-time setup
-- This also happens with onnx runtime, but the warm up time is much faster
-
----
-
-<!-- .slide: data-visibility="hidden" -->
-
-<div class="tag">Result</div>
-
-## The two engines<br><span class="then">One run each.</span>
-
-| | first call | second call | typical | slowest |
-|---|---|---|---|---|
-| ONNX Runtime | 18.0 ms | 14.1 ms | 13 ms | 18.0 ms |
-| LibTorch | 79.6 ms | 38.4 ms | 7.7 ms | 79.6 ms |
-
-
-Note:
-- Same model, same machine, very different shape
-- ONNX Runtime: short warm-up, slower typical call
-- LibTorch: long warm-up, faster typical call
-- The slowest call changes from run to run on both, and gets much worse when the machine is busy: run it again and compare
-- We continue with ONNX Runtime, so that's the number you write down
-- We leave the warm up out in part 1: even the warm-up stays far below 46.4 ms, most likely on your machine too, so we don't consider it relevant.
-
 ---
 
 <div class="tag">Run it</div>
@@ -271,6 +167,7 @@ cmake --build --preset release --target step04_solution
 Note:
 - Nothing to edit: build it and run it
 - You can change the amount of repetitions and iterations to see what happens
+- Take a look at the results
 - 2 minutes
 - Remeber the output of your worst case, we need it in steps 6 and 7
 

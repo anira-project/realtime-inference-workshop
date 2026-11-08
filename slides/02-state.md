@@ -73,10 +73,10 @@ ONNX keeps that state in the open: `audio` + `state_in` → `audio_out` + `state
 Note:
 - Some models read the past at every call, others remember
 - Stateless: no memory, the past is handed in at every call
-- Stateful: only the new block, carries the past along. 
+- Stateful: only gets the new block, carries the past along. 
 - Our model is stateful in pytorch/python.
 - Because Onnx runtime is stateless by design, so we need to feed the state out when exporting
-- At every forward pass: We need to explicitly pass out the state of the model to feed it into the next forward pass
+- When we want to use our onnx export we need to explicitly pass out the state of the model to feed it into the next forward pass, at every forward pass
 - Without passing the state, every block is the first block.
 
 ---
@@ -136,7 +136,7 @@ cmake --build --preset release --target step02_exercise
 
 Note:
 - Two TODOs: outside the loop we need to construct our state and then pass it with the audio
-- We don't create the state ourselves: the model writes it on every call. We only give it the memory, zeros for the start
+- We don't create the state ourselves: the model writes it on every call. We only give it the memory, initialize it with zeros 
 - Again you will find a constant struct before the main function, now with the size of the state.
 - 5 minutes, don't worry if you don't finish
 - to build and run, use commands on the slide

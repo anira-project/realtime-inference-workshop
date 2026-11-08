@@ -5,7 +5,6 @@
 
 Note:
 - First step: a minimal C++ program that runs the model
-- One block, and ignore real-time for now
 
 ---
 
@@ -23,7 +22,7 @@ Note:
 - Goal: run the model in C++
 - Load it with ONNX Runtime
 - Run one block of a test signal through it
-- Compare with the Python output
+- Compare with a reference
 
 ---
 
@@ -115,8 +114,7 @@ std::copy_n(m_outputs[0].GetTensorMutableData<float>(), num_samples, audio);
 ```
 
 Note:
-- The constructor does nothing. `load` starts ONNX Runtime, `Ort::Env`, and creates the session, `Ort::Session`, from the file
-- The `.onnx` file contains everything: the structure of the network and all the trained weights, so we don't need to rebuild the model in C++.
+- The constructor does nothing. `load` starts ONNX Runtime, creates an `Ort::Env`, and creates the session, `Ort::Session`, from the file
 - Model is 126 MB, so load once and keep the engine
 - Tensors created once, in `load`, with their own memory from ONNX Runtime. Shape: 1 batch, 1 channel, N samples
 - Every block: copy in, `Run`, copy out
@@ -210,10 +208,9 @@ engine.process(«buffer.data()», «k_model.m_input_size»);  // <- solution
 ```
 
 Note:
-- `buffer` starts as a copy of the input; `process()` overwrites the block with the result, in place
+- `buffer` starts as a copy of the input; `process()` overwrites the block with the result, in place. The model input size is also given in the ModelConfig struct
 - Only the first 2048 samples are compared
-- Where the block starts, `buffer.data()`, and how many samples: 2048, set by the model at export
-- Try 512: the engine says the model takes exactly 2048 samples per call
+- Process gets a pointer to the beginning of our buffer and the process size, so the model block size
 
 ---
 

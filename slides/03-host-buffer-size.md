@@ -126,8 +126,8 @@ buffer.try_pop(sample);                // Take from the front — false if empty
 Note:
 - We use 3 methods: 
 - The available() method checks if there are samples in the buffer
-- `try_push` at the back, `try_pop` from the front, one sample at a time: first in, first out method
-- `try` means:
+- `try_push` at the back, `try_pop` from the front: first in, first out method, , one sample at a time
+- `try` means
 - They never throw: they return a boolian telling us whether it worked. Even if we try to push and the RB is full or the other way around, nothing changes
 
 ---
@@ -197,7 +197,9 @@ for (size_t i = 0; i < prefill; ++i) {                   // given: the zeros go 
 
 Note:
 - The host takes 512 samples every callback, but the model's first block is only complete in the fourth callback
-- Callbacks 1 to 3 take 3 × 512 = 1536 samples from `m_output`: 2048 − 512. That is the prefill, zeros
+- Callbacks 1 to 3: We only fill our buffer with 512 samples at each callback.
+- In Callback 4 our RB is full and the model pops the samples and pushes the results on the output RB.
+- That means that our first 3 callbacks will have no output. we fill that gap with zeros.
 - So the host always finds samples, from the very first callback
 - The sizes are given: `m_input` one model block, `m_output` one model block
 - For host sizes that don't divide 2048 this isn't true anymore, but we'll get into that in part 2
@@ -272,25 +274,30 @@ Note:
 
 ## What is the algorithmic latency?
 
-<div class="lat-add">
-  <div class="lat-term fragment"><span>model block</span><small>samples</small><strong>2048</strong></div>
-  <div class="lat-op fragment">−</div>
-  <div class="lat-term fragment"><span>host block</span><small>samples</small><strong>512</strong></div>
-  <div class="lat-op fragment">=</div>
-  <div class="lat-term total fragment"><span>buffer adaptation</span><small>samples, the prefill</small><strong>1536</strong></div>
+<div class="callbacks">
+  <div class="callback fragment" data-fragment-index="1"><span>Callback 1</span><small>collect 512</small><strong>zeros out</strong></div>
+  <div class="callback fragment" data-fragment-index="1"><span>Callback 2</span><small>collect 512</small><strong>zeros out</strong></div>
+  <div class="callback fragment" data-fragment-index="1"><span>Callback 3</span><small>collect 512</small><strong>zeros out</strong></div>
+  <div class="callback model fragment" data-fragment-index="2"><span>Callback 4</span><small>block complete, model runs</small><strong>model output</strong></div>
 </div>
 
-<div class="cards-note corner-note fragment">For 512 into 2048. Other host block sizes give other numbers: part 2.</div>
+<div class="lat-add with-code">
+  <div class="lat-term fragment" data-fragment-index="3"><span>model block</span><small>samples</small><strong>2048</strong></div>
+  <div class="lat-op fragment" data-fragment-index="3">−</div>
+  <div class="lat-term fragment" data-fragment-index="3"><span>host block</span><small>samples</small><strong>512</strong></div>
+  <div class="lat-op fragment" data-fragment-index="4">=</div>
+  <div class="lat-term total fragment" data-fragment-index="4"><span>buffer adaptation</span><small>3 callbacks × 512, the prefill</small><strong>1536</strong></div>
+</div>
+
+<div class="cards-note corner-note fragment" data-fragment-index="4">For 512 into 2048. Other host block sizes give other numbers: part 2.</div>
 
 Note:
 - Ask first: how much latency does our processing add, the way we built it?
 - The model needs 2048, the host brings 512 at a time
-- Callbacks 1 to 3: `m_input` only collects samples, the host gets the prefill
-- Callback 4: the block is complete, the model runs inside the callback
-- Click: that wait is the buffer adaptation, model block minus host block: 1536 samples, about 35 ms at 44.1 kHz. It is our prefill from TODO 1
-- In general: model block minus the largest block that divides both, here 2048 − 512
-- It is the algorithm's latency, from how we feed the model. The model itself adds its own on top: step 7
-- Only for 512: other host block sizes give other numbers, part 2
+- Click: callbacks 1 to 3: `m_input` only collects samples, the host gets the prefill
+- Click: callback 4 we have enough samples for our forward pass. The block is complete, the model runs inside the callback and pushes the results all in the  same callback
+- So that means that in our last our latency is one model block minus one host block.
+- in other words the model runs in the callback they arrive in
 
 ---
 

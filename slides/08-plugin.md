@@ -24,7 +24,7 @@ Note:
 <div class="cards-note corner-note">And <code>release</code> stops the worker thread again. Bypass, mono and stereo: <code>PluginBase</code>.</div>
 
 Note:
-- What did we add? Not much: the host talks to us in three places
+- What happens? 
 - Constructor: the processor is a plain member, made with the plugin and `k_model`, and it owns the engine. Nothing is loaded or allocated, because the host may construct the plugin just to scan it
 - `prepare`, from `prepareToPlay`: `m_processor.prepare(host_block_size, k_max_inference_ms)` loads the model once, sizes the buffers, starts the worker thread; we return the latency. The host may call it again at any time
 - `process`, from `processBlock`: callback from step 7, unchanged, on the input mixed down to mono
@@ -60,6 +60,7 @@ Note:
 - Commands are on the slide: standalone or VST3
 - Start the build now, ready during the break
 - Play with dry/wet, try your own sounds, headphones please
+- Given example, load your own sample or with live input (pass-through)
 - Set your device or DAW to 512 samples and 44.1 kHz; 48 kHz asks first, anything else is bypassed and says so
 - Sample rate warning: model expects 44.1 kHz
 - At 48 kHz it runs but sounds different: set your device to 44.1
@@ -77,4 +78,3 @@ Note:
 - You'd write all of it again for every new model
 - After the break: how anira does this for you
 - 15 minute break, we start again at 11:40
-- Click the timer to start the countdown; a tone with one minute left, three when time is up

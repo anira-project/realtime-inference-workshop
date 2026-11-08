@@ -6,7 +6,6 @@ Eight numbers to play
 <!-- kind: demo -->
 
 Note:
-- [before: the step 10 app open behind the slides, camera allowed, sound on the room's speakers]
 - We have everything in place, and everything runs.
 - Now it's time to have some fun with the model, and use it in a different way.
 - There are many ways to do that, and of course we add some neural processing on top.
@@ -46,9 +45,9 @@ Note:
 </div>
 
 Note:
-- Our model has two halves: an encoder, eight numbers per block, a decoder.
-- Anything that gives eight numbers can drive the decoder, a hand among them.
-- [click] So the encoder goes, and with it the audio input.
+- First, let's go back to our model.
+- Actually, our model has two parts: an encoder and a decoder, with a latent vector of eight dimensions in between.
+- [click] And what we can do here is remove the encoder, and with it the audio input.
 - [click] The eight numbers come from somewhere else: an LFO, a slider, or your hand in front of a camera.
 - [pause] The decoder alone turns them into sound: one latent frame in, 2048 samples out.
 - A decoder without an encoder is a generator, an instrument: that is this step.

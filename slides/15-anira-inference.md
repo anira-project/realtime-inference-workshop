@@ -101,6 +101,7 @@ Note:
 </div>
 
 Note:
+- So what are the provided files?
 - Same assets as in part 1: the model, the test signal and the reference.
 - New in the helpers: anira itself, fetched by CMake, and contract.json, already complete.
 - Your setup build already compiled anira, so this build is fast.

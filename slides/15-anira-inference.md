@@ -4,10 +4,10 @@
 <!-- kind: exercise -->
 
 Note:
-- [before: step09_exercise_Standalone built on this machine; the interface at 48 kHz, so the report-slide demo shows the rate ask first]
-- Thank you, Fares: hands-on from here, the part 1 model on anira.
-- Step 9, and there is code to write, in two files.
-- Same model, same test signal, same check, but steps 3, 6 and 7 are anira's now.
+- Thank you, Fares for all the details!
+- Let's go back to coding!
+- Step 9, we do all steps from part I,
+- the Same model, same test signal, same check, but with anira now.
 
 ---
 

@@ -49,7 +49,7 @@ The last step, and a playground: no TODO, no check. Open [`exercise/HandMapping.
 
 ## Slides
 
-[`slides/17-hands.md`](../../slides/17-hands.md).
+[`slides/16-hands.md`](../../slides/16-hands.md).
 
 ## What's next
 

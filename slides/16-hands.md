@@ -59,7 +59,7 @@ Note:
 ## One model, cut in two.<br><span class="then">We only need the decoder.</span>
 
 <div class="split-files">
-  <div class="sf-row">
+  <div class="sf-row sf-dim">
     <div class="sf-file">{{FILE:model_forward.onnx}}</div>
     <div class="sf-io"><span>audio · 2048</span><span>+ state · 63,488</span></div>
     <div class="sf-arrow">→</div>

@@ -2501,3 +2501,6 @@ html.tanh .mj-keys.three { grid-template-columns: repeat(3, 1fr); font-size: 0.7
 html.tanh .cards.fm-grid { display: grid; grid-template-columns: 1fr 1fr; row-gap: var(--space-2); }
 html.tanh .cards.fm-grid .card-arrow { grid-column: 2; justify-self: center; }
 html.tanh .cards.fm-grid .card.accent { grid-column: 2; }
+
+/* Step 10 · the forward model above the decoder, not needed here: faded */
+html.tanh .sf-row.sf-dim { opacity: 0.35; }

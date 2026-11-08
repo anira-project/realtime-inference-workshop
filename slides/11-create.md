@@ -32,12 +32,12 @@ class ProcessorExample {
 ```
 
 Note:
-- Lets recap the constructors in the first workshop phase
+- Let's recap the constructors in the first workshop phase
 - First the engines.
 - In part 1 we wrote one class for one engine, ONNX Runtime, by hand: it owns the session and the tensors, and later loads and runs the model.
 - The engine was a decision of the code: another engine, LibTorch, ExecuTorch, LiteRT or your own, would be another class like it, with its own API and its own way of handling the state. The plugin is built for one engine, at compile time.
-- Starting from step 3 the ProcessorExample is owning the class
-- And in step 8 it was constructed with the plugin's constructor
+- Starting from step 3 the ProcessorExample owns the class
+- And in step 8 it was constructed in the plugin's constructor
 
 ---
 
@@ -103,7 +103,7 @@ Note:
 - Here is an example: we have four different model exports and all of them need different engines.
 - Then in the end we can define a default engine which will be the engine choice after prepare
 - At runtime you can then switch between the engines
-- If you define an entry for an engine the build does not it is skipped, so one file serves every build.
+- If you define an entry for an engine the build does not have, it is skipped, so one file serves every build.
 
 ---
 
@@ -123,7 +123,7 @@ Note:
 <div class="cards-note">Step 9's <code>model.json</code>: one entry, one export. A relative path is resolved against the folder of the config file.</div>
 
 Note:
-- I.e. model we have used in part 1 would be declared like this
+- E.g. the model we used in part 1 would be declared like this
 
 ---
 
@@ -146,11 +146,11 @@ ProcessorExample m_processor{k_model};     // step 8: given at construction, kep
 ```
 
 Note:
-- But if we recap our the constant k_model struct there was more information than just the model path.
-- The more and more complex our examples grew, the more members our struct got:
+- But if we recap our constant k_model struct there was more information than just the model path.
+- The more complex our examples grew, the more members our struct got:
 - First only input size, then also state, latency, etc...
-- Then there was also information that our Onnx Engine was assuming, i.e. the data type (float in our example, that we only had one channel, etc.)
-- Anira generalizes this in the following way
+- Then there was also information that our OnnxEngine was assuming, e.g. the data type (float in our example), that we only had one channel, etc.
+- anira generalizes this in the following way
 
 ---
 
@@ -174,8 +174,8 @@ Note:
 
 Note:
 - In anira every tensor - in or out - has a slot with a name and role
-- I.e. our input audio is a tensor named "audio_in". It's role is streamed because (it represents a continuous stream with a time axis)
-- We define the channel number as 1 and the fixed time window of 2048
+- E.g. our input audio is a tensor named "audio_in". Its role is streamed because it represents a continuous stream with a time axis
+- We define the channel number as 1 and the fixed time window as 2048
 
 ---
 
@@ -196,7 +196,7 @@ std::vector<Ort::Value> m_outputs;  // audio, state
 Note:
 - Now recap how the state was handled in part 1
 - It was declared as a size and two tensors in the engine
-- That the state output feeds the state input was declared nowhere it was later implemented in the OnnxEngine::process call
+- That the state output feeds the state input was declared nowhere; it was later implemented in the OnnxEngine::process call
 
 ---
 
@@ -230,10 +230,10 @@ Note:
 - In anira state is just another role, next to streamed
 - State tensors are declared as a pair:
 - Here state_out feeds state_in.
-- We can also see another information which we can provide in the anira ModelConfig:
+- We can also see another piece of information which we can provide in the anira ModelConfig:
 - That is whether a streamed output tensor has a latency
-- Appart from streamed and state anira also allows a third tensor role. Static tensors:
-- Static tensors keep the same value in every inference run until overwritten and then keep this value for the next inference. This can be some parameter that the user can tweak (i.e. the decay time in a reverb emulation neural network model)
+- Apart from streamed and state, anira also allows a third tensor role. Static tensors:
+- Static tensors keep the same value in every inference run until overwritten and then keep this value for the next inference. This can be some parameter that the user can tweak (e.g. the decay time in a reverb emulation neural network model)
 - The tensor specifications are known when the model is exported. So this is something that your data scientist can fill out for you ideally..
 
 ---
@@ -279,7 +279,7 @@ const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
 ```
 
 Note:
-- And apart from that we have been using a "dirty" hot spinning loop on the worker thread which is burning our full cpu compute of one thread while waiting for data.
+- And apart from that we have been using a "dirty" hot spinning loop on the worker thread which is burning our full CPU compute of one thread while waiting for data.
 - How is this handled by anira?
 
 ---
@@ -344,9 +344,9 @@ Note:
 
 Note:
 - anira has two waiting strategies, declared process wide
-- SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool with socalled exponential backoff
-- With this technique, the balence between pooling for new data and leaving compute to other threads becomes bigger and bigger.
-- first we have 4 hot spinning retries consuming all compute, then 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry
+- SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool waits with so-called exponential backoff
+- With this technique, the balance between polling for new data and leaving compute to other threads becomes bigger and bigger.
+- First we have 4 hot spinning retries consuming all compute, then 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry
 - So an idle thread picks up new work within about 100 µs.
 - In BLOCKING mode, the WorkerThreads wait in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
 - The price is on the audio thread: if a pool thread is blocked, enqueuing a new job to the thread pool makes one wake syscall.
@@ -374,7 +374,7 @@ size_t PluginProcessor::prepare(…) {
 ```
 
 Note:
-- And finally lets talk about memory. In step 8 the processor is a member of the plugin, and the engine a member of the processor: so there it is one engine per instance, fixed by the classes.
+- And finally let's talk about memory. In step 8 the processor is a member of the plugin, and the engine a member of the processor: so there it is one engine per instance, fixed by the classes.
 - Each instance loads the model in its prepare, so ten instances hold ten copies of the same model. Memory grows with the instances the host adds, like the threads did.
 
 ---
@@ -400,7 +400,7 @@ Note:
 <div class="cards-note">On the pool of four threads from the context file. A copy is one ONNX Runtime session with its own weights; anira shares only the environment and the session options.</div>
 
 Note:
-- anira loads the weights at prepare as well but How many copies are loaded depends on whether the model has state.
+- anira loads the weights at prepare as well, but how many copies are loaded depends on whether the model has state.
 - With state, like ours: the state belongs to one stream, so every handler gets its own session at its prepare, and its inferences run one at a time, in order. One handler per plugin instance: ten instances, ten copies, the same as part 1.
 - Without state: the first handler's prepare loads the model for the whole process. A model setting, max_instances, by default one per pool thread, then says how many engine instances that load creates
 - So ten instances on our four threads would hold four copies, not ten.
@@ -429,5 +429,5 @@ Note:
 Note:
 - After create: everything is declared and checked, and nothing runs yet.
 - Left, what we declared; right, all create did with it: it checked, it built the slots, and it allocated the state pair's two buffers.
-- There is no model loaded, no ringbuffer allocated or no thread started yet
+- There is no model loaded, no ring buffer allocated and no thread started yet
 - Next up is prepare

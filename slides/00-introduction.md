@@ -20,7 +20,7 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 Note:
 - Hi all
 - Welcome to our workshop on real-time inference of neural networks.
-- Today we take an exported neural network model and implement it in an audio environement in a real-time safe manner
+- Today we take an exported neural network model and implement it in an audio environment in a real-time safe manner
 
 ---
 
@@ -32,10 +32,10 @@ Note:
 
 Note:
 - But before we talk about neural networks, let's first look at something familiar:
-- Fixed block FFT processing within the hosts audio callback.
-- For example we can have a host audio callback with 512 samples and a fixed size fft processing module which requires 2048 samples.
-- How is this typically implemented.
-- You'd use a ringbuffer collect samples for 3 callbacks, then in the fourth you can run your fft processing
+- Fixed block FFT processing within the host's audio callback.
+- For example we can have a host audio callback with 512 samples and a fixed size FFT processing module which requires 2048 samples.
+- How is this typically implemented?
+- You'd use a ring buffer to collect samples for 3 callbacks, then in the fourth you can run your FFT processing
 - On this machine it takes less than the equivalent of a sample per block constantly
 - And then the samples are returned
 - So we will have a little processing spike every 4 host callbacks, but since we are so quick it does not matter much
@@ -49,10 +49,10 @@ Note:
 <div class="teaser" data-teaser="clock" data-work="nn"><canvas></canvas></div>
 
 Note:
-- If we change the fft module with a neural network module, we have similarities
+- If we replace the FFT module with a neural network module, we have similarities
 - We also have a fixed input size for the neural network (here 2048 as well), but the processing takes longer
 - And on top of that the processing is nondeterministic, it varies in time
-- Todays question is therefore: How can we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline?
+- Today's question is therefore: How can we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline?
 
 ---
 
@@ -119,7 +119,7 @@ Note:
 </div>
 
 Note:
-- But before diving deeper into the topic let me first introduce ourselves
+- But before diving deeper into the topic let us first introduce ourselves
 - Lina Campanella is working as a student assistant at TU Berlin.
 - I am a research associate at TU Berlin leading the Computer Music and Neural Audio Systems research team, and together with Valentin I run tanh lab.
 - In addition Valentin also works as an audio software developer at Baby Audio.
@@ -144,10 +144,10 @@ Note:
 
 Note:
 - What is this tanh lab?
-- Tanh lab is an audio software studio based in berlin.
+- Tanh lab is an audio software studio based in Berlin.
 - We take ideas from research all the way to a product.
 - Our work ranges from applied research, evaluating the feasibility of an idea to the full stack implementation and deployment of the product.
-- We are also the maintaining the open source and permissively licensed anira library.
+- We are also maintaining the open source and permissively licensed anira library.
 
 ---
 
@@ -170,12 +170,12 @@ Note:
 <div class="cards-note">Not today: training, exporting, ML fundamentals, Python.</div>
 
 Note:
-- Now lets talk about the workshop.
-- Today's path starts from an exported model (get it from data scientist) already trained and exported.
+- Now let's talk about the workshop.
+- Today's path starts from an exported model (get it from a data scientist) already trained and exported.
 - We will run this model in C++, and see what the engine, the block size and the worst case mean for us.
 - We make it real-time safe, with a worker thread and an honest latency.
 - And we put all of it into a plugin that runs in your host.
-- anira solves these three steps, but in order to understand why it is usefull, today you will build it by hand first.
+- anira solves these three steps, but in order to understand why it is useful, today you will build it by hand first.
 - So today we are not going to cover: training, exporting, machine learning basics or Python.
 
 ---
@@ -244,7 +244,7 @@ Note:
 - Why release? There is a benchmark in the examples, which is only meaningful in release.
 - Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so please do it at another moment, not now on the shared network.
 - If configuring fails, raise your hand and we come to you.
-- Please! do not wait for the first exercise: that is the worst moment to start a download.
+- Please! Do not wait for the first exercise: that is the worst moment to start a download.
 
 ---
 

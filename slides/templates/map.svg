@@ -131,7 +131,7 @@
   </g>
 
   <!-- Drawn last, over the boxes: the outline of the row a chapter fills -->
-  <rect class="map-band create" x="12" y="88" width="1576" height="146" rx="10"/>
-  <rect class="map-band prepare" x="12" y="240" width="1576" height="134" rx="10"/>
-  <rect class="map-band process" x="12" y="380" width="1576" height="324" rx="10"/>
+  <rect class="map-band create" x="20" y="88" width="1560" height="146" rx="10"/>
+  <rect class="map-band prepare" x="20" y="240" width="1560" height="134" rx="10"/>
+  <rect class="map-band process" x="20" y="380" width="1560" height="324" rx="10"/>
 </svg>

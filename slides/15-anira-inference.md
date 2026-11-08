@@ -359,13 +359,13 @@ Note:
 <div class="cards-note">At 48 kHz the plugin asks first: a 44.1 kHz model, no resampler. <strong>Process anyway</strong> plays it as it is.</div>
 
 Note:
-- If you clicked the report button, you probably saw this screen.
-- It's the benchmark anira ran inside the plugin, on your machine, before the first block.
-- First a warm-up, until the times are stable; then it measures.
-- Here the worst case is 12.9 ms, and that becomes the budget.
-- That's 28 % of one model block: comfortable.
-- Under 75 % is comfortable, under 100 % marginal, and above that the plugin holds back until you click Try nonetheless.
-- [point at the last line] And at 48 kHz it asks first: the model is trained at 44.1 kHz.
+- The report button shows this.
+- anira's benchmark, on your machine.
+- Warm-up first, then it measures.
+- Worst case 12.9 ms: that is the budget.
+- 28 % of a model block: comfortable.
+- Over 100 %, the plugin holds back.
+- [point at the last line] 48 kHz: it asks first.
 
 ---
 

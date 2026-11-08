@@ -18,5 +18,18 @@ macro(workshop_setup_juce)
             DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         )
         FetchContent_MakeAvailable(JUCE)
+
+        # juce_recommended_lto_flags pass a bare -flto. GCC then runs its
+        # link-time (LTRANS) jobs in parallel only when it finds a GNU make
+        # jobserver; without one, as in a make without -j, it runs them one
+        # after another and warns "using serial compilation of N LTRANS jobs".
+        # -flto=auto takes the jobserver when there is one and every CPU
+        # thread otherwise; GCC 11 and up, like CMake's own IPO flags.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+           AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11)
+            set_target_properties(juce_recommended_lto_flags PROPERTIES
+                INTERFACE_COMPILE_OPTIONS "$<$<CONFIG:Release>:-flto=auto>"
+                INTERFACE_LINK_LIBRARIES "$<$<CONFIG:Release>:-flto=auto>")
+        endif()
     endif()
 endmacro()

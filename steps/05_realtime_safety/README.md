@@ -32,7 +32,7 @@ cmake -S . -B build/rtsan -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
   -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" \
   -DWORKSHOP_STEP=05
-cmake --build build/rtsan -j
+cmake --build build/rtsan --parallel 4
 ./build/rtsan/bin/step05_solution
 ```
 

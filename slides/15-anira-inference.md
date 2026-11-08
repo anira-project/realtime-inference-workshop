@@ -26,10 +26,12 @@ Note:
 
 Note:
 - Here are the six things again that we built by hand in part 1.
-- Three of them we now declare.
-- The model goes into model.json.
-- The benchmark and what happens on a missed deadline go into contract.json.
-- The other three anira handles for us: real-time safety, threading and latency.
+- Inference: which model, which engine, which tensors, all defined in model.json.
+- Benchmarking: the worst-case execution time is declared in our contract.
+- Real-time safety is built into anira's design.
+- Threading is handled by anira too: one thread pool, from the anira context.
+- Latency: anira calculates it, and we only read it.
+- Real-time guarantees: what happens on a missed deadline is also in the contract.
 - [pause] So what is left for us to write?
 
 ---
@@ -57,11 +59,9 @@ Note:
 <div class="cards-note">The calls are in <code>AniraProcessor.cpp</code>.</div>
 
 Note:
-- What is left: three configs on top, three calls below, and step 7's check at the end.
-- The model file is the what: ONNX Runtime, and you fill the tensor sizes and the state pair.
-- The contract is the how: three keys, we read them in a moment.
-- The context, the with-what, sits in AniraProcessor.h, in the source folder beside the exercise.
-- No context file: the defaults are enough here.
+- What is left: three configs on top, three calls below.
+- In model.json you fill the gaps: the tensor sizes and the state pair.
+- The contract is given, and the context runs on its defaults.
 - Below, the three calls: create in the constructor, prepare from prepareToPlay, process from processBlock.
 - Process runs live in the callback, and the check also runs it offline, waiting for each result.
 - The check shifts the output by anira's latency, less the model's own delay, already in the reference.

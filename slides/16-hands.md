@@ -48,9 +48,10 @@ Note:
 - First, let's go back to our model.
 - Actually, our model has two parts: an encoder and a decoder, with a latent vector of eight dimensions in between.
 - [click] And what we can do here is remove the encoder, and with it the audio input.
-- [click] The eight numbers come from somewhere else: an LFO, a slider, or your hand in front of a camera.
+- [click] Then we can use an LFO, a slider, or maybe you hand to control the eight numbers instead!
 - [pause] The decoder alone turns them into sound: one latent frame in, 2048 samples out.
-- A decoder without an encoder is a generator, an instrument: that is this step.
+- A decoder without an encoder is a generator, an instrument
+- This is what the last step is all about!
 
 ---
 
@@ -83,6 +84,34 @@ Note:
 
 ---
 
+<div class="tag">Hand tracking</div>
+
+## Hands in the webcam image,<br><span class="then">four open-source models on anira.</span>
+
+<div class="cards ht">
+  <div class="card"><div class="ht-pic"><svg class="th-pic" viewBox="0 0 160 120" aria-hidden="true"><rect class="th-cam-frame" x="1" y="1" width="158" height="118" rx="8"/><g class="th-cam-hand"><polyline points="80,108 64,98 52,86 43,74 36,64"/><polyline points="80,108 68,70 66,52 65,40 64,29"/><polyline points="80,108 80,68 80,48 80,35 80,23"/><polyline points="80,108 92,70 94,52 95,40 96,30"/><polyline points="80,108 103,77 108,63 111,53 113,44"/><polygon points="70,108 90,108 104,78 92,68 68,70 60,90"/></g></svg></div><div class="card-title">webcam</div><div class="card-text">30 frames a second</div></div>
+  <div class="card-arrow">→</div>
+  <div class="card"><div class="card-title">palm detector</div><div class="card-text">where are the hands?</div></div>
+  <div class="card-arrow">→</div>
+  <div class="card"><div class="card-title">landmarks</div><div class="card-text">21 points per hand</div></div>
+  <div class="card-arrow">→</div>
+  <div class="card"><div class="card-title">gesture</div><div class="card-text">two models: fist, open palm, …</div></div>
+  <div class="card-arrow">→</div>
+  <div class="card accent"><div class="ht-pic"><svg class="th-pic" viewBox="0 0 160 120" aria-hidden="true"><rect class="th-pred-frame" x="1" y="1" width="158" height="118" rx="8"/><g class="th-cam-pred"><g class="th-cam-bones"><polyline points="80,108 64,98 52,86 43,74 36,64"/><polyline points="80,108 68,70 66,52 65,40 64,29"/><polyline points="80,108 80,68 80,48 80,35 80,23"/><polyline points="80,108 92,70 94,52 95,40 96,30"/><polyline points="80,108 103,77 108,63 111,53 113,44"/><polyline points="68,70 80,68 92,70 103,77"/></g><g class="th-cam-dots"><circle cx="80" cy="108" r="3.4"/><circle cx="64" cy="98" r="3.4"/><circle cx="52" cy="86" r="3.4"/><circle cx="43" cy="74" r="3.4"/><circle cx="36" cy="64" r="3.4"/><circle cx="68" cy="70" r="3.4"/><circle cx="66" cy="52" r="3.4"/><circle cx="65" cy="40" r="3.4"/><circle cx="64" cy="29" r="3.4"/><circle cx="80" cy="68" r="3.4"/><circle cx="80" cy="48" r="3.4"/><circle cx="80" cy="35" r="3.4"/><circle cx="80" cy="23" r="3.4"/><circle cx="92" cy="70" r="3.4"/><circle cx="94" cy="52" r="3.4"/><circle cx="95" cy="40" r="3.4"/><circle cx="96" cy="30" r="3.4"/><circle cx="103" cy="77" r="3.4"/><circle cx="108" cy="63" r="3.4"/><circle cx="111" cy="53" r="3.4"/><circle cx="113" cy="44" r="3.4"/></g></g></svg></div><div class="card-title">the hand</div><div class="card-text">five numbers to play with</div></div>
+</div>
+
+<div class="cards-note">Google's MediaPipe hand tracking, open source (Apache 2.0)</div>
+
+Note:
+- To play with our hands, we first need to know where they are.
+- anira does not only run audio: it runs models on video too.
+- So we track the hands visible in our webcam image.
+- That takes four AI models, one after the other.
+- One finds the palm, one the 21 points of the hand, and two name the gesture.
+- We use Google's open-source MediaPipe models for that.
+
+---
+
 <div class="tag">Coming with v3.0</div>
 
 ## anira foundation models.<br><span class="then">Ready-made models, easy to integrate.</span>
@@ -97,9 +126,7 @@ Note:
 <div class="cards-note">Each with its anira configs and an example: add it to your plugin without writing them.</div>
 
 Note:
-- Where do the eight numbers come from today? From your hand.
-- A camera sees it, and a model reads the hand from the image.
-- We are building a collection for that: anira foundation models.
+- Models like these, we are collecting: anira foundation models.
 - Models we train ourselves, and open source models that are already out there.
 - Each comes with its anira configs, as an easy-to-use example to integrate.
 - [click] Hand tracking, Google's open source model, is one of them: we provide it for this step.

@@ -964,6 +964,42 @@ html.tanh .lat-plus {
   color: var(--fs-text-muted-color);
 }
 
+/* One box per host callback: what goes in and what the host gets back */
+html.tanh .callbacks {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  font-family: var(--fs-heading-font);
+}
+
+html.tanh .callbacks .callback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4);
+  border: var(--hairline) solid var(--fs-border-strong);
+}
+
+html.tanh .callbacks .callback.model { background: var(--tint-model); }
+
+html.tanh .callbacks .callback span {
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+html.tanh .callbacks .callback small {
+  margin-top: var(--space-1);
+  font-size: 0.6em;
+  color: var(--fs-text-muted-color);
+}
+
+html.tanh .callbacks .callback strong {
+  margin-top: var(--space-3);
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
 /* A long program output in one block: small and tight, so all of it fits */
 html.tanh .reveal .output-full pre {
   width: 100%;

@@ -83,8 +83,9 @@ jobs:
       # is what we say it is. A non-zero exit fails the run.
       - name: Run the solutions
         shell: bash
-        # Steps 6 and 7 pace their host four times slower here, configured
-        # above: a shared runner does not keep up with real time
+        # Steps 6 and 7 pace their host four times slower here, and step 4
+        # allows four model blocks, configured above: a shared runner does not
+        # keep up with real time
         run: |
           for binary in step01_solution step02_solution step03_solution step04_solution step06_solution step07_solution step09_solution_check step10_solution_check; do
             path=$(find build -name "$binary" -o -name "$binary.exe" | head -1)

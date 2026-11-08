@@ -121,7 +121,7 @@ The models are not in git; the configure downloads them. [steps/common/assets/mo
 - `-DWORKSHOP_ANIRA=OFF` — leave part 2 out
 - `-DWORKSHOP_JUCE=OFF` — leave the plugin steps out
 - `-DWORKSHOP_RTSAN=ON` — step 5 with RealtimeSanitizer; needs a clang that has it, see the [step's README](steps/05_realtime_safety/README.md)
-- `-DWORKSHOP_HOST_SLOWDOWN=4` — for CI: the host loop of steps 6 and 7 calls back four times slower, since a shared runner does not keep up with real time
+- `-DWORKSHOP_HOST_SLOWDOWN=4` — for CI: the host loop of steps 6 and 7 calls back four times slower, and step 4 allows four model blocks per forward pass, since a shared runner does not keep up with real time
 - `-DWORKSHOP_CHECK_EXERCISES=ON` — for maintainers: every exercise, its `?` filled in from the solution by [`scripts/fill_exercise.py`](scripts/fill_exercise.py), has to build and pass like the solution (`stepNN_exercise_filled`, `step09_exercise_filled_check`). CI runs them on every push; locally it needs Python 3.
 
 ## Funding

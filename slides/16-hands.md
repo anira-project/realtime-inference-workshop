@@ -144,17 +144,13 @@ Note:
 - Alongside it, one switch fades the output out in about a second: Silence without hands, on by default.
 - [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
 - [point at the latent panel] Eight bars, one per latent, more on the tick later.
-- [back to the slide] Left to right, our three threads and what passes between them.
-- [point at the flow] Slowed down eighty times: each thread runs at its own pace, and none waits for another.
-- The camera every 33 ms, the timer every 17 ms, an audio callback every 11.6 ms, a decoder frame every 46 ms.
-- The camera thread is not the GUI: the system's capture queue hands it every frame.
-- It pushes an image down into the pool and pops the prediction, the 21 points of each hand: it never waits.
-- The newest hands go to the message thread through a lock-free triple buffer.
-- The message thread is JUCE's GUI thread: 60 times a second it reads the hands, runs your mapping, and draws.
-- The latent vector reaches the audio thread as eight atomic floats, one per dimension.
-- The audio thread pushes control data, the latent vector, once per 2048 samples, and pops the decoder's audio.
-- Down is push, up is pop: only the camera and the audio thread call anira, the message thread never does.
-- Now your part.
+- [back to the slide] And here is what's nice about anira.
+- Once the configs are in place, we just register our handlers.
+- Four for the webcam models on the camera thread, one for the audio model on the audio thread.
+- All five share the same thread pool.
+- [point at the middle] And our message thread syncs the detection with the audio thread, to control the latents.
+- [point at the flow] Each thread runs at its own pace, and none waits for another.
+- Next: how a hand becomes the latents.
 
 ---
 

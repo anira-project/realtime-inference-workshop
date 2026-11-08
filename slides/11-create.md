@@ -82,7 +82,7 @@ Note:
 
 ```json
 "models": [
-  { "engine": "onnxruntime", "path": "model_forward.onnx" },
+  { "engine": "onnxruntime", "path": "model.onnx" },
   { "engine": "libtorch",    "path": "model.pt" },
   { "engine": "executorch",  "path": "model.pte" },
   { "engine": "litert",      "path": "model.tflite" }

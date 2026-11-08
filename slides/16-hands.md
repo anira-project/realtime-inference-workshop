@@ -100,7 +100,7 @@ Note:
   <div class="card accent"><div class="ht-pic"><svg class="th-pic" viewBox="0 0 160 120" aria-hidden="true"><rect class="ht-bar-bg" x="14" y="14" width="18" height="92" rx="3"/><rect class="ht-bar" x="14" y="55" width="18" height="51" rx="3"/><rect class="ht-bar-bg" x="42" y="14" width="18" height="92" rx="3"/><rect class="ht-bar" x="42" y="32" width="18" height="74" rx="3"/><rect class="ht-bar-bg" x="70" y="14" width="18" height="92" rx="3"/><rect class="ht-bar" x="70" y="23" width="18" height="83" rx="3"/><rect class="ht-bar-bg" x="98" y="14" width="18" height="92" rx="3"/><rect class="ht-bar" x="98" y="92" width="18" height="14" rx="3"/><rect class="ht-bar-bg" x="126" y="14" width="18" height="92" rx="3"/><rect class="ht-bar" x="126" y="60" width="18" height="46" rx="3"/></svg></div><div class="card-title">the hand</div><div class="card-text">five numbers to play with</div></div>
 </div>
 
-<div class="cards-note">Google's MediaPipe hand tracking, open source (Apache 2.0)</div>
+<div class="cards-note">Google's MediaPipe hand tracking, open source (Apache 2.0) · anira configs ready, used under the hood</div>
 
 Note:
 - To play with our hands, we first need to know where they are.
@@ -109,28 +109,8 @@ Note:
 - That takes four AI models, one after the other.
 - One finds the palm, one the 21 points of the hand, and two name the gesture.
 - We use Google's open-source MediaPipe models for that.
-
----
-
-<div class="tag">Coming with v3.0</div>
-
-## anira foundation models.<br><span class="then">Ready-made models, easy to integrate.</span>
-
-<div class="cards fm-grid">
-  <div class="card">{{ICON:model}}<div class="card-title">our own</div><div class="card-text">models we train</div></div>
-  <div class="card">{{ICON:model}}<div class="card-title">open source</div><div class="card-text">models already out there</div></div>
-  <div class="card-arrow fragment" data-fragment-index="1">↓</div>
-  <div class="card accent fragment" data-fragment-index="1">{{ICON:people}}<div class="card-title">hand tracking</div><div class="card-text">Google's model, provided</div></div>
-</div>
-
-<div class="cards-note">Each with its anira configs and an example: add it to your plugin without writing them.</div>
-
-Note:
-- Models like these, we are collecting: anira foundation models.
-- Models we train ourselves, and open source models that are already out there.
-- Each comes with its anira configs, as an easy-to-use example to integrate.
-- [click] Hand tracking, Google's open source model, is one of them: we provide it for this step.
-- Let me show you.
+- We already have the anira configurations for all four, so we just use them under the hood.
+- How exactly, we skip today: the decoder is what we play.
 
 ---
 

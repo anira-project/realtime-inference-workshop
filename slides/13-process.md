@@ -221,10 +221,12 @@ if (!m_input.try_push(samples[i])) {   // the worker is behind, the ring is full
 <div class="callback-note">The box is one callback: <code>try_push</code> loses the end of its input block, and its output starts with as many zeros.</div>
 
 Note:
-- And on the other side: the worker is behind and the input ring is full
-- try_push fails, the rest of the host block is never pushed, and the output starts its next block with as many zeros: two clicks
+- And on the other side
+- Because the worker thread is busy to long it pop out input samples to late and the input ring is full
+- try_push fails then and the rest of the host block is never pushed
+- the output then pays the depth and starts its next block with as many zeros
 - After the zeros the audio is late by as many samples
-- And one latency later the gap reaches the output, and the audio jumps back in line: a third click
+- And one latency later the gap reaches the output, and the audio jumps back in line
 
 ---
 
@@ -288,11 +290,10 @@ Note:
 <div class="click-note fill"><b>no shift</b> A late result or a full queue: the contract's <code>"on_miss"</code> fills the block, the late result is dropped, the audio after it stays in line.</div>
 
 Note:
-- anira handles both cases the same way: the missed block is filled in place, and nothing shifts
-- A late result is dropped when it arrives, and if every slot is busy, the window is dropped and its block filled the same way, at its place in the stream
-- What goes in there we choose in the contract with on_miss: bypass, the default, passes the input through, hold_last repeats the last block, zeros is silence as in part 1, or our own callback
-- process reports the block as missed, which is not an error, and if every slot was busy, rt_error tells us we are overloaded
-- And on a transport jump we call reset on the handler, wait-free from the audio thread: it clears the rings, refills the latency's zeros and starts the state at zero
+- anira handles both cases more gracefully: the missed block is filled in place, and nothing shifts
+- A late result is dropped when it arrives, and if all input slots are busy, the window is dropped and its block filled later, at its place in the stream
+- The contract chooses what happens on a on_miss: bypass, the default, passes the input through, hold_last repeats the last block, zeros is silence as in part 1, or the user can even provide a custom callback function
+- process reports the block as missed and if every slot was busy the real-time logger tells us we are overloaded
 
 ---
 
@@ -345,11 +346,7 @@ Note:
 <div class="cards-note">Step 8 in a bounce: the output ring runs dry and goes out as silence, and the input ring fills up and drops samples.</div>
 
 Note:
-- And finally: did anyone export a track with our plugin from step 8? Rendering offline, a bounce in the DAW
-- Live the host calls once per block, every 11.6 ms for 512 samples, and the latency covers our inference
-- In a bounce there is no clock: the host calls the next block as soon as the last one returns
-- The inference still takes its 12 or so milliseconds. Our audio thread never waits, so the output ring runs dry and goes out as silence, and the input ring fills up and drops samples. The bounce has gaps
-- Live never waiting is right. Offline nothing runs against a deadline, so we can afford to wait. How does anira do that?
+- And finally I want to talk about offline bouncing...
 
 ---
 
@@ -374,8 +371,6 @@ if (isNonRealtime()) {   // a bounce: no deadline, nothing to miss
 </div>
 
 Note:
-- When the host renders offline, in JUCE isNonRealtime, we call process_wait instead of process
+- In anira when the host renders offline, in JUCE i.e. isNonRealtime is true, we call process_wait instead of process
 - The same call, but it blocks until the inference threads have delivered this block's result. ANIRA_WAIT_FOREVER means as long as it takes
-- Live process stays nonblocking: never wait on the audio thread
-- What we do not do: sleep in the callback for as long as the block lasts, to give the pool time. That only imitates the clock, and is still a guess
 

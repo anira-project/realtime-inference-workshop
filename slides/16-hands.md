@@ -112,34 +112,20 @@ Note:
 ## A camera at 30 fps,<br><span class="then">audio at 44.1 kHz, one pool.</span>
 
 <div class="threads">
-  <div class="th-name" style="grid-area: 1 / 1">camera thread<small>capture queue · 30 a second</small></div>
-  <div class="th-step card" style="grid-area: 1 / 2; --i: 0"><div class="card-title">frame</div><div class="card-text">from the camera</div></div>
-  <div class="th-arr" style="grid-area: 1 / 3">→</div>
-  <div class="th-step card" style="grid-area: 1 / 4; --i: 1"><div class="card-title">push_data</div><div class="card-text">the frame, returns at once</div></div>
-  <div class="th-arr" style="grid-area: 1 / 5">→</div>
-  <div class="th-step card" style="grid-area: 1 / 6; --i: 3"><div class="card-title">pop_data</div><div class="card-text">what has finished</div></div>
-  <div class="th-arr pool" style="grid-area: 1 / 7">⇄</div>
-  <div class="th-step th-pass" style="grid-area: 2 / 2 / 3 / 7; --i: 4">↓ the newest hands · lock-free triple buffer</div>
-  <div class="th-name" style="grid-area: 3 / 1">message thread<small>GUI timer · 60 a second</small></div>
-  <div class="th-step card" style="grid-area: 3 / 2; --i: 5"><div class="card-title">hands</div><div class="card-text">features, 0 to 1</div></div>
-  <div class="th-arr" style="grid-area: 3 / 3">→</div>
-  <div class="th-step card accent" style="grid-area: 3 / 4; --i: 6"><div class="card-title">your mapping</div><div class="card-text">HandMapping.cpp</div></div>
-  <div class="th-arr" style="grid-area: 3 / 5">→</div>
-  <div class="th-step card" style="grid-area: 3 / 6; --i: 7"><div class="card-title">8 latents</div><div class="card-text">smoothed</div></div>
-  <div class="th-step th-pass" style="grid-area: 4 / 2 / 5 / 7; --i: 8">↓ 8 × <code>std::atomic&amp;lt;float&amp;gt;</code> · relaxed</div>
-  <div class="th-name" style="grid-area: 5 / 1">audio thread<small>44.1 kHz</small></div>
-  <div class="th-step card" style="grid-area: 5 / 2; --i: 9"><div class="card-title">load the 8</div><div class="card-text">one latent frame</div></div>
-  <div class="th-arr" style="grid-area: 5 / 3">→</div>
-  <div class="th-step card" style="grid-area: 5 / 4; --i: 10"><div class="card-title">push_data</div><div class="card-text">once per 2048 samples</div></div>
-  <div class="th-arr" style="grid-area: 5 / 5">→</div>
-  <div class="th-step card" style="grid-area: 5 / 6; --i: 12"><div class="card-title">pop_data</div><div class="card-text">this callback's audio</div></div>
-  <div class="th-arr pool" style="grid-area: 5 / 7">⇄</div>
-  <div class="th-pool" style="grid-area: 1 / 8 / 6 / 9">
-    <div class="th-step th-pool-model" style="--i: 2">hand tracking<small>4 models</small></div>
-    <div class="th-pool-name">anira pool<small>one thread per core</small></div>
-    <div class="th-step th-pool-model" style="--i: 11">decoder<small>1 model</small></div>
-  </div>
+  <div class="card th-step" style="grid-area: 1 / 1; --p: 1.333s; --d: 0.000s"><div class="th-img"><svg class="th-cam" viewBox="0 0 160 120" aria-hidden="true"><rect class="th-cam-frame" x="1" y="1" width="158" height="118" rx="8"/><g class="th-cam-bones"><polyline points="80,108 64,98 52,86 43,74 36,64"/><polyline points="80,108 68,70 66,52 65,40 64,29"/><polyline points="80,108 80,68 80,48 80,35 80,23"/><polyline points="80,108 92,70 94,52 95,40 96,30"/><polyline points="80,108 103,77 108,63 111,53 113,44"/><polyline points="68,70 80,68 92,70 103,77"/></g><g class="th-cam-dots"><circle cx="80" cy="108" r="3.2"/><circle cx="64" cy="98" r="3.2"/><circle cx="52" cy="86" r="3.2"/><circle cx="43" cy="74" r="3.2"/><circle cx="36" cy="64" r="3.2"/><circle cx="68" cy="70" r="3.2"/><circle cx="66" cy="52" r="3.2"/><circle cx="65" cy="40" r="3.2"/><circle cx="64" cy="29" r="3.2"/><circle cx="80" cy="68" r="3.2"/><circle cx="80" cy="48" r="3.2"/><circle cx="80" cy="35" r="3.2"/><circle cx="80" cy="23" r="3.2"/><circle cx="92" cy="70" r="3.2"/><circle cx="94" cy="52" r="3.2"/><circle cx="95" cy="40" r="3.2"/><circle cx="96" cy="30" r="3.2"/><circle cx="103" cy="77" r="3.2"/><circle cx="108" cy="63" r="3.2"/><circle cx="111" cy="53" r="3.2"/><circle cx="113" cy="44" r="3.2"/></g></svg></div><div class="card-title">camera thread</div><div class="card-text">the capture queue · 30 a second<br>hands each frame to the tracker</div></div>
+  <div class="th-hand th-step" style="grid-area: 1 / 2; --p: 1.333s; --d: 0.120s">→<small>newest hands<br>triple buffer</small></div>
+  <div class="card accent th-step" style="grid-area: 1 / 3; --p: 0.667s; --d: 0.000s"><div class="card-title">message thread</div><div class="card-text">JUCE's GUI timer · 60 a second<br>reads the hands, runs your mapping, draws</div></div>
+  <div class="th-hand th-step" style="grid-area: 1 / 4; --p: 0.667s; --d: 0.040s">→<small>8 latents<br><code>std::atomic&amp;lt;float&amp;gt;</code></small></div>
+  <div class="card th-step" style="grid-area: 1 / 5; --p: 0.464s; --d: 0.000s"><div class="th-img th-wave">{{WAVEFORM:steps/common/assets/target_signal.h|blocks=2048|height=120|from=2|to=4}}</div><div class="card-title">audio thread</div><div class="card-text">44.1 kHz<br>one latent frame per 2048 samples</div></div>
+  <div class="th-calls" style="grid-area: 2 / 1"><span class="th-step" style="--p: 1.333s; --d: 0.080s">↓ push_data</span><span class="th-step" style="--p: 1.333s; --d: 0.000s">↑ pop_data</span></div>
+  <div class="th-none" style="grid-area: 2 / 3">no anira calls</div>
+  <div class="th-calls" style="grid-area: 2 / 5"><span class="th-step" style="--p: 1.858s; --d: 0.000s">↓ push_data</span><span class="th-step" style="--p: 0.464s; --d: 0.000s">↑ pop_data</span></div>
+  <div class="th-pool" style="grid-area: 3 / 1 / 4 / 6"></div>
+  <div class="th-pool-model th-step" style="grid-area: 3 / 1; --p: 1.333s; --d: 0.240s">hand tracking<small>4 models</small></div>
+  <div class="th-pool-name" style="grid-area: 3 / 3">anira pool<small>one thread per core</small></div>
+  <div class="th-pool-model th-step" style="grid-area: 3 / 5; --p: 1.858s; --d: 0.200s">decoder<small>1 model</small></div>
 </div>
+<div class="cards-note">Each thread at its own pace, slowed down 40×: the camera every 33 ms, the timer every 17 ms, an audio callback every 11.6 ms and a decoder frame every 46 ms.</div>
 
 Note:
 - [switch to the app, camera on, one hand in view; from here speak little, play more] Here it is.
@@ -153,14 +139,15 @@ Note:
 - Alongside it, one switch fades the output out in about a second: Silence without hands, on by default.
 - [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
 - [point at the latent panel] Eight bars, one per latent, more on the tick later.
-- [back to the slide] Three threads of ours, and anira's pool on the right.
+- [back to the slide] Left to right, our three threads and what passes between them.
+- [point at the pulses] Slowed down forty times: each thread runs at its own pace, and none waits for another.
 - The camera thread is not the GUI: the system's capture queue hands it every frame.
-- It pushes the frame to the tracker and pops what has finished: it never waits.
+- It pushes the frame down into the pool and pops what has finished: it never waits.
 - The newest hands go to the message thread through a lock-free triple buffer.
-- There, 60 times a second, your mapping turns them into eight latents.
-- They reach the audio thread as eight atomic floats.
-- The audio thread pushes one latent frame per 2048 samples to the decoder and pops its audio.
-- The message thread never touches anira: only the camera and the audio thread push and pop, on one pool.
+- The message thread is JUCE's GUI thread: 60 times a second it reads the hands, runs your mapping, and draws.
+- The eight latents reach the audio thread as eight atomic floats.
+- The audio thread pushes one latent frame per 2048 samples and pops its audio.
+- Down is push, up is pop: only the camera and the audio thread call anira, the message thread never does.
 - Now your part.
 
 ---

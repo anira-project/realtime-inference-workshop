@@ -366,15 +366,8 @@ Note:
 <div class="cards-note">At 48 kHz the plugin asks first: a 44.1 kHz model, no resampler. <strong>Process anyway</strong> plays it as it is.</div>
 
 Note:
-- [before: step09_exercise_Standalone built, interface at 48 kHz]
-- This is what prepare measured on this machine, before the first block.
-- Budget and measured are the same: the slowest of the last four warm-up runs.
-- The warm-up stopped after four runs, because they already agreed.
-- A load of 28 percent: comfortable.
-- A model that is not real-time is held back, until you press Try nonetheless.
-- [ask the room] Your check printed yours: anyone marginal, or not real-time?
-- [if time: open step09_exercise_Standalone at 48 kHz: the rate ask, Process anyway, then report]
-- [in the demo] The window asks at any rate but 44.1 kHz, as step 8 did at 48: no resampler.
+- If you clicked the report button, you probably saw this screen.
+- It shows the benchmark anira ran inside the application, on your machine.
 
 ---
 

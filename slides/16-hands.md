@@ -56,22 +56,25 @@ Note:
 
 <div class="tag">Coming with v3.0</div>
 
-## anira foundation models.<br><span class="then">One of them: hand tracking.</span>
+## anira foundation models.<br><span class="then">Ready-made models, easy to integrate.</span>
 
 <div class="cards">
-  <div class="card">{{ICON:model}}<div class="card-title">foundation models</div><div class="card-text">ready-made, with predefined anira configs</div></div>
+  <div class="card">{{ICON:model}}<div class="card-title">our own</div><div class="card-text">models we train</div></div>
+  <div class="card">{{ICON:model}}<div class="card-title">open source</div><div class="card-text">models already out there</div></div>
   <div class="card-arrow">→</div>
-  <div class="card accent">{{ICON:people}}<div class="card-title">hand tracking</div><div class="card-text">one of them</div></div>
+  <div class="card accent">{{ICON:people}}<div class="card-title">hand tracking</div><div class="card-text">Google's model, provided</div></div>
 </div>
 
-<div class="cards-note">We launch them with the v3 release: add a model to your C++ plugin without writing its configs.</div>
+<div class="cards-note">Each with its anira configs and an example: add it to your plugin without writing them.</div>
 
 Note:
-- Where do the eight numbers come from today: from your hand.
-- A camera sees it, and a model reads the hand from the image: the hand tracker.
-- With v3 we plan to launch anira foundation models, and hand tracking is one of them.
-- Today you get a preview of it, ahead of the release: from anira-cam, our library for video models.
-- It runs on anira like the decoder: let me show you.
+- Where do the eight numbers come from today? From your hand.
+- A camera sees it, and a model reads the hand from the image.
+- We are building a collection for that: anira foundation models.
+- Models we train ourselves, and open source models that are already out there.
+- Each comes with its anira configs, as an easy-to-use example to integrate.
+- Hand tracking, Google's model, is one of them: we provide it for this step.
+- Let me show you.
 
 ---
 
@@ -82,7 +85,7 @@ Note:
 <div class="cards">
   <div class="card">{{ICON:people}}<div class="card-title">camera</div><div class="card-text">30 frames per second</div></div>
   <div class="card-arrow">→</div>
-  <div class="card">{{ICON:model}}<div class="card-title">hand tracking</div><div class="card-text">palm → landmarks → gesture<br>four models, ONNX Runtime</div></div>
+  <div class="card">{{ICON:model}}<div class="card-title">hand tracking</div><div class="card-text">Google's model, provided</div></div>
   <div class="card-arrow">→</div>
   <div class="card accent">{{ICON:sliders}}<div class="card-title">8 latents</div><div class="card-text">height, pinch, tilt, …</div></div>
   <div class="card-arrow">→</div>
@@ -102,61 +105,7 @@ Note:
 - [point at the status line] The camera's rate, 30 here, the tracking rate, and the decoder's latency on this machine.
 - [point at the latent panel] Eight bars, one per latent, more on the tick later.
 - [back to the slide] The tracker runs per camera frame, the decoder per block of 2048 samples, both on one pool.
-- How the tracker gets there: next.
-
----
-
-<div class="tag">Hand tracking</div>
-
-## MediaPipe hands<br><span class="then">Three stages, four models.</span>
-
-<div class="cards">
-  <div class="card">{{ICON:people}}<div class="card-title">camera frame</div><div class="card-text">30 a second</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:model}}<div class="card-title">palm detector</div><div class="card-text">192 × 192 image<br>→ a box per palm</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:model}}<div class="card-title">landmarks</div><div class="card-text">224 × 224 crop per hand<br>→ 21 joints, left or right</div></div>
-  <div class="card-arrow">→</div>
-  <div class="card">{{ICON:model}}<div class="card-title">gesture</div><div class="card-text">embedder + classifier<br>→ 7 gestures</div></div>
-</div>
-
-Note:
-- Google's MediaPipe hand chain: four small models, Apache 2.0, converted to ONNX in anira-cam.
-- Stage one, the palm detector, looks at the whole frame.
-- Stage two, the landmarks: besides the joints, it says whether a hand is there at all.
-- Once a hand is found, its next crop comes from its own joints.
-- With both hands tracked, the detector rests.
-- Stage three, the gesture, is two models: that makes four.
-- The embedder takes the joints, in the image and in space, and which hand it is.
-- Out come 128 numbers: a pose, nothing to do with the model's 128 latent dimensions.
-- The classifier names it: open palm, fist, victory and four more.
-- The app draws the gesture over the video, and nothing else uses it today.
-
----
-
-<div class="tag">Hand tracking</div>
-
-## MediaPipe hands on anira<br><span class="then">The camera thread pushes and never waits.</span>
-
-<div class="statement-points">
-  <div><small>1</small>One handler per model, one landmark handler per hand</div>
-  <div><small>2</small>Every frame: pop what has finished, push the new crops</div>
-  <div><small>3</small>The result reaches the GUI through a triple buffer</div>
-  <div><small>4</small>One pool: 30 camera frames and 21.5 latent frames a second</div>
-</div>
-
-Note:
-- Two calls, push and pop.
-- A model config per model, a Hard contract per handler, one context for the chain.
-- Budgets are set by hand: detector and landmarks get twice a worst case, benchmarked on an M3 Max.
-- Warm-up: one fixed run, nothing measured at prepare.
-- Why not: the gesture stages queue behind bigger models, a measured budget would be too tight; theirs is wide.
-- [point at 1] Two hands at once, on the pool.
-- [point at 2] The push fills the ring, claims a slot, Fares's word, and goes on.
-- A late result arrives with the next frame: the tracking rate drops, never the camera's.
-- [point at 3] The writer always has a free buffer, no lock.
-- [point at 4] A thread per core, set in the context: tracker and decoder queue together.
-- Idle threads block, as Fares recommended.
+- Now your part.
 
 ---
 

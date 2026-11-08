@@ -154,7 +154,7 @@ Note:
 - Then each layer of the encoder trades time for channels, until a single time step is left for 2048 samples
 - That bootleneck is called a latent
 - Thanks to a dimensionality reduction technique we can only keep 8 dimensions that explain the majority of the varience in the dataset.
-- The decoder mirrors this, and an inverse filter bank merges the bands back into 2048 samples.
+- The decoder mirrors this, back into 2048 samples.
 - The model is stateful: each block depends on the blocks before it.
 
 ---
@@ -174,8 +174,6 @@ Note:
 
 Note:
 - The model we use in this exercise was trained on a magnetic resonator piano.
-- Electromagnets above the strings let the piano sustain, swell and bend, without loudspeakers.
-- The recordings come from Strengjavera, an installation where artificial life plays the piano.
 
 ---
 

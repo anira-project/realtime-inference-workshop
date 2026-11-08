@@ -28,6 +28,7 @@ inline std::string todo_for(int step, const std::string& message) {
         return "TODO 1 or 3";  // The latency in model.json, or the calls
     case 10:
         if (has("missed")) { return {}; }  // Offline nothing is missed: not a TODO
+        if (has("does not match")) { return "TODO 2"; }  // prepare took the files: the offset line
         return "TODO 1";  // anira refused a tensor in encoder.json or decoder.json
     default:
         return {};

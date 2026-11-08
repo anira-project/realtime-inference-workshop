@@ -31,6 +31,15 @@ constexpr size_t k_model_latency = 2224;
 // as the contract declares, so the check sends a few, not only 512.
 constexpr std::array<size_t, 6> k_offline_blocks = {512, 100, 412, 1, 511, 256};
 
+// The shift at which the output lines up with the reference, within tolerance;
+// `num_samples` if it never does. The output is the reference, delayed.
+static size_t matching_shift(const float* got, const float* want, size_t num_samples) {
+    for (size_t shift = 0; shift < num_samples / 2; ++shift) {
+        if (max_abs_diff(got + shift, want, num_samples - shift) <= k_tolerance) { return shift; }
+    }
+    return num_samples;
+}
+
 // The host offline: blocks of the given sizes in turn, each waiting for its
 // result. Returns the output; `late` gets where a block was missed.
 static std::vector<float> run_offline(AniraProcessor& processor,
@@ -98,7 +107,16 @@ static int check() try {
     // the output after the rest of the reported latency, as in step 7.
     const int result = report_with_latency(output.data(), k_target_output_signal.data(), output.size(),
                                            latency - k_model_latency, late, k_host.m_block_size);
-    if (result != 0) { return result; }
+    if (result != 0) {
+        // A wrong "latency" on audio_out moves the reported latency, not the
+        // output: the output still lines up, at another shift. Name it.
+        const size_t shift = matching_shift(output.data(), k_target_output_signal.data(), output.size());
+        if (shift != output.size()) {
+            fail("TODO 1: audio_out declares a latency of %zu samples; the model's own delay is %zu",
+                 latency - shift, k_model_latency);
+        }
+        return result;
+    }
 
     // Live, at the host's pace: the call the audio thread makes. It has to
     // process the block; whether one comes back late does not matter here.

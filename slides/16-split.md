@@ -5,7 +5,8 @@
 
 Note:
 - Step 10: opening the model.
-- Now we cut it in the middle, into encoder and decoder, and reach into the latent space between them.
+- We cut it in the middle: encoder and decoder.
+- And we reach into the latent space between them.
 
 ---
 
@@ -29,11 +30,20 @@ Note:
 </div>
 
 Note:
-- This is our model from the introduction, the variational autoencoder. Until now we ran it as one block: 2048 samples in, 2048 out.
-- [click] The first half is the encoder. It squeezes a block of 2048 samples, 46 ms of audio, down to 8 numbers. Those 8 numbers describe the sound of that block.
-- [click] Those 8 numbers are the latent space, z. One block of audio is one point in it, and the next block the next point.
-- [click] The second half is the decoder. It turns 8 numbers back into 2048 samples: it makes the sound that point describes.
-- The export gives us both halves as two files, model_encoder.onnx and model_decoder.onnx. In between, we can reach in: change the 8 numbers before the decoder sees them.
+- Our model from the introduction, the variational autoencoder.
+- Until now we ran it as one block: 2048 samples in, 2048 out.
+- [click] The first half is the encoder.
+- It squeezes 2048 samples, 46 ms of audio, down to 8 numbers.
+- Those 8 numbers describe the sound of that block.
+- [click] They are the latent space, z.
+- One block of audio is one point in it.
+- The next block, the next point.
+- [click] The second half is the decoder.
+- 8 numbers in, 2048 samples out.
+- It makes the sound that point describes.
+- The export gives us both halves as two files: model_encoder.onnx and model_decoder.onnx.
+- In between, we can reach in.
+- We change the 8 numbers before the decoder sees them.
 - In this step: an offset on each of the eight numbers, as in anira's own example.
 
 ---
@@ -46,10 +56,17 @@ Note:
 
 Note:
 - Zoom into the middle: the eight numbers of z, one bar each.
-- The encoder sends a new set every 2048 samples, 21.5 times a second, so the bars step along with the music. The movement here is a simulation, not the real values.
-- Each number is one dimension of the latent space, and the decoder makes the sound that this point describes.
-- [toggle] Now we add an offset to each dimension, one number per bar, here the ones under the bars. Every bar jumps by its offset; the faint bar is where it was.
-- The decoder now gets other numbers and makes another sound from the same audio. That is what you will hear next, and what you build in this step.
+- The encoder sends a new set every 2048 samples, 21.5 times a second.
+- The bars step along with the music.
+- The movement here is a simulation, not the real values.
+- Each number is one dimension of the latent space.
+- The decoder makes the sound that this point describes.
+- [toggle] Now we add an offset to each dimension.
+- One number per bar, the ones under the bars.
+- Every bar jumps by its offset.
+- The faint bar is where it was.
+- The decoder gets other numbers, and makes another sound from the same audio.
+- That is what you will hear next, and what you build in this step.
 
 ---
 
@@ -63,10 +80,15 @@ Note:
      data-label-a="No offset" data-label-b="With the offsets above"></div>
 
 Note:
-- The chords from the introduction, through encoder and decoder, and in between the eight numbers shifted.
-- These eight offsets, one per dimension, each somewhere between minus 3 and plus 3: we drew them at random and picked this one by ear.
-- Move the fader: the same chords, the same timing, but another sound. In the spectrogram the energy moves up, it gets about three times brighter, and a little quieter.
-- That is all the offset is: z plus a number, before the decoder. Rendered with scripts/render_latent_demo.py, the same encoder and decoder as this step.
+- The chords from the introduction, through encoder and decoder.
+- In between, the eight numbers shifted.
+- Eight offsets, one per dimension, each between minus 3 and plus 3.
+- We drew them at random and picked this set by ear.
+- [move the fader] The same chords, the same timing, another sound.
+- In the spectrogram the energy moves up.
+- About three times brighter, and a little quieter.
+- That is all the offset is: z plus a number, before the decoder.
+- Rendered with scripts/render_latent_demo.py, the same encoder and decoder as this step.
 - In the plugin of this step you get the same eight knobs.
 
 ---
@@ -97,12 +119,24 @@ Note:
 <div class="note-box">The decoder only knows the sounds it was trained on, the magnetic resonator piano: whatever 8 numbers you give it, it answers in that timbre.</div>
 
 Note:
-- What is actually in those eight numbers?
-- On the left, the 2048 samples of one block: every sample, exactly, but you cannot read anything from them.
-- On the right, the same 46 ms as eight numbers. They do not store the waveform, they describe how it sounds.
-- How loud it is, in our model that is z0. How bright, that is z2. The texture, tonal or noisy. And things nobody has a word for: the model decided what to keep.
-- The decoder turns such a description back into sound, and it only knows one kind of sound: the magnetic resonator piano it was trained on.
-- That is why anything you send through comes out in that timbre: a voice, a drum, our chords. That is called timbre transfer, and it is what the Realtime Audio Variational autoEncoder is mostly used for.
+- What is in those eight numbers?
+- Left: the 2048 samples of one block.
+- Every sample, exactly.
+- And you cannot read anything from them.
+- Right: the same 46 ms as eight numbers.
+- They do not store the waveform.
+- They describe how it sounds.
+- How loud: in our model, that is z0.
+- How bright: z2.
+- The texture, tonal or noisy.
+- And things nobody has a word for.
+- The model decided what to keep.
+- The decoder turns such a description back into sound.
+- And it knows one kind of sound only: the magnetic resonator piano it was trained on.
+- So anything you send through comes out in that timbre.
+- A voice, a drum, our chords.
+- That is timbre transfer.
+- It is what the Realtime Audio Variational autoEncoder is mostly used for.
 - And it is why changing the numbers gives another sound, but still a piano-resonator sound.
 
 ---
@@ -140,15 +174,28 @@ Note:
 
 Note:
 - Why does a shifted point still make a sound, and not noise?
-- Picture the eight numbers as a position on a map of sounds. Here two of the eight directions, the two you just saw move: z0 and z2.
+- Picture the eight numbers as a position on a map of sounds.
+- Here two of the eight directions, the two you just saw move: z0 and z2.
 - The chords walk across this map, one step every 2048 samples.
-- The model was trained so that the map has no holes: points close to each other sound alike, and every point is a sound it can make.
-- Press before: the chords, as the model plays them.
-- [click] An offset moves the whole walk somewhere else on the map. The decoder still finds a sound there, just a different one.
-- Press after the shift: only the two numbers on the map moved, z0 by 1.5 and z2 by 2.5, the other six stay as they were. Louder and brighter, as the arrow says, and still a sound, still the piano resonator.
-- And what do the directions mean? Nobody decided that, the model learned it, and every model learns it differently.
-- Often you can hear it: in our model, z0 makes it quieter or louder, and z2 darker or brighter. Others are harder to put into words.
-- So: turn one knob at a time and listen. That is what the plugin of this step is for.
+- The model was trained so the map has no holes.
+- Points close to each other sound alike.
+- Every point is a sound it can make.
+- [press before] The chords, as the model plays them.
+- [click] An offset moves the whole walk somewhere else on the map.
+- The decoder still finds a sound there.
+- Just a different one.
+- [press after] Only two numbers moved: z0 by 1.5, z2 by 2.5.
+- The other six stay as they were.
+- Louder and brighter, as the arrow says.
+- Still a sound, still the piano resonator.
+- What do the directions mean?
+- Nobody decided that.
+- The model learned it, and every model learns it differently.
+- Often you can hear it.
+- In our model, z0 is quieter or louder, z2 darker or brighter.
+- Others are harder to put into words.
+- So: turn one knob at a time and listen.
+- That is what the plugin of this step is for.
 ---
 
 <div class="tag">Latent space</div>
@@ -187,12 +234,18 @@ Note:
 </svg>
 
 Note:
-- Where do the eight numbers come from? The model actually learned 128 numbers per block, not 8.
-- After training, its authors asked one question: which of these numbers change the most over all the sounds the model has learned? And they sorted them by that.
-- The bars show the answer for our model. The first number alone carries almost a fifth of all the change, the first eight together about 93 %.
-- So the export keeps the first eight and drops the other 120. Think of a summary: you keep the eight headlines and drop the footnotes.
-- The dropped ones are set to zero. Then the same audio always gives the same output, and that is why our check can compare it exactly.
-- And it is why z0 does the most when you turn it, and z7 the least.
+- Where do the eight numbers come from?
+- The model learned 128 numbers per block, not 8.
+- After training, its authors asked one question: which of these numbers change the most, over all the sounds the model has learned?
+- And they sorted them by that.
+- The bars show the answer for our model.
+- The first number alone carries almost a fifth of all the change.
+- The first eight together, about 93 %.
+- So the export keeps the first eight and drops the other 120.
+- Think of a summary: you keep the eight headlines and drop the footnotes.
+- The dropped ones are set to zero.
+- So the same audio always gives the same output, and our check can compare it exactly.
+- And that is why z0 does the most when you turn it, and z7 the least.
 - The model is the Realtime Audio Variational autoEncoder, Caillon and Esling, 2021.
 ---
 
@@ -214,13 +267,22 @@ Note:
 </div>
 
 Note:
-- What we do with the eight numbers in this step is the simplest thing there is: an offset. A fixed number added to each dimension, one knob each, as in anira's own example.
-- There are more ways, and they all sit in the same place in the code, between encode and decode, once per latent frame.
+- What we do with the eight numbers in this step is the simplest thing there is: an offset.
+- A fixed number added to each dimension, one knob each.
+- As in anira's own example.
+- There are more ways.
+- They all sit in the same place in the code: between encode and decode, once per latent frame.
 - Scale multiplies a dimension: more or less movement than the music gives it.
 - Noise adds a little randomness every frame: variation.
 - Blend mixes the numbers of two sounds: a crossfade in the latent space, not in the audio.
-- And the last one goes furthest: replace the numbers completely. They do not have to come from the encoder at all. An LFO, a MIDI controller, a movement: anything that gives eight numbers, 21.5 times a second, and the decoder makes a sound from it. Keep that in mind.
-- We keep to the offset: one line of code, and you hear right away what each dimension does.
+- And the last one goes furthest: replace the numbers completely.
+- They do not have to come from the encoder at all.
+- An LFO, a MIDI controller, a movement.
+- Anything that gives eight numbers, 21.5 times a second.
+- The decoder makes a sound from it.
+- Keep that in mind.
+- We keep to the offset.
+- One line of code, and you hear right away what each dimension does.
 
 ---
 
@@ -252,12 +314,16 @@ Note:
 </div>
 
 Note:
-- Until now we ran the model as one file, model_forward: audio in, audio out, and the state with it.
-- To reach into the middle, the export cuts it where the latents are, into two files.
+- Until now we ran the model as one file, model_forward.
+- Audio in, audio out, the state with it.
+- To reach into the middle, the export cuts it where the latents are.
+- Two files.
 - The encoder takes audio and gives eight latents per block of 2048 samples.
 - The decoder takes those eight latents and gives the audio back.
-- Each half keeps its own state, and the two together are exactly the forward model's 63,488 floats.
-- Same model, same sound: chained, the two files do what the one did. And between them we can now change the eight numbers.
+- Each half keeps its own state.
+- Together they are exactly the forward model's 63,488 floats.
+- Same model, same sound: chained, the two files do what the one did.
+- And between them we can now change the eight numbers.
 
 ---
 
@@ -272,11 +338,13 @@ Note:
 </div>
 
 Note:
-- This step is short on purpose: two TODOs, and then time to play.
-- First, the two model files: what goes into the encoder and the decoder, and what comes out. You know that from step 9.
+- This step is short on purpose: two TODOs, then time to play.
+- First, the two model files: what goes into the encoder and the decoder, and what comes out.
+- You know that from step 9.
 - Second, one line between the two handlers: the offset on each latent.
-- Everything else is given: the two handlers, prepare, the latency, and passing the frames from one to the other.
-- Then the plugin: eight knobs, one per latent, and the rest of the time is yours.
+- Everything else is given: the two handlers, prepare, the latency, and the frames passed from one to the other.
+- Then the plugin: eight knobs, one per latent.
+- The rest of the time is yours.
 
 ---
 
@@ -307,11 +375,17 @@ Note:
 </div>
 
 Note:
-- The two halves of the model. The check compares against step 10's own reference, encoder and decoder as anira's example runs them; you do not need to open it.
-- The contract is step 9's, but a miss gives zeros: bypass would pass the input through, and the encoder's output has eight channels, its input one.
+- The two halves of the model.
+- The check compares against step 10's own reference: encoder and decoder as anira's example runs them.
+- You do not need to open it.
+- The contract is step 9's, with one change: a miss gives zeros.
+- Bypass would pass the input through, and the encoder's output has eight channels, its input one.
 - The plugin around it is given: step 9's, with eight knobs.
-- You fill in the two model files, and one line in SplitProcessor.cpp. Everything else in that file is given: the two handlers, prepare, the latency, and the frames passed from one handler to the other.
-- Both handlers run on the host's audio blocks: anira counts the encoder by its audio input, the decoder by its audio output. One latent frame per 2048 samples follows from the model files.
+- You fill in the two model files, and one line in SplitProcessor.cpp.
+- Everything else in that file is given: the two handlers, prepare, the latency, and the frames passed from one handler to the other.
+- Both handlers run on the host's audio blocks.
+- anira counts the encoder by its audio input, the decoder by its audio output.
+- One latent frame per 2048 samples follows from the model files.
 
 ---
 
@@ -332,9 +406,13 @@ Note:
 ```
 
 Note:
-- The two model files, only the tensors that stream; the state pairs are given, as in step 9.
-- The encoder takes audio and gives latents; the decoder takes latents and gives audio. The latents are what connects the two, so their shape is the same on both sides.
-- Every ? is a number: how many samples per inference, how many latents, how many frames per inference. The comments next to them in the files help.
+- The two model files, only the tensors that stream.
+- The state pairs are given, as in step 9.
+- The encoder takes audio and gives latents.
+- The decoder takes latents and gives audio.
+- The latents connect the two, so their shape is the same on both sides.
+- Every question mark is a number: samples per inference, how many latents, frames per inference.
+- The comments next to them in the files help.
 - The decoder has no audio input, so its clock is its audio output: anchor audio.
 
 ---
@@ -381,11 +459,14 @@ cmake --build --preset release --target step10_exercise_Standalone
 </div>
 
 Note:
-- You have ten minutes, and then time to play.
-- First the two model files: replace every ? with its number.
+- Ten minutes, then time to play.
+- First the two model files: replace every question mark with its number.
 - Then one line in SplitProcessor.cpp: add each offset to its latent.
-- The check runs offline, like a bounce, so nothing is missed: with all offsets at zero it has to match step 10's reference exactly, and with offsets it has to sound different.
-- Then build the plugin and play: manipulate the latents with the eight knobs, one at a time first.
+- The check runs offline, like a bounce, so nothing is missed.
+- With all offsets at zero it has to match step 10's reference exactly.
+- With offsets, it has to change.
+- Then build the plugin and play.
+- The eight knobs, one at a time first.
 
 ---
 
@@ -404,9 +485,12 @@ Note:
 ```
 
 Note:
-- The encoder takes one model block, 2048 samples, and gives eight latents, one frame.
+- The encoder takes one model block, 2048 samples.
+- It gives eight latents, one frame.
 - The decoder takes exactly that, and gives 2048 samples back.
-- The latents have the same shape on both sides: that is where the two files meet.
+- The latents have the same shape on both sides.
+- That is where the two files meet.
+- A wrong number is refused at prepare: anira names the tensor and both shapes.
 
 ---
 
@@ -422,8 +506,10 @@ for (size_t i = 0; i < k_num_latents; ++i) {
 
 Note:
 - One line: each latent plus its dimension's offset, before the frame goes on to the decoder.
-- offsets is a parameter of process: eight numbers, which the plugin reads from its eight knobs at the start of every block and hands in.
-- With every offset at zero nothing changes, and the check compares with the reference. With offsets, the check expects another sound.
+- offsets is a parameter of process.
+- Eight numbers, read from the eight knobs at the start of every block.
+- With every offset at zero nothing changes, and the check compares with the reference.
+- With offsets, the check expects another sound.
 
 ---
 
@@ -439,6 +525,6 @@ Note:
 </div>
 
 Note:
-- [Play it: the plugin, z0 and z2 live, louder, then brighter; the knobs go from minus 3 to plus 3.]
+- [Play it: the plugin, z0 and z2 live. Louder, then brighter. The knobs go from minus 3 to plus 3.]
 - That is the model taken apart, with eight numbers in your hand.
 - Next: a hand that moves them.

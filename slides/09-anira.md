@@ -31,7 +31,7 @@ Note:
 - Here is part 1 in one picture: six things real-time inference needs.
 - Inference, benchmarking, real-time safety, threading, minimal latency, and real-time guarantees.
 - We solved each one the simple way: one engine, one machine, one plugin instance.
-- [click] anira covers all six and provides often improvements over our simple implementations, which we will show soon.
+- [click] anira covers all six, and often improves on our simple implementations. We will show that soon.
 - First, what anira is and where it comes from.
 
 ---
@@ -85,7 +85,9 @@ Note:
 </div>
 
 Note:
-- anira is a C++ library: you describe the model and what the host promises, and anira takes care of threads, buffers and latency.
+- anira is a C++ library.
+- You describe the model, and what the host promises.
+- anira takes care of threads, buffers and latency.
 - [click] It runs LibTorch, ONNX Runtime, LiteRT, ExecuTorch, or your own engine.
 - [click] On desktop, mobile, in the browser, and on boards like Bela.
 - [click] In plugins, standalone apps, Max/MSP, and on real-time video.
@@ -103,8 +105,8 @@ Note:
 </div>
 
 Note:
-- anira was a research project, but is not established in released products
-- here is a selection:
+- anira started as a research project, but is now established in released products.
+- Here is a selection.
 - [click] Sonnox Oxford Drum Gate 2, which classifies drum hits by timbre.
 - [click] Baby Audio SubCulture, a pitch-tracking bass enhancer.
 - [click] And Project LYDIA by Neutone, a pedal on a Raspberry Pi 5.
@@ -129,7 +131,8 @@ Note:
 
 Note:
 - How did we get here? Not in one go.
-- At ADC23 we showed a template with one inference thread per plugin: the design you built in part 1.
+- At ADC23 we showed a template with one inference thread per plugin.
+- That is the design you built in part 1.
 - It worked, for one plugin.
 - [click] After the talk the sonible team asked us: have you thought about many instances?
 - Every plugin opens its own real-time thread.
@@ -186,7 +189,8 @@ Note:
 </div>
 
 Note:
-- That is what we presented at ADC24, and published as a paper at IS², where it won the Industry Award.
+- That is what we presented at ADC24.
+- We published it as a paper at IS², where it won the Industry Award.
 
 ---
 
@@ -205,9 +209,11 @@ Note:
 </div>
 
 Note:
-- In July 2025, with v2, we expanded anira from an audio-to-audio solution to any kind of data.
-- Models started taking control data next to audio, like pitch and loudness, one value per frame instead of one per sample.
-- So in v2, every input and output became a tensor with its own shape and its own rate.
+- In July 2025 came v2.
+- It expanded anira from audio-to-audio to any kind of data.
+- So we support models which take control inputs next to the audio, like pitch and loudness.
+- One value per frame, instead of one per sample.
+- In v2, every input and output became a tensor, with its own shape and its own rate.
 
 ---
 
@@ -228,10 +234,10 @@ Note:
 <div class="history-note">funded by the BMFTR since 2026</div>
 
 Note:
-- In 2026 we added webassembly support for the browser
-- And we got public funding from the BMFTR to develop anira further.
-- from an audio only solution to video, image and text
-- With it came iOS, Android
+- In 2026 we added WebAssembly support, so anira runs in the browser.
+- And we got public funding to develop anira further.
+- From an audio-only library to video, images and text.
+- With that came iOS and Android.
 - And a new design: v3.
 
 ---
@@ -267,7 +273,9 @@ Note:
 - v2 was built for audio plugins on the desktop, and that is where it reached its limits.
 - [click] v3 takes any data: audio, images and text.
 - [click] One C ABI at the core, and C++ and TypeScript sit on top of it.
-- [click] Two contracts: Hard for a stream, Async for jobs. Async is refused in this pre-release and comes later; everything today is Hard.
+- [click] Two contracts: Hard for a stream, Async for jobs.
+- Async is not in this pre-release yet, it comes later.
+- Everything today is Hard.
 - [click] And one tensor type for CPU, GPU and NPU.
 
 ---
@@ -289,7 +297,6 @@ Note:
 <div class="history-note">Apache 2.0 · tanh lab, TU Berlin</div>
 
 Note:
-- Today you run a v3 pre-release, and v3.0 ships at the end of November.
-- After the release we want to go back to research: for real-time audio and video, is the CPU, the GPU or the NPU faster? More on that in the outlook at the end.
+- Today you run a v3 pre-release. v3.0 ships at the end of November.
 - Now Fares shows you how anira works inside.
 

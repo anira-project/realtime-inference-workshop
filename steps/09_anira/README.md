@@ -70,13 +70,14 @@ The check runs twice. First offline, like a bounce: the host calls as fast as it
 - **`model.json, line 13: ? is still open`** (or `"?" is still open`) — a blank not filled yet; the line says which.
 - **`model.json, line 13: "2048" is text; write the number without quotes`** — a number in quotes is a string in JSON.
 - **`inputs[0].axes[2][1]: an extent is a positive integer or "dynamic"`** — a size is not a positive number. The path names it: `inputs[0]` is `audio`, `inputs[1]` is `state_in`, `outputs[…]` the same for the outputs.
-- **`prepare: ... 'audio' ... axes`** or a similar refusal naming a tensor — TODO 1: a size is filled but wrong; prepare checks every spec against the file and says which one does not fit.
-- **`create: configuration error: tensor 'state_in': a State input needs a state_source`** — TODO 2: a state input nobody feeds is refused by name, at create.
+- **`onnxruntime: input tensor 'audio' bound to the model's 'audio': the model's tensor is [1, 1, 2048], the spec's engine dims are [1, 1, 1024] (axis 2: 2048 against 1024)`** — TODO 1 (or 2, for `state_in`): a size is filled but wrong; prepare checks every tensor against the model file and names the one that does not fit, with both shapes.
+- **`tensor 'state_in': a State input needs a state_source: ...`** — TODO 2: a state input nobody feeds is refused by name, at create.
 - **`prepare: configuration error: contract: Hard host blocks missing`** — TODO 3.1: the contract does not know the host's blocks yet.
 - **`TODO 3: read the latency of output slot 0`** — TODO 3.2.
 - **`state_source 'audio' names no output tensor`** — TODO 2: no output has that name.
 - **`state_source 'audio_out' is a Streamed output`** — TODO 2: a state input is fed from the state output, not from the audio.
-- **`TODO 1: audio_out declares no latency`** — `"latency"` in `model.json` is 0.
+- **`TODO 1: audio_out declares a latency of 0 samples; the model's own delay is 2224`**, after a mismatch — the output lines up with the reference, but at another shift: `"latency"` in `model.json` is wrong (here 0). The reported latency moves with it, the output does not.
+- **`a latency of 46147 samples leaves nothing of 16384 to compare`** — TODO 3.1: the arguments of `hard_host_blocks` are in the wrong order; the sample rate went in as a block size.
 - **`TODO 3: offline, the output is the input`** — TODO 3.3: the block goes out untouched; the offline call does not process it.
 - **`TODO 3: offline, N blocks were missed`** — TODO 3.3: the offline call does not wait; give it `ANIRA_WAIT_FOREVER`.
 - **`TODO 3: offline, N blocks were missed once they changed size`** — TODO 3.1: the contract does not cover every block the host may send; its smallest is 1.

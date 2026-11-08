@@ -7,8 +7,10 @@ v3: inline execution, GPU, NPU, zero copy
 
 Note:
 - We have reached the outlook.
-- We covered a lot today. As we said, the final anira v3 comes out at the end of this month.
-- It has a few more features that were not part of this workshop. Here they are, so you know what is coming.
+- We covered a lot today.
+- As we said, the final anira v3 comes out at the end of this month.
+- It has a few more features that were not part of this workshop.
+- Here they are, so you know what is coming.
 
 ---
 
@@ -30,9 +32,11 @@ Note:
 
 Note:
 - First: we want to lower the latency further.
-- Look at the sum anira computed at prepare: 1536 for the block adaptation, 1024 for the inference, 2224 for the model itself.
+- Look at the sum anira computed at prepare.
+- 1536 for the block adaptation, 1024 for the inference, 2224 for the model itself.
 - A big part comes from moving the inference to a separate thread.
-- If the engine is real-time safe and fast, we could skip that trip and run the inference directly on the audio thread.
+- If the engine is real-time safe and fast, we could skip that trip.
+- Then the inference runs directly on the audio thread.
 
 ---
 
@@ -57,8 +61,12 @@ Note:
 
 Note:
 - Back to part 1, step 4.
-- [click] With host blocks of 512, the callback that completes a model block runs the whole forward pass: 13 ms in a callback of 11.6 ms. Too late.
-- [click] With host blocks of 2048, every callback runs the model: 13 ms in 46.4 ms. It fits, with plenty of headroom.
+- [click] With host blocks of 512, every fourth callback completes a model block and runs the whole forward pass.
+- That is 13 ms in a callback of 11.6 ms.
+- Too late.
+- [click] With host blocks of 2048, every callback runs the model.
+- 13 ms in 46.4 ms.
+- It fits, with plenty of headroom.
 - In that case it makes sense to run the model on the audio thread.
 
 ---
@@ -92,11 +100,15 @@ Note:
 Note:
 - That option comes with the final v3: inline execution.
 - [click] First condition: you declare the engine real-time safe, the flag REALTIME_SAFE.
-- [click] Second: it fits into the callback. prepare measures it, within inline_ratio of the block period.
-- [click] Our example, host blocks of 2048: nothing to adapt on either side.
-- Both conditions met: the audio thread runs it, and the latency is only the model's own, 2224.
+- [click] Second: it fits into the callback.
+- prepare measures that, within inline_ratio of the block period.
+- [click] Our example, host blocks of 2048.
+- Nothing to adapt on either side.
+- Both conditions met: the audio thread runs it.
+- The latency is only the model's own, 2224.
 - Otherwise the pool runs it, as today: 4272.
-- Almost half the latency. Depending on your use case, that can matter a lot.
+- Almost half the latency.
+- Depending on your use case, that can matter a lot.
 - In the contract this is execution: worker, inline or auto, fixed at prepare.
 
 ---
@@ -117,11 +129,15 @@ Note:
 
 Note:
 - Next: memory beyond the CPU.
-- Today every tensor lives in host memory, and that is what you ran today.
-- With v3 a tensor says where it lives: CPU, GPU or NPU.
-- So you can move the inference to a GPU or an NPU to make it faster, or, if your data is already on the GPU, run the inference there directly.
-- GPU through CUDA, Metal, Vulkan or GL; NPU through the hardware back ends of LiteRT and ExecuTorch.
-- The provider is picked with the engine: one plan per engine and provider, at prepare.
+- Today every tensor lives in host memory.
+- That is what you ran today.
+- With the final v3 a tensor says where it lives: CPU, GPU or NPU.
+- So you can move the inference to a GPU or an NPU, to make it faster.
+- Or, if your data is already on the GPU, you run the inference there directly.
+- GPU through CUDA, Metal, Vulkan or GL.
+- NPU through the hardware back ends of LiteRT and ExecuTorch.
+- The provider is picked with the engine.
+- One plan per engine and provider, at prepare.
 
 ---
 
@@ -144,11 +160,16 @@ Note:
 
 Note:
 - That gives us many options: hardware, execution provider, engine.
-- [click] Which path is fastest? Each line here is a question, not an answer.
-- After v3.0 we will measure these combinations in our research, for audio and also for video.
-- [click] For audio, most work today runs on the CPU, and those paths meet real time.
-- On the GPU it is barely studied; there are a few examples.
-- [click] If you have run inference on the GPU already, we would like to hear from you during the conference and compare notes.
+- [click] Which path is fastest?
+- Each line here is a question, not an answer.
+- After v3.0 we will measure these combinations in our research.
+- For audio, and also for video.
+- [click] For audio, most work today runs on the CPU.
+- Those paths meet real time.
+- On the GPU it is barely studied.
+- There are a few examples.
+- [click] If you have run inference on the GPU already, we would like to hear from you.
+- Find us during the conference, and let's compare notes.
 - When the paper is out, we will post it on our channels.
 
 ---
@@ -188,9 +209,13 @@ Note:
 - The last feature: zero copy.
 - Take step 11 with a 4K camera at 30 frames a second.
 - One frame is 3840 by 2160 pixels, 4 bytes each: 33 MB.
-- Today every frame is copied from the GPU to the CPU, and for a GPU plan back again: about 2 GB every second, before the model has done anything.
-- [click] With zero copy, the texture on the GPU is the tensor. We pass a pointer, nothing is copied.
-- Only the eight latents cross over to the decoder on the CPU: under a kilobyte a second.
+- Today every frame is copied from the GPU to the CPU.
+- For a GPU plan, back again.
+- That is about 2 GB every second, before the model has done anything.
+- [click] With zero copy, the texture on the GPU is the tensor.
+- We pass a pointer, nothing is copied.
+- Only the eight latents cross over to the decoder on the CPU.
+- Under a kilobyte a second.
 - That removes the overhead of the copies: the time and the memory bandwidth.
 
 ---
@@ -209,8 +234,11 @@ Note:
 - All of this comes with the same API as today.
 - The configs and the three calls stay as you wrote them.
 - A plan gains a provider, a tensor gains a location.
-- The real-time rules stay: the pool runs the model, and only an engine declared real-time safe runs inline.
-- So you do not have to wait: start with v3.0.0-alpha.3, the version from this workshop, right after ADC.
+- The real-time rules stay.
+- The pool runs the model.
+- Only an engine declared real-time safe runs inline.
+- So you do not have to wait.
+- Start with v3.0.0-alpha.3, the version from this workshop, right after ADC.
 
 ---
 
@@ -232,5 +260,6 @@ Note:
 Note:
 - Thank you very much for attending this workshop.
 - The two QR codes: the workshop repository, with every solution, and anira.
-- We would love your feedback on this workshop. Find us during the next three days.
+- We would love your feedback on this workshop.
+- Find us during the next three days.
 - Enjoy the conference.

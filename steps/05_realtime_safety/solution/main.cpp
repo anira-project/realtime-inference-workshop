@@ -103,8 +103,8 @@ int main() {
 #ifndef WORKSHOP_HAS_RTSAN
     unchecked = "but real-time safety is not checked: no RealtimeSanitizer";
     note("built without RealtimeSanitizer, so real-time safety is not checked. It needs\n"
-         "clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux) and\n"
-         "-DWORKSHOP_RTSAN=ON. See the README.");
+         "clang >= 20 and -DWORKSHOP_RTSAN=ON, on macOS (Homebrew LLVM, not Apple Clang)\n"
+         "or Linux; Windows has no RTSan. See the README.");
 #endif
 
     ProcessorExample processor(k_model);  // Keeps the model, loads nothing yet

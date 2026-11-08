@@ -48,7 +48,7 @@ Play around with the dry/wet parameter. Use headphones please.
 cmake --build --preset release --target step08_plugin_Standalone # for the standalone
 cmake --build --preset release --target step08_plugin_VST3       # for the VST3 plugin
 
-#open the standalone app with:
+# macOS: open the standalone app with
 open build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/*.app
 ```
 <p class="path-note">The VST3 plugin is in <code>build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/VST3</code>.</p>
@@ -58,6 +58,7 @@ open build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalo
 
 Note:
 - Commands are on the slide: standalone or VST3
+- open is macOS: on Linux run the program in the Standalone folder, on Windows the .exe there
 - Start the build now, ready during the break
 - Play with dry/wet, try your own sounds, headphones please
 - Set your device or DAW to 512 samples and 44.1 kHz; 48 kHz asks first, anything else is bypassed and says so

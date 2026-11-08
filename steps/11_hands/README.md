@@ -11,8 +11,13 @@ A JUCE app (JUCE is built once, the first time, a few minutes):
 ```bash
 cmake --preset release
 cmake --build --preset release --target step11_exercise
+# macOS
 open "build/release/steps/11_hands/step11_exercise_artefacts/Release/Workshop Hands (exercise).app"
+# Linux
+"./build/release/steps/11_hands/step11_exercise_artefacts/Release/Workshop Hands (exercise)"
 ```
+
+On Windows: `build\release\steps\11_hands\step11_exercise_artefacts\Release\Workshop Hands (exercise).exe`, or a double-click on it.
 
 - [`../common/hands/`](../common/hands/) — the camera and the hand tracking, given and hidden: you never open them. [`HandTracker.h`](../common/hands/HandTracker.h) is the one header worth a look. It gives you up to two hands, each with five features from 0 to 1 (left-right, height, open, pinch, tilt), which hand it is, a gesture, and 21 landmarks for drawing.
 - Behind it runs MediaPipe's hand chain from [anira-cam](https://github.com/anira-project/anira-cam): palm detector, landmarks, gesture. It uses anira's v3 API like the decoder, one model config and a hard contract per model, on the same context. Its four ONNX models (Apache 2.0) come with the other models and are compiled into the app. The camera: AVFoundation on macOS, `juce::CameraDevice` on Windows, OpenCV on Linux (`sudo apt install libopencv-dev` before configuring).

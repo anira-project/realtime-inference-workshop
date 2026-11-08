@@ -12,8 +12,8 @@ The host loop is step 3's. Without RTSan nothing is checked, so the program warn
 
 ```
   NOTE  built without RealtimeSanitizer, so real-time safety is not checked. It needs
-        clang >= 20 from LLVM (macOS: Homebrew LLVM, not Apple Clang; or Linux) and
-        -DWORKSHOP_RTSAN=ON. See the README.
+        clang >= 20 and -DWORKSHOP_RTSAN=ON, on macOS (Homebrew LLVM, not Apple Clang)
+        or Linux; Windows has no RTSan. See the README.
   PASS  the output matches the reference: max abs diff 3.87e-07, tolerance 0.0001
 
 ==============================================================
@@ -23,7 +23,11 @@ The host loop is step 3's. Without RTSan nothing is checked, so the program warn
 
 ## Building with RTSan
 
-RTSan needs a clang that has it — on macOS the Homebrew LLVM, not Apple Clang:
+RTSan needs clang 20 or newer from LLVM, with its runtime, on **macOS or Linux**. It does not exist on **Windows**, neither with MSVC nor with clang-cl, and the configure stops there with `-DWORKSHOP_RTSAN=ON`. On Windows, build step 5 without it (it runs, checks nothing, and says so) and read the report below.
+
+### macOS
+
+The Homebrew LLVM, not Apple Clang, which has no RTSan:
 
 ```bash
 brew install llvm
@@ -31,6 +35,31 @@ cmake -S . -B build/rtsan -DCMAKE_BUILD_TYPE=Release \
   -DWORKSHOP_RTSAN=ON \
   -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
   -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" \
+  -DWORKSHOP_STEP=05
+cmake --build build/rtsan --parallel 4
+./build/rtsan/bin/step05_solution
+```
+
+### Linux
+
+clang and the sanitizer runtimes, which come in a package of their own:
+
+- Fedora 42 and newer: `sudo dnf install clang compiler-rt`
+- Arch: `sudo pacman -S --needed clang compiler-rt`
+- Debian and Ubuntu: the distribution's clang is mostly older than 20 (Ubuntu 24.04 has 18), so take one from [apt.llvm.org](https://apt.llvm.org), here 22, and use `clang++-22` below instead of `clang++`:
+
+  ```bash
+  wget https://apt.llvm.org/llvm.sh
+  sudo bash llvm.sh 22
+  sudo apt install libclang-rt-22-dev
+  ```
+
+`clang++ --version` says which one you have. Then:
+
+```bash
+cmake -S . -B build/rtsan -DCMAKE_BUILD_TYPE=Release \
+  -DWORKSHOP_RTSAN=ON \
+  -DCMAKE_CXX_COMPILER=clang++ \
   -DWORKSHOP_STEP=05
 cmake --build build/rtsan --parallel 4
 ./build/rtsan/bin/step05_solution
@@ -50,6 +79,8 @@ Intercepted call to real-time unsafe function `malloc` in real-time context!
     #6 ProcessorExample::process_block(float*, unsigned long)
     #7 main
 ```
+
+On Linux the frames inside `libonnxruntime.so` have no names, and the trace goes through `Ort::detail::SessionImpl<OrtSession>::Run` instead; the rest is the same.
 
 The first report comes on the way into the forward pass, before the model has run, and it's not the last: the engine keeps allocating during the pass, layer by layer. There is no flag that turns that off.
 

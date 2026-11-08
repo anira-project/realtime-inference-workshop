@@ -51,12 +51,13 @@ void process_block(float* samples, size_t num_samples) [[clang::nonblocking]] {
 ```
 
 `-fsanitize=realtime` checks every call underneath at runtime and reports the first break.<br>
-<div class="cards-note corner-note">Needs clang ≥ 20. On macOS: Homebrew LLVM, not Apple Clang. </div>
+<div class="cards-note corner-note">Needs clang ≥ 20, on macOS (Homebrew LLVM, not Apple Clang) or Linux. Not on Windows.</div>
 
 Note:
 - To find out we will use a RealtimeSanitizer
 - Build our main.cpp with RealtimeSanitizer on: checks every call underneath at runtime, also in libraries
 - Since Clang 20 there's a tool for this
+- macOS and Linux only: there is no RTSan for Windows, on Windows just watch the report
 <!-- - On a Mac: LLVM from Homebrew, not Apple's Clang -->
 
 ---

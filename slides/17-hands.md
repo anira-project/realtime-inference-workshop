@@ -346,6 +346,7 @@ Note:
 - Your setup build already built the app: after each change, the first command rebuilds it.
 - Then the second command, or a double-click: not from the IDE, not the binary inside the bundle.
 - Otherwise macOS asks the wrong program for the camera.
+- open is macOS: on Linux run the program in the Release folder, on Windows the .exe there.
 - If you refused once: allow it under Privacy & Security, Camera, and restart the app.
 - On Linux: the OpenCV dev package before configuring, and your user in the video group.
 - No camera, no permission: the video area is a pad, and the mouse is the hand.

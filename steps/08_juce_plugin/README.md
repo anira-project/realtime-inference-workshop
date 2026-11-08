@@ -11,8 +11,13 @@ The first build of JUCE takes a few minutes:
 ```bash
 cmake --preset release
 cmake --build --preset release --target step08_plugin_Standalone   # or step08_plugin_VST3
+# macOS
 open "build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/Workshop Inference.app"
+# Linux
+"./build/release/steps/08_juce_plugin/step08_plugin_artefacts/Release/Standalone/Workshop Inference"
 ```
+
+On Windows: `build\release\steps\08_juce_plugin\step08_plugin_artefacts\Release\Standalone\Workshop Inference.exe`, or a double-click on it.
 
 The VST3 passes `pluginval --strictness-level 5`.
 

@@ -40,11 +40,11 @@ Note:
 ## Three configs, three calls.<br><span class="then">Same output, same check.</span>
 
 <div class="cards rows-top">
-  <div class="card">{{ICON:model}}<div class="card-title">what</div><div class="card-text">the engine and the file, the tensors, their roles, the state pair</div><div class="need-how decl">you fill · <code>model.json</code></div></div>
+  <div class="card">{{ICON:model}}<div class="card-title">model</div><div class="card-text">the engine and the file, the tensors, their roles, the state pair</div><div class="need-how decl">you fill · <code>model.json</code></div></div>
   <div class="card-arrow">+</div>
-  <div class="card">{{ICON:sliders}}<div class="card-title">how</div><div class="card-text">budget, warm-up, on a miss</div><div class="need-how auto">given · <code>contract.json</code></div></div>
+  <div class="card">{{ICON:sliders}}<div class="card-title">contract</div><div class="card-text">budget, warm-up, on a miss</div><div class="need-how auto">given · <code>contract.json</code></div></div>
   <div class="card-arrow">+</div>
-  <div class="card">{{ICON:chip}}<div class="card-title">with what</div><div class="card-text">the pool: threads, how they wait</div><div class="need-how auto">given · <code>ContextConfig{}</code>, defaults</div></div>
+  <div class="card">{{ICON:chip}}<div class="card-title">context</div><div class="card-text">the pool: threads, how they wait</div><div class="need-how auto">given · <code>ContextConfig{}</code>, defaults</div></div>
 </div>
 
 <div class="cards rows-bottom">
@@ -61,7 +61,7 @@ Note:
 
 Note:
 - What is left: three configs on top, three calls below.
-- First, the three configs.
+- First, let's define the three configuration files.
 - model.json has gaps for you: the tensor sizes, and how to handle the state.
 - contract.json defines how the model runs; it is complete, and we look into it in a second.
 - And the context: we use its defaults, so the thread pool is half the number of logical cores.
@@ -148,7 +148,7 @@ Note:
 - Think about which output tensor has to go there, by name, to keep the inference stateful.
 - All the numbers come from part 1: steps 1, 2 and 7.
 - If you pick a wrong state_source, create refuses it and says why.
-- That is the model file, the what: now the how.
+- That is the model file; next, the contract.
 
 ---
 
@@ -229,6 +229,8 @@ Note:
 - But now any buffer size from the host works.
 - [start the timer] Ten minutes; we walk around, wave if you get stuck.
 
+Time is up: let's go to the solution.
+
 ---
 
 <div class="tag">Solution</div>
@@ -250,7 +252,6 @@ Note:
 ```
 
 Note:
-- Time is up: let's go to the solution.
 - In TODO 1 we had to fill in the size of the input and output audio tensors, and the latency.
 - We know it from part 1: 2048 samples in and out.
 - And the model's own latency is 2224 samples.

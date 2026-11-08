@@ -6,13 +6,8 @@ What you declare: the model and the pool. Nothing runs yet.
 <!-- kind: talk -->
 
 Note:
-- The first row of the map: the creation of the InferenceHandler, once, on the main thread, in the plugin's constructor.
-- Two inputs, the model config and the context; one output, the handler. We declare everything it needs: the engines, the tensors and the state in the ModelConfig, and the thread pool in the optional ContextConfig.
-- Create checks the model config: the tensors, the axes, and which engines and providers this build can run. Then it builds the handler's slots, one per tensor, the state pairs among them. It opens no model file: the models, the plans and the pool's threads all come at prepare.
-- As in step 8: there the constructor makes the processor, with the model, and its engine, which load nothing, and the processor's prepare loads the model. anira's create does a little more, it checks the configs and builds the slots, but it loads no model either.
-- One rule for the whole chapter: create declares and checks. Nothing we declare here takes effect before prepare or process, and that is where we look at it; every anira slide says which, top right.
-- Nothing in this row runs on the audio thread, so all of it may read files and allocate.
-- We start as in part 1, with what we wrote by hand.
+- The first row is about the plugin's constructor where we create the InferenceHandler
+- One rule for the whole chapter: create declares and checks. Nothing we declare here takes effect before prepare or process
 
 ---
 
@@ -37,9 +32,12 @@ class ProcessorExample {
 ```
 
 Note:
-- First the engines. In part 1 we wrote one class for one engine, ONNX Runtime, by hand: it owns the session and the tensors, and later loads and runs the model.
+- Lets recap the constructors in the first workshop phase
+- First the engines.
+- In part 1 we wrote one class for one engine, ONNX Runtime, by hand: it owns the session and the tensors, and later loads and runs the model.
 - The engine was a decision of the code: another engine, LibTorch, ExecuTorch, LiteRT or your own, would be another class like it, with its own API and its own way of handling the state. The plugin is built for one engine, at compile time.
-- In step 8 the ProcessorExample owns this class: made with it, in the plugin's constructor, where it loads nothing, and loaded in its prepare.
+- Starting from step 3 the ProcessorExample is owning the class
+- And in step 8 it was constructed with the plugin's constructor
 
 ---
 
@@ -68,14 +66,11 @@ Note:
 <div class="cards-note">Behind anira's C ABI with hidden symbols: no clash with a host or another plugin that ships its own engine.</div>
 
 Note:
-- anira brings the engines: LibTorch, ONNX Runtime, ExecuTorch, LiteRT and TensorFlow Lite, prebuilt, static or shared, compiled in at build time.
-- Each one is an adapter behind the same interface: what we wrote by hand as OnnxEngine, once per engine.
-- Or bring your own: a custom engine is your own code behind the same four calls, descriptor, load, prepare and process, so a class like ours from part 1 fits there. Its size is whatever your engine weighs.
-- A custom engine mirrors step 8: you make it and add it to the pipeline before create, as our ProcessorExample makes its OnnxEngine when the plugin constructs it. anira calls its load at prepare, like our load in the processor's prepare, and its process on a pool thread.
-- They cost very different amounts to ship: LibTorch 318 MB, ONNX Runtime 26 MB, ExecuTorch 17 MB, LiteRT 11 MB, TensorFlow Lite 5 MB.
-- Measured: the libraries unpacked from the anira-project/backends releases, macOS arm64 (LibTorch 2.12.0, ONNX Runtime 1.30.0, ExecuTorch 1.3.1, LiteRT 2.2.0, TensorFlow Lite 2.17.0). LibTorch ships only shared, ExecuTorch only static; less of a static library ends up in a linked plugin.
-- anira's public interface is a C ABI, and everything else is hidden: only the anira_ symbols are exported. So two plugins with different versions of anira, next to a host that ships its own ONNX Runtime, do not clash.
-- Built in or your own, every engine loads its model at prepare; create only checks that this build can run it. An entry for an engine the build does not have is skipped.
+- anira on the other hand comes with multiple engines out of the box: LibTorch, ONNX Runtime, ExecuTorch, LiteRT and TensorFlow Lite, prebuilt .. as static or shared and compiled in or linked at build time.
+- Each one is an adapter behind a unified interface that has four calls, descriptor, load, prepare and process
+- You can also implement your own engine through the interface, so a class like ours from part 1 fits there as it had similar calls
+- One thing worth mentioning: anira keeps the engines' symbols private. They are hidden when your plugin is linked, and the plugin exports only anira's C API.
+- That matters because some hosts ship their own engine; Ableton Live 12, for example, bundles its own ONNX Runtime. If your plugin exported its engine symbols, the dynamic linker could bind your calls to the host's copy, a different version, and the host can crash on the first call.
 
 ---
 
@@ -103,12 +98,12 @@ Note:
 </div>
 
 Note:
-- How to configure it: you list them in one model config, one entry per engine, each with its own export of the model.
-- Here four: ONNX Runtime, LibTorch, ExecuTorch and LiteRT, each loading its own file.
-- default_engine says which one runs. You can benchmark the model on each engine, from the same config.
-- Every entry has to take the same tensors, state included.
-- An entry for an engine the build does not have is skipped, so one file serves every build.
-- Create checks the file's structure: the tensors, the axes, and which entries this build can run. The plans are built at prepare, when the models load.
+- So if those engines come out of the box, how do you declare which one your model needs?
+- In anira you declare this in the model config
+- Here is an example: we have four different model exports and all of them need different engines.
+- Then in the end we can define a default engine which will be the engine choice after prepare
+- At runtime you can then switch between the engines
+- If you define an entry for an engine the build does not it is skipped, so one file serves every build.
 
 ---
 
@@ -128,9 +123,8 @@ Note:
 <div class="cards-note">Step 9's <code>model.json</code>: one entry, one export. A relative path is resolved against the folder of the config file.</div>
 
 Note:
-- For our example we use ONNX Runtime only, to keep it simple: one entry, one export.
-- The workshop builds only ONNX Runtime, so another entry would be skipped anyway.
-- And our model.pt keeps its state inside: next to this entry it would need an export with the state in and out.
+- I.e. model we have used in part 1 would be declared like this
+- Just a sidenote, anira also supports binary model files compiled in
 
 ---
 
@@ -153,12 +147,11 @@ ProcessorExample m_processor{k_model};     // step 8: given at construction, kep
 ```
 
 Note:
-- Next, the tensors. Part 1 had a model config too: k_model, five facts typed by hand from the export metadata, step by step.
-- The path, the model's block of 2048 samples, the state of 63,488 floats, the rate it was trained at, and its own delay of 2224 samples.
-- The processor takes it at construction and keeps it, as anira's create takes the model config. What the processor does with it comes at prepare.
-- Everything else the code assumes: every buffer is a float vector, one channel, one model block, and Ort::Value exists only inside OnnxEngine.
-- A model with an int input, a second channel or an image does not fit this code.
-- The sample rate is the one fact anira's model file does not take: the host's rate comes with the contract at prepare, and whether the model fits it stays the plugin's call, step 9's ask_unless_44k.
+- But if we recap our the constant k_model struct there was more information than just the model path.
+- The more and more complex our examples grew, the more members our struct got:
+- First only input size, then also state, latency, etc...
+- Then there were also information that our Onnx Engine was assuming, i.e. the data type (float in our example, that we only had one channel, etc.)
+- Anira generalizes this the Tensor specifications in the following way, the tensor specifications are part of the model config as they are defined by the model
 
 ---
 
@@ -181,7 +174,10 @@ Note:
 </div>
 
 Note:
-- In anira there is one tensor type on every slot, and the model file says what each one is.
+- In anira every tensor - in or out - has a slot with a name and role
+- I.e. our input audio is a streamed tensor (it needs to be feed as a continuous stream with a time axis)
+
+
 - anira_tensor is a plain C struct: a data pointer, a dtype, a shape and strides.
 - The dtype codes are DLPack's, the standard that PyTorch and the other frameworks share, so int and bool fit, and so do token IDs.
 - The spec in the model file names each slot, its dtype, its axes and its role.

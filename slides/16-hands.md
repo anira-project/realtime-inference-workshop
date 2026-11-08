@@ -61,8 +61,8 @@ Note:
 <div class="cards fm-grid">
   <div class="card">{{ICON:model}}<div class="card-title">our own</div><div class="card-text">models we train</div></div>
   <div class="card">{{ICON:model}}<div class="card-title">open source</div><div class="card-text">models already out there</div></div>
-  <div class="card-arrow">↓</div>
-  <div class="card accent">{{ICON:people}}<div class="card-title">hand tracking</div><div class="card-text">Google's model, provided</div></div>
+  <div class="card-arrow fragment" data-fragment-index="1">↓</div>
+  <div class="card accent fragment" data-fragment-index="1">{{ICON:people}}<div class="card-title">hand tracking</div><div class="card-text">Google's model, provided</div></div>
 </div>
 
 <div class="cards-note">Each with its anira configs and an example: add it to your plugin without writing them.</div>
@@ -73,7 +73,7 @@ Note:
 - We are building a collection for that: anira foundation models.
 - Models we train ourselves, and open source models that are already out there.
 - Each comes with its anira configs, as an easy-to-use example to integrate.
-- Hand tracking, Google's model, is one of them: we provide it for this step.
+- [click] Hand tracking, Google's open source model, is one of them: we provide it for this step.
 - Let me show you.
 
 ---

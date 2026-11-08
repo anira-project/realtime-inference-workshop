@@ -17,7 +17,7 @@ You need git, CMake 3.22 or newer, and a C++17 compiler.
 - **Linux**: `gcc` or `clang`, CMake, and what JUCE needs:
 
   ```bash
-  sudo apt install build-essential cmake git libasound2-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev libfreetype6-dev libcurl4-openssl-dev libwebkit2gtk-4.1-dev libopencv-dev
+  sudo apt install build-essential pkg-config cmake git libasound2-dev libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev libxcomposite-dev libxrender-dev libxi-dev libfreetype-dev libfontconfig-dev libopencv-dev
   ```
 
   `libopencv-dev` is for the camera in the last step; without it the step still builds, with the mouse instead of a hand.

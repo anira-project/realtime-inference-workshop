@@ -132,6 +132,7 @@ Note:
 - So you can move the inference to a GPU or an NPU to make it faster, or, if your data is already on the GPU, run the inference there directly.
 - GPU through CUDA, Metal, Vulkan or GL; NPU through the hardware back ends of LiteRT and ExecuTorch.
 - The provider is picked with the engine: one plan per engine and provider, at prepare.
+- For that, we build the engines with provider support, and the engine/model matrix gets a new field: the provider.
 
 ---
 

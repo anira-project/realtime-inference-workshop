@@ -102,4 +102,4 @@ Compare with [`solution/`](solution/) when you want to.
 
 ## What's next
 
-The model taken apart: encoder and decoder as two handlers, and eight numbers between them you can reach.
+The model as an instrument: a camera and hand tracking drive the decoder.

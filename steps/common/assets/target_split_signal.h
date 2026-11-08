@@ -8,7 +8,7 @@
 
 
 
-// The output step 10 should produce for the sine in test_signal.h: 8 blocks of
+// The output the bonus step should produce for the sine in test_signal.h: 8 blocks of
 // 2048 samples. The encoder, then the decoder, as anira's encoder/decoder example runs
 // them: the encoder's priming frame (zeros) reaches the decoder first. Generated in Python.
 // clang-format off

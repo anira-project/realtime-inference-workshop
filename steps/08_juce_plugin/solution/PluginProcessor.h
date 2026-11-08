@@ -4,7 +4,7 @@
 //       the three places where the host talks to us: the constructor
 //       creates, prepare() prepares and returns the latency, process() runs
 //       one block. The window, the source player, the bypass, the mono
-//       mix-down and the boilerplate are PluginBase, shared with steps 9 and 10.
+//       mix-down and the boilerplate are PluginBase, shared with step 9 and the bonus.
 #pragma once
 
 #include "PluginBase.h"

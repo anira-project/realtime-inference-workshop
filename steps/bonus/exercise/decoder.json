@@ -1,4 +1,4 @@
-// Step 10: the decoder, filled in. The comments say where each value comes from.
+// Bonus: the decoder. Replace every ? with its value, a number as it is.
 // The comments are hints; the processor drops them before anira reads the file.
 {
   "models": [
@@ -10,7 +10,7 @@
       "name": "latents",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 8], ["time", 1]]   // TODO1: what the encoder gives, eight latents, one frame
+      "axes": [["batch", 1], ["channel", ?], ["time", ?]]   // TODO1: what the encoder gives
     },
     {
       "name": "state_in",
@@ -25,7 +25,7 @@
       "name": "audio_out",
       "dtype": "float32",
       "role": "streamed",
-      "axes": [["batch", 1], ["channel", 1], ["time", 2048]],   // TODO1: one model block, 2048 samples
+      "axes": [["batch", 1], ["channel", 1], ["time", ?]],   // TODO1: audio samples per inference
       "latency": 2224
     },
     {

@@ -4,8 +4,10 @@ const fs = require('fs').promises;
 const path = require('path');
 const QRCode = require('qrcode');
 
-async function combineSlides() {
-  const slidesDir = path.join(__dirname, '../slides');
+// The chapter files of slides/, or of a folder in it (bonus); a folder's files keep it
+// in their name, so the notes editor finds them
+async function combineSlides(folder = '') {
+  const slidesDir = path.join(__dirname, '../slides', folder);
   const slideFiles = await fs.readdir(slidesDir);
   
   const sortedFiles = slideFiles
@@ -19,7 +21,7 @@ async function combineSlides() {
     const content = await fs.readFile(filePath, 'utf-8');
     
     slides.push({
-      filename: file,
+      filename: folder ? `${folder}/${file}` : file,
       content: content,
       isHtml: file.endsWith('.html')
     });
@@ -29,12 +31,37 @@ async function combineSlides() {
 }
 
 async function generateHTML(isDev = false) {
-  const slidesTemplatePath = path.join(__dirname, '../slides/templates/slides.html');
-  const slidesTemplate = await fs.readFile(slidesTemplatePath, 'utf-8');
-  
-  const slides = await combineSlides();
   const distDir = path.join(__dirname, '../dist');
   await fs.mkdir(distDir, { recursive: true });
+
+  const html = await renderDeck(await combineSlides(), 'Real-Time Neural Inference Workshop', isDev);
+  await fs.writeFile(path.join(distDir, 'workshop.html'), html);
+  console.log('✅ Generated workshop.html');
+
+  // The bonus: a deck of its own at bonus/, not part of the workshop's. It shares
+  // css/, js/ and assets/ one level up.
+  const bonusDir = path.join(distDir, 'bonus');
+  await fs.mkdir(bonusDir, { recursive: true });
+  const bonus = await renderDeck(await combineSlides('bonus'), 'Bonus · Real-Time Neural Inference Workshop', isDev);
+  await fs.writeFile(path.join(bonusDir, 'index.html'), relocate(bonus, '../'));
+  console.log('✅ Generated bonus/index.html');
+  
+  // The site root opens the deck; the chapters are reached from inside it (Esc, the agenda)
+  await generateIndexPage(distDir);
+  
+  console.log('✅ All HTML files generated successfully!');
+}
+
+// A page one folder down reaches the shared folders one level up: every link into
+// them, as an attribute or a markdown link, gets the prefix. Nothing else is touched,
+// so code on the slides ([this](...)) stays as it is.
+function relocate(html, prefix) {
+  return html.replace(/(["'(])((?:assets|css|js|reveal\.js)\/|katex\b)/g, `$1${prefix}$2`);
+}
+
+async function renderDeck(slides, title, isDev) {
+  const slidesTemplatePath = path.join(__dirname, '../slides/templates/slides.html');
+  const slidesTemplate = await fs.readFile(slidesTemplatePath, 'utf-8');
   
   // Every slide file is one chapter: a vertical stack in a single deck, so the
   // overview (Esc) shows one column per chapter
@@ -49,7 +76,7 @@ async function generateHTML(isDev = false) {
     const kindMatch = slide.content.match(/<!--\s*kind:\s*([\w,\s]+?)\s*-->/);
     chapters.push({
       ...slide,
-      id: slide.filename.replace(/\.(md|html)$/, '').replace(/^\d+-/, ''),
+      id: path.basename(slide.filename).replace(/\.(md|html)$/, '').replace(/^\d+-/, ''),
       title: extractTitle(slide.content, slide.isHtml),
       part: part,
       kinds: kindMatch ? kindMatch[1].split(',').map(k => k.trim()) : []
@@ -76,19 +103,11 @@ async function generateHTML(isDev = false) {
       `;
   }
   
-  const html = renderTemplate(slidesTemplate, {
+  return renderTemplate(slidesTemplate, {
     SLIDES_CONTENT: slidesContent,
-    PRESENTATION_TITLE: 'Real-Time Neural Inference Workshop',
+    PRESENTATION_TITLE: title,
     HOT_RELOAD_SCRIPT: isDev ? '<script src="js/hot_reload.js?v={{BUILD_ID}}"></script>\n  <script src="js/overflow_check.js?v={{BUILD_ID}}"></script>\n  <script src="js/notes_editor.js?v={{BUILD_ID}}"></script>' : ''
   });
-  
-  await fs.writeFile(path.join(distDir, 'workshop.html'), html);
-  console.log('✅ Generated workshop.html');
-  
-  // The site root opens the deck; the chapters are reached from inside it (Esc, the agenda)
-  await generateIndexPage(distDir);
-  
-  console.log('✅ All HTML files generated successfully!');
 }
 
 // {{INTEGRATION:train|export|implement}} → the train/export/implement diagram, with a box

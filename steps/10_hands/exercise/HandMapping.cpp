@@ -1,4 +1,4 @@
-// Step 11 — The model as an instrument
+// Step 10 — The model as an instrument
 //
 // The last step, and a playground: no TODO, no check. Pick a mapping in
 // map_hands at the bottom, rebuild, play. Change one, or write your own in

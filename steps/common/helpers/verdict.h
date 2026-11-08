@@ -109,12 +109,12 @@ WORKSHOP_PRINTF_FORMAT inline void note(const char* format, ...) {
 
 // The step's result in a frame, after the lines above. Returns `code`, what
 // main exits with: 0 is solved.
-// @step: the step's number
+// @step: the step's number, or k_bonus
 // @code: what the checks returned
 // @note: added to SOLVED, e.g. what was not checked
 inline int step_result(int step, int code, const char* note = nullptr) {
     const char* rule = "==============================================================";
-    std::string text = "STEP " + std::to_string(step);
+    std::string text = step == k_bonus ? std::string("BONUS") : "STEP " + std::to_string(step);
     if (code == 0) {
         text += " SOLVED";
         if (note != nullptr) { text += std::string(", ") + note; }

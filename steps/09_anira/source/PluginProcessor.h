@@ -4,7 +4,7 @@
 //       same three places: the constructor creates, prepare() plans and
 //       returns the latency, process() moves one mono block. The window, the
 //       source player, the bypass, the mono mix-down and the boilerplate are
-//       PluginBase, shared with steps 8 and 10.
+//       PluginBase, shared with step 8 and the bonus.
 #pragma once
 
 #include "AniraProcessor.h"

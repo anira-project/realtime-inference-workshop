@@ -20,7 +20,7 @@ The VST3 passes `pluginval --strictness-level 5`.
 
 [`solution/ProcessorExample.h`](solution/ProcessorExample.h) is step 7's `ProcessorExample`, filled in, one-to-one: the same constants, the same `prepare`, `process_block` and `process_model`, with its `WorkerThread` inside. [`solution/PluginProcessor`](solution/PluginProcessor.cpp) owns that one processor, which owns the engine, as step 7's `main` does, and writes only the places where the host talks to us.
 
-Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), shared with steps 9 and 10: `PluginBase` (buses, the dry/wet parameter, the bypass, the mono mix-down, the host boilerplate), the window in `ui/`, and the source player in `dsp/`. `PluginBase` takes the host's `prepareToPlay`, `processBlock` and `releaseResources` and calls the step's `prepare`, `process` and `release`. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
+Everything else is the plugin shell in [`common/plugin/`](../common/plugin/), shared with step 9 and the bonus: `PluginBase` (buses, the dry/wet parameter, the bypass, the mono mix-down, the host boilerplate), the window in `ui/`, and the source player in `dsp/`. `PluginBase` takes the host's `prepareToPlay`, `processBlock` and `releaseResources` and calls the step's `prepare`, `process` and `release`. Your number from step 4 comes from `k_max_inference_ms` in [`common/inference_time.h`](../common/inference_time.h), as in steps 6 and 7.
 
 ## The three places the host talks to us
 

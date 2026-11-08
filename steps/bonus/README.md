@@ -1,4 +1,6 @@
-# Step 10: Opening the model
+# Bonus: Opening the model
+
+A bonus step for after the workshop, with its own slides: [anira-project.github.io/realtime-inference-workshop/bonus](https://anira-project.github.io/realtime-inference-workshop/bonus/).
 
 **Goal:** the model cut in the middle. The encoder turns 2048 samples into eight numbers, the decoder turns eight numbers into 2048 samples. Between them is your code: an offset per dimension, as in anira's own encoder/decoder example. Eight knobs on the model, an instrument.
 
@@ -21,17 +23,17 @@
 Build and run from the repository root:
 
 ```bash
-cmake --build --preset release --target step10_exercise_check
-./build/release/bin/step10_exercise_check
+cmake --build --preset release --target bonus_exercise_check
+./build/release/bin/bonus_exercise_check
 ```
 
 Once it passes, play: the plugin, eight knobs, one per latent.
 
 ```bash
-cmake --build --preset release --target step10_exercise_Standalone   # or step10_exercise_VST3
+cmake --build --preset release --target bonus_exercise_Standalone   # or bonus_exercise_VST3
 ```
 
-The result is in `build/release/steps/10_split/step10_exercise_artefacts/Release/`. A double-click on a knob sets it back to 0. Turn one at a time: in this model z0 changes the loudness and z2 the brightness. **report** shows step 9's report, one card for the encoder and one for the decoder; a slow machine and a rate other than 44.1 kHz ask first, as in step 9.
+The result is in `build/release/steps/bonus/bonus_exercise_artefacts/Release/`. A double-click on a knob sets it back to 0. Turn one at a time: in this model z0 changes the loudness and z2 the brightness. **report** shows step 9's report, one card for the encoder and one for the decoder; a slow machine and a rate other than 44.1 kHz ask first, as in step 9.
 
 ## Expected output
 
@@ -52,11 +54,11 @@ anira's report, decoder (at prepare, on this machine):
   PASS  the offsets change the output
 
 ==============================================================
-  STEP 10 SOLVED
+  BONUS SOLVED
 ==============================================================
 ```
 
-The latency is this machine's: both budgets are measured at prepare. The check runs offline, as a bounce: every block waits for its result, so nothing is missed and the comparison is exact. It compares against step 10's own reference, [`target_split_signal.h`](../common/assets/target_split_signal.h): encoder and decoder as anira's example runs them, the encoder's priming frame included. That frame changes the decoder's state, so the output differs a little from the forward model's. Step 9's reference would not match.
+The latency is this machine's: both budgets are measured at prepare. The check runs offline, as a bounce: every block waits for its result, so nothing is missed and the comparison is exact. It compares against the bonus step's own reference, [`target_split_signal.h`](../common/assets/target_split_signal.h): encoder and decoder as anira's example runs them, the encoder's priming frame included. That frame changes the decoder's state, so the output differs a little from the forward model's. Step 9's reference would not match.
 
 ## If you're stuck
 
@@ -71,8 +73,4 @@ Compare with [`solution/`](solution/) when you want to.
 
 ## Slides
 
-[`slides/16-split.md`](../../slides/16-split.md).
-
-## What's next
-
-A hand instead of the encoder: the latents from a camera, the decoder as a generator.
+Online at [anira-project.github.io/realtime-inference-workshop/bonus](https://anira-project.github.io/realtime-inference-workshop/bonus/), source in [`slides/bonus/split.md`](../../slides/bonus/split.md).

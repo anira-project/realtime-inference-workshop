@@ -1,4 +1,4 @@
-// The one anira context configuration of step 11: the hand tracker and the decoder each make
+// The one anira context configuration of step 10: the hand tracker and the decoder each make
 // their anira::Context from it. anira runs every context of a process on one core with one
 // thread pool, so they must ask for the same settings; otherwise the first one wins and every
 // other one is warned about it.

@@ -5,6 +5,9 @@
 
 #include <string>
 
+// The bonus step has no number: its checks pass this one.
+inline constexpr int k_bonus = 0;
+
 // The TODO behind a FAIL message of `step`, "TODO 1", "TODO 2 or 3", or
 // empty when it is not a TODO (the worker was late, say).
 // @step: the step's number
@@ -26,7 +29,7 @@ inline std::string todo_for(int step, const std::string& message) {
         if (has("state")) { return "TODO 2"; }  // anira refused the state pair
         if (has("'audio")) { return "TODO 1"; }  // anira refused audio_in or audio_out
         return "TODO 1 or 3";  // The latency in model.json, or the calls
-    case 10:
+    case k_bonus:
         if (has("missed")) { return {}; }  // Offline nothing is missed: not a TODO
         if (has("does not match")) { return "TODO 2"; }  // prepare took the files: the offset line
         return "TODO 1";  // anira refused a tensor in encoder.json or decoder.json

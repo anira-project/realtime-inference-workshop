@@ -47,7 +47,7 @@ Note:
 - On top of it: anira.hpp, header-only C++20, and the TypeScript package
 - Main-thread calls return a status and an error message that names the field; audio-thread calls return a status, and rt_error says why
 - The ABI is append-only inside a major version and stable from v3.0. Until then, rebuild against each pre-release
-- And compat/v2.hpp runs v2 code with one include swapped and using namespace anira::v2. It is deprecated and goes one minor release after 3.0. The hand tracker in step 11 uses exactly that
+- And compat/v2.hpp runs v2 code with one include swapped and using namespace anira::v2. It is deprecated and goes one minor release after 3.0. The hand tracker in step 10 uses exactly that
 
 ---
 
@@ -75,7 +75,7 @@ Note:
 - In the constructor we create: the model config, a pipeline with it, and the handler. It checks the config and loads nothing yet
 - In prepareToPlay the host's blocks go into the contract, 1 up to the announced block size, we prepare the handler and tell the host its latency. And we prepare again whenever the host changes its blocks
 - In processBlock one tensor goes over the host's channels as they are, planar: one pointer per channel, and the shape. Then process runs it in place
-- Our model in steps 9 and 10 is mono, so there we mix down first, as in step 8. A stereo model takes the buffer as it is
+- Our model in step 9 is mono, so there we mix down first, as in step 8. A stereo model takes the buffer as it is
 - Nothing to do in releaseResources: the handler destroys itself when the plugin goes, and the pool runs until the last handler is gone
 - This is the pattern of anira's own JUCE example
 - Hands-on from here: the part 1 model on anira, then the model taken apart

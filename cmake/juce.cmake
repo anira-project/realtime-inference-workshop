@@ -1,4 +1,4 @@
-# JUCE for the plugins of steps 8 and 9 and the app of step 11. On by default;
+# JUCE for the plugins of steps 8 and 9 and the app of step 10. On by default;
 # -DWORKSHOP_JUCE=OFF leaves those steps out.
 #
 # The release's source archive, fetched like any other dependency into the

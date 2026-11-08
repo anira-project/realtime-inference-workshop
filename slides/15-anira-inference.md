@@ -377,4 +377,4 @@ Note:
 - In two files, we replaced steps 3, 6 and 7.
 - Gone: the ring buffer, the worker, the latency arithmetic, and step 2's state copy.
 - And step 7's check still passes, with anira's latency instead of ours.
-- Next, step 10: we cut the model in the middle.
+- Next, step 10: the model as an instrument.

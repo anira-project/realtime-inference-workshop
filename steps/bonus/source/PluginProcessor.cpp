@@ -17,7 +17,7 @@ std::vector<PluginBase::Knob> latent_knobs() {
 }  // namespace
 
 PluginProcessor::PluginProcessor()
-    : PluginBase("Workshop split", "Step 10: opening the model", latent_knobs()) {}
+    : PluginBase("Workshop split", "Bonus: opening the model", latent_knobs()) {}
 
 // Everything that allocates, plans or warms up belongs here. anira takes any
 // sample rate and buffer size.

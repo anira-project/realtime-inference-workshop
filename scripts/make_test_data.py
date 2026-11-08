@@ -8,7 +8,7 @@ The input is a sine, the output is what the model makes of it on the reference
 path: model_forward.onnx in ONNX Runtime, the state carried by hand from a zero
 start. Embedding both keeps the C++ steps free of file IO.
 
-Step 10 gets a reference of its own (target_split_signal.h): the encoder and the
+The bonus step gets a reference of its own (target_split_signal.h): the encoder and the
 decoder run as anira's encoder/decoder example runs them. The encoder's first
 latent frame is its latency priming, zeros, and it goes to the decoder like every
 other frame; that frame changes the decoder's state, so the output differs from
@@ -57,7 +57,7 @@ TARGET_DOC = """\
 
 
 SPLIT_DOC = """\
-// The output step 10 should produce for the sine in test_signal.h: {blocks} blocks of
+// The output the bonus step should produce for the sine in test_signal.h: {blocks} blocks of
 // {block} samples. The encoder, then the decoder, as anira's encoder/decoder example runs
 // them: the encoder's priming frame (zeros) reaches the decoder first. Generated in Python."""
 
@@ -81,7 +81,7 @@ def run_reference(model_path, signal):
 
 
 def run_split_reference(encoder_path, decoder_path, signal, priming_frames=1):
-    """Encoder, then decoder, as step 10 runs them on anira.
+    """Encoder, then decoder, as the bonus step runs them on anira.
 
     The decoder first gets the encoder's priming frames (zeros: anira's encoder
     latency, one frame here), then one encoded frame per block. The audio the

@@ -1,4 +1,4 @@
-// Step 10 — Opening the model: the processor.
+// Bonus — Opening the model: the processor.
 //
 // The model cut in the middle, as in anira's encoder/decoder example
 // (examples/juce-audio-plugin, model 7): two handlers on one context, and one

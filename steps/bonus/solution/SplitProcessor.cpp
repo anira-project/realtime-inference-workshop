@@ -1,10 +1,10 @@
-// Step 10 — Opening the model, reference implementation
+// Bonus — Opening the model, reference implementation
 //
 // Goal:  the model cut in the middle: encoder and decoder as two handlers, and
 //        an offset per latent dimension between them.
 // Given: encoder.json, decoder.json and contract.json next to this file, the
 //        plugin around it.
-// Check: step10_solution_check: with zero offsets the output equals step 10's
+// Check: bonus_solution_check: with zero offsets the output equals the bonus step's
 //        reference, shifted by latency(); an offset changes it.
 
 #include "SplitProcessor.h"

@@ -1,4 +1,4 @@
-# Step 11: a camera, hand tracking and the decoder, one anira pool. A JUCE app,
+# Step 10: a camera, hand tracking and the decoder, one anira pool. A JUCE app,
 # and a playground: no solution, the exercise has every mapping (HandMapping.cpp).
 workshop_setup_juce()
 workshop_setup_anira()
@@ -7,7 +7,7 @@ workshop_setup_anira()
 include(${CMAKE_CURRENT_LIST_DIR}/../common/hands/hands.cmake)
 
 foreach(variant exercise)
-    set(target step11_${variant})
+    set(target step10_${variant})
     juce_add_gui_app(${target}
         VERSION 0.1.0
         PRODUCT_NAME "Workshop Hands (${variant})"

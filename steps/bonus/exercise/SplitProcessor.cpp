@@ -1,4 +1,4 @@
-// Step 10 — Opening the model
+// Bonus — Opening the model
 //
 // Goal:   the model cut in the middle: encoder and decoder as two handlers, and
 //         an offset per latent dimension between them.
@@ -6,9 +6,9 @@
 //         around it, anira (anira.hpp).
 // Task:   TODO 1 in encoder.json and decoder.json: replace every ? there.
 //         TODO 2 below: one line, marked "fill out".
-// Check:  step10_exercise_check: with zero offsets the output equals step 10's
+// Check:  bonus_exercise_check: with zero offsets the output equals the bonus step's
 //         reference, shifted by latency(); an offset changes it. Then play:
-//         the plugin step10_exercise, eight knobs, z0 to z7.
+//         the plugin bonus_exercise, eight knobs, z0 to z7.
 //
 // It builds once every ? is filled in, then the check says what is still off.
 

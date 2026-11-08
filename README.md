@@ -123,6 +123,6 @@ Code, slides, text and the example audio: [Apache 2.0](LICENSE).
 
 Not part of that, each under its own license:
 
-- The Realtime Audio Variational autoEncoder model (`rave/model_*.onnx`), exported from the Intelligent Instruments Lab's magnetic resonator piano model: [CC BY-NC 4.0](https://huggingface.co/Intelligent-Instruments-Lab/rave-models), non-commercial. It is not in git; the configure downloads it.
-- The hand tracking models (`handtracking/`), MediaPipe's, via [anira-cam](https://github.com/anira-project/anira-cam): Apache 2.0.
+- The Realtime Audio Variational autoEncoder model, exported from the Intelligent Instruments Lab's magnetic resonator piano model: [CC BY-NC 4.0](https://huggingface.co/Intelligent-Instruments-Lab/rave-models), non-commercial. It is not in git; the configure downloads it.
+- The hand tracking models (`handtracking/`), MediaPipe's: Apache 2.0.
 - The fonts in `slides/assets/fonts/`: SIL Open Font License 1.1.

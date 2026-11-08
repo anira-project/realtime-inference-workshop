@@ -40,8 +40,8 @@ Note:
 - We wrote every step by hand: we pushed the host block into the input ring, sample by sample on the audio thread
 - Then the worker popped the samples out and called the model inference on the worker thread
 - The result got pushed back to the output ring buffer
-- And back on the audio thread the host block popped the output ring buffer to fill its host block
-- All of it inside our processor, and it only knew one shape: audio in, audio out
+- And back on the audio thread the host popped the output ring buffer to fill its host block
+- All of it inside our processor implemented manually
 - How does anira do this?
 
 ---
@@ -222,7 +222,7 @@ if (!m_input.try_push(samples[i])) {   // the worker is behind, the ring is full
 
 Note:
 - And on the other side
-- Because the worker thread is busy to long it pop out input samples to late and the input ring is full
+- Because the worker thread is busy for to long, the input samples in the input ring are poped to late and the input ring gets full
 - try_push fails then and the rest of the host block is never pushed
 - the output then pays the depth and starts its next block with as many zeros
 - After the zeros the audio is late by as many samples
@@ -293,7 +293,6 @@ Note:
 - anira handles both cases more gracefully: the missed block is filled in place, and nothing shifts
 - A late result is dropped when it arrives, and if all input slots are busy, the window is dropped and its block filled later, at its place in the stream
 - The contract chooses what happens on a on_miss: bypass, the default, passes the input through, hold_last repeats the last block, zeros is silence as in part 1, or the user can even provide a custom callback function
-- process reports the block as missed and if every slot was busy the real-time logger tells us we are overloaded
 
 ---
 

@@ -21,7 +21,7 @@ Note:
 <span class="fragment integration-focus"></span>
 
 Note:
-- So basically these first two steps in the typical integration process..
+- In a typical integration process, these are the first two steps displayed here
 
 ---
 

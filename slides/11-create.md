@@ -68,7 +68,7 @@ Note:
 - anira on the other hand comes with multiple engines out of the box: LibTorch, ONNX Runtime, ExecuTorch, LiteRT and TensorFlow Lite, prebuilt .. as static or shared and compiled in or linked at build time.
 - Each one is an adapter behind a unified interface that has four calls, init, load, prepare and process
 - You can also implement your own engine through the interface, so a class like ours from part 1 fits there as it had similar calls
-- One thing worth mentioning: anira keeps the engines' symbols private. They are hidden when your plugin is linked, and the plugin exports only anira's C API.
+- One thing worth mentioning: anira keeps the engines' symbols private. They are hidden when your plugin is linked, and the plugin exports only anira's C ABI.
 - That matters because some hosts ship their own engine; Ableton Live 12, for example, bundles its own ONNX Runtime. If your plugin exported its engine symbols, the dynamic linker could bind your calls to the host's copy, a different version, and the host can crash on the first call.
 
 ---
@@ -101,8 +101,7 @@ Note:
 - In anira you declare this in the model config
 - Here is an example: we have four different model exports and all of them need different engines.
 - Then in the end we can define a default engine which will be the engine choice after prepare
-- At runtime you can then switch between the engines
-- If you define an entry for an engine the build does not have, it is skipped, so one file serves every build.
+- At runtime you can then switch between the engines and their respective models
 
 ---
 
@@ -232,8 +231,8 @@ Note:
 - We can also see another piece of information which we can provide in the anira ModelConfig:
 - That is whether a streamed output tensor has a latency
 - Apart from streamed and state, anira also allows a third tensor role. Static tensors:
-- Static tensors keep the same value in every inference run until overwritten and then keep this value for the next inference. This can be some parameter that the user can tweak (e.g. the decay time in a reverb emulation neural network model)
-- The tensor specifications are known when the model is exported. So this is something that your data scientist can fill out for you ideally..
+- Static tensors keep the same value in every inference run until overwritten and then keep this value for the next inferences. This can be some parameter that the user can tweak (e.g. the decay time in a reverb emulation neural network model)
+- The tensor specifications are known when the model is exported. So this is something that the data scientist can fill out for you ideally..
 
 ---
 
@@ -314,7 +313,7 @@ Note:
 
 Note:
 - In anira there is one configurable thread pool per process, and every instance queues into it.
-- It is declared once, in the ContextConfig with the information of how many threads, and how they wait for work while idle.
+- It is declared once, in the ContextConfig, in which you can declare how many threads to use, and how those should wait for work while idle.
 
 ---
 
@@ -344,9 +343,9 @@ Note:
 Note:
 - anira has two waiting strategies, declared process wide
 - SPIN_BACKOFF is the default: the audio thread only touches an atomic, and the idle pool waits with so-called exponential backoff
-- With this technique, the balance between polling for new data and leaving compute to other threads becomes bigger and bigger.
-- First we have 4 hot spinning retries consuming all compute, then 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 µs sleep before every further retry
-- So an idle thread picks up new work within about 100 µs.
+- With this technique, the balance between polling for new data and leaving compute to other threads is changed between different stages.
+- First we have 4 hot spinning retries consuming all compute, then 32 more with a CPU pause hint of about 100 ns each, then a yield and a 100 micro s sleep before every further retry
+- So an idle thread in the last phase picks up new work within about 100 micro s, if the operating system sleep is accurate..
 - In BLOCKING mode, the WorkerThreads wait in moodycamel's semaphore: it first spins on the semaphore's count, up to 10,000 tries without a pause, then blocks on the OS semaphore until an enqueue wakes it.
 - The price is on the audio thread: if a pool thread is blocked, enqueuing a new job to the thread pool makes one wake syscall.
 - This is not strictly real-time safe but the idle thread can pick up work usually faster in the last idle phase, which is also why we recommend it in most use cases.

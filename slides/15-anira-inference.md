@@ -333,6 +333,7 @@ Note:
 - On this machine that is 5295 samples [say: fifty-two ninety-five]; yours depends on your machine.
 - Blank 3, offline, a bounce: process_wait waits for every result.
 - Blank 4, live, in the callback: process never waits.
+TODO valentin; support all buffer sizes?
 
 ---
 
@@ -379,7 +380,7 @@ Note:
 </div>
 
 Note:
-- In two files, we replaced part 1, steps 1 to 7.
+- In two files, we replaced part 1, steps 1 to 8.
 - Gone: the engine code, the state copy, the ring buffer, the hand benchmark, the worker and the latency arithmetic.
 - And step 7's check still passes, with anira's latency instead of ours.
 - Next, step 10: the model as an instrument.

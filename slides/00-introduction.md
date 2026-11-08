@@ -147,6 +147,7 @@ Note:
 - Tanh lab is an audio software studio based in Berlin.
 - We take ideas from research all the way to a product.
 - Our work ranges from applied research, evaluating the feasibility of an idea to the full stack implementation and deployment of the product.
+- Our expertise lies mainly in real-time audio processing and machine learning
 - We are also maintaining the open source and permissively licensed anira library.
 
 ---
@@ -217,7 +218,7 @@ Note:
 - Please scan the code now, or type the address.
 - The slides are linked there too, top right on the GitHub page.
 - If you cannot read the screen well, click through them on your own machine.
-- If you have not built the code yet, clone it and start the configure step now, so it runs while we talk.
+- If you have not done so already, please clone the repo and start the configure step now, so it runs while we talk.
 
 ---
 
@@ -240,11 +241,11 @@ Note:
 - We sent the setup instructions by email. If you did it at home: thank you, just pull and configure again.
 - If not: please start now. Clone, configure, build.
 - Configuring downloads about 350 MB: the models, ONNX Runtime, JUCE and anira. The room's network is shared, so the earlier the better.
-- It runs while we talk. Building the libraries and every solution takes a while too, so start the build right after. The exercises build on their own, once you fill them in.
+- Idealy the build is then finished in time for the first exercise
 - Why release? There is a benchmark in the examples, which is only meaningful in release.
-- Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches ONNX Runtime, JUCE and anira a second time, so please do it at another moment, not now on the shared network.
+- Debugging works too: `cmake --preset debug` builds into `build/debug/`, next to the release build. But it fetches the dependencies a second time, so please do it at another moment, not now on the shared network.
 - If configuring fails, raise your hand and we come to you.
-- Please! Do not wait for the first exercise: that is the worst moment to start a download.
+- Please! Do not wait for the first exercise.
 
 ---
 

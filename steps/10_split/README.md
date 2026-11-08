@@ -1,6 +1,6 @@
 # Step 10: Opening the model
 
-**Goal:** the model cut in the middle. The encoder turns 2048 samples into eight numbers, the decoder turns eight numbers into 2048 samples, and between them is your code: an offset per dimension, the instrument, as in anira's own example.
+**Goal:** the model cut in the middle. The encoder turns 2048 samples into eight numbers, the decoder turns eight numbers into 2048 samples. Between them is your code: an offset per dimension, as in anira's own encoder/decoder example. Eight knobs on the model, an instrument.
 
 **Problem it solves:** step 9 ran the model as a black box. Split into its two halves, the middle becomes reachable: eight numbers per block that describe how it sounds, and that you can change before the decoder makes sound from them.
 
@@ -15,7 +15,7 @@
 
 ## What to do
 
-1. **Declare the tensors** (`encoder.json`, `decoder.json`). Replace every `?` with its number: the encoder takes one model block of audio (`time` 2048, as in step 9) and gives the latents (`channel` 8, `time` 1: eight latents, one frame per inference); the decoder takes those latents and gives 2048 samples back.
+1. **Declare the tensors** (`encoder.json`, `decoder.json`). Replace every `?` with its number. The encoder takes one model block of audio, `time` 2048 as in step 9, and gives the latents: `channel` 8, `time` 1, eight latents in one frame per inference. The decoder takes those latents and gives one model block back.
 2. **An offset on z** (`SplitProcessor.cpp`). One line, marked `fill out`: add each dimension's offset to its latent, before the frame goes on to the decoder. `offsets` is a parameter of `process`: the plugin hands in its eight knobs.
 
 Build and run from the repository root:
@@ -56,7 +56,7 @@ anira's report, decoder (at prepare, on this machine):
 ==============================================================
 ```
 
-The latency is this machine's: both budgets are measured at prepare. The check runs offline, as a bounce: every block waits for its result, so nothing is missed and the comparison is exact. It compares against step 10's own reference, [`target_split_signal.h`](../common/assets/target_split_signal.h): encoder and decoder as anira's example runs them, the encoder's priming frame included. That frame changes the decoder's state, so this output differs from the forward model's by about 0.014; `scripts/make_test_data.py` writes both references.
+The latency is this machine's: both budgets are measured at prepare. The check runs offline, as a bounce: every block waits for its result, so nothing is missed and the comparison is exact. It compares against step 10's own reference, [`target_split_signal.h`](../common/assets/target_split_signal.h): encoder and decoder as anira's example runs them, the encoder's priming frame included. That frame changes the decoder's state, so the output differs a little from the forward model's. Step 9's reference would not match.
 
 ## If you're stuck
 

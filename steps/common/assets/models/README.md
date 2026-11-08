@@ -1,7 +1,7 @@
 # Models
 
-The model files are **not in git**. They are downloaded from this repository's
-own release at configure time, into this folder, next to the audio in
+The model files are **not in git**. They are downloaded from Hugging Face at
+configure time, into this folder, next to the audio in
 [`../audio/`](../audio/):
 
 ```
@@ -53,13 +53,14 @@ reference give the same output, and the steps can check against it.
 
 250 MB of weights make every clone slow, and Git LFS has a bandwidth quota
 (1 GB per month on the free plan) that a roomful of people runs through in an
-hour. Release assets have neither problem.
+hour. Hugging Face and release assets have neither problem.
 
 ## How the download works
 
-[`cmake/models.cmake`](../../../../cmake/models.cmake) fetches one archive,
-`workshop-models.zip` (about 245 MB), from the release tagged
-`workshop-model`. It holds every model the steps load, and nothing else:
+[`cmake/models.cmake`](../../../../cmake/models.cmake) fetches each file from
+[huggingface.co/anira-project/realtime-inference-workshop](https://huggingface.co/anira-project/realtime-inference-workshop),
+which holds them at the same paths as this folder. When Hugging Face fails, it
+takes the same file from the release tagged `workshop-model` instead:
 
 ```
 rave/model_forward.onnx                         steps 1 to 9
@@ -67,10 +68,9 @@ rave/model_encoder.onnx, rave/model_decoder.onnx steps 10 and 11
 handtracking/, four models                      step 11
 ```
 
-The archive and each file in it are checked against their SHA-256, and a failed
-download is retried. The archive goes to the build folder and is deleted once
-its files are here. Files that are already here and intact are left alone, so a
-second configure needs no network. To use a model file from somewhere else:
+Each file is checked against its SHA-256, and a failed download is retried.
+Files that are already here and intact are left alone, so a second configure
+needs no network. To use a model file from somewhere else:
 
 ```bash
 cmake --preset release -DWORKSHOP_ONNX_MODEL=/path/to/model_forward.onnx

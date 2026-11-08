@@ -42,9 +42,9 @@ option(WORKSHOP_JUCE "Build the JUCE plugin and app steps" ON)
 # Part 2 builds anira from source, which takes a couple of minutes once.
 option(WORKSHOP_ANIRA "Build the anira steps (9 and up)" ON)
 
-# The models are downloaded from the repository's own release into
-# steps/common/assets/models/, unless they are already there: one archive with
-# every model the steps load. The test signal and the expected output are compiled in
+# The models are downloaded from Hugging Face, or the repository's own release,
+# into steps/common/assets/models/, unless they are already there. The test
+# signal and the expected output are compiled in
 # (steps/common/assets/test_signal.h).
 workshop_fetch_models()
 

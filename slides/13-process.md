@@ -6,9 +6,8 @@ One block through anira
 <!-- kind: talk -->
 
 Note:
-- Process: one block through anira.
-- This is the third row of the map, the part that runs in every callback.
-- We go through the two kinds of thread, the path of one block, the stages, the audio thread's wait for a result, a miss, and the real-time rules.
+- Process is the third row of the map: what happens in every callback
+- We look at the push and pop, the phases around the model, the wait, what happens when something is late, and the offline bounce
 
 ---
 
@@ -19,92 +18,16 @@ Note:
 {{MAP:show=create,prepare|focus=process}}
 
 Note:
-- Process runs in every callback, on the audio thread.
-- The row we fill now is processBlock: one call per callback.
-- Everything else in this row is anira's, on the audio thread and in the pool.
-
----
-
-<div class="tag">Two threads</div>
-
-## Two kinds of thread.<br><span class="then">Each has its own rules.</span>
-
-<div class="kinds">
-  <div class="kind audio">
-    <div class="kind-name">Audio thread</div>
-    <div class="kind-role"><code>process</code>, with pre- and post-processing</div>
-    <div class="kind-track"><div class="kind-row callbacks"></div></div>
-    <div class="kind-axis"><span>one callback</span><span>time →</span></div>
-    <div class="kind-rules"><b>no allocation</b><b>no lock</b><b>waits only if asked</b></div>
-  </div>
-  <div class="kind inference">
-    <div class="kind-name">Inference threads</div>
-    <div class="kind-role">the model runs: the heavy, not real-time-safe work</div>
-    <div class="kind-track">
-      <div class="kind-row"><i style="left:2%;width:46%"></i><i style="left:52%;width:40%"></i></div>
-      <div class="kind-row"><i style="left:14%;width:52%"></i><i style="left:70%;width:26%"></i></div>
-      <div class="kind-row"><i style="left:6%;width:30%"></i><i style="left:40%;width:48%"></i></div>
-    </div>
-    <div class="kind-axis"><span>one model run</span><span>time →</span></div>
-    <div class="kind-rules"><b>may allocate, may lock</b><b>as long as it takes</b><b>shared by every instance</b></div>
-  </div>
-</div>
-
-Note:
-- There are two kinds of thread, and each has its own rules.
-- They are the two halves of the process row, and the next slides fill them in.
-- On the left, the audio thread: every callback runs process, with the pre- and post-processing around it.
-- It returns long before its deadline, and it never allocates or locks; it waits only if you ask it to, and we will see how.
-- On the right, the inference threads: one pool per process, shared by every instance.
-- Only the heavy work that is not real-time safe moves there: the model run, inside an engine that may allocate and lock, for as long as it takes.
-- Configs, prepare and the latency run wherever the host calls them, usually its main thread: that is setup before the stream starts, not a thread anira adds.
-
----
-
-<div class="tag">anira · Pipeline</div>
-
-## Audio in, through the pool, audio out.<br><span class="then">Push, then pop, every callback.</span>
-
-<div class="pipeline" data-window="4" data-inference="1.32" data-threads="2" data-slots="4" data-ring="12" data-period="1400" data-loop="40">
-  <div class="pl-in"><div class="pl-label">audio in · 512</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a1 fragment" data-fragment-index="1" data-stage="1"><span class="pl-push">push</span></div>
-  <div class="pl-ring in fragment" data-fragment-index="1" data-stage="1"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a2 fragment" data-fragment-index="2" data-stage="2"><span class="pl-enqueue">enqueue</span></div>
-  <div class="pl-slots fragment" data-fragment-index="2" data-stage="2"><div class="pl-label">slots · 2048 each</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
-  <div class="pl-arrow a3 both fragment" data-fragment-index="3" data-stage="3"></div>
-  <div class="pl-threads fragment" data-fragment-index="3" data-stage="3"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
-  <div class="pl-out fragment" data-fragment-index="5" data-stage="5"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
-  <div class="pl-arrow a4 back fragment" data-fragment-index="5" data-stage="5"><span class="pl-pop">pop</span></div>
-  <div class="pl-ring out fragment" data-fragment-index="4" data-stage="4"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
-  <div class="pl-arrow a5 back fragment" data-fragment-index="4" data-stage="4"><span class="pl-dequeue">dequeue</span></div>
-  <div class="pl-down fragment" data-fragment-index="4" data-stage="4"><span class="pl-then"></span></div>
-</div>
-
-<div class="cards-note fragment" data-fragment-index="5">The output ring starts with 2560 samples of silence, step 7's prefill: 1536 + 1024. Then every block is on time.</div>
-
-Note:
-- Audio in, through the pool, audio out: push, then pop, every callback.
-- We build it up click by click while it runs, with our numbers from part 1: 512 samples per callback, 2048 per model run, and a worst case of 15.3 ms, about 1.3 callbacks.
-- First only the audio coming in: a block per callback, at a steady rate.
-- [click] The push: the audio thread writes every block into the ring buffer, and with nothing taking it out, the ring fills up.
-- [click] The enqueue: whenever the ring holds enough for one model run, that part goes into a free slot, at a different rate than the blocks.
-- With no one running them, the slots fill up.
-- [click] The inference threads: a free thread takes the oldest waiting slot, runs the model and writes the result back.
-- One run takes about 1.3 callbacks, far less than the four callbacks between two windows. Our model has state, so its runs go one at a time anyway.
-- [click] The dequeue: the audio thread's path in one callback is push, enqueue when the ring holds enough, straight down, dequeue.
-- The inference threads on the right run on their own.
-- The slot just handed over is still running, so the dequeue takes an older result, or none yet.
-- [click] The pop: once a slot is done, the dequeue moves its result into the output ring buffer, and every pop plays one block out of it.
-- The output ring starts primed with silence, as in step 6: 2560 samples, 1536 for the block adaptation and 1024 for the worker's two callbacks. It plays out first, and the first result arrives just as it runs out.
-- That silence plus the model's own 2224 is the latency, which anira computes at prepare and reports to the host: 4784, as in step 7.
+- Process runs in every callback, on the audio thread: in JUCE that is processBlock
+- Everything else in this row is anira's, on the audio thread and on the inference threads
 
 ---
 
 <!-- .slide: class="recap" -->
 
-<div class="tag">Part 1 · Steps 3 and 7</div>
+<div class="tag">Part 1 · Steps 3 and 6</div>
 
-## Pre- and post-processing,<br><span class="then">inside the processor, by hand.</span>
+## Push and pop, by hand.<br><span class="then">Every sample, inside our processor.</span>
 
 ```cpp
 m_input.try_push(samples[i]);       // host in, sample by sample
@@ -115,10 +38,12 @@ m_output.try_pop(samples[i]);       // host out, sample by sample
 ```
 
 Note:
-- In part 1 we did the pre- and post-processing inside the processor, by hand.
-- The host block into the ring, model blocks out of it, the results back, and the host block out of the output ring.
-- That is pre- and post-processing, and ours knew only one shape: audio to audio.
-- anira turns this into stages.
+- Lets recap process in part 1
+- We wrote every step by hand: the host block into the input ring, sample by sample
+- On the worker a model block out of it, the model, and the result into the output ring
+- And back on the audio thread the host block out of the output ring
+- All of it inside our processor, and it only knew one shape: audio in, audio out
+- How does anira do this?
 
 ---
 
@@ -126,7 +51,7 @@ Note:
 
 <div class="tag">anira · Stages</div>
 
-## Four phases around the engine.<br><span class="then">Two threads, one state loop.</span>
+## The push and pop is anira's.<br><span class="then">The phases around the engine are yours.</span>
 
 <svg class="st" viewBox="0 0 1600 560" aria-label="the stage phases">
   <defs>
@@ -135,9 +60,9 @@ Note:
     </marker>
   </defs>
   <rect class="st-lane audio" x="20" y="40" width="1570" height="200" rx="10"/>
-  <text x="40" y="70" class="st-lane-label">audio thread · driver-thread</text>
+  <text x="40" y="70" class="st-lane-label">audio thread · real-time: no allocation, no lock, no wait</text>
   <rect class="st-lane pool" x="20" y="300" width="1570" height="200" rx="10"/>
-  <text x="40" y="330" class="st-lane-label">inference thread · one of the pool</text>
+  <text x="40" y="330" class="st-lane-label">inference thread · may allocate, lock and block</text>
   <g class="fragment" data-fragment-index="1">
     <rect class="ov-pill" x="50" y="112" width="130" height="56" rx="8"/><text x="115" y="146" class="st-text">host block</text>
     <line class="ov-flow strong" x1="180" y1="140" x2="226" y2="140" marker-end="url(#st-arrow)"/>
@@ -176,17 +101,52 @@ Note:
   </g>
 </svg>
 
-<div class="cards-note">The default stage is step 3: a window out of the ring, the result back in. <code>before</code> and <code>after</code> are empty. You write a stage for another shape.</div>
+<div class="cards-note">The defaults are part 1's push and pop. Fill a phase for more, like the FFT from the start: in <code>before_inference</code>, on the model's window. <code>reset</code> starts a new stream.</div>
 
 Note:
-- anira puts four phases around the engine: pre_process and post_process on the audio thread, before_inference and after_inference on the pool.
-- [click] Top lane: the host block goes into the input ring, and pre_process takes one window out of it as the model tensor.
-- The tensor goes into a slot with a stamp, a running number that keeps the results in order, and the callback returns.
-- [click] Bottom lane: a pool thread runs before_inference, the engine and after_inference on the tensor, and hands the slot back.
-- In a later callback the audio thread takes the next stamp in line, and post_process writes the result into the output ring.
-- [click] The state pair from the create chapter is bound before before_inference and swapped after after_inference: both hooks see the state, and nothing is copied.
-- The default stage is what step 3 did by hand, with before and after empty.
-- You write your own stage only when the model needs another shape than audio in, audio out.
+- anira does all of this for us: its default phases are exactly our push and pop from part 1
+- And around the engine it gives us four phases we can fill ourselves, plus a reset
+- [click] Top lane, the audio thread: the host block goes into the input ring, pre_process takes one window out of it into the model tensor, into a slot, and the callback returns
+- [click] Bottom lane, an inference thread: before_inference, the engine and after_inference, then the slot goes back. In a later callback post_process writes the result into the output ring
+- [click] And the state pair from Create is swapped around each inference, no copy
+- Every phase has its thread. pre_process, post_process and reset run on the audio thread: there we have to promise that they are real-time, no allocation, no lock, no wait, otherwise prepare refuses the processor
+- before_inference and after_inference run on an inference thread: they may allocate, lock and block, as long as it takes
+- reset runs before the first block of a new stream, after prepare or a reset of the handler: an overlap buffer or a filter's history starts over
+- And that is where something like the FFT from the very beginning fits: remember the clock, the FFT ran in every fourth callback
+- In a processor the heavy half can run in before_inference, on an inference thread, on the model's window of 2048, and the callback stays flat. anira's docs name exactly this case: a spectrogram model's FFT and its inverse
+
+---
+
+<div class="tag">anira · Pipeline</div>
+
+## Audio in, through the pool, audio out.<br><span class="then">Push, then pop, every callback.</span>
+
+<div class="pipeline" data-window="4" data-inference="1.32" data-threads="2" data-slots="4" data-ring="12" data-period="1400" data-loop="40">
+  <div class="pl-in"><div class="pl-label">audio in · 512</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
+  <div class="pl-arrow a1 fragment" data-fragment-index="1" data-stage="1"><span class="pl-push">push</span></div>
+  <div class="pl-ring in fragment" data-fragment-index="1" data-stage="1"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
+  <div class="pl-arrow a2 fragment" data-fragment-index="2" data-stage="2"><span class="pl-enqueue">enqueue</span></div>
+  <div class="pl-slots fragment" data-fragment-index="2" data-stage="2"><div class="pl-label">slots · 2048 each</div><div class="pl-list"></div><div class="pl-legend"><span class="queued">waiting</span><span class="running">running</span><span class="done">done</span></div></div>
+  <div class="pl-arrow a3 both fragment" data-fragment-index="3" data-stage="3"></div>
+  <div class="pl-threads fragment" data-fragment-index="3" data-stage="3"><div class="pl-label">inference threads</div><div class="pl-list"></div></div>
+  <div class="pl-out fragment" data-fragment-index="5" data-stage="5"><div class="pl-label">audio out</div><div class="pl-audio"><svg class="pl-wave" viewBox="0 0 120 40" aria-hidden="true"><path class="wave" d="M2 20 C 10 4, 18 4, 26 20 S 42 36, 50 20 S 66 4, 74 20 S 90 36, 98 20 S 114 4, 118 20"/><path class="flat" d="M2 20 L118 20"/></svg></div></div>
+  <div class="pl-arrow a4 back fragment" data-fragment-index="5" data-stage="5"><span class="pl-pop">pop</span></div>
+  <div class="pl-ring out fragment" data-fragment-index="4" data-stage="4"><div class="pl-label">ring buffer</div><div class="pl-circle"></div></div>
+  <div class="pl-arrow a5 back fragment" data-fragment-index="4" data-stage="4"><span class="pl-dequeue">dequeue</span></div>
+  <div class="pl-down fragment" data-fragment-index="4" data-stage="4"><span class="pl-then"></span></div>
+</div>
+
+<div class="cards-note fragment" data-fragment-index="5">The output ring starts with 2560 samples of silence, step 7's prefill: 1536 + 1024. Then every block is on time.</div>
+
+Note:
+- Now lets look at one block going through anira, with our numbers from part 1: 512 samples per callback, 2048 per model run, and a worst case of 15.3 ms, about 1.3 callbacks
+- [click] The push: the audio thread writes every block into the input ring
+- [click] The enqueue: as soon as the ring holds one model block, it goes into a free slot
+- [click] A free inference thread takes the oldest waiting slot, runs the model and writes the result back
+- [click] The dequeue: right after the enqueue the audio thread takes a result out. But the window it just handed over is still running, so it takes an older one, or none yet
+- [click] The pop: the result goes into the output ring, and every callback plays one block out of it
+- The output ring starts with 2560 samples of silence, as in step 7: 1536 for the block adaptation and 1024 for the two callbacks of the worker. Plus the model's 2224, that is our 4784
+- Watch the dequeue: it never waits for the window it just handed over. That costs latency, and that is what wait_ratio is about
 
 ---
 
@@ -212,14 +172,11 @@ Note:
 </div>
 
 Note:
-- Between enqueue and dequeue, the audio thread may wait: wait_ratio says how long.
-- process itself never waits; only its waiting twin, process_wait, does: with ANIRA_WAIT_CONTRACT up to wait_ratio of a block, otherwise as long as you pass it.
-- get_latency already counts on that wait: with wait_ratio above 0, a host that calls plain process gets the lower latency and more misses.
-- Why wait at all: if the model is fast, a short wait gets the result out in the same callback, one block earlier.
-- This is the same pipeline with a fast model: a window of two blocks, and one run takes about a third of a block; simplified, not to scale.
-- With wait_ratio 0, the default, the audio thread goes straight from the enqueue to the dequeue.
-- The window it just handed over is still running, so its result comes out one callback later.
-- That callback is latency.
+- Between the enqueue and the dequeue the audio thread may wait: that is wait_ratio, in the contract
+- To see it we take a faster model: a window of two blocks, and one run takes about a third of a block. Simplified, not to scale
+- With wait_ratio 0, the default, the dequeue comes right after the enqueue
+- The window just handed over is still running, so its result comes out one callback later: that callback is latency
+- process itself never waits, only its twin process_wait does: up to wait_ratio of a block
 
 ---
 
@@ -245,11 +202,10 @@ Note:
 </div>
 
 Note:
-- With wait_ratio 0.25, process_wait blocks the audio thread for up to a quarter of the block period between enqueue and dequeue.
-- The arrow down stands for one block period, and the dashed box beside it is the share the ratio allows.
-- The model needs a third of a block, so the wait runs out first.
-- The dequeue finds nothing new, and the result comes out one callback later, as before.
-- The quarter block of waiting is gone from the callback for nothing.
+- With 0.25 process_wait waits up to a quarter of a block
+- The dashed box next to the arrow down is the share the ratio allows
+- The model needs a third, so the wait runs out first: nothing new, and the result comes one callback later as before
+- The quarter block of waiting was lost for nothing
 
 ---
 
@@ -275,10 +231,53 @@ Note:
 </div>
 
 Note:
-- With wait_ratio 0.5, process_wait blocks it for up to half a block.
-- The model is done after a third, the audio thread wakes up, and the dequeue takes this window's result right away.
-- The result goes out in the same callback: the silence at the start is shorter, and the latency is one block lower.
-- It buys latency with callback time: fine for one instance on a quiet machine, dangerous for ten.
+- With 0.5 it waits up to half a block
+- The model is done after a third, the audio thread wakes up, and the dequeue takes this window's result right away
+- So the result goes out in the same callback, and the latency is one block lower. get_latency already counts on that wait at prepare
+- But it buys latency with callback time: fine for one instance on a quiet machine, dangerous for ten. The default stays 0
+
+---
+
+<!-- .slide: class="recap miss" -->
+
+<div class="tag">Part 1 · Step 7</div>
+
+## What happens if an inference is too late?<br><span class="then">Zeros, then the late samples are dropped.</span>
+
+```cpp
+while (m_debt > 0) { if (m_output.try_pop(late)) { --m_debt; } else { break; } }  // drop the late
+for (size_t i = zeros; i < num_samples; ++i) {
+    const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
+    if (!popped) {                                          // the result is late
+        std::fill_n(samples + i, num_samples - i, 0.0f);
+        m_debt += num_samples - i;                          // dropped when it arrives
+        break;
+    }
+}
+```
+
+<div class="click">
+  <div class="click-labels"><span style="left:32.50%;width:5.00%">zeros</span><span class="fragment" data-fragment-index="2" style="left:37.50%;width:62.50%">in line: the late samples are popped and dropped</span></div>
+  <svg class="click-wave" viewBox="0 0 1500 200" aria-hidden="true">
+  <rect class="click-gap" x="487.5" y="0" width="75.0" height="200"/>
+  <line class="click-div" x1="188" y1="6" x2="188" y2="194"/><line class="click-div" x1="375" y1="6" x2="375" y2="194"/><line class="click-div" x1="562" y1="6" x2="562" y2="194"/><line class="click-div" x1="750" y1="6" x2="750" y2="194"/><line class="click-div" x1="938" y1="6" x2="938" y2="194"/><line class="click-div" x1="1125" y1="6" x2="1125" y2="194"/><line class="click-div" x1="1312" y1="6" x2="1312" y2="194"/>
+  <path class="click-line" d="M0.0 63.9 L2.5 60.2 L5.0 56.9 L7.5 54.0 L10.0 51.7 L12.5 49.8 L15.0 48.5 L17.5 47.7 L20.0 47.5 L22.5 47.9 L25.0 48.9 L27.5 50.4 L30.0 52.5 L32.5 55.1 L35.0 58.3 L37.5 61.9 L40.0 65.9 L42.5 70.4 L45.0 75.3 L47.5 80.4 L50.0 85.8 L52.5 91.4 L55.0 97.1 L57.5 102.9 L60.0 108.7 L62.5 114.5 L65.0 120.1 L67.5 125.5 L70.0 130.7 L72.5 135.6 L75.0 140.2 L77.5 144.3 L80.0 148.0 L82.5 151.1 L85.0 153.7 L87.5 155.8 L90.0 157.2 L92.5 158.1 L95.0 158.2 L97.5 157.8 L100.0 156.7 L102.5 155.0 L105.0 152.6 L107.5 149.7 L110.0 146.2 L112.5 142.2 L115.0 137.6 L117.5 132.7 L120.0 127.3 L122.5 121.6 L125.0 115.7 L127.5 109.5 L130.0 103.2 L132.5 96.8 L135.0 90.4 L137.5 84.1 L140.0 77.9 L142.5 71.9 L145.0 66.2 L147.5 60.9 L150.0 55.9 L152.5 51.4 L155.0 47.4 L157.5 43.9 L160.0 41.1 L162.5 38.9 L165.0 37.3 L167.5 36.5 L170.0 36.3 L172.5 36.8 L175.0 38.0 L177.5 39.9 L180.0 42.5 L182.5 45.8 L185.0 49.6 L187.5 54.0 L190.0 59.0 L192.5 64.4 L195.0 70.2 L197.5 76.5 L200.0 83.0 L202.5 89.7 L205.0 96.5 L207.5 103.5 L210.0 110.4 L212.5 117.3 L215.0 124.0 L217.5 130.4 L220.0 136.6 L222.5 142.4 L225.0 147.7 L227.5 152.6 L230.0 156.9 L232.5 160.6 L235.0 163.6 L237.5 166.0 L240.0 167.6 L242.5 168.5 L245.0 168.7 L247.5 168.1 L250.0 166.8 L252.5 164.7 L255.0 161.9 L257.5 158.3 L260.0 154.2 L262.5 149.4 L265.0 144.1 L267.5 138.2 L270.0 131.9 L272.5 125.3 L275.0 118.3 L277.5 111.1 L280.0 103.7 L282.5 96.3 L285.0 88.9 L287.5 81.5 L290.0 74.4 L292.5 67.5 L295.0 60.9 L297.5 54.8 L300.0 49.1 L302.5 43.9 L305.0 39.4 L307.5 35.5 L310.0 32.2 L312.5 29.8 L315.0 28.1 L317.5 27.1 L320.0 27.0 L322.5 27.7 L325.0 29.1 L327.5 31.4 L330.0 34.4 L332.5 38.1 L335.0 42.6 L337.5 47.7 L340.0 53.4 L342.5 59.6 L345.0 66.2 L347.5 73.3 L350.0 80.7 L352.5 88.3 L355.0 96.1 L357.5 103.9 L360.0 111.7 L362.5 119.5 L365.0 127.0 L367.5 134.2 L370.0 141.1 L372.5 147.6 L375.0 153.6 L377.5 158.9 L380.0 163.7 L382.5 167.8 L385.0 171.1 L387.5 173.7 L390.0 175.4 L392.5 176.4 L395.0 176.5 L397.5 175.7 L400.0 174.1 L402.5 171.8 L405.0 168.6 L407.5 164.6 L410.0 160.0 L412.5 154.6 L415.0 148.7 L417.5 142.2 L420.0 135.2 L422.5 127.8 L425.0 120.1 L427.5 112.2 L430.0 104.1 L432.5 95.9 L435.0 87.8 L437.5 79.8 L440.0 72.0 L442.5 64.5 L445.0 57.3 L447.5 50.7 L450.0 44.5 L452.5 38.9 L455.0 34.1 L457.5 29.9 L460.0 26.5 L462.5 23.8 L465.0 22.1 L467.5 21.1 L470.0 21.1 L472.5 21.9 L475.0 23.5 L477.5 26.0 L480.0 29.3 L482.5 33.4 L485.0 38.3 L487.5 43.8 L487.5 100 L562.5 100L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5 L752.5 39.1 L755.0 34.3 L757.5 30.3 L760.0 27.0 L762.5 24.6 L765.0 22.9 L767.5 22.2 L770.0 22.3 L772.5 23.2 L775.0 25.0 L777.5 27.6 L780.0 30.9 L782.5 35.1 L785.0 39.9 L787.5 45.4 L790.0 51.5 L792.5 58.0 L795.0 65.1 L797.5 72.5 L800.0 80.1 L802.5 88.0 L805.0 96.0 L807.5 104.0 L810.0 111.9 L812.5 119.7 L815.0 127.3 L817.5 134.5 L820.0 141.4 L822.5 147.7 L825.0 153.6 L827.5 158.8 L830.0 163.3 L832.5 167.2 L835.0 170.3 L837.5 172.6 L840.0 174.1 L842.5 174.9 L845.0 174.7 L847.5 173.8 L850.0 172.1 L852.5 169.5 L855.0 166.3 L857.5 162.3 L860.0 157.6 L862.5 152.3 L865.0 146.5 L867.5 140.2 L870.0 133.4 L872.5 126.3 L875.0 119.0 L877.5 111.5 L880.0 103.8 L882.5 96.2 L885.0 88.6 L887.5 81.2 L890.0 74.0 L892.5 67.1 L895.0 60.6 L897.5 54.6 L900.0 49.1 L902.5 44.1 L905.0 39.8 L907.5 36.2 L910.0 33.3 L912.5 31.1 L915.0 29.7 L917.5 29.0 L920.0 29.2 L922.5 30.1 L925.0 31.8 L927.5 34.2 L930.0 37.3 L932.5 41.1 L935.0 45.6 L937.5 50.6 L940.0 56.1 L942.5 62.1 L945.0 68.5 L947.5 75.2 L950.0 82.1 L952.5 89.2 L955.0 96.4 L957.5 103.6 L960.0 110.7 L962.5 117.7 L965.0 124.4 L967.5 130.9 L970.0 137.0 L972.5 142.6 L975.0 147.7 L977.5 152.4 L980.0 156.4 L982.5 159.7 L985.0 162.4 L987.5 164.4 L990.0 165.7 L992.5 166.3 L995.0 166.1 L997.5 165.2 L1000.0 163.6 L1002.5 161.3 L1005.0 158.4 L1007.5 154.8 L1010.0 150.7 L1012.5 146.0 L1015.0 140.8 L1017.5 135.2 L1020.0 129.3 L1022.5 123.1 L1025.0 116.6 L1027.5 110.0 L1030.0 103.3 L1032.5 96.7 L1035.0 90.1 L1037.5 83.6 L1040.0 77.4 L1042.5 71.4 L1045.0 65.8 L1047.5 60.6 L1050.0 55.9 L1052.5 51.7 L1055.0 48.0 L1057.5 44.9 L1060.0 42.4 L1062.5 40.6 L1065.0 39.5 L1067.5 39.0 L1070.0 39.2 L1072.5 40.0 L1075.0 41.5 L1077.5 43.6 L1080.0 46.4 L1082.5 49.7 L1085.0 53.5 L1087.5 57.8 L1090.0 62.6 L1092.5 67.7 L1095.0 73.2 L1097.5 78.9 L1100.0 84.8 L1102.5 90.8 L1105.0 96.9 L1107.5 103.0 L1110.0 109.1 L1112.5 114.9 L1115.0 120.6 L1117.5 126.0 L1120.0 131.1 L1122.5 135.9 L1125.0 140.2 L1127.5 144.0 L1130.0 147.3 L1132.5 150.1 L1135.0 152.3 L1137.5 153.9 L1140.0 155.0 L1142.5 155.4 L1145.0 155.2 L1147.5 154.4 L1150.0 153.0 L1152.5 151.1 L1155.0 148.6 L1157.5 145.5 L1160.0 142.1 L1162.5 138.1 L1165.0 133.8 L1167.5 129.2 L1170.0 124.2 L1172.5 119.0 L1175.0 113.7 L1177.5 108.3 L1180.0 102.8 L1182.5 97.3 L1185.0 91.8 L1187.5 86.5 L1190.0 81.4 L1192.5 76.6 L1195.0 72.0 L1197.5 67.8 L1200.0 63.9 L1202.5 60.5 L1205.0 57.6 L1207.5 55.1 L1210.0 53.1 L1212.5 51.7 L1215.0 50.8 L1217.5 50.4 L1220.0 50.6 L1222.5 51.4 L1225.0 52.6 L1227.5 54.4 L1230.0 56.6 L1232.5 59.3 L1235.0 62.5 L1237.5 66.0 L1240.0 69.9 L1242.5 74.0 L1245.0 78.4 L1247.5 83.0 L1250.0 87.8 L1252.5 92.7 L1255.0 97.6 L1257.5 102.4 L1260.0 107.3 L1262.5 111.9 L1265.0 116.5 L1267.5 120.8 L1270.0 124.8 L1272.5 128.6 L1275.0 132.0 L1277.5 135.0 L1280.0 137.6 L1282.5 139.8 L1285.0 141.5 L1287.5 142.7 L1290.0 143.5 L1292.5 143.8 L1295.0 143.6 L1297.5 143.0 L1300.0 141.8 L1302.5 140.2 L1305.0 138.2 L1307.5 135.8 L1310.0 133.1 L1312.5 130.0 L1315.0 126.5 L1317.5 122.9 L1320.0 119.0 L1322.5 114.9 L1325.0 110.7 L1327.5 106.5 L1330.0 102.1 L1332.5 97.9 L1335.0 93.6 L1337.5 89.5 L1340.0 85.5 L1342.5 81.8 L1345.0 78.2 L1347.5 75.0 L1350.0 72.0 L1352.5 69.4 L1355.0 67.1 L1357.5 65.2 L1360.0 63.7 L1362.5 62.6 L1365.0 61.9 L1367.5 61.7 L1370.0 61.9 L1372.5 62.5 L1375.0 63.4 L1377.5 64.8 L1380.0 66.6 L1382.5 68.7 L1385.0 71.1 L1387.5 73.9 L1390.0 76.8 L1392.5 80.0 L1395.0 83.4 L1397.5 87.0 L1400.0 90.7 L1402.5 94.4 L1405.0 98.1 L1407.5 101.9 L1410.0 105.5 L1412.5 109.1 L1415.0 112.6 L1417.5 115.9 L1420.0 119.0 L1422.5 121.8 L1425.0 124.4 L1427.5 126.7 L1430.0 128.6 L1432.5 130.3 L1435.0 131.6 L1437.5 132.5 L1440.0 133.1 L1442.5 133.3 L1445.0 133.2 L1447.5 132.6 L1450.0 131.8 L1452.5 130.6 L1455.0 129.0 L1457.5 127.2 L1460.0 125.1 L1462.5 122.7 L1465.0 120.1 L1467.5 117.3 L1470.0 114.4 L1472.5 111.3 L1475.0 108.1 L1477.5 104.9 L1480.0 101.6 L1482.5 98.4 L1485.0 95.2 L1487.5 92.1 L1490.0 89.1 L1492.5 86.2 L1495.0 83.5 L1497.5 81.1 L1500.0 78.8"/>
+  <path class="shift-ghost fragment" data-fragment-index="2" d="M487.5 43.8 L490.0 50.0 L492.5 56.7 L495.0 63.8 L497.5 71.4 L500.0 79.4 L502.5 87.5 L505.0 95.8 L507.5 104.2 L510.0 112.5 L512.5 120.7 L515.0 128.7 L517.5 136.3 L520.0 143.6 L522.5 150.4 L525.0 156.7 L527.5 162.3 L530.0 167.3 L532.5 171.5 L535.0 175.0 L537.5 177.6 L540.0 179.4 L542.5 180.3 L545.0 180.3 L547.5 179.5 L550.0 177.8 L552.5 175.2 L555.0 171.8 L557.5 167.6 L560.0 162.6 L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5 L752.5 39.1 L755.0 34.3 L757.5 30.3 L760.0 27.0 L762.5 24.6 L765.0 22.9 L767.5 22.2 L770.0 22.3 L772.5 23.2 L775.0 25.0 L777.5 27.6 L780.0 30.9 L782.5 35.1 L785.0 39.9 L787.5 45.4 L790.0 51.5 L792.5 58.0 L795.0 65.1 L797.5 72.5 L800.0 80.1 L802.5 88.0 L805.0 96.0 L807.5 104.0 L810.0 111.9 L812.5 119.7 L815.0 127.3 L817.5 134.5 L820.0 141.4 L822.5 147.7 L825.0 153.6 L827.5 158.8 L830.0 163.3 L832.5 167.2 L835.0 170.3 L837.5 172.6 L840.0 174.1 L842.5 174.9 L845.0 174.7 L847.5 173.8 L850.0 172.1 L852.5 169.5 L855.0 166.3 L857.5 162.3 L860.0 157.6 L862.5 152.3 L865.0 146.5 L867.5 140.2 L870.0 133.4 L872.5 126.3 L875.0 119.0 L877.5 111.5 L880.0 103.8 L882.5 96.2 L885.0 88.6 L887.5 81.2 L890.0 74.0 L892.5 67.1 L895.0 60.6 L897.5 54.6 L900.0 49.1 L902.5 44.1 L905.0 39.8 L907.5 36.2 L910.0 33.3 L912.5 31.1 L915.0 29.7 L917.5 29.0 L920.0 29.2 L922.5 30.1 L925.0 31.8 L927.5 34.2 L930.0 37.3 L932.5 41.1 L935.0 45.6 L937.5 50.6 L940.0 56.1 L942.5 62.1 L945.0 68.5 L947.5 75.2 L950.0 82.1 L952.5 89.2 L955.0 96.4 L957.5 103.6 L960.0 110.7 L962.5 117.7 L965.0 124.4 L967.5 130.9 L970.0 137.0 L972.5 142.6 L975.0 147.7 L977.5 152.4 L980.0 156.4 L982.5 159.7 L985.0 162.4 L987.5 164.4 L990.0 165.7 L992.5 166.3 L995.0 166.1 L997.5 165.2 L1000.0 163.6 L1002.5 161.3 L1005.0 158.4 L1007.5 154.8 L1010.0 150.7 L1012.5 146.0 L1015.0 140.8 L1017.5 135.2 L1020.0 129.3 L1022.5 123.1 L1025.0 116.6 L1027.5 110.0 L1030.0 103.3 L1032.5 96.7 L1035.0 90.1 L1037.5 83.6 L1040.0 77.4 L1042.5 71.4 L1045.0 65.8 L1047.5 60.6 L1050.0 55.9 L1052.5 51.7 L1055.0 48.0 L1057.5 44.9 L1060.0 42.4 L1062.5 40.6 L1065.0 39.5 L1067.5 39.0 L1070.0 39.2 L1072.5 40.0 L1075.0 41.5 L1077.5 43.6 L1080.0 46.4 L1082.5 49.7 L1085.0 53.5 L1087.5 57.8 L1090.0 62.6 L1092.5 67.7 L1095.0 73.2 L1097.5 78.9 L1100.0 84.8 L1102.5 90.8 L1105.0 96.9 L1107.5 103.0 L1110.0 109.1 L1112.5 114.9 L1115.0 120.6 L1117.5 126.0 L1120.0 131.1 L1122.5 135.9 L1125.0 140.2 L1127.5 144.0 L1130.0 147.3 L1132.5 150.1 L1135.0 152.3 L1137.5 153.9 L1140.0 155.0 L1142.5 155.4 L1145.0 155.2 L1147.5 154.4 L1150.0 153.0 L1152.5 151.1 L1155.0 148.6 L1157.5 145.5 L1160.0 142.1 L1162.5 138.1 L1165.0 133.8 L1167.5 129.2 L1170.0 124.2 L1172.5 119.0 L1175.0 113.7 L1177.5 108.3 L1180.0 102.8 L1182.5 97.3 L1185.0 91.8 L1187.5 86.5 L1190.0 81.4 L1192.5 76.6 L1195.0 72.0 L1197.5 67.8 L1200.0 63.9 L1202.5 60.5 L1205.0 57.6 L1207.5 55.1 L1210.0 53.1 L1212.5 51.7 L1215.0 50.8 L1217.5 50.4 L1220.0 50.6 L1222.5 51.4 L1225.0 52.6 L1227.5 54.4 L1230.0 56.6 L1232.5 59.3 L1235.0 62.5 L1237.5 66.0 L1240.0 69.9 L1242.5 74.0 L1245.0 78.4 L1247.5 83.0 L1250.0 87.8 L1252.5 92.7 L1255.0 97.6 L1257.5 102.4 L1260.0 107.3 L1262.5 111.9 L1265.0 116.5 L1267.5 120.8 L1270.0 124.8 L1272.5 128.6 L1275.0 132.0 L1277.5 135.0 L1280.0 137.6 L1282.5 139.8 L1285.0 141.5 L1287.5 142.7 L1290.0 143.5 L1292.5 143.8 L1295.0 143.6 L1297.5 143.0 L1300.0 141.8 L1302.5 140.2 L1305.0 138.2 L1307.5 135.8 L1310.0 133.1 L1312.5 130.0 L1315.0 126.5 L1317.5 122.9 L1320.0 119.0 L1322.5 114.9 L1325.0 110.7 L1327.5 106.5 L1330.0 102.1 L1332.5 97.9 L1335.0 93.6 L1337.5 89.5 L1340.0 85.5 L1342.5 81.8 L1345.0 78.2 L1347.5 75.0 L1350.0 72.0 L1352.5 69.4 L1355.0 67.1 L1357.5 65.2 L1360.0 63.7 L1362.5 62.6 L1365.0 61.9 L1367.5 61.7 L1370.0 61.9 L1372.5 62.5 L1375.0 63.4 L1377.5 64.8 L1380.0 66.6 L1382.5 68.7 L1385.0 71.1 L1387.5 73.9 L1390.0 76.8 L1392.5 80.0 L1395.0 83.4 L1397.5 87.0 L1400.0 90.7 L1402.5 94.4 L1405.0 98.1 L1407.5 101.9 L1410.0 105.5 L1412.5 109.1 L1415.0 112.6 L1417.5 115.9 L1420.0 119.0 L1422.5 121.8 L1425.0 124.4 L1427.5 126.7 L1430.0 128.6 L1432.5 130.3 L1435.0 131.6 L1437.5 132.5 L1440.0 133.1 L1442.5 133.3 L1445.0 133.2 L1447.5 132.6 L1450.0 131.8 L1452.5 130.6 L1455.0 129.0 L1457.5 127.2 L1460.0 125.1 L1462.5 122.7 L1465.0 120.1 L1467.5 117.3 L1470.0 114.4 L1472.5 111.3 L1475.0 108.1 L1477.5 104.9 L1480.0 101.6 L1482.5 98.4 L1485.0 95.2 L1487.5 92.1 L1490.0 89.1 L1492.5 86.2 L1495.0 83.5 L1497.5 81.1 L1500.0 78.8"/>
+  <g class="fragment" data-fragment-index="1">
+    <line class="click-jump" x1="487.5" y1="43.8" x2="487.5" y2="100"/>
+    <line class="click-jump" x1="562.5" y1="100" x2="562.5" y2="157.0"/>
+  </g>
+</svg>
+</div>
+
+<div class="click-note fragment" data-fragment-index="2"><b>click</b> Two clicks per miss. The audio after it stays in line.</div>
+
+Note:
+- Now what happens when something is late. Lets look at part 1 first
+- The worker is late: when the audio thread pops, the output ring is empty
+- Then the rest of the block goes out as zeros, and we count them as our debt
+- [click] Into the zeros and out of them: two clicks
+- [click] In the next callbacks the late samples are popped and thrown away as soon as they arrive, so the audio after the miss stays in line
 
 ---
 
@@ -338,59 +337,11 @@ for (size_t i = 0; i < num_samples; ++i) {
 <div class="callback-note">The box is one callback: <code>try_push</code> loses the end of its input block, and its output starts with as many zeros.</div>
 
 Note:
-- First the input side: the worker is behind, and the input ring is full.
-- try_push fails, the rest of the host block is not pushed, and the processor counts it in m_unpushed.
-- [click] The output starts its next block with as many zeros: two clicks.
-- [click] After the zeros, the audio is late by as many samples.
-- On top, the input: the samples that were never pushed, in red. Below, the output.
-- Both happen in the same callback, the box: the end of its input block is lost, and its output starts with as many zeros.
-- [click] One latency later, those samples would reach the output. They are missing, so the audio jumps back in line: the third click.
-- The missing samples are on the input side, so the output cannot drop them: it only meets the gap one latency later.
-
----
-
-<!-- .slide: class="recap miss" -->
-
-<div class="tag">Part 1 · Step 7</div>
-
-## What happens if an inference is too late?<br><span class="then">Zeros, then the late samples are dropped.</span>
-
-```cpp
-while (m_debt > 0) { if (m_output.try_pop(late)) { --m_debt; } else { break; } }  // drop the late
-for (size_t i = zeros; i < num_samples; ++i) {
-    const bool popped = m_debt == 0 && m_output.try_pop(samples[i]);
-    if (!popped) {                                          // the result is late
-        std::fill_n(samples + i, num_samples - i, 0.0f);
-        m_debt += num_samples - i;                          // dropped when it arrives
-        break;
-    }
-}
-```
-
-<div class="click">
-  <div class="click-labels"><span style="left:32.50%;width:5.00%">zeros</span><span class="fragment" data-fragment-index="2" style="left:37.50%;width:62.50%">in line: the late samples are popped and dropped</span></div>
-  <svg class="click-wave" viewBox="0 0 1500 200" aria-hidden="true">
-  <rect class="click-gap" x="487.5" y="0" width="75.0" height="200"/>
-  <line class="click-div" x1="188" y1="6" x2="188" y2="194"/><line class="click-div" x1="375" y1="6" x2="375" y2="194"/><line class="click-div" x1="562" y1="6" x2="562" y2="194"/><line class="click-div" x1="750" y1="6" x2="750" y2="194"/><line class="click-div" x1="938" y1="6" x2="938" y2="194"/><line class="click-div" x1="1125" y1="6" x2="1125" y2="194"/><line class="click-div" x1="1312" y1="6" x2="1312" y2="194"/>
-  <path class="click-line" d="M0.0 63.9 L2.5 60.2 L5.0 56.9 L7.5 54.0 L10.0 51.7 L12.5 49.8 L15.0 48.5 L17.5 47.7 L20.0 47.5 L22.5 47.9 L25.0 48.9 L27.5 50.4 L30.0 52.5 L32.5 55.1 L35.0 58.3 L37.5 61.9 L40.0 65.9 L42.5 70.4 L45.0 75.3 L47.5 80.4 L50.0 85.8 L52.5 91.4 L55.0 97.1 L57.5 102.9 L60.0 108.7 L62.5 114.5 L65.0 120.1 L67.5 125.5 L70.0 130.7 L72.5 135.6 L75.0 140.2 L77.5 144.3 L80.0 148.0 L82.5 151.1 L85.0 153.7 L87.5 155.8 L90.0 157.2 L92.5 158.1 L95.0 158.2 L97.5 157.8 L100.0 156.7 L102.5 155.0 L105.0 152.6 L107.5 149.7 L110.0 146.2 L112.5 142.2 L115.0 137.6 L117.5 132.7 L120.0 127.3 L122.5 121.6 L125.0 115.7 L127.5 109.5 L130.0 103.2 L132.5 96.8 L135.0 90.4 L137.5 84.1 L140.0 77.9 L142.5 71.9 L145.0 66.2 L147.5 60.9 L150.0 55.9 L152.5 51.4 L155.0 47.4 L157.5 43.9 L160.0 41.1 L162.5 38.9 L165.0 37.3 L167.5 36.5 L170.0 36.3 L172.5 36.8 L175.0 38.0 L177.5 39.9 L180.0 42.5 L182.5 45.8 L185.0 49.6 L187.5 54.0 L190.0 59.0 L192.5 64.4 L195.0 70.2 L197.5 76.5 L200.0 83.0 L202.5 89.7 L205.0 96.5 L207.5 103.5 L210.0 110.4 L212.5 117.3 L215.0 124.0 L217.5 130.4 L220.0 136.6 L222.5 142.4 L225.0 147.7 L227.5 152.6 L230.0 156.9 L232.5 160.6 L235.0 163.6 L237.5 166.0 L240.0 167.6 L242.5 168.5 L245.0 168.7 L247.5 168.1 L250.0 166.8 L252.5 164.7 L255.0 161.9 L257.5 158.3 L260.0 154.2 L262.5 149.4 L265.0 144.1 L267.5 138.2 L270.0 131.9 L272.5 125.3 L275.0 118.3 L277.5 111.1 L280.0 103.7 L282.5 96.3 L285.0 88.9 L287.5 81.5 L290.0 74.4 L292.5 67.5 L295.0 60.9 L297.5 54.8 L300.0 49.1 L302.5 43.9 L305.0 39.4 L307.5 35.5 L310.0 32.2 L312.5 29.8 L315.0 28.1 L317.5 27.1 L320.0 27.0 L322.5 27.7 L325.0 29.1 L327.5 31.4 L330.0 34.4 L332.5 38.1 L335.0 42.6 L337.5 47.7 L340.0 53.4 L342.5 59.6 L345.0 66.2 L347.5 73.3 L350.0 80.7 L352.5 88.3 L355.0 96.1 L357.5 103.9 L360.0 111.7 L362.5 119.5 L365.0 127.0 L367.5 134.2 L370.0 141.1 L372.5 147.6 L375.0 153.6 L377.5 158.9 L380.0 163.7 L382.5 167.8 L385.0 171.1 L387.5 173.7 L390.0 175.4 L392.5 176.4 L395.0 176.5 L397.5 175.7 L400.0 174.1 L402.5 171.8 L405.0 168.6 L407.5 164.6 L410.0 160.0 L412.5 154.6 L415.0 148.7 L417.5 142.2 L420.0 135.2 L422.5 127.8 L425.0 120.1 L427.5 112.2 L430.0 104.1 L432.5 95.9 L435.0 87.8 L437.5 79.8 L440.0 72.0 L442.5 64.5 L445.0 57.3 L447.5 50.7 L450.0 44.5 L452.5 38.9 L455.0 34.1 L457.5 29.9 L460.0 26.5 L462.5 23.8 L465.0 22.1 L467.5 21.1 L470.0 21.1 L472.5 21.9 L475.0 23.5 L477.5 26.0 L480.0 29.3 L482.5 33.4 L485.0 38.3 L487.5 43.8 L487.5 100 L562.5 100L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5 L752.5 39.1 L755.0 34.3 L757.5 30.3 L760.0 27.0 L762.5 24.6 L765.0 22.9 L767.5 22.2 L770.0 22.3 L772.5 23.2 L775.0 25.0 L777.5 27.6 L780.0 30.9 L782.5 35.1 L785.0 39.9 L787.5 45.4 L790.0 51.5 L792.5 58.0 L795.0 65.1 L797.5 72.5 L800.0 80.1 L802.5 88.0 L805.0 96.0 L807.5 104.0 L810.0 111.9 L812.5 119.7 L815.0 127.3 L817.5 134.5 L820.0 141.4 L822.5 147.7 L825.0 153.6 L827.5 158.8 L830.0 163.3 L832.5 167.2 L835.0 170.3 L837.5 172.6 L840.0 174.1 L842.5 174.9 L845.0 174.7 L847.5 173.8 L850.0 172.1 L852.5 169.5 L855.0 166.3 L857.5 162.3 L860.0 157.6 L862.5 152.3 L865.0 146.5 L867.5 140.2 L870.0 133.4 L872.5 126.3 L875.0 119.0 L877.5 111.5 L880.0 103.8 L882.5 96.2 L885.0 88.6 L887.5 81.2 L890.0 74.0 L892.5 67.1 L895.0 60.6 L897.5 54.6 L900.0 49.1 L902.5 44.1 L905.0 39.8 L907.5 36.2 L910.0 33.3 L912.5 31.1 L915.0 29.7 L917.5 29.0 L920.0 29.2 L922.5 30.1 L925.0 31.8 L927.5 34.2 L930.0 37.3 L932.5 41.1 L935.0 45.6 L937.5 50.6 L940.0 56.1 L942.5 62.1 L945.0 68.5 L947.5 75.2 L950.0 82.1 L952.5 89.2 L955.0 96.4 L957.5 103.6 L960.0 110.7 L962.5 117.7 L965.0 124.4 L967.5 130.9 L970.0 137.0 L972.5 142.6 L975.0 147.7 L977.5 152.4 L980.0 156.4 L982.5 159.7 L985.0 162.4 L987.5 164.4 L990.0 165.7 L992.5 166.3 L995.0 166.1 L997.5 165.2 L1000.0 163.6 L1002.5 161.3 L1005.0 158.4 L1007.5 154.8 L1010.0 150.7 L1012.5 146.0 L1015.0 140.8 L1017.5 135.2 L1020.0 129.3 L1022.5 123.1 L1025.0 116.6 L1027.5 110.0 L1030.0 103.3 L1032.5 96.7 L1035.0 90.1 L1037.5 83.6 L1040.0 77.4 L1042.5 71.4 L1045.0 65.8 L1047.5 60.6 L1050.0 55.9 L1052.5 51.7 L1055.0 48.0 L1057.5 44.9 L1060.0 42.4 L1062.5 40.6 L1065.0 39.5 L1067.5 39.0 L1070.0 39.2 L1072.5 40.0 L1075.0 41.5 L1077.5 43.6 L1080.0 46.4 L1082.5 49.7 L1085.0 53.5 L1087.5 57.8 L1090.0 62.6 L1092.5 67.7 L1095.0 73.2 L1097.5 78.9 L1100.0 84.8 L1102.5 90.8 L1105.0 96.9 L1107.5 103.0 L1110.0 109.1 L1112.5 114.9 L1115.0 120.6 L1117.5 126.0 L1120.0 131.1 L1122.5 135.9 L1125.0 140.2 L1127.5 144.0 L1130.0 147.3 L1132.5 150.1 L1135.0 152.3 L1137.5 153.9 L1140.0 155.0 L1142.5 155.4 L1145.0 155.2 L1147.5 154.4 L1150.0 153.0 L1152.5 151.1 L1155.0 148.6 L1157.5 145.5 L1160.0 142.1 L1162.5 138.1 L1165.0 133.8 L1167.5 129.2 L1170.0 124.2 L1172.5 119.0 L1175.0 113.7 L1177.5 108.3 L1180.0 102.8 L1182.5 97.3 L1185.0 91.8 L1187.5 86.5 L1190.0 81.4 L1192.5 76.6 L1195.0 72.0 L1197.5 67.8 L1200.0 63.9 L1202.5 60.5 L1205.0 57.6 L1207.5 55.1 L1210.0 53.1 L1212.5 51.7 L1215.0 50.8 L1217.5 50.4 L1220.0 50.6 L1222.5 51.4 L1225.0 52.6 L1227.5 54.4 L1230.0 56.6 L1232.5 59.3 L1235.0 62.5 L1237.5 66.0 L1240.0 69.9 L1242.5 74.0 L1245.0 78.4 L1247.5 83.0 L1250.0 87.8 L1252.5 92.7 L1255.0 97.6 L1257.5 102.4 L1260.0 107.3 L1262.5 111.9 L1265.0 116.5 L1267.5 120.8 L1270.0 124.8 L1272.5 128.6 L1275.0 132.0 L1277.5 135.0 L1280.0 137.6 L1282.5 139.8 L1285.0 141.5 L1287.5 142.7 L1290.0 143.5 L1292.5 143.8 L1295.0 143.6 L1297.5 143.0 L1300.0 141.8 L1302.5 140.2 L1305.0 138.2 L1307.5 135.8 L1310.0 133.1 L1312.5 130.0 L1315.0 126.5 L1317.5 122.9 L1320.0 119.0 L1322.5 114.9 L1325.0 110.7 L1327.5 106.5 L1330.0 102.1 L1332.5 97.9 L1335.0 93.6 L1337.5 89.5 L1340.0 85.5 L1342.5 81.8 L1345.0 78.2 L1347.5 75.0 L1350.0 72.0 L1352.5 69.4 L1355.0 67.1 L1357.5 65.2 L1360.0 63.7 L1362.5 62.6 L1365.0 61.9 L1367.5 61.7 L1370.0 61.9 L1372.5 62.5 L1375.0 63.4 L1377.5 64.8 L1380.0 66.6 L1382.5 68.7 L1385.0 71.1 L1387.5 73.9 L1390.0 76.8 L1392.5 80.0 L1395.0 83.4 L1397.5 87.0 L1400.0 90.7 L1402.5 94.4 L1405.0 98.1 L1407.5 101.9 L1410.0 105.5 L1412.5 109.1 L1415.0 112.6 L1417.5 115.9 L1420.0 119.0 L1422.5 121.8 L1425.0 124.4 L1427.5 126.7 L1430.0 128.6 L1432.5 130.3 L1435.0 131.6 L1437.5 132.5 L1440.0 133.1 L1442.5 133.3 L1445.0 133.2 L1447.5 132.6 L1450.0 131.8 L1452.5 130.6 L1455.0 129.0 L1457.5 127.2 L1460.0 125.1 L1462.5 122.7 L1465.0 120.1 L1467.5 117.3 L1470.0 114.4 L1472.5 111.3 L1475.0 108.1 L1477.5 104.9 L1480.0 101.6 L1482.5 98.4 L1485.0 95.2 L1487.5 92.1 L1490.0 89.1 L1492.5 86.2 L1495.0 83.5 L1497.5 81.1 L1500.0 78.8"/>
-  <path class="shift-ghost fragment" data-fragment-index="2" d="M487.5 43.8 L490.0 50.0 L492.5 56.7 L495.0 63.8 L497.5 71.4 L500.0 79.4 L502.5 87.5 L505.0 95.8 L507.5 104.2 L510.0 112.5 L512.5 120.7 L515.0 128.7 L517.5 136.3 L520.0 143.6 L522.5 150.4 L525.0 156.7 L527.5 162.3 L530.0 167.3 L532.5 171.5 L535.0 175.0 L537.5 177.6 L540.0 179.4 L542.5 180.3 L545.0 180.3 L547.5 179.5 L550.0 177.8 L552.5 175.2 L555.0 171.8 L557.5 167.6 L560.0 162.6 L562.5 157.0 L565.0 150.7 L567.5 143.9 L570.0 136.6 L572.5 128.9 L575.0 120.9 L577.5 112.6 L580.0 104.2 L582.5 95.8 L585.0 87.4 L587.5 79.1 L590.0 71.1 L592.5 63.3 L595.0 56.0 L597.5 49.2 L600.0 42.9 L602.5 37.2 L605.0 32.3 L607.5 28.1 L610.0 24.6 L612.5 22.0 L615.0 20.3 L617.5 19.4 L620.0 19.4 L622.5 20.3 L625.0 22.1 L627.5 24.7 L630.0 28.1 L632.5 32.4 L635.0 37.3 L637.5 43.0 L640.0 49.3 L642.5 56.1 L645.0 63.4 L647.5 71.1 L650.0 79.2 L652.5 87.4 L655.0 95.8 L657.5 104.2 L660.0 112.6 L662.5 120.8 L665.0 128.8 L667.5 136.4 L670.0 143.7 L672.5 150.5 L675.0 156.7 L677.5 162.3 L680.0 167.2 L682.5 171.3 L685.0 174.7 L687.5 177.2 L690.0 178.9 L692.5 179.8 L695.0 179.7 L697.5 178.8 L700.0 177.0 L702.5 174.4 L705.0 171.0 L707.5 166.7 L710.0 161.8 L712.5 156.2 L715.0 150.0 L717.5 143.2 L720.0 136.0 L722.5 128.4 L725.0 120.5 L727.5 112.4 L730.0 104.1 L732.5 95.9 L735.0 87.7 L737.5 79.6 L740.0 71.8 L742.5 64.3 L745.0 57.2 L747.5 50.6 L750.0 44.5 L752.5 39.1 L755.0 34.3 L757.5 30.3 L760.0 27.0 L762.5 24.6 L765.0 22.9 L767.5 22.2 L770.0 22.3 L772.5 23.2 L775.0 25.0 L777.5 27.6 L780.0 30.9 L782.5 35.1 L785.0 39.9 L787.5 45.4 L790.0 51.5 L792.5 58.0 L795.0 65.1 L797.5 72.5 L800.0 80.1 L802.5 88.0 L805.0 96.0 L807.5 104.0 L810.0 111.9 L812.5 119.7 L815.0 127.3 L817.5 134.5 L820.0 141.4 L822.5 147.7 L825.0 153.6 L827.5 158.8 L830.0 163.3 L832.5 167.2 L835.0 170.3 L837.5 172.6 L840.0 174.1 L842.5 174.9 L845.0 174.7 L847.5 173.8 L850.0 172.1 L852.5 169.5 L855.0 166.3 L857.5 162.3 L860.0 157.6 L862.5 152.3 L865.0 146.5 L867.5 140.2 L870.0 133.4 L872.5 126.3 L875.0 119.0 L877.5 111.5 L880.0 103.8 L882.5 96.2 L885.0 88.6 L887.5 81.2 L890.0 74.0 L892.5 67.1 L895.0 60.6 L897.5 54.6 L900.0 49.1 L902.5 44.1 L905.0 39.8 L907.5 36.2 L910.0 33.3 L912.5 31.1 L915.0 29.7 L917.5 29.0 L920.0 29.2 L922.5 30.1 L925.0 31.8 L927.5 34.2 L930.0 37.3 L932.5 41.1 L935.0 45.6 L937.5 50.6 L940.0 56.1 L942.5 62.1 L945.0 68.5 L947.5 75.2 L950.0 82.1 L952.5 89.2 L955.0 96.4 L957.5 103.6 L960.0 110.7 L962.5 117.7 L965.0 124.4 L967.5 130.9 L970.0 137.0 L972.5 142.6 L975.0 147.7 L977.5 152.4 L980.0 156.4 L982.5 159.7 L985.0 162.4 L987.5 164.4 L990.0 165.7 L992.5 166.3 L995.0 166.1 L997.5 165.2 L1000.0 163.6 L1002.5 161.3 L1005.0 158.4 L1007.5 154.8 L1010.0 150.7 L1012.5 146.0 L1015.0 140.8 L1017.5 135.2 L1020.0 129.3 L1022.5 123.1 L1025.0 116.6 L1027.5 110.0 L1030.0 103.3 L1032.5 96.7 L1035.0 90.1 L1037.5 83.6 L1040.0 77.4 L1042.5 71.4 L1045.0 65.8 L1047.5 60.6 L1050.0 55.9 L1052.5 51.7 L1055.0 48.0 L1057.5 44.9 L1060.0 42.4 L1062.5 40.6 L1065.0 39.5 L1067.5 39.0 L1070.0 39.2 L1072.5 40.0 L1075.0 41.5 L1077.5 43.6 L1080.0 46.4 L1082.5 49.7 L1085.0 53.5 L1087.5 57.8 L1090.0 62.6 L1092.5 67.7 L1095.0 73.2 L1097.5 78.9 L1100.0 84.8 L1102.5 90.8 L1105.0 96.9 L1107.5 103.0 L1110.0 109.1 L1112.5 114.9 L1115.0 120.6 L1117.5 126.0 L1120.0 131.1 L1122.5 135.9 L1125.0 140.2 L1127.5 144.0 L1130.0 147.3 L1132.5 150.1 L1135.0 152.3 L1137.5 153.9 L1140.0 155.0 L1142.5 155.4 L1145.0 155.2 L1147.5 154.4 L1150.0 153.0 L1152.5 151.1 L1155.0 148.6 L1157.5 145.5 L1160.0 142.1 L1162.5 138.1 L1165.0 133.8 L1167.5 129.2 L1170.0 124.2 L1172.5 119.0 L1175.0 113.7 L1177.5 108.3 L1180.0 102.8 L1182.5 97.3 L1185.0 91.8 L1187.5 86.5 L1190.0 81.4 L1192.5 76.6 L1195.0 72.0 L1197.5 67.8 L1200.0 63.9 L1202.5 60.5 L1205.0 57.6 L1207.5 55.1 L1210.0 53.1 L1212.5 51.7 L1215.0 50.8 L1217.5 50.4 L1220.0 50.6 L1222.5 51.4 L1225.0 52.6 L1227.5 54.4 L1230.0 56.6 L1232.5 59.3 L1235.0 62.5 L1237.5 66.0 L1240.0 69.9 L1242.5 74.0 L1245.0 78.4 L1247.5 83.0 L1250.0 87.8 L1252.5 92.7 L1255.0 97.6 L1257.5 102.4 L1260.0 107.3 L1262.5 111.9 L1265.0 116.5 L1267.5 120.8 L1270.0 124.8 L1272.5 128.6 L1275.0 132.0 L1277.5 135.0 L1280.0 137.6 L1282.5 139.8 L1285.0 141.5 L1287.5 142.7 L1290.0 143.5 L1292.5 143.8 L1295.0 143.6 L1297.5 143.0 L1300.0 141.8 L1302.5 140.2 L1305.0 138.2 L1307.5 135.8 L1310.0 133.1 L1312.5 130.0 L1315.0 126.5 L1317.5 122.9 L1320.0 119.0 L1322.5 114.9 L1325.0 110.7 L1327.5 106.5 L1330.0 102.1 L1332.5 97.9 L1335.0 93.6 L1337.5 89.5 L1340.0 85.5 L1342.5 81.8 L1345.0 78.2 L1347.5 75.0 L1350.0 72.0 L1352.5 69.4 L1355.0 67.1 L1357.5 65.2 L1360.0 63.7 L1362.5 62.6 L1365.0 61.9 L1367.5 61.7 L1370.0 61.9 L1372.5 62.5 L1375.0 63.4 L1377.5 64.8 L1380.0 66.6 L1382.5 68.7 L1385.0 71.1 L1387.5 73.9 L1390.0 76.8 L1392.5 80.0 L1395.0 83.4 L1397.5 87.0 L1400.0 90.7 L1402.5 94.4 L1405.0 98.1 L1407.5 101.9 L1410.0 105.5 L1412.5 109.1 L1415.0 112.6 L1417.5 115.9 L1420.0 119.0 L1422.5 121.8 L1425.0 124.4 L1427.5 126.7 L1430.0 128.6 L1432.5 130.3 L1435.0 131.6 L1437.5 132.5 L1440.0 133.1 L1442.5 133.3 L1445.0 133.2 L1447.5 132.6 L1450.0 131.8 L1452.5 130.6 L1455.0 129.0 L1457.5 127.2 L1460.0 125.1 L1462.5 122.7 L1465.0 120.1 L1467.5 117.3 L1470.0 114.4 L1472.5 111.3 L1475.0 108.1 L1477.5 104.9 L1480.0 101.6 L1482.5 98.4 L1485.0 95.2 L1487.5 92.1 L1490.0 89.1 L1492.5 86.2 L1495.0 83.5 L1497.5 81.1 L1500.0 78.8"/>
-  <g class="fragment" data-fragment-index="1">
-    <line class="click-jump" x1="487.5" y1="43.8" x2="487.5" y2="100"/>
-    <line class="click-jump" x1="562.5" y1="100" x2="562.5" y2="157.0"/>
-  </g>
-</svg>
-</div>
-
-<div class="click-note fragment" data-fragment-index="2"><b>click</b> Two clicks per miss. The audio after it stays in line.</div>
-
-Note:
-- And on the output side: what happens if an inference is too late?
-- The output side pops sample by sample, and when the ring is empty, the result is late.
-- The rest of the block goes out as zeros, and the processor counts them in m_debt.
-- [click] Into the zeros and out of them: two clicks.
-- [click] In the next callbacks, before anything is played, as many samples are popped and thrown away as soon as they have arrived: the late part of the result.
-- So the audio after the miss is exactly where it belongs: the dashed line and the signal are the same.
-- All of them have to go before a block is played; if not enough have arrived yet, that callback is another miss and the rest stays owed.
+- And the other side: the worker is behind and the input ring is full
+- try_push fails, the rest of the host block is never pushed, and we count it in m_unpushed
+- [click] The output starts its next block with as many zeros: two clicks
+- [click] And after the zeros the audio is late by as many samples
+- [click] One latency later the samples that were never pushed would reach the output. They are missing, so the audio jumps back in line: the third click
 
 ---
 
@@ -454,13 +405,11 @@ Note:
 <div class="click-note fill fragment" data-fragment-index="1"><b>no shift</b> A late result or a full queue: the block is filled, the late result is dropped, the audio after it stays in line.</div>
 
 Note:
-- In anira a missed block is filled in place, and nothing shifts: the audio after it stays in line, for a late result and for a full queue alike.
-- A miss is one block, and what goes out there is the contract's on_miss: the input block, the last block again, silence, or your own function.
-- With a callback you can continue the waveform from before the miss and aim for where the next block starts.
-- The next block is usually not computed yet, so that start is a guess: close, but a small step remains.
-- [click] A late result that arrives after the miss is dropped, and no input is skipped, so the audio after the miss is where it belongs: the dashed line and the signal are the same.
-- If every slot is busy, the window is dropped and its block is filled the same way, at its place in the stream. If the shared queue itself refuses the job, the block goes out as zeros, whatever the policy.
-- The edges of the filled block can still be heard, depending on the policy. A full queue no longer shifts the audio: the fill sits where the dropped hop belongs.
+- anira handles both cases the same way: a missed block is filled in place, and nothing shifts
+- A late result, or a full queue because every slot is busy: that one block is filled, and the audio after it stays in line
+- What goes in there is the contract's on_miss: the input block, the last block again, silence, or our own function
+- With a callback we can continue the waveform and aim for where the next block starts. The next block is usually not computed yet, so that is a guess, and a small step remains
+- [click] A late result that arrives afterwards is dropped, and no input is skipped: the dashed line and the signal are the same
 
 ---
 
@@ -486,15 +435,12 @@ Note:
 <div class="note-box">Transport jump: <code>reset()</code>, wait-free. Clears rings and state.</div>
 
 Note:
-- What a missed block delivers is the contract's choice: on_miss.
-- bypass, the default, passes the input through unchanged.
-- hold_last repeats the last block the model delivered.
-- zeros is silence, as in step 7, and callback calls your own function on the audio thread.
-- process reports the block as missed, and that is not an error: the buffer holds what the policy chose.
-- A late result that arrives after a miss is dropped, so the stream stays aligned, without the counters of step 7.
-- If every slot is busy, the window is dropped and filled the same way: that is overload, and rt_error tells you so.
-- After a miss the pool catches up: the next block is on time again once the late result has arrived, otherwise that callback is another miss.
-- And the box: on a transport jump you call reset, wait-free, from the audio thread. It clears the rings and refills the latency's zeros, drops the inferences still running, and the state pair starts at zero with the first block of the new stream. In part 1 we had no answer for that: the old samples and the old state would have carried on.
+- on_miss is set in the contract. bypass is the default: the input block, as it came in
+- hold_last repeats the last block the model delivered, zeros is silence as in part 1, and callback calls our own function on the audio thread
+- process reports the block as missed, and that is not an error: the buffer holds what the policy chose
+- If every slot is busy, that is overload, and rt_error tells us so
+- After a miss the pool catches up: once the late result has arrived, the next block is on time again
+- And the box: on a transport jump we call reset, wait-free, from the audio thread. It clears the rings, refills the latency's zeros, and the state starts at zero. In part 1 we had no answer for that
 
 ---
 
@@ -547,11 +493,11 @@ Note:
 <div class="cards-note">Step 8 in a bounce: the output ring runs dry and goes out as silence, and the input ring fills up and drops samples.</div>
 
 Note:
-- Did anyone export a track with our plugin from step 8? Rendering offline, a bounce in the DAW.
-- Live, the host calls once per block period, 11.6 ms for 512 samples, and the latency covers our inference: the result is back before the host needs it.
-- In a bounce there is no clock. The host calls the next block as soon as the last one returns, a fraction of a millisecond later.
-- The inference still takes its 12 or so milliseconds. Our audio thread never waits, so in step 8 the output ring runs dry and those samples go out as silence, and the input ring fills up and drops what does not fit. The bounce has gaps.
-- Live, never waiting is right. Offline nothing runs against a deadline, so we can afford to wait. How does anira do that?
+- And finally: did anyone export a track with our plugin from step 8? Rendering offline, a bounce in the DAW
+- Live the host calls once per block, every 11.6 ms for 512 samples, and the latency covers our inference
+- In a bounce there is no clock: the host calls the next block as soon as the last one returns
+- The inference still takes its 12 or so milliseconds. Our audio thread never waits, so the output ring runs dry and goes out as silence, and the input ring fills up and drops samples. The bounce has gaps
+- Live never waiting is right. Offline nothing runs against a deadline, so we can afford to wait. How does anira do that?
 
 ---
 
@@ -576,61 +522,10 @@ if (isNonRealtime()) {   // a bounce: no deadline, nothing to miss
 </div>
 
 Note:
-- So when the host says it renders offline, JUCE's isNonRealtime, we call process_wait instead: the same call, but it blocks until the inference threads have delivered this block's result. ANIRA_WAIT_FOREVER means as long as it takes.
-- That is exactly what v2's set_non_realtime did.
-- Live, process stays nonblocking: never wait on the audio thread.
-- What we do not do: sleep in the callback for as long as the block lasts, to give the pool time. That only imitates the clock, and is still a guess.
-
----
-
-<!-- .slide: class="recap" -->
-
-<div class="tag">Part 1 · Step 5</div>
-
-## We checked real-time safety by hand.<br><span class="then">Once, on our machine.</span>
-
-```cpp
-void process_block(float* samples, size_t num_samples)
-    [[clang::nonblocking]] { … }
-```
-
-<div class="cards-note">RTSan on our engine, one run: what it caught, and what it could not see.</div>
-
-Note:
-- In step 5 we checked real-time safety by hand, once, on our machine.
-- We tagged the callback nonblocking, built with -fsanitize=realtime, and ran RTSan once, on ONNX Runtime.
-- That showed us what it caught, and what it could not see.
-- And it has to be repeated for every change, every model, every engine.
-
----
-
-<!-- .slide: class="answer" -->
-
-<div class="tag">anira · Safety</div>
-
-## Every entry names its thread.<br><span class="then">The audio-thread entries are nonblocking.</span>
-
-<div class="threads">
-  <div class="threads-label">main</div>
-  <div class="threads-lane"><span>from_file</span><span>create</span><span>prepare</span><span>destroy</span></div>
-  <div class="threads-label">audio</div>
-  <div class="threads-lane audio"><span>process</span><span class="stage">pre_process</span><span class="stage">post_process</span></div>
-  <div class="threads-label">pool</div>
-  <div class="threads-lane pool"><span class="stage">before_inference</span><span class="engine">engine</span><span class="stage">after_inference</span></div>
-</div>
-
-<div class="cards-note">Every audio-thread entry carries <code>ANIRA_NONBLOCKING</code>; the whole test suite runs under RTSan in CI.</div>
-
-Note:
-- In anira every entry names its thread, and the audio-thread entries are nonblocking.
-- The thread tags are part of the API, as in CLAP: main for setup, audio for the host's callback, pool for inference.
-- from_file, create, prepare and destroy are main; get_latency may be called from any thread; process, pre_process and post_process are audio; before_inference, the engine and after_inference are pool.
-- ANIRA_NONBLOCKING is clang's nonblocking attribute on every audio-thread entry, so the compiler checks what each one calls.
-- The exceptions are the waiting twins like process_wait: they are tagged blocking, and calling one in the callback is your decision.
-- And the whole test suite runs under RTSan in CI.
-- Your own stage is different: anira cannot check it. Under a Hard contract your processor promises with a flag that pre_process and post_process are real-time safe; mark them ANIRA_NONBLOCKING and run RTSan in your own build to hold that promise.
-- Logging from the audio thread needs no lock: a fixed record goes into a queue, and a drain thread prints it.
-- A failed audio-thread call says why in rt_error.
+- When the host renders offline, in JUCE isNonRealtime, we call process_wait instead of process
+- The same call, but it blocks until the inference threads have delivered this block's result. ANIRA_WAIT_FOREVER means as long as it takes
+- Live process stays nonblocking: never wait on the audio thread
+- What we do not do: sleep in the callback for as long as the block lasts, to give the pool time. That only imitates the clock, and is still a guess
 
 ---
 
@@ -641,24 +536,5 @@ Note:
 {{MAP:show=create,prepare,process}}
 
 Note:
-- After process, every row is filled.
-- The next chapter walks the whole map once, from your callback to the engine and back.
-
----
-
-<div class="tag">Take away</div>
-
-## The callback waits only if you ask.<br><span class="then">The policies are yours.</span>
-
-<div class="statement-points">
-  <div>Waiting: a strategy for the pool, a ratio for the callback, a policy for a miss</div>
-  <div>Stages: four phases around the engine, two of them on the audio thread</div>
-  <div>Safety: every entry names its thread; the audio-thread ones are checked</div>
-</div>
-
-Note:
-- The callback waits only if you ask, and the policies are yours.
-- Waiting: a strategy for the pool, a ratio for the callback, a policy for a miss.
-- Stages: four phases around the engine, two of them on the audio thread.
-- Safety: every entry names its thread, and the audio-thread ones are checked.
-- Next: the whole picture, the C ABI underneath, and the three places in a plugin.
+- After process every row of the map is filled
+- Next we walk the whole map once, from our callback to the engine and back

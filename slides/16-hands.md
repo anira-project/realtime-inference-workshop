@@ -203,26 +203,5 @@ Note:
 - Get a feel for how it works: the camera and your hands control the synth.
 - [start the timer] Use your laptop loudspeakers, so we all play together, and jam!
 - We have ten minutes now; afterwards we wrap it up.
-- [let it run, walk through the room] And now: hands down.
-- [silence: the latent vector glides to rest and the room fades out; wait for it]
 
----
-
-<div class="tag">Done</div>
-
-## Two models, three rates,<br><span class="then">one library.</span>
-
-<div class="congrats">
-  <svg viewBox="0 0 120 120" aria-hidden="true">
-    <circle cx="60" cy="60" r="52"/>
-    <path d="M36 62 L53 78 L85 44"/>
-  </svg>
-</div>
-
-Note:
-- [when the room is quiet again] Two models on one pool: the hand tracker reads images, the decoder writes audio.
-- Camera frames at 30 a second, latent frames at 21.5, one per 2048 samples, audio at 44.1 kHz.
-- The same configs and calls you know, and push and pop carry frames that are not audio.
-- One copy remains: every camera frame is copied to the CPU, then to the engine.
-- A frame that stays where it is: zero copy, one of the four things ahead.
-- That was the fun part; the rest is the outlook.
+on macOs you might need to open the application via finder in order to have camera permissions!

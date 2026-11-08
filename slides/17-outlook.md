@@ -6,7 +6,7 @@ v3: inline execution, GPU, NPU, zero copy
 <!-- kind: talk -->
 
 Note:
-- [before: straight on from step 10's done slide, no break]
+- [before: straight on from the jam, no break]
 - All four are planned for the final v3, due this month.
 - Zero copy, the frame that stays where it is, comes last; first, the latency and inline execution.
 

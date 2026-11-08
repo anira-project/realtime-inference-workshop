@@ -216,17 +216,21 @@ Note:
 
 {{STREAM:host=512,768,441|model=2048|length=6144|seconds=7}}
 
-<div class="lat-sum">
-  <div class="lat-part">block adaptation<small>P − gcd(b, P)</small><strong>1536</strong></div>
+<div class="lat-grid">
+  <span></span>
+  <div class="lat-part">block adaptation<small>P − gcd(b, P)</small></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">inference<small>⌈budget ÷ host block⌉ host blocks</small><strong>1024</strong></div>
+  <div class="lat-part">inference<small>⌈budget ÷ host block⌉ host blocks</small></div>
   <div class="lat-plus">+</div>
-  <div class="lat-part">the model itself<strong>2224</strong></div>
+  <div class="lat-part">the model itself</div>
   <div class="lat-plus">=</div>
-  <div class="lat-part total">latency<strong>4784</strong></div>
+  <div class="lat-part total">latency</div>
+  <span class="lat-host">host <b>512</b></span><strong>1536</strong><span></span><strong>2 × 512 = 1024</strong><span></span><strong>2224</strong><span></span><strong class="total">4784</strong>
+  <span class="lat-host">host <b>768</b></span><strong>1792</strong><span></span><strong>1 × 768 = 768</strong><span></span><strong>2224</strong><span></span><strong class="total">4784</strong>
+  <span class="lat-host">host <b>441</b></span><strong>2047</strong><span></span><strong>2 × 441 = 882</strong><span></span><strong>2224</strong><span></span><strong class="total">5153</strong>
 </div>
 
-<div class="lat-why">anira gives the inference ⌈budget ÷ host block⌉ host blocks: 12.7 ms, measured at prepare, take two of 11.6 ms.</div>
+<div class="lat-why">The budget: 12.7 ms, measured at prepare. Host blocks of 11.6 ms (512), 17.4 ms (768) and 10 ms (441).</div>
 
 Note:
 - anira calculates the same, at prepare, for the block size the host uses

@@ -39,7 +39,7 @@ Note:
 
 ## Three configs, three calls.<br><span class="then">Same output, same check.</span>
 
-<div class="cards">
+<div class="cards rows-top">
   <div class="card">{{ICON:model}}<div class="card-title">what</div><div class="card-text">the engine and the file, the tensors, their roles, the state pair</div><div class="need-how decl">you fill · <code>model.json</code></div></div>
   <div class="card-arrow">+</div>
   <div class="card">{{ICON:sliders}}<div class="card-title">how</div><div class="card-text">budget, warm-up, on a miss</div><div class="need-how auto">given · <code>contract.json</code></div></div>
@@ -47,7 +47,7 @@ Note:
   <div class="card">{{ICON:chip}}<div class="card-title">with what</div><div class="card-text">the pool: threads, how they wait</div><div class="need-how auto">given · <code>ContextConfig{}</code>, defaults</div></div>
 </div>
 
-<div class="cards">
+<div class="cards rows-bottom">
   <div class="card">{{ICON:code}}<div class="card-title">create</div><div class="card-text">pipeline and handler, in the constructor</div><div class="need-how auto">given</div></div>
   <div class="card-arrow">→</div>
   <div class="card">{{ICON:clock}}<div class="card-title">prepare</div><div class="card-text">host blocks in, latency out</div><div class="need-how decl">you fill · 2 blanks</div></div>
@@ -55,13 +55,15 @@ Note:
   <div class="card">{{ICON:wave}}<div class="card-title">process</div><div class="card-text">one call per callback: live, or offline waiting</div><div class="need-how decl">you fill · 2 blanks</div></div>
 </div>
 
-<div class="cards-note">The calls are in <code>AniraProcessor.cpp</code>.</div>
+<div class="cards-note rows-bottom">The calls are in <code>AniraProcessor.cpp</code>.</div>
+
+<span class="fragment rows-focus"></span>
 
 Note:
 - What is left: three configs on top, three calls below.
 - In model.json you fill the gaps: the tensor sizes and the state pair.
 - The contract is given, and the context runs on its defaults.
-- [point below] Then three calls: create, prepare and process.
+- [click] Then three calls: create, prepare and process.
 - Create goes in the constructor, prepare in prepareToPlay, process in processBlock.
 - The check runs process offline and waits for each result.
 - It removes the latency anira adds, so the output lines up with the reference.

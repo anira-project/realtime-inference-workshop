@@ -2452,3 +2452,16 @@ html.tanh .report-scale div {
   align-items: center;
   gap: var(--space-4);
 }
+
+/* Two rows of cards, one in focus: the top row first, a .rows-focus fragment
+   moves the focus to the bottom row. The slide's own section only, as for
+   .integration-focus. */
+html.tanh .rows-top,
+html.tanh .rows-bottom {
+  transition: opacity 0.4s var(--ease);
+}
+
+html.tanh .reveal section:not(:has(section)):has(.rows-focus:not(.visible)) .rows-bottom,
+html.tanh .reveal section:not(:has(section)):has(.rows-focus.visible) .rows-top {
+  opacity: 0.25;
+}

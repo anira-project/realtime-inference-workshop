@@ -56,8 +56,8 @@ async function handleNotes(req, res, url) {
       file = url.searchParams.get('file');
       index = Number(url.searchParams.get('index'));
     }
-    // A chapter file of slides/, nothing else
-    if (typeof file !== 'string' || !/^[\w.-]+\.md$/.test(file) || !Number.isInteger(index)) {
+    // A chapter file of slides/ or of one folder in it (bonus/), nothing else
+    if (typeof file !== 'string' || !/^([\w-]+\/)?[\w.-]+\.md$/.test(file) || !Number.isInteger(index)) {
       return reply(400, { error: 'file and index required' });
     }
     const filePath = path.join(SLIDES_DIR, file);

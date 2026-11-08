@@ -9,7 +9,7 @@ rave/model_forward.onnx   126 MB   audio plus the state in, audio plus the new
                                    state out: the state is the caller's job
 rave/model_encoder.onnx    64 MB   audio + state in, 8 latents + state out
 rave/model_decoder.onnx    62 MB   8 latents + state in, audio + state out
-handtracking/              the four hand tracking models of step 11
+handtracking/              the four hand tracking models of step 10
 ```
 
 All take 2048 samples (or one latent frame) per call, 44.1 kHz, one channel.
@@ -64,8 +64,8 @@ takes the same file from the release tagged `workshop-model` instead:
 
 ```
 rave/model_forward.onnx                         steps 1 to 9
-rave/model_encoder.onnx, rave/model_decoder.onnx steps 10 and 11
-handtracking/, four models                      step 11
+rave/model_encoder.onnx, rave/model_decoder.onnx step 10 and the bonus
+handtracking/, four models                      step 10
 ```
 
 Each file is checked against its SHA-256, and a failed download is retried.

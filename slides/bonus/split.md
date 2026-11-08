@@ -1,4 +1,4 @@
-<h1>Step 10<br>Opening the model</h1>
+<h1>Bonus<br>Opening the model</h1>
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: exercise -->
@@ -199,7 +199,7 @@ Note:
 - The offset is the simplest: the other four sit between encode and decode too, once per latent frame.
 - Blend is a crossfade in the latent space, not in the audio.
 - [pause] Replace goes furthest: the numbers need not come from the encoder at all, even a hand will do.
-- Keep that one in mind: it is step 11.
+- That one you played in step 10.
 - Today the offset: one line of code, and you hear right away what each dimension does.
 
 ---
@@ -274,13 +274,13 @@ Note:
   </div>
   <div class="given-column many">
     <div class="given-label">Helpers</div>
-    <div class="given-folder">10_split/exercise/ · source/</div>
+    <div class="given-folder">bonus/exercise/ · source/</div>
     {{FILE:contract.json}}
     {{FILE:PluginProcessor.cpp}}
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
-    <div class="given-folder">10_split/exercise/</div>
+    <div class="given-folder">bonus/exercise/</div>
     {{FILE:encoder.json|new}}
     {{FILE:decoder.json|new}}
     {{FILE:SplitProcessor.cpp|new}}
@@ -360,7 +360,7 @@ Note:
 - The encoder's frame is anira priming its output with zeros: the primed silence from the process chapter.
 - The check lists it as the priming frame; the decoder's figure it does not print.
 - That zero frame runs through the decoder and shifts its state: not quite the forward model's audio after all.
-- Hence step 10's own reference in the check, not step 9's.
+- Hence a reference of its own in the check, not step 9's.
 - Now the two TODOs.
 
 ---
@@ -371,14 +371,14 @@ Note:
 
 <div class="task-timer" data-minutes="10"></div>
 
-Fill in the TODOs in `steps/10_split/exercise/`
+Fill in the TODOs in `steps/bonus/exercise/`
 
 ```bash
 # validate: the check against the reference
-cmake --build --preset release --target step10_exercise_check
-./build/release/bin/step10_exercise_check
-# play: the plugin, eight knobs (or step10_exercise_VST3)
-cmake --build --preset release --target step10_exercise_Standalone
+cmake --build --preset release --target bonus_exercise_check
+./build/release/bin/bonus_exercise_check
+# play: the plugin, eight knobs (or bonus_exercise_VST3)
+cmake --build --preset release --target bonus_exercise_Standalone
 ```
 
 <div class="run">
@@ -483,4 +483,4 @@ Note:
 - [play the plugin: z0 first, louder, then z2, brighter]
 - That is the model taken apart, with eight numbers in your hand.
 - Ring buffers, thread and latency are anira's, twice now; the middle is yours.
-- Next, step 11: a hand moves the eight numbers.
+- In step 10 a hand moved the same eight numbers.

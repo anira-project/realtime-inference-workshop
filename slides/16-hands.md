@@ -1,4 +1,4 @@
-<h1>Step 11<br>The model as an instrument</h1>
+<h1>Step 10<br>The model as an instrument</h1>
 
 Eight numbers to play
 
@@ -6,8 +6,8 @@ Eight numbers to play
 <!-- kind: demo, exercise -->
 
 Note:
-- [before: the step 11 app open behind the slides, camera allowed, sound on the room's speakers]
-- This is step 10's decoder alone, and a hand moves its eight numbers.
+- [before: the step 10 app open behind the slides, camera allowed, sound on the room's speakers]
+- This is our model's decoder alone, and a hand moves its eight numbers.
 - No TODO this step, one file to play with: at the end we all play together.
 
 ---
@@ -45,9 +45,8 @@ Note:
 </div>
 
 Note:
-- The model from step 10 once more: encoder, eight numbers, decoder.
-- In step 10 your line sat between the two halves: an offset on z.
-- Replace went furthest: anything that gives eight numbers, a hand among them.
+- Our model has two halves: an encoder, eight numbers per block, a decoder.
+- Anything that gives eight numbers can drive the decoder, a hand among them.
 - [click] So the encoder goes, and with it the audio input.
 - [click] The eight numbers come from somewhere else: an LFO, a slider, or your hand in front of a camera.
 - [pause] The decoder alone turns them into sound: one latent frame in, 2048 samples out.
@@ -129,7 +128,7 @@ Note:
 - With both hands tracked, the detector rests.
 - Stage three, the gesture, is two models: that makes four.
 - The embedder takes the joints, in the image and in space, and which hand it is.
-- Out come 128 numbers: a pose, nothing to do with step 10's 128 latent dimensions.
+- Out come 128 numbers: a pose, nothing to do with the model's 128 latent dimensions.
 - The classifier names it: open palm, fist, victory and four more.
 - The app draws the gesture over the video, and nothing else uses it today.
 
@@ -147,7 +146,7 @@ Note:
 </div>
 
 Note:
-- Step 10's calls, push and pop.
+- Two calls, push and pop.
 - A model config per model, a Hard contract per handler, one context for the chain.
 - Budgets are set by hand: detector and landmarks get twice a worst case, benchmarked on an M3 Max.
 - Warm-up: one fixed run, nothing measured at prepare.
@@ -190,7 +189,7 @@ Note:
   </div>
   <div class="given-column many">
     <div class="given-label">Helpers</div>
-    <div class="given-folder">common/hands/ · 11_hands/source/</div>
+    <div class="given-folder">common/hands/ · 10_hands/source/</div>
     {{FILE:hands|new}}
     {{FILE:HandTracker.h|new}}
     {{FILE:HandControls.cpp|new}}
@@ -199,7 +198,7 @@ Note:
   </div>
   <div class="given-column exercise">
     <div class="given-label">Exercise</div>
-    <div class="given-folder">11_hands/exercise/</div>
+    <div class="given-folder">10_hands/exercise/</div>
     {{FILE:HandMapping.cpp|new}}
   </div>
 </div>
@@ -296,7 +295,7 @@ Note:
 - yours starts with the loudness alone, the rest is your choice.
 - Inside each one, map_range draws a straight line between two ends.
 - [point at the z0 line] Openness: a fist gives minus 2.5, an open palm gives 2.
-- The other six you find by ear, as in step 10.
+- The other six you find by ear.
 - [pause] On z0, plus 1 is about 5.5 dB louder.
 - Minus 3 is rest, the near silence you heard.
 - [pause] Each latent lives between about minus 2 and plus 2.
@@ -311,11 +310,11 @@ Note:
 
 <div class="task-timer" data-minutes="10"></div>
 
-The last step: give it a spin in `steps/11_hands/exercise/HandMapping.cpp`
+The last step: give it a spin in `steps/10_hands/exercise/HandMapping.cpp`
 
 ```bash
-cmake --build --preset release --target step11_exercise
-open build/release/steps/11_hands/step11_exercise_artefacts/Release/*.app
+cmake --build --preset release --target step10_exercise
+open build/release/steps/10_hands/step10_exercise_artefacts/Release/*.app
 ```
 
 <div class="cards-note">macOS: start it with <code>open</code> or a double-click, so it can ask for the camera · no camera: the mouse plays the hand · left hand leads: <strong>Swap hands</strong></div>
@@ -360,7 +359,7 @@ Note:
 ## Fifty laptops, one room.<br><span class="then">Play.</span>
 
 <div class="statement-points">
-  <div><small>1</small>Open your step 11 app</div>
+  <div><small>1</small>Open your step 10 app</div>
   <div><small>2</small>Laptop speakers, half volume</div>
   <div><small>3</small>Both hands up, and play</div>
 </div>

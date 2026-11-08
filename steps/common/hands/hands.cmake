@@ -1,5 +1,5 @@
 # The hands, given and hidden: a camera, MediaPipe's hand tracking on anira and
-# the features of each hand (HandTracker.h). Step 11 includes this file and
+# the features of each hand (HandTracker.h). Step 10 includes this file and
 # calls workshop_add_hands(<target>) on its app; it never opens what is here.
 set(WORKSHOP_HANDS_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
@@ -28,7 +28,7 @@ target_link_libraries(workshop_handtracking PUBLIC anira::anira workshop_hand_mo
 # The camera on Linux: OpenCV, if installed (a warning if not). WORKSHOP_OPENCV_CAMERA
 # requires it, and uses it on macOS and Windows too, to try that path without a
 # Linux machine; CI sets it on Linux.
-option(WORKSHOP_OPENCV_CAMERA "Step 11: read the camera through OpenCV on every platform" OFF)
+option(WORKSHOP_OPENCV_CAMERA "Step 10: read the camera through OpenCV on every platform" OFF)
 set(WORKSHOP_HANDS_OPENCV OFF)
 if(WORKSHOP_OPENCV_CAMERA OR (UNIX AND NOT APPLE))
     find_package(OpenCV QUIET COMPONENTS core imgproc videoio)
@@ -38,7 +38,7 @@ if(WORKSHOP_OPENCV_CAMERA OR (UNIX AND NOT APPLE))
         message(FATAL_ERROR "WORKSHOP_OPENCV_CAMERA is on, but OpenCV was not found: sudo apt install libopencv-dev (macOS: brew install opencv)")
     else()
         message(WARNING
-            "Step 11 has no camera on Linux without OpenCV: the app builds, but the mouse pad plays "
+            "Step 10 has no camera on Linux without OpenCV: the app builds, but the mouse pad plays "
             "instead of your hands. Install it and configure again:\n"
             "    sudo apt install libopencv-dev")
     endif()

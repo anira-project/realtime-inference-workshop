@@ -6,7 +6,7 @@ v3: inline execution, GPU, NPU, zero copy
 <!-- kind: talk -->
 
 Note:
-- [before: straight on from step 11's done slide, no break]
+- [before: straight on from step 10's done slide, no break]
 - All four are planned for the final v3, due this month.
 - Zero copy, the frame that stays where it is, comes last; first, the latency and inline execution.
 
@@ -200,7 +200,7 @@ Note:
 <div class="cards-note fragment" data-fragment-index="1">The camera texture is the hand tracker's tensor on the GPU. Only its landmarks cross over to the CPU: about 130,000 times less.</div>
 
 Note:
-- Zero copy, the last feature: in step 11 every frame is copied to the CPU, then to the engine.
+- Zero copy, the last feature: in step 10 every frame is copied to the CPU, then to the engine.
 - Take a 4K camera that can hand over each frame as a GPU texture.
 - Today its pixels are copied out of the capture buffer for the tracker; a GPU plan copies them up again.
 - [pause] About 2 gigabytes every second, bytes, not bits, before the model has done anything.
@@ -230,7 +230,21 @@ Note:
 - And the real-time rules from this morning do not change.
 - So you do not have to wait for 3.0: start on alpha.3, today's version, right after ADC.
 - Before then a pre-release may still rename a detail: the changelog says how, and you rebuild, as Fares said.
-- [pause] And behind you lies the day: the model by hand, on anira, taken apart, and played with your hands.
+- [pause] And behind you lies the day: the model by hand, on anira, and played with your hands.
+
+---
+
+<div class="tag">Bonus</div>
+
+## Opening the model.<br><span class="then">Encoder, eight numbers, decoder.</span>
+
+<div class="note-box">A bonus step for after the workshop, in the repository: <code>steps/bonus/</code>, its slides linked from its README.</div>
+
+Note:
+- One more step for after the workshop: the bonus.
+- We cut the model in the middle: an encoder, eight numbers, a decoder.
+- Two handlers on anira, and your code sits between them.
+- You have the repository: the exercise is in steps/bonus, and its README links the slides.
 
 ---
 

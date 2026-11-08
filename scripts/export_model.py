@@ -16,7 +16,7 @@ CC BY-NC 4.0). 44.1 kHz, 2048 samples per block, one channel, 8 latents.
 
 With --decoder-noise, only model_decoder_noise.onnx: the decoder with the cropped latent
 dimensions filled with fresh noise on every call, as the model's own decode() does. Not
-deterministic, so nothing checks against it; it is the generator of step 11, where it sounds
+deterministic, so nothing checks against it; it is the generator of step 10, where it sounds
 livelier than the zero-filled decoder.
 
 The streaming TorchScript model keeps its convolution caches as buffers updated in place, which

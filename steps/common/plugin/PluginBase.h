@@ -1,4 +1,4 @@
-// The plugin shell steps 8 to 10 share, given complete: buses, the dry/wet
+// The plugin shell steps 8 and 9 and the bonus share, given complete: buses, the dry/wet
 // parameter, a step's own knobs, the source player, the window, the bypass,
 // the mono mix-down, and the host boilerplate. A step derives from it and
 // writes three places: its constructor creates, prepare() prepares and
@@ -18,7 +18,7 @@
 
 class PluginBase : public juce::AudioProcessor {
 public:
-    // One row of anira's plan report (steps 9 and 10), one per model: what
+    // One row of anira's plan report (step 9 and the bonus), one per model: what
     // prepare measured on this machine. Plain values, so step 8 needs no anira.
     struct ReportRow {
         enum class Verdict { unmeasured, comfortable, marginal, not_realtime };
@@ -131,7 +131,7 @@ protected:
     // whether the plugin can prepare. In prepare.
     bool fixed_settings_fit(double sample_rate, size_t max_block_size);
 
-    // Steps 9 and 10: anira takes any rate, but the model is trained at 44.1
+    // Step 9 and the bonus: anira takes any rate, but the model is trained at 44.1
     // kHz: any other rate asks the user first. In prepare.
     void ask_unless_44k(double sample_rate);
 

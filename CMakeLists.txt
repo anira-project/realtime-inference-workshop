@@ -43,7 +43,7 @@ endif()
 # RealtimeSanitizer for step 5; needs a clang that has it, see that step's README.
 option(WORKSHOP_RTSAN "Build the real-time safety step with -fsanitize=realtime" OFF)
 
-# JUCE, for the plugins of steps 8 and 9 and the app of step 11. The workshop
+# JUCE, for the plugins of steps 8 and 9 and the app of step 10. The workshop
 # relies on it, so it is on; JUCE only compiles when one of those is built.
 option(WORKSHOP_JUCE "Build the JUCE plugin and app steps" ON)
 
@@ -63,7 +63,7 @@ set(WORKSHOP_HOST_SLOWDOWN 1 CACHE STRING "Pace the host loop of steps 6 and 7 t
 workshop_fetch_models()
 
 # Build one step (-DWORKSHOP_STEP=01) or all of them.
-set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01 or 02, or all")
+set(WORKSHOP_STEP "all" CACHE STRING "Which step to build: a number like 01 or 02, bonus, or all")
 
 set(WORKSHOP_STEPS 01_minimal_inference 02_state 03_host_buffer_size 04_benchmark 05_realtime_safety 06_threading 07_latency)
 
@@ -71,10 +71,11 @@ if(WORKSHOP_JUCE)
     list(APPEND WORKSHOP_STEPS 08_juce_plugin)
 endif()
 if(WORKSHOP_ANIRA)
-    list(APPEND WORKSHOP_STEPS 09_anira 10_split)
+    list(APPEND WORKSHOP_STEPS 09_anira)
     if(WORKSHOP_JUCE)
-        list(APPEND WORKSHOP_STEPS 11_hands)
+        list(APPEND WORKSHOP_STEPS 10_hands)
     endif()
+    list(APPEND WORKSHOP_STEPS bonus)
 endif()
 
 foreach(step ${WORKSHOP_STEPS})

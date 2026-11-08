@@ -2,10 +2,10 @@
 # requires-python = ">=3.10"
 # dependencies = ["numpy", "onnxruntime", "soundfile"]
 # ///
-"""Render the latent demo for step 10: the chords of render_demo.py through the encoder
+"""Render the latent demo for the bonus step: the chords of render_demo.py through the encoder
 and the decoder, once as they are and once with an offset on every latent dimension (OFFSETS).
 
-The split path is step 10's: the encoder per block of 2048 samples, an offset added to
+The split path is the bonus step's: the encoder per block of 2048 samples, an offset added to
 the 8 latents, the decoder per frame, each with its state carried by hand. The middle
 pass is kept and looped as in render_demo.py, so the files line up with demo_input.wav.
 

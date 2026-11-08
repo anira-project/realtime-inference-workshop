@@ -1,4 +1,4 @@
-// Step 10 — the plugin around SplitProcessor, given complete.
+// Bonus — the plugin around SplitProcessor, given complete.
 //
 // Goal: step 9's plugin, with SplitProcessor in place of AniraProcessor, and
 //       eight knobs, z0 to z7, one offset per latent dimension, as in anira's

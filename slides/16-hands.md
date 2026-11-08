@@ -113,31 +113,31 @@ Note:
 
 <div class="threads">
   <div class="th-name" style="grid-area: 1 / 1">camera thread<small>capture queue · 30 a second</small></div>
-  <div class="card" style="grid-area: 1 / 2"><div class="card-title">frame</div><div class="card-text">from the camera</div></div>
+  <div class="th-step card" style="grid-area: 1 / 2; --i: 0"><div class="card-title">frame</div><div class="card-text">from the camera</div></div>
   <div class="th-arr" style="grid-area: 1 / 3">→</div>
-  <div class="card" style="grid-area: 1 / 4"><div class="card-title">push_data</div><div class="card-text">the frame, returns at once</div></div>
+  <div class="th-step card" style="grid-area: 1 / 4; --i: 1"><div class="card-title">push_data</div><div class="card-text">the frame, returns at once</div></div>
   <div class="th-arr" style="grid-area: 1 / 5">→</div>
-  <div class="card" style="grid-area: 1 / 6"><div class="card-title">pop_data</div><div class="card-text">what has finished</div></div>
+  <div class="th-step card" style="grid-area: 1 / 6; --i: 3"><div class="card-title">pop_data</div><div class="card-text">what has finished</div></div>
   <div class="th-arr pool" style="grid-area: 1 / 7">⇄</div>
-  <div class="th-pass" style="grid-area: 2 / 2 / 3 / 7">↓ the newest hands · lock-free triple buffer</div>
+  <div class="th-step th-pass" style="grid-area: 2 / 2 / 3 / 7; --i: 4">↓ the newest hands · lock-free triple buffer</div>
   <div class="th-name" style="grid-area: 3 / 1">message thread<small>GUI timer · 60 a second</small></div>
-  <div class="card" style="grid-area: 3 / 2"><div class="card-title">hands</div><div class="card-text">features, 0 to 1</div></div>
+  <div class="th-step card" style="grid-area: 3 / 2; --i: 5"><div class="card-title">hands</div><div class="card-text">features, 0 to 1</div></div>
   <div class="th-arr" style="grid-area: 3 / 3">→</div>
-  <div class="card accent" style="grid-area: 3 / 4"><div class="card-title">your mapping</div><div class="card-text">HandMapping.cpp</div></div>
+  <div class="th-step card accent" style="grid-area: 3 / 4; --i: 6"><div class="card-title">your mapping</div><div class="card-text">HandMapping.cpp</div></div>
   <div class="th-arr" style="grid-area: 3 / 5">→</div>
-  <div class="card" style="grid-area: 3 / 6"><div class="card-title">8 latents</div><div class="card-text">smoothed</div></div>
-  <div class="th-pass" style="grid-area: 4 / 2 / 5 / 7">↓ 8 × <code>std::atomic&amp;lt;float&amp;gt;</code> · relaxed</div>
+  <div class="th-step card" style="grid-area: 3 / 6; --i: 7"><div class="card-title">8 latents</div><div class="card-text">smoothed</div></div>
+  <div class="th-step th-pass" style="grid-area: 4 / 2 / 5 / 7; --i: 8">↓ 8 × <code>std::atomic&amp;lt;float&amp;gt;</code> · relaxed</div>
   <div class="th-name" style="grid-area: 5 / 1">audio thread<small>44.1 kHz</small></div>
-  <div class="card" style="grid-area: 5 / 2"><div class="card-title">load the 8</div><div class="card-text">one latent frame</div></div>
+  <div class="th-step card" style="grid-area: 5 / 2; --i: 9"><div class="card-title">load the 8</div><div class="card-text">one latent frame</div></div>
   <div class="th-arr" style="grid-area: 5 / 3">→</div>
-  <div class="card" style="grid-area: 5 / 4"><div class="card-title">push_data</div><div class="card-text">once per 2048 samples</div></div>
+  <div class="th-step card" style="grid-area: 5 / 4; --i: 10"><div class="card-title">push_data</div><div class="card-text">once per 2048 samples</div></div>
   <div class="th-arr" style="grid-area: 5 / 5">→</div>
-  <div class="card" style="grid-area: 5 / 6"><div class="card-title">pop_data</div><div class="card-text">this callback's audio</div></div>
+  <div class="th-step card" style="grid-area: 5 / 6; --i: 12"><div class="card-title">pop_data</div><div class="card-text">this callback's audio</div></div>
   <div class="th-arr pool" style="grid-area: 5 / 7">⇄</div>
   <div class="th-pool" style="grid-area: 1 / 8 / 6 / 9">
-    <div class="th-pool-model">hand tracking<small>4 models</small></div>
+    <div class="th-step th-pool-model" style="--i: 2">hand tracking<small>4 models</small></div>
     <div class="th-pool-name">anira pool<small>one thread per core</small></div>
-    <div class="th-pool-model">decoder<small>1 model</small></div>
+    <div class="th-step th-pool-model" style="--i: 11">decoder<small>1 model</small></div>
   </div>
 </div>
 

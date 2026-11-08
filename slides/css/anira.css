@@ -2516,3 +2516,15 @@ html.tanh .th-pass { padding-left: var(--space-3); font-size: 0.7em; color: var(
 html.tanh .th-pool { display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-main); background: var(--tint-exercise); }
 html.tanh .th-pool-name { font-family: var(--fs-heading-font); font-weight: 600; text-align: center; }
 html.tanh .th-pool-model { padding: var(--space-2) var(--space-3); border: var(--hairline) solid var(--fs-border-strong); border-radius: var(--radius-small); background: var(--fs-background-color, #fff); font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.85em; }
+
+/* Step 10 · one frame's way through the threads, lit in turn while the slide is up:
+   camera → pool → triple buffer → your mapping → atomics → audio → pool, every 7 s */
+html.tanh .reveal section.present .threads .th-step { animation: th-flow 7s ease-in-out infinite; animation-delay: calc(var(--i) * 0.45s); }
+html.tanh .threads .th-pass.th-step { border-radius: var(--radius-small); }
+@keyframes th-flow {
+  0%, 11%, 100% { box-shadow: 0 0 0 0 transparent; transform: none; }
+  4% { box-shadow: 0 0 0 4px var(--ink); transform: scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.tanh .reveal section.present .threads .th-step { animation: none; }
+}

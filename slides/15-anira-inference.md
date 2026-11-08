@@ -121,7 +121,7 @@ Note:
 ```json
 {
   "models":  [ { "engine": "onnxruntime", "path": "…/model_forward.onnx" } ],
-  "inputs":  [ { "name": "audio",     "role": "streamed",
+  "inputs":  [ { "name": "audio_in",  "role": "streamed",
                  "axes": [["batch",1],["channel",1],["time",?]] },
                { "name": "state_in",  "role": "state",
                  "axes": [["batch",1],["any",?]], "state_source": "?" } ],
@@ -268,7 +268,7 @@ Note:
 
 ```json
 "inputs": [
-  { "name": "audio", "role": "streamed",
+  { "name": "audio_in", "role": "streamed",
     "axes": [["batch", 1], ["channel", 1], ["time", «2048»]] },   // <- solution
   …
 ],
@@ -305,7 +305,7 @@ Note:
 - TODO 2: step 2's state size, in and out, and the state_source.
 - [ask the room, hands up] Who tried a wrong one first, and read the message?
 - The answer is state_out.
-- audio is no output at all, and audio_out is streamed audio, not state.
+- audio_in is no output at all, and audio_out is streamed audio, not state.
 - Create refuses both, and says why.
 - With the pair in place, anira runs the inferences one after another: each needs the state of the one before.
 

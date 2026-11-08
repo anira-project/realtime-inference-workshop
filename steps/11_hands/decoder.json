@@ -2,7 +2,7 @@
   "models": [
     { "engine": "onnxruntime", "path": "../common/assets/models/rave/model_decoder.onnx" }
   ],
-  "anchor": "audio",
+  "anchor": "audio_out",
   "inputs": [
     {
       "name": "latents",
@@ -20,7 +20,7 @@
   ],
   "outputs": [
     {
-      "name": "audio",
+      "name": "audio_out",
       "dtype": "float32",
       "role": "streamed",
       "axes": [["batch", 1], ["channel", 1], ["time", 2048]],

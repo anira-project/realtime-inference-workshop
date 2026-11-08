@@ -24,7 +24,7 @@ inline std::string todo_for(int step, const std::string& message) {
         return "TODO 2 or 3";
     case 9:
         if (has("state")) { return "TODO 2"; }  // anira refused the state pair
-        if (has("'audio")) { return "TODO 1"; }  // anira refused audio or audio_out
+        if (has("'audio")) { return "TODO 1"; }  // anira refused audio_in or audio_out
         return "TODO 1 or 3";  // The latency in model.json, or the calls
     case 10:
         if (has("missed")) { return {}; }  // Offline nothing is missed: not a TODO

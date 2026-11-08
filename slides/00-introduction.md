@@ -31,13 +31,14 @@ Note:
 <div class="teaser" data-teaser="clock" data-work="fft"><canvas></canvas></div>
 
 Note:
-- What you see: one turn of the clock is one callback. The host gives us 512 samples, and the next 512 are due one turn later
-- An FFT on blocks of 2048: three callbacks only collect, the 4th runs FFT and IFFT
-- That is the pattern you know from STFT and FFT convolution: a FIFO collects the block, the callback that completes it does the transform, and we report 2048 samples of latency to the host
-- The block sizes don't match, and that only costs latency
-- FFT and IFFT take about 3 µs on our laptop (FFTW), roughly a tenth of a sample. The tick on the clock is drawn much thicker than that
-- The boxes on the right: time per block, in samples. The same for every block: an FFT does the same operations, whatever the audio is
-- Three callbacks idle, one does all the work. Spiky, but with thousands of times headroom it doesn't matter. Every callback is on time
+- But before we talk about neural networks, let's first look at something familiar:
+- Fixed block FFT processing within the hosts audio callback.
+- For example we can have a host audio callback with 512 samples and a fixed size fft processing module which requires 2048 samples.
+- How is this typically implemented.
+- You'd use a ringbuffer collect samples for 3 callbacks, then in the fourth you can run your fft processing
+- On this machine it takes less than the equivalent of a sample per block constantly
+- And then the samples are returned
+- So we will have a little processing spike every 4 host callbacks, but since we are so quick it does not matter much
 
 ---
 
@@ -48,13 +49,10 @@ Note:
 <div class="teaser" data-teaser="clock" data-work="nn"><canvas></canvas></div>
 
 Note:
-- Same clock, same 2048-sample block. Only the FFT is replaced by our neural network
-- The block sizes don't match, as with the FFT: four callbacks collect, the 4th runs the network. That part we know how to handle
-- New problem 1: the forward pass takes about 570 samples' worth of time (13 ms on ONNX Runtime, step 3), more than the 512 a callback has. It doesn't fit
-- New problem 2: by how much it misses changes every time, sometimes far more. The runtime is not deterministic
-- The boxes on the right: time per block, in samples, red when it is more than the 512 a callback has. The newest one counts while the network runs
-- The times shown are illustrative, after step 3's measurements
-- The question: how do we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline? That is today's workshop
+- If we change the fft module with a neural network module, we have similarities
+- We also have a fixed input size for the neural network (here 2048 as well), but the processing takes longer
+- And on top of that the processing is nondeterministic, it varies in time
+- Todays question is therefore: How can we fit a fixed-size, non-deterministic model into a callback with varying block sizes and a hard deadline?
 
 ---
 
@@ -87,7 +85,7 @@ Note:
 </div>
 
 Note:
-- The short answer to solve this problem, you can use our anira library.
+- The short answer: you can use our anira library.
 - It is an open-source library for real-time inference.
 - You give it a model for LibTorch, ONNX Runtime, LiteRT or ExecuTorch, and it takes care of the threads, the buffering and the latency.
 - It is the outcome of our work and research about real-time inference since 2020.
@@ -121,8 +119,8 @@ Note:
 </div>
 
 Note:
-- So who are we?
-- Lina is a student assistant at TU Berlin.
+- But before diving deeper into the topic let me first introduce ourselves
+- Lina Campanella is working as a student assistant at TU Berlin.
 - I am a research associate at TU Berlin leading the Computer Music and Neural Audio Systems research team, and together with Valentin I run tanh lab.
 - In addition Valentin also works as an audio software developer at Baby Audio.
 
@@ -145,7 +143,7 @@ Note:
 </div>
 
 Note:
-- So whats tanh lab.
+- What is this tanh lab?
 - Tanh lab is an audio software studio based in berlin.
 - We take ideas from research all the way to a product.
 - Our work ranges from applied research, evaluating the feasibility of an idea to the full stack implementation and deployment of the product.

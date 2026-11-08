@@ -1,13 +1,13 @@
 <h1>The whole picture</h1>
 
-One map, one C ABI, three places
+One picture, one C ABI, three places
 
 <!-- .slide: data-state="no-header" -->
 <!-- kind: talk -->
 
 Note:
-- The whole picture.
-- One map with every row filled, the C ABI it sits on, and the three places in a plugin where all of it is called.
+- Now lets put it all together
+- Everything from create, prepare and process in one picture, the C ABI underneath it, and the three places in a plugin where we call it
 
 ---
 
@@ -18,13 +18,13 @@ Note:
 {{MAP:show=create,prepare,process|abi}}
 
 Note:
-- This is the path from your callback to the engine and back, in one picture.
-- On the left your app: the three files and the three calls.
-- The dashed line is the C ABI: right of it is the library, and the handler is all you touch.
-- The session is private to each handler: the state pairs from create; the plans, the latency, the rings and the slots from prepare.
-- On the right what anira keeps once per process: the pool, the queue and the loaded models, shared by every handler.
-- A block crosses it in process and comes back the same way, in place, in the same buffer.
-- Nothing on the audio side allocates or locks: the rules from steps 5 to 7, kept by the library.
+- This is the whole path from our callback to the engine and back
+- On the left our app: the three files and the three calls
+- The dashed line is the C ABI: everything right of it is the library, and the handler is all we touch
+- The session belongs to one handler: the state pairs from create, and the plans, the latency, the rings and the slots from prepare
+- On the right what anira keeps once per process: the pool, the queue and the loaded models, shared by every handler
+- In process a block crosses the line and comes back the same way, in place, in the same buffer
+- And nothing on the audio side allocates or locks: the rules from steps 5 to 7, now kept by the library
 
 ---
 
@@ -40,14 +40,14 @@ Note:
 </div>
 
 Note:
-- One C ABI, and every language sits on top of it.
-- Why C: it is the one binary interface every compiler, platform and WebAssembly agree on.
-- Only the anira_ functions are exported, so two plugins with anira inside do not clash in one host.
-- A plugin that links anira statically has its own copy and its own pool; the instances of one plugin share it.
-- anira.hpp, header-only C++20, and the TypeScript package sit on top of it.
-- Main-thread calls return a status and an error message naming the field; audio-thread calls return a status, and rt_error says why.
-- The ABI is append-only inside a major version and stable from v3.0; until then, rebuild against each pre-release.
-- compat/v2.hpp runs v2 code with one include swapped and using namespace anira::v2. It is deprecated and goes one minor release after 3.0. The hand tracker in step 11 is exactly that.
+- Underneath all of this sits one C ABI, and every language sits on top of it
+- Why C: it is the one binary interface every compiler, every platform and WebAssembly agree on
+- Only the anira_ functions are exported, so two plugins with anira inside do not clash in one host: the hidden symbols from Create
+- A plugin that links anira statically has its own copy and its own pool, and the instances of that plugin share it
+- On top of it: anira.hpp, header-only C++20, and the TypeScript package
+- Main-thread calls return a status and an error message that names the field; audio-thread calls return a status, and rt_error says why
+- The ABI is append-only inside a major version and stable from v3.0. Until then, rebuild against each pre-release
+- And compat/v2.hpp runs v2 code with one include swapped and using namespace anira::v2. It is deprecated and goes one minor release after 3.0. The hand tracker in step 11 uses exactly that
 
 ---
 
@@ -71,29 +71,11 @@ m_handler-&gt;process(block, 0, block, 0);</code></pre></div>
 </div>
 
 Note:
-- Three places in a plugin, and three calls: the constructor, prepareToPlay and processBlock, as in step 8.
-- In the constructor we create: the model config, a pipeline with it, and the handler. Create checks the model config and builds the slots; it loads nothing yet.
-- In prepareToPlay the host's blocks go into the contract, 1 up to the block size it announces, we prepare the handler, and we report its latency to the host. Prepare runs again whenever the host changes its blocks.
-- In processBlock one tensor goes over the host's channels as they are, planar: channels is a span with one pointer per channel, filled from the buffer every block, and shape is the channel count and the sample count. float32 comes from the pointers. process then runs it in place.
-- Our model in steps 9 and 10 is mono, one channel in the model file, so there we mix down first, as in step 8. A stereo model takes the buffer as it is.
-- Nothing to do in releaseResources: the handler destroys itself when the plugin goes.
-- The threads are not ours to stop any more: anira keeps the pool until the last handler is destroyed.
-- This is the pattern of anira's own JUCE example.
----
-
-<div class="tag">Take away</div>
-
-## The main thread plans,<br><span class="then">the audio thread moves samples, the pool runs models.</span>
-
-<div class="statement-points">
-  <div>A model file and a contract file, plus an optional context file</div>
-  <div>Three calls connect them to the host</div>
-  <div>Everything we built in part 1 is in the boxes between</div>
-</div>
-
-Note:
-- The main thread plans, the audio thread moves samples, the pool runs models.
-- A model file and a contract file describe the model and the run, and a third, optional one the context.
-- Three calls connect them to the host.
-- Everything we built in part 1 is in the boxes between.
-- Hands-on from here: the part 1 model on anira, then the model taken apart.
+- And this is how it looks in a plugin: three places, three calls. The constructor, prepareToPlay and processBlock, as in step 8
+- In the constructor we create: the model config, a pipeline with it, and the handler. It checks the config and loads nothing yet
+- In prepareToPlay the host's blocks go into the contract, 1 up to the announced block size, we prepare the handler and tell the host its latency. And we prepare again whenever the host changes its blocks
+- In processBlock one tensor goes over the host's channels as they are, planar: one pointer per channel, and the shape. Then process runs it in place
+- Our model in steps 9 and 10 is mono, so there we mix down first, as in step 8. A stereo model takes the buffer as it is
+- Nothing to do in releaseResources: the handler destroys itself when the plugin goes, and the pool runs until the last handler is gone
+- This is the pattern of anira's own JUCE example
+- Hands-on from here: the part 1 model on anira, then the model taken apart

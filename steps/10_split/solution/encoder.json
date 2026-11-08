@@ -6,7 +6,7 @@
   ],
   "inputs": [
     {
-      "name": "audio",
+      "name": "audio_in",
       "dtype": "float32",
       "role": "streamed",
       "axes": [["batch", 1], ["channel", 1], ["time", 2048]]   // TODO1: one model block, 2048 samples, as in step 9

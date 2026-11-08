@@ -7,8 +7,9 @@ Create, prepare, process
 
 Note:
 - Thanks valentin for the history overview of anira
-- In the next part I want to show you how anira works.
+- In the next part I want to show you the inner workings of the anira library
 - You start using anira, by declaring up to three configs
+- And then the InferenceHandler is your API to anira's inference thread pool.
 
 ---
 
@@ -29,13 +30,11 @@ Note:
 <div class="cards-note">A model file and a contract file, plus an optional context file, and three calls. For most models that is all.</div>
 
 Note:
-- With anira, most models run without any processing code of your own.
-- You declare the model and the runtime settings in config files, and the InferenceHandler is your API to anira's inference thread pool.
-- There are three configs: one for the model, one for the stream contract, one for the pool.
+- There is the ModelConfig (remember the constant struct at the beginning of the examples), a stream contract, a ContextConfig.
 - The ModelConfig declares the model: its file path or binary, and every tensor with its role.
 - The Contract is the contract for the stream: it contains information about the host's buffer sizes and sample rate, and the inference budget.
 - The optional ContextConfig declares the context of the process: how many threads the pool has and which log level. There is one pool per process, and every handler shares it.
-- The InferenceHandler gives you the three typical calls from step 8: create, prepare and process. It is created with the model config and the context; the contract comes in at prepare, once the host has said its buffer size.
+- The InferenceHandler then gives you the three typical calls from step 8: create, prepare and process. It is created with the model config and the context; the contract comes in at prepare, once the host has said its buffer size.
 
 ---
 
@@ -46,7 +45,7 @@ Note:
 {{MAP}}
 
 Note:
-- The three handler calls, create, prepare and process, are called in the typical plugin calls from step 8: the constructor, prepareToPlay and processBlock.
+- The three handler calls, create, prepare and process, can be directly mapped onto the plugin calls from step 8: the constructor, prepareToPlay and processBlock.
 - The columns run from your code on the left, through the language api of your choice (C++, Typescript, C), through the C ABI, to anira's private session and context on the right
 - Typically create and prepare run on the main thread and the process function is called from the audio thread.
 - In the following we will fill each row

@@ -2511,8 +2511,6 @@ html.tanh .threads { display: grid; grid-template-columns: 1fr 240px 1fr 240px 1
 html.tanh .threads .card { padding: var(--space-4); gap: var(--space-2); }
 html.tanh .th-hand { align-self: center; text-align: center; font-size: 1.3em; color: var(--ink); border-radius: var(--radius-small); }
 html.tanh .th-hand small { display: block; font-size: 0.42em; white-space: nowrap; line-height: 1.4; color: var(--fs-text-muted-color); }
-html.tanh .th-calls { display: flex; justify-content: space-around; padding: var(--space-2) 0; font-family: var(--fs-code-font); font-size: 0.6em; }
-html.tanh .th-calls span { padding: 2px var(--space-2); border-radius: var(--radius-small); }
 html.tanh .th-none { align-self: center; text-align: center; font-size: 0.55em; color: var(--fs-text-muted-color); }
 html.tanh .th-pool { align-self: stretch; min-height: 110px; border-radius: var(--radius-main); background: var(--tint-exercise); }
 html.tanh .th-pool-model { margin: var(--space-3); padding: var(--space-2) var(--space-3); border: var(--hairline) solid var(--fs-border-strong); border-radius: var(--radius-small); background: var(--fs-background-color, #fff); font-family: var(--fs-heading-font); font-weight: 600; font-size: 0.8em; text-align: center; }
@@ -2530,10 +2528,19 @@ html.tanh .reveal section.present .threads .th-step { animation: th-pulse var(--
   html.tanh .reveal section.present .threads .th-step { animation: none; }
 }
 
-/* Step 10 · a camera frame with the tracked hand, and the decoder's audio, in their threads' cards */
-html.tanh .threads .th-img { height: 120px; display: flex; align-items: center; justify-content: center; }
-html.tanh .threads .th-img svg { height: 100%; width: auto; max-width: 100%; }
-html.tanh .threads .th-wave svg { width: 100%; height: 100%; }
-html.tanh .th-cam-frame { fill: var(--fs-text-subtle-color); opacity: 0.25; }
+/* Step 10 · what goes into the pool and what comes back: an image and its prediction,
+   8 latents and the audio */
+html.tanh .th-calls { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); padding: var(--space-2) 0; }
+html.tanh .th-call { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: var(--space-2); border-radius: var(--radius-small); }
+html.tanh .th-call-pic { height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; }
+html.tanh .th-call-pic svg { height: 100%; width: auto; max-width: 100%; }
+html.tanh .th-call-name { font-family: var(--fs-code-font); font-size: 0.65em; }
+html.tanh .th-call small { font-size: 0.55em; color: var(--fs-text-muted-color); }
+html.tanh .th-cam-frame { fill: var(--fs-text-subtle-color); opacity: 0.3; }
+html.tanh .th-pred-frame { fill: none; stroke: var(--fs-border-strong); stroke-width: 2; }
+html.tanh .th-cam-hand polyline { fill: none; stroke: #b98b6e; stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; }
+html.tanh .th-cam-hand polygon { fill: #b98b6e; stroke: #b98b6e; stroke-width: 10; stroke-linejoin: round; }
 html.tanh .th-cam-bones polyline { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
 html.tanh .th-cam-dots circle { fill: var(--tint-exercise); stroke: var(--ink); stroke-width: 1.5; }
+html.tanh .th-bar { fill: var(--ink); }
+html.tanh .th-zero { stroke: var(--fs-border-strong); stroke-width: 1.5; }

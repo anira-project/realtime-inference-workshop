@@ -166,15 +166,16 @@ Note:
 
 <div class="tag">anira · Prepare</div>
 
-## What else <code>prepare</code> does.<br><span class="then">Load the models, allocate the buffers.</span>
+## What else <code>prepare</code> does.<br><span class="then">Load the models, allocate the buffers, start the pool.</span>
 
-<div class="statement-points">
+<div class="statement-points two">
   <div>Loads every model this build can run, pooled per process</div>
   <div>Sizes and allocates every buffer: a ring per streamed tensor, slots for the jobs in flight</div>
+  <div>Starts the thread pool with the first <code>prepare</code> in the process; it runs until the last handler is gone</div>
   <div>Nothing after: <code>process</code> allocates nothing; new host blocks, <code>prepare</code> again</div>
 </div>
 
-<div class="cards-note">Part 1 did both by hand: one model loaded the first time, two rings sized from the worst moment we could think of.</div>
+<div class="cards-note">Part 1 did all of it by hand: one model loaded the first time, two rings sized from the worst moment we could think of, a worker thread started per instance.</div>
 
 Note:
 - So what else does prepare do for us?

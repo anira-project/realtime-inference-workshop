@@ -172,8 +172,6 @@ Note:
 - That is handy once you ship it: every machine gets its own number.
 - Warm-up until stable: the slow first runs happen before the audio starts.
 - On a miss, bypass: the dry input goes out instead of silence.
-- [pause] The block sizes are not here: that is your blank, in prepare.
-- That is both files: now fill in the gaps.
 
 ---
 

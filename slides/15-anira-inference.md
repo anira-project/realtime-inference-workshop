@@ -187,13 +187,12 @@ m_contract.hard_host_blocks(?, ?, ?);   // in prepare()
 <div class="note-box">We fill in the worst block size possible: at a loop point, for example, the smallest one you could get.</div>
 
 Note:
-- Next to the contract file, we also need to tell anira what the host config
-- That happens in prepare, and it's TODO 3's first blank.
+- Next, let's look into the AniraProcessor.
+- In prepare, next to the contract file, we also have to tell anira what the host sends: TODO 3's first blank.
 - Three values: the smallest block, the largest block, and the sample rate.
 - The largest and the rate come from prepareToPlay.
-- Since this is a plugin, we have to handle a DAW that sends a smaller block than it announced.
-- At a loop point, for example, the callback is shorter.
-- [pause] So for the smallest block, we want the worst case scenario here.
+- Since this is a plugin, a DAW may send a smaller block than it announced, at a loop point for example.
+- [pause] So for the smallest block, we take the worst case.
 
 ---
 

@@ -25,8 +25,11 @@ Note:
 </div>
 
 Note:
-- The six things from the start of part 2, each with a third line now: where it went.
-- Three we declare, in two files; the other three anira handles, and Fares just showed you how.
+- Here are the six things again that we built by hand in part 1.
+- Three of them we now declare.
+- The model goes into model.json.
+- The benchmark and what happens on a missed deadline go into contract.json.
+- The other three anira handles for us: real-time safety, threading and latency.
 - [pause] So what is left for us to write?
 
 ---

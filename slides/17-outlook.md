@@ -7,7 +7,8 @@ v3: inline execution, GPU, NPU, zero copy
 
 Note:
 - We have reached the outlook.
-- We covered a lot today. As we said, the final anira v3 comes out at the end of this month.
+- We covered a lot today. But there is even more to come
+
 - It has a few more features that were not part of this workshop. Here they are, so you know what is coming.
 
 ---

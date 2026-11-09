@@ -129,7 +129,7 @@ Note:
 - Missing are the back ends: CUDA, Metal, Vulkan or WebGPU, and NPUs through LiteRT and ExecuTorch.
 - Then inference runs faster, and data already on the GPU, like a camera image, goes in without a copy.
 - The hard part: moving data between APIs, say CUDA to WebGPU and back, costs copies.
-- For that we build the engines with provider support, and the matrix gets a provider field.
+- For that we build the engines with provider support, and the back end gets a provider field.
 ---
 
 <div class="tag">After v3.0</div>
@@ -150,13 +150,12 @@ Note:
 <div class="combos-invite fragment">Measured some of these already? We would like to compare notes.</div>
 
 Note:
-- That gives us many options: hardware, execution provider, engine.
-- [click] Which path is fastest? Each line here is a question, not an answer.
-- After v3.0 we will measure these combinations in our research, for audio and also for video.
-- [click] For audio, most work today runs on the CPU, and those paths meet real time.
-- On the GPU it is barely studied; there are a few examples.
-- [click] If you have run inference on the GPU already, we would like to hear from you during the conference and compare notes.
-- When the paper is out, we will post it on our channels.
+- With that field, every back end is a path: hardware, provider, engine.
+- [click] Which path is fastest? We don't know yet.
+- After v3.0 we will measure them in our research, for audio and video.
+- [click] For audio, the CPU paths meet real time today. The GPU is barely studied.
+- [click] If you have run audio on a GPU, talk to us during the conference.
+- We will post the paper on our channels.
 
 ---
 

@@ -33,8 +33,7 @@ Note:
 
 Note:
 - First: we want to lower the latency further.
-- The sum from prepare: 1536 block adaptation, 1024 inference, 2224 the model.
-- A big part comes from moving the inference to a separate thread.
+- A big part of the latency is the inference, because the model runs on another thread.
 - If the engine is real-time safe and fast, we could skip that trip and run the inference directly on the audio thread.
 
 ---

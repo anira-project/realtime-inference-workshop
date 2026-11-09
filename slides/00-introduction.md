@@ -225,6 +225,28 @@ Note:
 
 <div class="tag">Setup</div>
 
+## Wi-Fi<br><span class="then">Connect before you clone.</span>
+
+<div class="prereqs">
+  <div class="prereq">
+    <div class="prereq-label">Network</div>
+    <div class="prereq-text">WIFI_NAME</div>
+  </div>
+  <div class="prereq">
+    <div class="prereq-label">Password</div>
+    <div class="prereq-text"><code>WIFI_PASSWORD</code></div>
+  </div>
+</div>
+
+Note:
+- Before the build: the Wi-Fi.
+- The network and password are on the slide.
+- The network is shared, so please connect now and start the download right away.
+
+---
+
+<div class="tag">Setup</div>
+
 ## Set up now<br><span class="then">Clone, configure and build while we talk.</span>
 
 ```bash

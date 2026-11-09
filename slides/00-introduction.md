@@ -230,7 +230,7 @@ Note:
 <div class="prereqs">
   <div class="prereq">
     <div class="prereq-label">Network</div>
-    <div class="prereq-text">WIFI_NAME</div>
+    <div class="prereq-text">ADC2026</div>
   </div>
   <div class="prereq">
     <div class="prereq-label">Password</div>

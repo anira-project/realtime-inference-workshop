@@ -234,7 +234,7 @@ Note:
   </div>
   <div class="prereq">
     <div class="prereq-label">Password</div>
-    <div class="prereq-text"><code>WIFI_PASSWORD</code></div>
+    <div class="prereq-text"><code>audiodevcon</code></div>
   </div>
 </div>
 

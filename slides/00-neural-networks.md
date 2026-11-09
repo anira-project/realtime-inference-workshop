@@ -21,7 +21,11 @@ Note:
 <span class="fragment integration-focus"></span>
 
 Note:
-- In a typical integration process, these are the first two steps displayed here
+- This is what a typical integration process looks like.
+- First, the neural network is trained and exported
+- Then it's implemented - our main topic
+- Before we get there, let’s take a very quick look at the first two steps
+- So that we know what model we’ll be working with.
 
 ---
 

@@ -18,9 +18,8 @@ Lina Campanella · Fares Schulz · Valentin Ackva
 <!-- .slide: data-state="no-header" -->
 
 Note:
-
-- Hi all,
-- And welcome to our workshop on real-time inference of neural networks.
+- Hello everyone,
+- and welcome to our workshop on real-time inference of neural networks.
 - Today we take a neural network that has already been trained and exported, and step by step turn it into a real-time safe audio plugin.
 
 ---
@@ -144,12 +143,13 @@ Note:
 </div>
 
 Note:
-- What is this tanh lab?
-- Tanh lab is an audio software studio based in Berlin.
+- What is tanh lab?
+- We’re an audio software studio based in Berlin
 - We take ideas from research all the way to a product.
-- Our work ranges from applied research, evaluating the feasibility of an idea to the full stack implementation and deployment of the product.
-- Our expertise lies mainly in real-time audio processing and machine learning
-- We are also maintaining the open source and permissively licensed anira library.
+- Sometimes that means applied research, where we find out whether an idea is actually feasible.
+- Sometimes it means delivering the complete product, from the DSP core to deployment.
+- Our focus is real-time audio and machine learning and ... especially where the two meet: getting neural networks to run reliably inside an audio callback.
+- That’s also why we maintain anira, an open-source, permissively licensed C++ library for real-time neural network inference in audio.
 
 ---
 

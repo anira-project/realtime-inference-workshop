@@ -178,20 +178,6 @@ Note:
 - When the new features land, even the GPU, you just update anira.
 ---
 
-<div class="tag">Bonus</div>
-
-## Opening the model.<br><span class="then">Encoder, eight numbers, decoder.</span>
-
-<div class="note-box">A bonus step for after the workshop, in the repository: <code>steps/bonus/</code>, its slides linked from its README.</div>
-
-Note:
-- One more step for after the workshop: the bonus.
-- We cut the model in the middle: an encoder, eight numbers, a decoder.
-- Two handlers on anira, and your code sits between them.
-- You have the repository: the exercise is in steps/bonus, and its README links the slides.
-
----
-
 ## Thank you.<br><span class="then">Any questions?</span>
 
 <div class="qr-row">

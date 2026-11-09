@@ -33,7 +33,7 @@ Note:
 
 Note:
 - First: we want to lower the latency further.
-- Look at the sum anira computed at prepare: 1536 for the block adaptation, 1024 for the inference, 2224 for the model itself.
+- The sum from prepare: 1536 block adaptation, 1024 inference, 2224 the model.
 - A big part comes from moving the inference to a separate thread.
 - If the engine is real-time safe and fast, we could skip that trip and run the inference directly on the audio thread.
 

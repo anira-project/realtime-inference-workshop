@@ -240,17 +240,18 @@ cmake --build --preset release --target step09_exercise_Standalone
 </div>
 
 Note:
-- Okay, now we've reached the step 9 task: fill out the TODOs.
+- Okay, now we've reached the part where you take over:
 
-- There are three of them.
-- TODO 1: audio tensors.
-- TODO 2: state
-- TODO 3: prepare and process
+- fill out the TODOs.
+- TODO 1: size audio tensors.
+- TODO 2: size and handle the state
+- TODO 3: fill prepare and process
 
 - Before you start the plugin, build and run the exercise check first.
 - It validates that all your blanks are filled in correctly.
 
-- Also once you have the plugin running there is a button to see the auto benchmark results in a report!
+- Also if you start the plugin, theere is a button for report
+- Shows you the result of our auto bechnmarking and warmup
 
 - [start the timer] Ten minutes; wave if you get stuck.
 
@@ -326,7 +327,6 @@ Note:
 - TODO 3: where our plugin talks to anira.
 - Blank 1, the host's blocks: 1, the largest block and the sample rate, as before the task.
 - Blank 2: the latency of output slot 0, audio_out.
-- On this machine that is 5295 samples [say: fifty-two ninety-five]; yours depends on your machine.
 - Blank 3, offline, a bounce: process_wait waits for every result.
 - Blank 4, live, in the callback: process never waits.
 - And with blank 1, the plugin now supports every buffer size the host sends, from 1 up to the largest.
@@ -378,5 +378,6 @@ Note:
 Note:
 - In two files, we replaced part 1, steps 1 to 8.
 - Gone: the engine code, the state copy, the ring buffer, the hand benchmark, the worker and the latency arithmetic.
-- And step 7's check still passes, with anira's latency instead of ours.
-- Next, step 10: the model as an instrument.
+- We also have now a plugin that runs at any buffer size.
+- With this in place:
+- Next, step 10: where we use the model as an instrument, rather than as an effect

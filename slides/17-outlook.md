@@ -9,7 +9,7 @@ Note:
 - We have reached the outlook.
 - We covered a lot today. But there is even more to come
 
-- It has a few more features that were not part of this workshop. Here they are, so you know what is coming.
+- anira has a few more upcoming features that were not part of this workshop. Here they are, so you know what is coming.
 
 ---
 
@@ -59,7 +59,7 @@ Note:
 
 Note:
 - Back to part 1, step 4.
-- [click] With host blocks of 512, the callback that completes a model block runs the whole forward pass: 13 ms in a callback of 11.6 ms. Too late.
+- [click] With host blocks of 512, a callback lasts 11.6 ms, but the model needs 13 ms. Too late.
 - [click] With host blocks of 2048, every callback runs the model: 13 ms in 46.4 ms. It fits, with plenty of headroom.
 - In that case it makes sense to run the model on the audio thread.
 

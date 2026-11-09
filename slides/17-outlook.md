@@ -124,17 +124,12 @@ Note:
 
 Note:
 - Next: memory beyond the CPU.
-- Today every tensor lives in host memory, and that is what you ran today.
-- With v3 a tensor says where it lives: CPU, GPU or NPU.
-- The groundwork for this is already done in anira.
-- What's still missing are the back ends and their memory, like CUDA or WebGPU.
-- With it comes zero copy: data already on the GPU, like a camera image, goes into the model without being copied.
-- That is the hard part: moving data from one API to another, say CUDA to WebGPU and back to CUDA, is difficult and costs copies.
-- So you can move the inference to a GPU or an NPU to make it faster, or, if your data is already on the GPU, run the inference there directly.
-- GPU through CUDA, Metal, Vulkan or GL; NPU through the hardware back ends of LiteRT and ExecuTorch.
-- The provider is picked with the engine: one plan per engine and provider, at prepare.
-- For that, we build the engines with provider support, and the engine/model matrix gets a new field: the provider.
-
+- Today every tensor lives in host memory.
+- With v3 a tensor says where it lives: CPU, GPU or NPU. The groundwork is done.
+- Missing are the back ends: CUDA, Metal, Vulkan or WebGPU, and NPUs through LiteRT and ExecuTorch.
+- Then inference runs faster, and data already on the GPU, like a camera image, goes in without a copy.
+- The hard part: moving data between APIs, say CUDA to WebGPU and back, costs copies.
+- For that we build the engines with provider support, and the matrix gets a provider field.
 ---
 
 <div class="tag">After v3.0</div>

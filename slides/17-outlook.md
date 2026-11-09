@@ -174,10 +174,8 @@ Note:
 Note:
 - All of this comes with the same API as today.
 - The configs and the three calls stay as you wrote them.
-- A plan gains a provider, a tensor gains a location.
-- The real-time rules stay: the pool runs the model, and only an engine declared real-time safe runs inline.
-- So you do not have to wait: start with v3.0.0-alpha.3, the version from this workshop, right after ADC.
-
+- So you do not have to wait: start your implementation with the alpha tag from this workshop.
+- When the new features land, even the GPU, you just update anira.
 ---
 
 <div class="tag">Bonus</div>

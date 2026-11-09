@@ -176,6 +176,7 @@ Note:
 - The configs and the three calls stay as you wrote them.
 - So you do not have to wait: start your implementation with the alpha tag from this workshop.
 - When the new features land, even the GPU, you just update anira.
+
 ---
 
 ## Thank you.<br><span class="then">Any questions?</span>

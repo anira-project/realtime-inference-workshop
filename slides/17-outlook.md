@@ -9,7 +9,7 @@ Note:
 - We have reached the outlook.
 - We covered a lot today. But there is even more to come
 
-- It has a few more features that were not part of this workshop. Here they are, so you know what is coming.
+- anira has a few more upcoming features that were not part of this workshop. Here they are, so you know what is coming.
 
 ---
 
@@ -33,8 +33,7 @@ Note:
 
 Note:
 - First: we want to lower the latency further.
-- Look at the sum anira computed at prepare: 1536 for the block adaptation, 1024 for the inference, 2224 for the model itself.
-- A big part comes from moving the inference to a separate thread.
+- A big part of the latency is the inference, because the model runs on another thread.
 - If the engine is real-time safe and fast, we could skip that trip and run the inference directly on the audio thread.
 
 ---
@@ -60,7 +59,7 @@ Note:
 
 Note:
 - Back to part 1, step 4.
-- [click] With host blocks of 512, the callback that completes a model block runs the whole forward pass: 13 ms in a callback of 11.6 ms. Too late.
+- [click] With host blocks of 512, a callback lasts 11.6 ms, but the model needs 13 ms. Too late.
 - [click] With host blocks of 2048, every callback runs the model: 13 ms in 46.4 ms. It fits, with plenty of headroom.
 - In that case it makes sense to run the model on the audio thread.
 
@@ -95,16 +94,15 @@ Note:
 <div class="cards-note">Not yet: it comes with the final v3 release, together with GPU and NPU accelerators. Until then every inference runs on the pool.</div>
 
 Note:
-- That option comes with the final v3: inline execution.
-- [click] First condition: you declare the engine real-time safe, the flag REALTIME_SAFE.
-- [click] Second: it fits into the callback. prepare measures it, within inline_ratio of the block period.
-- [click] Our example, host blocks of 2048: nothing to adapt on either side.
-- Both conditions met: the audio thread runs it, and the latency is only the model's own, 2224.
-- Otherwise the pool runs it, as today: 4272.
-- Almost half the latency. Depending on your use case, that can matter a lot.
-- But inline only works for some buffer sizes: the host block has to be large enough for the model to fit.
-- So prepare decides: each time the host announces its blocks, it switches between inline and the pool.
-- In the contract this is execution: worker, inline or auto.
+- That option comes with an upcoming v3 feature: inline execution.
+- [click] First condition: you declare the engine real-time safe.
+- [click] Second: it fits into the callback. prepare measures it.
+- [click] Our example, host blocks of 2048.
+- Here both conditions are met, which brings the latency down to the model's own.
+- Almost half the latency.
+- But inline only works when the host block is long enough for the model.
+- In a plugin this feature is unlikely: the host can send other block sizes than it announced in prepare.
+- But it could be handy in standalone applications.
 
 ---
 
@@ -124,16 +122,12 @@ Note:
 
 Note:
 - Next: memory beyond the CPU.
-- Today every tensor lives in host memory, and that is what you ran today.
-- With v3 a tensor says where it lives: CPU, GPU or NPU.
-- The groundwork for this is already done in anira.
-- What's still missing are the back ends and their memory, like CUDA or WebGPU.
-- With it comes zero copy: data already on the GPU, like a camera image, goes into the model without being copied.
-- That is the hard part: moving data from one API to another, say CUDA to WebGPU and back to CUDA, is difficult and costs copies.
-- So you can move the inference to a GPU or an NPU to make it faster, or, if your data is already on the GPU, run the inference there directly.
-- GPU through CUDA, Metal, Vulkan or GL; NPU through the hardware back ends of LiteRT and ExecuTorch.
-- The provider is picked with the engine: one plan per engine and provider, at prepare.
-- For that, we build the engines with provider support, and the engine/model matrix gets a new field: the provider.
+- Today every tensor lives in host memory.
+- With v3 a tensor says where it lives: CPU, GPU or NPU. The groundwork is done.
+- Missing are the back ends: CUDA, Metal, Vulkan or WebGPU.
+- Then inference could run faster there, and data already on the GPU, like a camera image, goes in without a copy.
+- The hard part: moving data between APIs, say CUDA to WebGPU and back.
+- For that we build the engines with provider support, and the back end gets a provider field.
 
 ---
 
@@ -155,13 +149,11 @@ Note:
 <div class="combos-invite fragment">Measured some of these already? We would like to compare notes.</div>
 
 Note:
-- That gives us many options: hardware, execution provider, engine.
-- [click] Which path is fastest? Each line here is a question, not an answer.
-- After v3.0 we will measure these combinations in our research, for audio and also for video.
-- [click] For audio, most work today runs on the CPU, and those paths meet real time.
-- On the GPU it is barely studied; there are a few examples.
-- [click] If you have run inference on the GPU already, we would like to hear from you during the conference and compare notes.
-- When the paper is out, we will post it on our channels.
+- With that field, every back end is a path: hardware, provider, engine.
+- [click] Which path is fastest? We don't know yet.
+- After v3.0 we will measure them in our research, for audio and video.
+- [click] For audio, the CPU paths meet real time today. The GPU is barely studied.
+- [click] If you have run audio on a GPU, talk to us during the conference. We would love to exchange insights.
 
 ---
 
@@ -180,23 +172,8 @@ Note:
 Note:
 - All of this comes with the same API as today.
 - The configs and the three calls stay as you wrote them.
-- A plan gains a provider, a tensor gains a location.
-- The real-time rules stay: the pool runs the model, and only an engine declared real-time safe runs inline.
-- So you do not have to wait: start with v3.0.0-alpha.3, the version from this workshop, right after ADC.
-
----
-
-<div class="tag">Bonus</div>
-
-## Opening the model.<br><span class="then">Encoder, eight numbers, decoder.</span>
-
-<div class="note-box">A bonus step for after the workshop, in the repository: <code>steps/bonus/</code>, its slides linked from its README.</div>
-
-Note:
-- One more step for after the workshop: the bonus.
-- We cut the model in the middle: an encoder, eight numbers, a decoder.
-- Two handlers on anira, and your code sits between them.
-- You have the repository: the exercise is in steps/bonus, and its README links the slides.
+- So you do not have to wait: start your implementation with the alpha tag from this workshop.
+- When the new features land, even the GPU, you just update anira.
 
 ---
 
@@ -217,7 +194,7 @@ Note:
 
 Note:
 - Thank you very much for attending this workshop.
-- The two QR codes: the workshop repository, with every solution, and anira.
+- The two QR codes: the workshop repository, with every solution and even a bonus exercise, and anira.
 - We would love your feedback on this workshop. Find us during the next three days.
 - [pause] Any questions?
 - Enjoy the conference.

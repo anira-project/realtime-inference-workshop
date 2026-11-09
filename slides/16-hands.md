@@ -6,7 +6,6 @@ Eight numbers to play
 <!-- kind: demo -->
 
 Note:
-- We have everything in place, and everything runs.
 - Now it's time to have some fun with the model, and use it in a different way.
 - There are many ways to do that, and of course we add some neural processing on top.
 
@@ -169,9 +168,8 @@ Note:
 - What we haven't told you yet: each dimension of the latent vector can often be tied to a sound attribute.
 - Loudness, brightness, body, and more.
 - Now we map the hand, its gesture, its position and its tilt, to these dimensions to control them.
-- Per hand, the tracker gives five numbers, each from 0 to 1.
-- Your right hand leads: open is loud, high is bright.
-- A second hand adds texture.
+- Your right hand leads
+- Your left hand controls texture.
 - The values are smoothed, so the sound glides instead of jumping.
 
 ---
@@ -198,13 +196,11 @@ open build/release/steps/10_hands/step10_solution_artefacts/Release/*.app
 <div class="cards-note">macOS: start it with <code>open</code> or a double-click, so it can ask for the camera · no camera: the mouse plays the hand · left hand leads: <strong>Swap hands</strong></div>
 
 Note:
-- [before: the room's speakers on, the lectern app open]
 - This is the final code we run today, so no exercise.
 - We'd like to jam with all of you together.
 - Build the standalone app with these two commands.
 - Get a feel for how it works: the camera and your hands control the synth.
 - [start the timer] Use your laptop loudspeakers, so we all play together, and jam!
-- [click Show the demo, pick the app window] So you can see me playing, too; the × closes it.
 - We have ten minutes now; afterwards we wrap it up.
 
 on macOs you might need to open the application via finder in order to have camera permissions!

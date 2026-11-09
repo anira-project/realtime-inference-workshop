@@ -316,6 +316,6 @@ Note:
 
 Note:
 - Last stop: today you run v3.alpha3, pinned in the workshop's CMake.
-- v3.0 is planned for the end of the month.
+- more v3.0 features are planned for this month.
 - That is the history; Now Fares, will talk about anira's inside.
 

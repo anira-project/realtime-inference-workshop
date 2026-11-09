@@ -25,12 +25,11 @@ Note:
 </div>
 
 Note:
-- Here are the six things again that we built by hand in part 1.
-- Inference: which model, which engine, which tensors, now all defined in model.json.
-- Benchmarking: defined in our contract.json.
-- Real-time safety and threading are built into anira: one thread pool, from the anira context.
-- Latency: anira calculates it, and we only read it.
-- Real-time guarantees: what happens on a missed deadline is also in the contract.
+- here we see the six steps from part 1 again, which we do now in one go
+- Inference goes into model.json.
+- The benchmark goes into contract.json.
+- Real-time safety, threading, latency and real-time safety is handled by anira
+- and if we fall behind in inference, our contract file defines the fallback
 - [pause] So what is left for us to write?
 
 ---
@@ -60,12 +59,10 @@ Note:
 <span class="fragment rows-focus"></span>
 
 Note:
-- What is left: fill gaps in the configs on top and in the three calls below:
-
-- First, let's define the three configuration files.
-- model.json has gaps for you: the tensor sizes, and how to handle the state.
-- contract.json defines how the model runs; it is complete, and we look into it in a second.
-- And the context: we use its defaults, so the thread pool is half the number of logical cores.
+- First of all, our three config files: model.json, the contract and the context.
+- We left only one of them with gaps: model.json, where you define the tensors.
+- The contract is complete: it says how the model runs, and we look into it in a second.
+- And the context uses its defaults: a thread pool of half the logical cores.
 
 - [click] Then the three calls: create, prepare and process.
 - Create is already done for you, in the constructor.
@@ -190,13 +187,12 @@ m_contract.hard_host_blocks(?, ?, ?);   // in prepare()
 <div class="note-box">We fill in the worst block size possible: at a loop point, for example, the smallest one you could get.</div>
 
 Note:
-- Next to the contract file, we also need to tell anira what the host config
-- That happens in prepare, and it's TODO 3's first blank.
+- Next, let's look into the AniraProcessor.
+- In prepare, next to the contract file, we also have to tell anira what the host sends: TODO 3's first blank.
 - Three values: the smallest block, the largest block, and the sample rate.
 - The largest and the rate come from prepareToPlay.
-- Since this is a plugin, we have to handle a DAW that sends a smaller block than it announced.
-- At a loop point, for example, the callback is shorter.
-- [pause] So for the smallest block, we want the worst case scenario here.
+- Since this is a plugin, a DAW may send a smaller block than it announced, at a loop point for example.
+- [pause] So for the smallest block, we take the worst case.
 
 ---
 
@@ -244,17 +240,18 @@ cmake --build --preset release --target step09_exercise_Standalone
 </div>
 
 Note:
-- Okay, now we've reached the step 9 task: fill out the TODOs.
+- Okay, now we've reached the part where you take over:
 
-- There are three of them.
-- TODO 1: audio tensors.
-- TODO 2: state
-- TODO 3: prepare and process
+- fill out the TODOs.
+- TODO 1: size audio tensors.
+- TODO 2: size and handle the state
+- TODO 3: fill prepare and process
 
 - Before you start the plugin, build and run the exercise check first.
 - It validates that all your blanks are filled in correctly.
 
-- Also once you have the plugin running there is a button to see the auto benchmark results in a report!
+- Also if you start the plugin, theere is a button for report
+- Shows you the result of our auto bechnmarking and warmup
 
 - [start the timer] Ten minutes; wave if you get stuck.
 
@@ -330,7 +327,6 @@ Note:
 - TODO 3: where our plugin talks to anira.
 - Blank 1, the host's blocks: 1, the largest block and the sample rate, as before the task.
 - Blank 2: the latency of output slot 0, audio_out.
-- On this machine that is 5295 samples [say: fifty-two ninety-five]; yours depends on your machine.
 - Blank 3, offline, a bounce: process_wait waits for every result.
 - Blank 4, live, in the callback: process never waits.
 - And with blank 1, the plugin now supports every buffer size the host sends, from 1 up to the largest.
@@ -382,5 +378,6 @@ Note:
 Note:
 - In two files, we replaced part 1, steps 1 to 8.
 - Gone: the engine code, the state copy, the ring buffer, the hand benchmark, the worker and the latency arithmetic.
-- And step 7's check still passes, with anira's latency instead of ours.
-- Next, step 10: the model as an instrument.
+- We also have now a plugin that runs at any buffer size.
+- With this in place:
+- Next, step 10: where we use the model as an instrument, rather than as an effect

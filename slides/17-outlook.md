@@ -94,17 +94,15 @@ Note:
 <div class="cards-note">Not yet: it comes with the final v3 release, together with GPU and NPU accelerators. Until then every inference runs on the pool.</div>
 
 Note:
-- That option comes with the final v3: inline execution.
-- [click] First condition: you declare the engine real-time safe, the flag REALTIME_SAFE.
-- [click] Second: it fits into the callback. prepare measures it, within inline_ratio of the block period.
-- [click] Our example, host blocks of 2048: nothing to adapt on either side.
-- Both conditions met: the audio thread runs it, and the latency is only the model's own, 2224.
-- Otherwise the pool runs it, as today: 4272.
-- Almost half the latency. Depending on your use case, that can matter a lot.
+- That option comes with an upcoming v3 feature: inline execution.
+- [click] First condition: you declare the engine real-time safe.
+- [click] Second: it fits into the callback. prepare measures it.
+- [click] Our example, host blocks of 2048.
+- Here both conditions are met, which brings the latency down to the model's own.
+- Almost half the latency.
 - But inline only works when the host block is long enough for the model.
-- So prepare checks it every time and picks inline or the pool.
-- In a plugin it's unlikely: the host can send other block sizes than it announced in prepare.
-- In the contract you set this with execution: worker, inline or auto.
+- In a plugin this feature is unlikely: the host can send other block sizes than it announced in prepare.
+- But it could be handy in standalone applications.
 
 ---
 
@@ -126,10 +124,11 @@ Note:
 - Next: memory beyond the CPU.
 - Today every tensor lives in host memory.
 - With v3 a tensor says where it lives: CPU, GPU or NPU. The groundwork is done.
-- Missing are the back ends: CUDA, Metal, Vulkan or WebGPU, and NPUs through LiteRT and ExecuTorch.
-- Then inference runs faster, and data already on the GPU, like a camera image, goes in without a copy.
-- The hard part: moving data between APIs, say CUDA to WebGPU and back, costs copies.
+- Missing are the back ends: CUDA, Metal, Vulkan or WebGPU.
+- Then inference could run faster there, and data already on the GPU, like a camera image, goes in without a copy.
+- The hard part: moving data between APIs, say CUDA to WebGPU and back.
 - For that we build the engines with provider support, and the back end gets a provider field.
+
 ---
 
 <div class="tag">After v3.0</div>
@@ -154,8 +153,7 @@ Note:
 - [click] Which path is fastest? We don't know yet.
 - After v3.0 we will measure them in our research, for audio and video.
 - [click] For audio, the CPU paths meet real time today. The GPU is barely studied.
-- [click] If you have run audio on a GPU, talk to us during the conference.
-- We will post the paper on our channels.
+- [click] If you have run audio on a GPU, talk to us during the conference. We would love to exchange insights.
 
 ---
 
@@ -196,7 +194,7 @@ Note:
 
 Note:
 - Thank you very much for attending this workshop.
-- The two QR codes: the workshop repository, with every solution, and anira.
+- The two QR codes: the workshop repository, with every solution and even a bonus exercise, and anira.
 - We would love your feedback on this workshop. Find us during the next three days.
 - [pause] Any questions?
 - Enjoy the conference.

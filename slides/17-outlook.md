@@ -103,6 +103,7 @@ Note:
 - Almost half the latency. Depending on your use case, that can matter a lot.
 - But inline only works when the host block is long enough for the model.
 - So prepare checks it every time and picks inline or the pool.
+- In a plugin it's unlikely: the host can send other block sizes than it announced in prepare.
 - In the contract you set this with execution: worker, inline or auto.
 
 ---
